@@ -54,6 +54,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | [15](docs/15-mvp-plan-riesgos.md) | Alcance del MVP · plan por fases · riesgos | 20-22 |
 | [16](docs/16-estructura-carpetas.md) | Estructura inicial del proyecto | 23 |
 | [17](docs/17-requisitos-no-funcionales.md) | Objetivos no funcionales verificables | §10 |
+| **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 
 ### Convención de etiquetas
 
@@ -78,25 +79,29 @@ Seis cuestiones que estaban abiertas y que estructuran el modelo de datos:
 | **P-03** | Las tres categorías sin desarrollar se siembran con capítulo y elemento «General» | `MA`, `ESG` y `SC` utilizables desde el día uno; su desglose se añade sin migración |
 | **P-04** | Horizonte corto = **1-2 años** | El plan de inversión por años cuadra con el catálogo |
 | **P-05** | **Una línea, un horizonte, un importe** | Corto, medio, largo, mejora potencial u otro tipo de petición son **mutuamente excluyentes**. El modelo es `time_horizon_id` + `amount`; la rejilla y el informe pivotan a cinco columnas para leerse como la hoja de siempre, pero una línea no puede quedar repartida entre dos plazos |
-
 | **P-05b** | El importe tecleado **lo incluye todo** | Es la base imponible final: lleva dentro indirectos, honorarios y contingencia. La aplicación **nunca** aplica la cascada por encima. Del perfil de costes, solo el impuesto afecta a todas las líneas; el resto de porcentajes son la preconfiguración de la calculadora de medición |
 
-Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos.**
+| **P-07** | Facilitadas las **4 plantillas reales** de Full Report | Analizadas en [`docs/18`](docs/18-analisis-plantillas-reales.md). Son **una sola estructura** × 2 portadas × 2 idiomas: 67 diapositivas, 4:3, 14 sistemas, 56 marcos de foto. **Corrige cinco decisiones del bloque 4** |
+
+Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos** y el riesgo del bloque 4
+pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 ---
 
-## Las tres decisiones que faltan para avanzar
+## Las cuatro decisiones que faltan para avanzar
 
-1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
+1. **`P-31` · ¿Se aprueba que la tabla de CAPEX deje de ser una imagen pegada desde Excel y pase a ser
+   una tabla nativa?** El análisis reveló que hoy las 6 diapositivas de CAPEX son imágenes EMF. La
+   tabla nativa es editable, seleccionable y divisible, pero **cambia el aspecto**.
+2. **`P-32` · ¿Se pueden facilitar las fuentes Gotham?** Sin ellas instaladas en el servidor, ni el
+   aviso de desbordamiento ni la previsualización son fiables — y el desbordamiento es el riesgo
+   principal en un informe de 67 diapositivas donde las formas crecen con el texto.
+3. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
    diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
-2. **`P-07` · ¿Pueden facilitarse 2-3 plantillas PPTX reales?** La más urgente: la generación
-   conservando el formato corporativo es el riesgo número uno, y sin plantillas reales queda sin medir.
-   El plan reserva las semanas 2-3 para una prueba de concepto dedicada.
-3. **`P-16` · ¿Cuál es la cascada de costes real y en qué orden se aplican los porcentajes?** Debe
-   coincidir con los Excel que la consultora ya usa. Tras P-05b su alcance está acotado: afecta solo a
-   la calculadora de medición, no al dato que se almacena.
+4. **`P-16` · ¿Cuál es la cascada de costes real?** Debe coincidir con los Excel que la consultora ya
+   usa. Tras P-05b su alcance está acotado a la calculadora de medición.
 
-Las 24 preguntas restantes, ordenadas por impacto, están en
+Las demás preguntas, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
 
 ---
@@ -109,6 +114,10 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   diapositivas ni renderizado**. Se resuelve con un contrato de plantilla documentado y previsualización
   con LibreOffice, cuyo resultado **no es idéntico** al de PowerPoint. Planes alternativos valorados en
   [`docs/12`](docs/12-pptx.md) §17.9.
+- `[LIM]` **El análisis de las plantillas es estructural, no visual.** LibreOffice no arranca en el
+  entorno donde se hizo, de modo que **no se ha visto ninguna plantilla renderizada**. Todo lo afirmado
+  en [`docs/18`](docs/18-analisis-plantillas-reales.md) procede del fichero, que es exacto y
+  verificable; la validación visual es parte de la prueba de concepto.
 - `[LIM]` La detección de textos que desbordan es una **estimación** por métricas de fuente, con margen
   de ±10-15 %. El aviso lo dice explícitamente al usuario.
 - `[LIM]` **Precio Centro no está integrado, y no se afirma que vaya a funcionar.** No se realiza

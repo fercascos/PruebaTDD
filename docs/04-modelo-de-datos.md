@@ -321,13 +321,39 @@ misma zona y rompería cualquier comparación entre activos de una cartera.
 antiguos, pero no debe ofrecerse al crear líneas nuevas.
 
 #### `risk_level` `[REQ]` §3.3.4
-`id` · `code` (`01`…`04`) · `name` (Bajo, Moderado, Alto, Extremo) · `definition` TEXT **completa** ·
-`score` SMALLINT · `color_token` · `display_order` · `is_system`.
+`id` · `code` (`01`…`04`) · `score` SMALLINT · `color_token` · `display_order` · `is_system`.
+El **nombre y la definición viven en la tabla de traducción** (ver más abajo): las plantillas reales
+demuestran que ambos se emiten en el informe y están traducidos al inglés.
 
 `[REC]` La definición íntegra se guarda en base de datos, no en el código del frontend, para poder
 mostrarla como ayuda al elegir el grado **y** volcarla al informe. Las cuatro definiciones de §3.3.4
 son un criterio profesional, no una etiqueta: si no están a la vista al clasificar, cada consultor
 usará el suyo.
+
+#### `<catalogo>_i18n` — traducción de catálogos `[REC]` (hallazgo C-5)
+
+Las plantillas reales incluyen versión española e inglesa, y traducen **todo** lo que procede de
+catálogos: nombres de capítulo (`CIMENTACIÓN` → `FOUNDATION`), de zona, y **las definiciones íntegras
+de los cuatro grados de riesgo**. Guardar `name` en una sola columna no sirve.
+
+Una tabla de traducción por catálogo, todas con la misma forma:
+
+`<catalogo>_i18n`: `id` · `<catalogo>_id` FK · `locale` (`es-ES`, `en-GB`) · `name` ·
+`definition` TEXT NULL (solo `risk_level`) · `short_name` NULL (para marcos estrechos) · auditoría.
+
+**Índices:** `UNIQUE(<catalogo>_id, locale)`.
+
+Aplica a: `asset_typology`, `zone`, `capex_code`, `risk_level`, `capex_concept`, `time_horizon`,
+`technical_system`, `specialty`, `phase_definition`, `doc_request_category`.
+
+**Resolución del idioma** `[REC]`: idioma del informe → idioma por defecto de la organización →
+`es-ES`. Si falta una traducción, se devuelve el texto del idioma de reserva **con un aviso**, nunca
+una cadena vacía.
+
+> **El idioma es del informe, no del usuario.** Un consultor español genera informes en inglés para un
+> fondo internacional sin cambiar el idioma de su interfaz. Por eso `report_version` guarda
+> `output_locale`, y por eso **`data_snapshot` congela los textos ya resueltos en ese idioma**: si
+> mañana alguien corrige la traducción de un capítulo, el informe emitido no puede cambiar. `[REQ]` §9
 
 #### `capex_concept` · `time_horizon` · `tenant_recoverable`
 `capex_concept`: `id` · `organization_id` NULL · `code` · `name` · `display_order` · `is_system`.
@@ -629,7 +655,8 @@ auditoría · soft delete.
 son dos entregables distintos del mismo encargo, y el Red Flag suele emitirse antes.
 
 `report_version`: `id` · `organization_id` · `report_id` · `version_number` · `report_template_id` ·
-`template_mapping_id` · `storage_key` · `pptx_sha256` `[REQ]` · `size_bytes` · `slide_count` ·
+`template_mapping_id` · **`output_locale`** (idioma del informe, C-5) · `storage_key` ·
+`pptx_sha256` `[REQ]` · `size_bytes` · `slide_count` ·
 `data_snapshot` JSONB NOT NULL `[REQ]` · `data_snapshot_sha256` · `generation_warnings` JSONB ·
 `preview_storage_key` · `status` ENUM(`BORRADOR`,`GENERADO`,`EN_REVISION`,`APROBADO`,`EMITIDO`) ·
 `generated_by/at` · `approved_by/at` · `issued_by/at` · `is_locked` · `supersedes_version_id`.

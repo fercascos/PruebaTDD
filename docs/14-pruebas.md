@@ -215,7 +215,17 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 
 ## 19.7. Pruebas de PPTX
 
-Corpus T1-T20 de [`12-pptx.md`](./12-pptx.md) §17.10.
+Corpus T1-T20 de [`12-pptx.md`](./12-pptx.md) §17.10, **más las cuatro plantillas reales**:
+
+| # | Plantilla real | Qué verifica |
+|---|---|---|
+| **T21** | `Modelo_A_CASTELLANO` (67 diap.) | Camino completo sobre la plantilla piloto: 35 marcadores, 14 pares de sistema, 56 marcos de foto |
+| **T22** | `Modelo_A_ENGLISH` (68 diap.) | **Resolución de catálogos en inglés** y coherencia idioma-plantilla |
+| **T23** | `Modelo_B_CASTELLANO` | Que el mismo mapeo clonado funcione con otra portada e índice |
+| **T24** | `Modelo_B_ENGLISH` | Ídem en inglés |
+
+`[REC]` Las cuatro se usan además como prueba de **rendimiento real**: 67 diapositivas es casi el triple
+del volumen que se había supuesto, y es el dato que valida o corrige el objetivo P-14.
 
 | Familia | Casos |
 |---|---|

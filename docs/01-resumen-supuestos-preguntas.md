@@ -67,7 +67,7 @@ descartadas en [`03-arquitectura.md`](./03-arquitectura.md).
 
 | Riesgo | Por qué importa | Mitigación |
 |---|---|---|
-| **Fidelidad del PPTX** | Si el informe sale descuadrado, el producto no se usa | Corpus de plantillas reales desde la semana 1; contrato de plantilla; prueba de concepto en las semanas 2-3 |
+| **Fidelidad del PPTX** | Si el informe sale descuadrado, el producto no se usa | **Riesgo ya medido** sobre las plantillas reales (doc 18 §18.7): baja de *alta* a *media* porque no hay gráficos, SmartArt ni OLE, y hay una sola estructura. Sube por la ausencia de marcadores de posición y las fuentes Gotham |
 | **Precio Centro** | Es una base de precios **comercial y licenciada**; su uso automatizado no es una decisión técnica | No se integra nada sin licencia vigente y revisión de condiciones. Vía preferente: importación del catálogo exportado, no extracción del sitio `[PDV]` |
 | **Desglose del árbol de códigos** | Tres categorías (Medioambiental, ESG & Energía, Soft Costs) quedan pendientes de desarrollar | Catálogos como datos: se siembran con «General», son utilizables desde el día uno y se amplían sin migración. Las cinco cuestiones de catálogo están **resueltas** (§3.1) |
 
@@ -101,7 +101,8 @@ Todos son modificables. Se indica el impacto de cambiarlos.
 | S-12 | El **VDR es externo**: se guarda el enlace y quién lo facilitó, no se replica el contenido | Medio: replicarlo multiplicaría el almacenamiento y la responsabilidad sobre datos del cliente |
 | S-13 | El **Q&A** es un repositorio de ficheros XLSX versionados, no un gestor de preguntas dentro de la aplicación | Medio-alto: convertirlo en gestor estructurado es un módulo entero |
 | S-14 | Aprobación de **un solo nivel**: un revisor aprueba antes de emitir | Medio |
-| S-15 | La plantilla PPTX se prepara siguiendo un **contrato documentado** | **Muy alto**: es lo que hace viable el bloque de informes |
+| S-15 | La plantilla PPTX se prepara siguiendo un **contrato documentado** | **Muy alto**: es lo que hace viable el bloque de informes. Coste **medido** sobre las plantillas reales: ~1,5 jornadas por plantilla, ~2 en total (doc 18 §18.6) |
+| S-15b | El informe se genera en **el idioma de la plantilla elegida** (ES o EN), y ese idioma se guarda en la versión y se congela en el snapshot | Alto: obliga a traducir los catálogos (doc 18 C-5) |
 
 ### 2.3. Técnicos
 
@@ -146,7 +147,7 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 | # | Pregunta | Por qué es crítica | Se avanza con |
 |---|---|---|---|
 | **P-06** | ¿Disponen de **licencia vigente de Precio Centro** y ofrece exportación o API? ¿Permiten sus condiciones el uso desde una aplicación propia? | Determina si el CAPEX arranca con precios reales. **No es una decisión técnica** | Solo entrada manual + importación de catálogo propio |
-| **P-07** | ¿Pueden facilitarse **2-3 plantillas PPTX reales**, incluida la más compleja? | Sin ellas, el mayor riesgo del proyecto queda sin medir | Plantillas sintéticas que imitan estructuras habituales de TDD |
+| ~~**P-07**~~ ✅ | ~~¿Pueden facilitarse plantillas PPTX reales?~~ **RESUELTA**: el cliente ha facilitado las **cuatro** plantillas de Full Report (Modelo A y B, en español e inglés) | El mayor riesgo del proyecto ya está **medido** | Analizadas en [`18-analisis-plantillas-reales.md`](./18-analisis-plantillas-reales.md). Abre P-30 a P-36 |
 | **P-08** | ¿Es obligatorio el **desglose por medición** (cantidad × precio) o basta el importe a tanto alzado por línea? | Si fuera obligatorio, la captura en campo se ralentiza mucho. *(La parte sobre qué incluye el importe ya está resuelta: P-05b)* | S-10: opcional |
 | **P-09** | ¿**SaaS multi-cliente** o instalación única para una consultora? | Multi-tenancy, RLS, onboarding y permisos | S-01: SaaS multi-organización |
 
@@ -184,6 +185,21 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 | P-27 | ¿Idiomas adicionales previstos y en qué plazo? |
 | P-28 | ¿Política corporativa de contraseñas y MFA que deba replicarse? |
 | P-29 | ¿Quién asume el rol de *product owner* para validar cada fase? |
+
+### 3.6. Preguntas abiertas por el análisis de las plantillas reales
+
+Surgen del análisis del doc [`18`](./18-analisis-plantillas-reales.md). Las dos primeras condicionan
+el trabajo de las fases F8-F9.
+
+| # | Pregunta | Impacto | Propuesta |
+|---|---|---|---|
+| **P-31** | ¿Se aprueba que la tabla de CAPEX pase de **imagen pegada desde Excel** a **tabla nativa** generada por la aplicación? Es una mejora objetiva, pero **cambia el aspecto** del informe | **Alto** | Sí: tabla nativa (editable, seleccionable, divisible, accesible) |
+| **P-32** | ¿Pueden facilitarse los **ficheros de las fuentes Gotham** (Light y Ultra) o su licencia, para instalarlas en el servidor? | **Alto** | Necesario: sin ellas ni el aviso de desbordamiento ni la previsualización son fiables |
+| **P-30** | Tres capítulos del árbol (`H11` fontanería, `H13` seguridad/CCTV/BMS, `H15` otros) **no tienen sección en la plantilla**. ¿Se añaden, se agrupan o solo se generan si hay hallazgos? | Alto | Generarlas solo si hay hallazgos, sin tocar la plantilla |
+| **P-33** | Los idiomas confirmados son **español e inglés**. ¿Habrá más? | Medio | Traducción por catálogo, con `locale` abierto |
+| **P-34** | El informe agrupa **Cimentación y Estructura** en una diapositiva y desglosa `H04` en tres. ¿Se mantiene o se normaliza al árbol? | Medio | Mantener la plantilla; la agrupación se resuelve en el mapeo |
+| **P-35** | Las diapositivas de **Mediciones AEO** y **Disclaimer** son contenido fijo. ¿Se marcan como intocables? | Bajo | Sí, con `@keep` |
+| **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, y cuándo se usa cada uno? | Bajo | Se tratan como dos variantes de portada del mismo mapeo |
 
 ---
 

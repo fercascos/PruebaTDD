@@ -267,15 +267,18 @@ purga programada; documentación de despliegue y operación; manual de uso; form
 descubrirse en la semana 16.
 
 **Semanas 2-3, en paralelo a F0/F1**, un desarrollador dedica dos semanas a un prototipo desechable
-—marcado como tal— que responda a cinco preguntas con las plantillas reales:
+—marcado como tal—. Con las plantillas ya analizadas (doc 18), **el objetivo cambia**: ya no es
+«¿es esto viable?» sino **«¿el clonado de la diapositiva de sistema produce un resultado
+indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas concretas:
 
 | Pregunta | Cómo se responde | Si la respuesta es mala |
 |---|---|---|
-| ¿La repetición por diseño produce diapositivas indistinguibles de las hechas a mano? | Generar 3 fichas de activo y comparar visualmente | Se refuerza el contrato o se activa el plan B |
-| ¿La partición de tablas conserva el formato con **nueve columnas**? | Generar una tabla de 62 filas con los cinco horizontes | Se simplifica el diseño de la tabla |
+| ¿El **clonado** de la diapositiva 13-14 (Cimentación) produce diapositivas indistinguibles del original? | Clonar para 3 sistemas y comparar en PowerPoint, con Gotham instalada | Se rediseña la plantilla con marcadores de posición, o se activa el plan B |
+| ¿La **tabla nativa** de CAPEX (que sustituye a la imagen EMF actual, P-31) resulta aceptable? | Generar una tabla de 62 filas con las cinco columnas de horizonte y enseñarla al cliente | Se replantea como imagen generada |
 | ¿La estimación de desbordamiento es útil (±15 %)? | Comparar con el render de LibreOffice en 20 casos | Se baja la ambición: aviso por umbral de caracteres |
 | ¿Cuánta desviación hay entre LibreOffice y PowerPoint? | Renderizar en ambos y comparar | Se ajusta la expectativa y se documenta |
-| ¿Cabe la definición del grado 04 en los marcos de la plantilla real? | Insertar los 412 caracteres en la ficha de hallazgo | Se propone acortar o mover la leyenda a una diapositiva propia |
+| ¿Los ~4.200 caracteres de capacidad medida por diapositiva de sistema bastan para dos subsistemas? | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
+| ¿La resolución de catálogos **en inglés** produce un informe coherente? | Generar la misma sección con `A_ES` y `A_EN` | Se revisa el modelo de traducción (C-5) |
 
 **Coste: 2 semanas de una persona. Beneficio: conocer el riesgo mayor en la semana 3 en lugar de la
 16**, cuando aún hay margen para cambiar de motor sin romper el calendario.
@@ -311,7 +314,7 @@ quadrantChart
     quadrant-2 "Vigilar de cerca"
     quadrant-3 "Aceptar"
     quadrant-4 "Mitigar cuando aparezca"
-    "R1 Fidelidad PPTX": [0.72, 0.95]
+    "R1 Fidelidad PPTX": [0.45, 0.95]
     "R2 Precio Centro": [0.70, 0.75]
     "R3 Catalogos incompletos": [0.35, 0.70]
     "R4 Modelo de importes": [0.10, 0.80]
@@ -330,15 +333,20 @@ quadrantChart
 ### 22.2. Fichas
 
 #### R1 · La generación de PPTX no conserva el formato con suficiente calidad
-**Probabilidad alta · Impacto crítico.** Si el informe sale descuadrado, el producto no se usa.
+**Probabilidad media · Impacto crítico.** `[REEVALUADO con las plantillas reales]` Baja de *alta* a
+*media*: el análisis del doc 18 §18.7 confirma que **no hay gráficos, SmartArt, OLE ni medios** —los
+tres elementos que hacían frágil el clonado— y que las cuatro plantillas son **una sola estructura**.
+Sube por la ausencia total de marcadores de posición y por las fuentes corporativas Gotham. Sigue
+siendo crítico en impacto: si el informe sale descuadrado, el producto no se usa.
 
 | Mitigación | Cuándo |
 |---|---|
-| Obtener plantillas reales (P-07) antes de escribir código de informe | Semana 1 |
+| ✅ **Plantillas reales obtenidas y analizadas** (doc 18) | Hecho |
+| Instalar las fuentes Gotham en el worker (P-32) | Antes de la prueba de concepto |
 | Prueba de concepto dedicada de 2 semanas (§21.3) | Semanas 2-3 |
 | Contrato de plantilla + plantilla de referencia + validador | F8 |
 | Repetición **por diseño** en lugar de clonado de XML | F9 |
-| Corpus de 20 plantillas con regresión visual | F8-F9 |
+| Corpus de 20 plantillas sintéticas **+ las 4 reales (T21-T24)** con regresión visual | F8-F9 |
 | Métrica de aceptación explícita (≥ 90 % sin retocar) | F10 |
 | `ReportRenderer` como interfaz, para cambiar de motor sin tocar el resto | F0 |
 | Planes B identificados y valorados (§17.9) | Desde el inicio |

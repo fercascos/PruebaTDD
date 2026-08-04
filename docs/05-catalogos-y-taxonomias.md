@@ -15,6 +15,7 @@ de la misma cartera. Tres consecuencias de diseño:
 | Decisión | Motivo |
 |---|---|
 | **Catálogo en tabla, no enumerado compilado** | El árbol tiene 121 hojas y tres categorías pendientes de desglose (P-03). Cada corrección no puede ser una migración |
+| **Cada catálogo tiene tabla de traducción** `[REC]` | Las plantillas reales existen en español e inglés y traducen nombres de capítulo, de zona y **las definiciones de riesgo**. Ver [`18`](./18-analisis-plantillas-reales.md) C-5 |
 | **Semilla del sistema + extensión por organización** | `organization_id IS NULL` marca las filas del sistema, comunes y no editables; cada organización puede añadir las suyas sin tocar las demás |
 | **Retirada por `deprecated_at`, nunca borrado** | Un código retirado debe seguir resolviéndose en informes antiguos, pero no ofrecerse al crear líneas nuevas |
 
@@ -242,6 +243,10 @@ leyenda de la metodología.
 | `04` | Extremo | 4 | Anomalías irrefutables que se prevén sean reclamados por el comprador exigiendo un compromiso de solución con plazo pactado. En este grupo se encuentran las anomalías que por su naturaleza inciden en el deterioro del edificio, pueden suponer un incumplimiento claro de la normativa en vigor y/o pueden tener incidencia en la actividad. |
 | — | – | — | `NULL`: sin clasificar |
 
+`[REC]` **Las definiciones están traducidas al inglés en las plantillas reales**, palabra por palabra
+(«Irrefutable anomalies that are foreseen to be claimed by the buyer…»). Viven, por tanto, en
+`risk_level_i18n`, no en una columna única.
+
 `[REC]` **La definición se muestra al elegir el grado**, no en un manual aparte. Estas cuatro
 definiciones son un criterio profesional, no una etiqueta de color: si no están a la vista en el
 momento de clasificar, cada consultor aplicará el suyo y la matriz de riesgos del informe dejará de
@@ -412,6 +417,7 @@ Lo que se carga en la migración `seed_catalogs`:
 | `capex_concept` | 10 | §3.3.3 |
 | `time_horizon` | **5** | §3.3.4 · mutuamente excluyentes (decisión P-05) |
 | `technical_system` | 14 | §3.2 |
+| `*_i18n` (10 catálogos × 2 idiomas) | ~380 | Traducciones ES/EN, extraídas de las plantillas reales |
 | `doc_request_category` | 5 | §3.1.5 |
 | `phase_definition` | 8 | §3.1.5 |
 | `specialty` | 10 | §3.1.4 |

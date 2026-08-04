@@ -2,6 +2,13 @@
 
 > **Este es el bloque de mayor riesgo técnico del proyecto.** Empieza por las limitaciones reales, no
 > por las promesas, porque las limitaciones condicionan todo lo demás.
+>
+> ⚠️ **Este documento se escribió antes de disponer de las plantillas reales.**
+> [`18-analisis-plantillas-reales.md`](./18-analisis-plantillas-reales.md) analiza las cuatro
+> plantillas facilitadas por el cliente y **corrige cinco decisiones de este documento**: se invierten
+> la estrategia principal y la secundaria (C-1), cambia el modelo de desbordamiento (C-2), la tabla de
+> CAPEX resulta ser una imagen pegada de Excel (C-3), se confirman fuentes no estándar (C-4) y los
+> catálogos necesitan traducción (C-5). **Léase el doc 18 junto con este.**
 
 ---
 
@@ -12,14 +19,14 @@ ecosistema de licencia permisiva.
 
 | # | Limitación | Impacto | Mitigación adoptada |
 |---|---|---|---|
-| **L1** | **`python-pptx` no ofrece API oficial para duplicar diapositivas.** La copia de XML con reasignación de relaciones es una técnica de la comunidad, no soportada, y frágil con gráficos, medios incrustados, SmartArt y objetos OLE | Es el corazón de «una diapositiva por activo / por sistema / por incidencia» | **Estrategia principal:** las diapositivas repetibles se definen como **diseños del patrón**, y cada repetición es una diapositiva nueva creada desde su diseño. Es el camino soportado y el que hereda de forma nativa tema, tipografías, posiciones, logos y pies. **Estrategia secundaria** (clonado de XML) solo para lo que el diseño no cubra, con lista explícita de elementos no soportados |
+| **L1** ⚠️ | *(Ver C-1 del doc 18: con las plantillas reales el clonado pasa a ser la estrategia **principal**, y es seguro porque no hay gráficos, SmartArt ni OLE.)* **`python-pptx` no ofrece API oficial para duplicar diapositivas.** La copia de XML con reasignación de relaciones es una técnica de la comunidad, no soportada, y frágil con gráficos, medios incrustados, SmartArt y objetos OLE | Es el corazón de «una diapositiva por activo / por sistema / por incidencia» | **Estrategia principal:** las diapositivas repetibles se definen como **diseños del patrón**, y cada repetición es una diapositiva nueva creada desde su diseño. Es el camino soportado y el que hereda de forma nativa tema, tipografías, posiciones, logos y pies. **Estrategia secundaria** (clonado de XML) solo para lo que el diseño no cubra, con lista explícita de elementos no soportados |
 | **L2** | **`python-pptx` no renderiza.** No hay forma de saber desde la biblioteca si un texto cabe o si una tabla desborda | La detección de desbordamiento no puede ser exacta | Doble vía: **estimación** por métricas de fuente con `fontTools`, y **previsualización real** convirtiendo a PDF/PNG con LibreOffice headless. Los avisos se presentan **explícitamente como estimaciones** |
 | **L3** | **LibreOffice no renderiza igual que PowerPoint.** Difieren en sustitución de fuentes, SmartArt, efectos, algunos gráficos y saltos de línea | La previsualización es indicativa, no idéntica | Se declara en la propia pantalla. Se recomienda una validación manual en PowerPoint por plantilla nueva. Si el cliente exige fidelidad exacta, existe vía comercial (§17.9) |
 | **L4** | **Las métricas de fuente exigen el archivo de la fuente.** Si la plantilla usa una tipografía corporativa no instalada en el servidor, la medición usa un sustituto | Falsos positivos y negativos en el aviso de desbordamiento | Se permite **subir los archivos de fuente** junto a la plantilla; si no están, se mide con un sustituto de métricas compatibles, se **amplía el margen al 15 %** y el aviso lo indica |
 | **L5** | **`python-pptx` no crea gráficos complejos.** Sí puede sustituir los datos de un gráfico existente | No se pueden generar gráficos arbitrarios | **Contrato de plantilla:** los gráficos deben existir con su formato definitivo; la aplicación solo reemplaza sus datos |
 | **L6** | **No hay API para SmartArt.** Es XML propietario que la biblioteca no modela | Un SmartArt con marcadores dentro no se rellenará | La plantilla no debe usar SmartArt en zonas de datos. Se **detecta y se avisa** durante el análisis. El SmartArt existente se conserva intacto |
 | **L7** | **El texto de un marcador puede estar fragmentado en varios `run`.** PowerPoint lo parte por revisiones ortográficas o cambios de formato: `{{project.` + `name}}` | Los marcadores podrían no detectarse | El analizador **normaliza el párrafo completo** antes de buscar, y al sustituir conserva el formato del primer `run`. Caso probado en la suite |
-| **L8** | **PowerPoint puede autoajustar el texto** (`normAutofit` con `fontScale`), y ese cálculo lo hace PowerPoint, no el fichero | Un texto marcado como desbordado puede encogerse solo al abrirlo | Se detecta el autoajuste y, en ese caso, el aviso baja de severidad y lo indica |
+| **L8** ⚠️ | **PowerPoint puede autoajustar el texto** (`normAutofit`)… **pero en las plantillas reales no hay ni un solo caso**: el 68 % de los cuadros usa «ajustar forma al texto», que hace crecer la forma y **sale de la diapositiva**. Ver C-2 del doc 18 | El texto no se encoge: se desborda fuera de la página | El criterio pasa a ser «¿el marco crecido rebasa el alto de la diapositiva o pisa la forma de debajo?», que es **más fiable** de estimar |
 | **L9** | **Las tablas creadas por código heredan el estilo, no el formato manual.** Si el autor dio formato a mano celda a celda, las filas nuevas no lo replican | Tablas largas con aspecto inconsistente | El generador **clona el XML de propiedades de una fila modelo**. Funciona con formato de fila; el formato irregular por celdas se declara no soportado |
 | **L10** | Un PPTX con **objetos OLE, vídeo, audio o macros** no se procesa en esos elementos | Los `.pptm` se rechazan por política; los objetos incrustados se conservan sin tocar | Se avisa en el análisis |
 
@@ -60,6 +67,11 @@ y modificarlo sin herramientas especiales. La alternativa habitual —cuadros de
 frágil: alguien acaba borrándolos o desplazándolos.
 
 ### Regla 2 · Las diapositivas repetibles se definen como diseños del patrón
+
+> ⚠️ **Corregido por C-1 del doc 18.** Las plantillas reales **no usan marcadores de posición** (0 de
+> 67 diapositivas), de modo que esta regla no es aplicable a ellas: la vía real es **clonar la
+> diapositiva modelo**, marcada con `@model`. Esta regla se mantiene como recomendación para plantillas
+> nuevas o rediseñadas.
 
 El autor crea un **diseño** en el patrón para cada sección que se repite. La aplicación instancia una
 diapositiva nueva desde ese diseño por cada elemento.
