@@ -96,7 +96,7 @@ Todos son modificables. Se indica el impacto de cambiarlos.
 | S-08 | **Una línea de CAPEX pertenece a un activo y a una zona**, y la zona depende de la tipología del edificio | Alto: condiciona los catálogos dependientes |
 | S-09 | ~~Importe por horizonte con varias columnas~~ → **Resuelto (P-05): una línea tiene UN horizonte y UN importe** | Cerrado |
 | S-10 | El desglose por medición (cantidad × precio unitario + cascada) es **opcional** y, cuando existe, se traslada al importe con una acción explícita | Alto: si fuera obligatorio, cambia la interfaz de captura |
-| S-10b | El importe de la línea es la **base imponible final** (ya incluye lo que el consultor estime de indirectos, honorarios y contingencia). Los impuestos van encima, desde el perfil de costes | **Alto**: determina si la cascada se aplica sobre el importe tecleado o no. Ver [`11`](./11-capex-precios.md) §16.2 |
+| S-10b | ~~El importe es la base imponible final~~ → **Confirmado por el cliente (P-05b)**: el importe incluye indirectos, honorarios y contingencia. Solo el impuesto se aplica encima | Cerrado |
 | S-11 | La **visita** se registra por activo, con estado y fecha propios, y la fase «Visita al activo» del proyecto refleja el agregado | Medio |
 | S-12 | El **VDR es externo**: se guarda el enlace y quién lo facilitó, no se replica el contenido | Medio: replicarlo multiplicaría el almacenamiento y la responsabilidad sobre datos del cliente |
 | S-13 | El **Q&A** es un repositorio de ficheros XLSX versionados, no un gestor de preguntas dentro de la aplicación | Medio-alto: convertirlo en gestor estructurado es un módulo entero |
@@ -123,8 +123,8 @@ Ordenadas por impacto. **Ninguna bloquea el inicio**: para cada una hay un supue
 
 ### 3.1. Decisiones cerradas por el cliente ✅
 
-Cinco cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí, con su fecha y su
-consecuencia, porque son las que estructuran el modelo de datos y condicionan la semilla de catálogos.
+Seis cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí con su consecuencia,
+porque son las que estructuran el modelo de datos y condicionan la semilla de catálogos.
 
 | # | Cuestión | **Decisión** | Consecuencia |
 |---|---|---|---|
@@ -134,11 +134,12 @@ consecuencia, porque son las que estructuran el modelo de datos y condicionan la
 | **P-04** ✅ | El rango del horizonte corto no cuadraba (0-2 frente a 1-2) | **Aceptada la propuesta**: se adopta **1-2 años**, configurable | El plan de inversión por años del informe cuadra con el catálogo |
 | **P-05** ✅ | ¿Importe por horizonte en varias columnas, o un solo horizonte por línea? | **Una sola columna**: cada línea pertenece a **un único horizonte** —corto, medio, largo, mejora potencial u otro tipo de petición—, y las categorías son mutuamente excluyentes | El modelo es `time_horizon_id` + `amount`, no cinco columnas. La rejilla y el informe **pivotan** a cinco columnas para leerse como la hoja de cálculo de siempre, pero es imposible que una línea quede repartida entre dos plazos. Ver [`11`](./11-capex-precios.md) §16.2 |
 
-`[PDV]` **Único supuesto que queda colgando de estas decisiones**: que el importe de la línea sea la
-**base imponible final** —ya incluidos los indirectos, honorarios y contingencia que el consultor
-estime— y no un coste directo al que la aplicación deba aplicar la cascada. De ello depende que el
-desglose por medición se traslade con un botón (propuesta actual) o se aplique automáticamente. Se
-confirma junto con P-16.
+| **P-05b** ✅ | ¿El importe tecleado ya incluye indirectos, honorarios y contingencia, o es un coste directo al que aplicar la cascada? | **Lo incluye todo**: el importe es la **base imponible final** de la línea | La aplicación **nunca** aplica la cascada por encima de un importe tecleado. El desglose por medición es una **calculadora opcional** cuyo resultado se traslada con un botón. Del perfil de costes, **solo el impuesto se aplica a todas las líneas**; indirectos, honorarios, gastos generales, beneficio industrial y contingencia se usan únicamente dentro de esa calculadora |
+
+Con estas seis decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
+cuestión estructural pendiente sobre cómo se captura y se calcula una línea de CAPEX. Lo único que
+sigue abierto en materia de costes es **P-16**, el orden concreto de los porcentajes *dentro* de la
+calculadora de medición, que afecta a una herramienta de apoyo y no al dato que se almacena.
 
 ### 3.2. Impacto crítico
 
@@ -146,7 +147,7 @@ confirma junto con P-16.
 |---|---|---|---|
 | **P-06** | ¿Disponen de **licencia vigente de Precio Centro** y ofrece exportación o API? ¿Permiten sus condiciones el uso desde una aplicación propia? | Determina si el CAPEX arranca con precios reales. **No es una decisión técnica** | Solo entrada manual + importación de catálogo propio |
 | **P-07** | ¿Pueden facilitarse **2-3 plantillas PPTX reales**, incluida la más compleja? | Sin ellas, el mayor riesgo del proyecto queda sin medir | Plantillas sintéticas que imitan estructuras habituales de TDD |
-| **P-08** | ¿Es obligatorio el **desglose por medición** (cantidad × precio) o basta el importe a tanto alzado por línea? ¿Y el importe tecleado ya incluye indirectos, honorarios y contingencia? | Si es obligatorio, la captura en campo se ralentiza mucho. La segunda parte determina si la cascada se aplica sobre lo tecleado o no | S-10 y S-10b: opcional, y el importe es la base imponible final |
+| **P-08** | ¿Es obligatorio el **desglose por medición** (cantidad × precio) o basta el importe a tanto alzado por línea? | Si fuera obligatorio, la captura en campo se ralentiza mucho. *(La parte sobre qué incluye el importe ya está resuelta: P-05b)* | S-10: opcional |
 | **P-09** | ¿**SaaS multi-cliente** o instalación única para una consultora? | Multi-tenancy, RLS, onboarding y permisos | S-01: SaaS multi-organización |
 
 ### 3.3. Impacto alto

@@ -53,7 +53,9 @@ aserciones que no comprueban nada. `[REC]`
 | **Redondeo** | Los cuatro modos; frontera `0,005`, `0,015`, `0,025` (donde `HALF_UP` y `HALF_EVEN` difieren); por peldaño frente a solo total |
 | **Suma coherente** | La suma de totales de línea coincide **exactamente** con el total del proyecto, con 300 líneas de importes aleatorios. Propiedad con `hypothesis` |
 | **Pivote a columnas** | Una línea produce valor en **exactamente una** de las cinco columnas y «—» en las otras cuatro; la suma de las cinco columnas coincide con el total del proyecto |
-| **Porcentajes** | 0 %; 100 %; decimales (`8,25 %`); todos a cero (total = coste directo) |
+| **Porcentajes** | 0 %; 100 %; decimales (`8,25 %`); todos a cero (base = coste directo) |
+| **No propagación** `[REC]` | Cambiar `contingency_pct` del perfil **no modifica** el `amount` de ninguna línea existente; cambiar `tax_pct` **sí** recalcula `tax_amount` y `total_cost` de todas. Es la prueba que protege la decisión P-05b |
+| **La cascada no se autoaplica** | Una línea con importe tecleado y `amount_source = MANUAL` conserva su importe aunque se rellene el desglose por medición; solo cambia al trasladarlo explícitamente |
 | **Escenarios** | Bajo < probable < alto siempre; factor 1,0 devuelve el probable; factores derivados de `confidence` |
 | **Índices** | Actualización con índices válidos; **índice ausente ⇒ no calcula y avisa** (no interpola); índice cero o negativo ⇒ error |
 | **Valores límite** | Cantidad 0; precio 0; importes de 10⁹ sin desbordar `NUMERIC(18,4)` |

@@ -183,7 +183,7 @@ apps/api/
 │   │   │   ├── router.py · service.py
 │   │   │   ├── engine.py           ⚠⚠ PURO: sin E/S, sin base de datos, sin reloj
 │   │   │   ├── horizons.py         Un horizonte por línea · pivote a columnas
-│   │   │   ├── cascade.py          Cascada configurable
+│   │   │   ├── cascade.py          Cascada configurable (solo desglose por medición)
 │   │   │   ├── rounding.py · scenarios.py · indices.py
 │   │   │   ├── views.py            Las diez vistas agregadas
 │   │   │   └── export.py           XLSX con trazabilidad y catálogos · CSV
@@ -451,7 +451,9 @@ down:           ## Detiene y limpia
 ## Invariantes que nunca se rompen
 1. Nunca se sobrescribe un objeto original (fotografía, documento, plantilla).
 2. Nunca se usa `float` para dinero. Solo `Decimal` y `NUMERIC`.
-3. Una línea de CAPEX tiene UN horizonte y UN importe. Nunca cinco columnas editables.
+3. Una línea de CAPEX tiene UN horizonte y UN importe, y ese importe lo incluye todo.
+   La cascada NUNCA se aplica sobre un importe tecleado: se traslada con acción explícita.
+   Del perfil de costes, solo `tax_pct` afecta a todas las líneas.
 4. Nunca se marca un precio como validado sin un usuario identificado.
 5. Nunca se modifica una versión de informe emitida.
 6. Nunca se escribe a mano el estado de una fase derivada.

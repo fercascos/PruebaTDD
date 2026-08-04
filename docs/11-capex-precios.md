@@ -9,7 +9,7 @@
 | 1 | **El cálculo es una función pura** | `CapexEngine` no accede a base de datos, red ni reloj. Entran datos, salen datos. Testeable al céntimo, en milisegundos `[REC]` |
 | 2 | **Ninguna fórmula oculta** | Cada peldaño se persiste y se muestra con sus operandos `[REQ]` |
 | 3 | **Decimal exacto, nunca coma flotante** | `Decimal` en Python, `NUMERIC` en PostgreSQL. El redondeo es una decisión explícita |
-| 4 | **Una línea, un horizonte, un importe** | Mutuamente excluyentes. El total con impuestos es columna generada `[REQ]` P-05 |
+| 4 | **Una línea, un horizonte, un importe que lo incluye todo** | Horizontes mutuamente excluyentes; el importe es la base imponible final; el total con impuestos es columna generada `[REQ]` P-05 y P-05b |
 | 5 | **Un precio sin procedencia no existe** | Toda línea con precio tiene una `price_reference`, incluida la entrada manual `[REQ]` |
 | 6 | **La validación es humana, siempre** | No hay ruta de código que ponga `price_status = VALIDADO` sin usuario identificado `[REQ]` |
 | 7 | **Las fuentes son adaptadores** | El núcleo no conoce ninguna fuente concreta `[REQ]` |
@@ -50,6 +50,7 @@ flowchart TD
 |---|---|---|
 | Origen | §3.3.4 «CAPEX estimado» | §3.3.5 (precios, GG, BI, contingencias) |
 | Obligatorio | **Sí** | **No** `[SUP]` S-10 / P-08 |
+| Qué contiene el importe | **Todo**: indirectos, honorarios y contingencia ya dentro | Los calcula, para ayudar a llegar a esa cifra |
 | Contenido | **Un horizonte + un importe** | Cantidad, precio unitario y cascada |
 | Para qué | Plan de inversión: cuánto y cuándo | Justificar de dónde sale el importe |
 | Quién lo usa | Siempre | Cuando hay medición real o referencia de precio |
@@ -74,18 +75,31 @@ consecuencias, todas favorables:
 cálculo actual—, pero eso es **presentación**: la rejilla pivota el horizonte de cada línea a su
 columna y el resto muestra «—». Ver [`09-ux-pantallas.md`](./09-ux-pantallas.md) pantalla 13.
 
-### Qué representa el importe `[SUP]`
+### Qué representa el importe
 
-`amount` es la **base imponible final** de la línea: el importe que el consultor considera necesario
-para ejecutar la actuación, **ya incluidos** los conceptos que estime (indirectos, honorarios,
-contingencia). Los impuestos van **encima**, calculados desde el perfil de costes, de forma uniforme
-haya o no desglose por medición.
+> **P-05b · DECIDIDO.** El importe **incluye todo**: es la **base imponible final** de la línea, con
+> los indirectos, honorarios, gastos generales, beneficio industrial y contingencia que el consultor
+> estime ya dentro. Los impuestos van **encima**, desde el perfil de costes.
 
-`[REC]` **La cascada no se aplica automáticamente sobre un importe tecleado a mano.** Cuando alguien
-escribe 48.500 € de memoria, esa cifra ya lleva dentro lo que esa persona considera: aplicarle encima
-un 8 % de indirectos y un 10 % de contingencia sería duplicar. Por eso el desglose es una herramienta
-de cálculo cuyo resultado se **traslada con un botón**, dejando constancia en `amount_source`, y la
-interfaz avisa cuando el importe y la medición no coinciden.
+**La cascada no se aplica nunca sobre un importe tecleado a mano.** Cuando alguien escribe 48.500 € de
+memoria, esa cifra ya lleva dentro lo que esa persona considera: aplicarle encima un 8 % de indirectos
+y un 10 % de contingencia sería duplicar. Por eso el desglose es una **calculadora** cuyo resultado se
+**traslada con un botón**, dejando constancia en `amount_source`, y la interfaz avisa cuando el importe
+y la medición no coinciden.
+
+#### Consecuencia sobre el perfil de costes `[REC]`
+
+De los seis porcentajes del perfil, **solo uno se aplica a todas las líneas**:
+
+| Porcentaje | Alcance | Cuándo se usa |
+|---|---|---|
+| **`tax_pct`** | **Todas** las líneas | Siempre, sobre `amount` |
+| `indirect_pct` · `overhead_pct` · `profit_pct` · `fees_pct` · `contingency_pct` | **Solo** el desglose por medición | Valores por defecto de la calculadora, editables por línea |
+
+Esto evita el malentendido más caro posible en este bloque: **creer que cambiar el porcentaje de
+contingencia del perfil recalcula los 63 importes del proyecto.** No lo hace, y no debe hacerlo: esos
+importes ya llevan dentro la contingencia que decidió el consultor. La interfaz de perfiles separa
+visualmente ambos grupos y lo dice con esas palabras.
 
 `[REC]` **Por qué el desglose sigue siendo opcional.** En muchas líneas el consultor pone un importe a
 tanto alzado basado en su criterio, y solo en algunas hace una medición. Obligar a medir todo
@@ -96,8 +110,10 @@ líneas donde sí la hay.
 
 ## 16.3. La cascada de costes
 
-`[PDV]` **P-16 es la pregunta abierta más importante de este apartado**: el orden de aplicación de los
-porcentajes cambia el resultado y debe coincidir con lo que la consultora ya usa.
+`[PDV]` **P-16 sigue abierta**: el orden de aplicación de los porcentajes cambia el resultado y debe
+coincidir con lo que la consultora ya usa. Su alcance, no obstante, está **acotado**: afecta solo a la
+calculadora de medición (P-05b), no al dato que se almacena ni a las líneas introducidas a tanto
+alzado.
 
 ### Cascada propuesta `[SUP]`
 
@@ -540,5 +556,5 @@ Esa cadena completa es el producto real de este bloque.
 | 3 | `[LIM]` Sin conversión automática de moneda | Multi-moneda en un proyecto queda pendiente de P-19 |
 | 4 | `[LIM]` Los índices se cargan manualmente | Automatizarlos exige una fuente con condiciones validadas |
 | 5 | `[LIM]` La cascada por defecto es un supuesto | Debe confirmarse contra los Excel reales del cliente antes del primer informe (P-16) |
-| 6 | `[SUP]` Que el importe sea la **base imponible final** de la línea (y no un coste directo al que aplicar la cascada) es una interpretación | Determina si la cascada se aplica o no sobre lo tecleado. Confirmar junto con P-16 |
+| 6 | `[LIM]` Cambiar los porcentajes del perfil **no recalcula** los importes ya introducidos, por diseño (P-05b) | Si se quiere reestimar un proyecto entero con otra contingencia, hay que rehacer las mediciones línea a línea. Es el precio de que el importe sea la cifra que el consultor asume |
 | 7 | `[LIM]` `PrecioCentroSource` es un andamio no funcional | Marcado como tal en código, documentación e interfaz. No se presenta como integración operativa |

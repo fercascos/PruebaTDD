@@ -450,16 +450,22 @@ ambas coinciden al céntimo. `[REC]`
 > Con un solo campo es **imposible que una línea quede repartida por error entre dos plazos**, y la
 > suma por horizonte es un `GROUP BY`, no cinco sumas independientes que podrían descuadrar.
 
-> **Sobre qué representa `amount`** `[SUP]`: es la **base imponible final** de la línea, es decir, el
-> importe que el consultor considera necesario para ejecutar la actuación, ya incluidos los conceptos
-> que estime (indirectos, honorarios, contingencia). Los impuestos van **encima**, calculados desde el
-> perfil de costes, de forma uniforme haya o no desglose por medición. Es lo que hace que
+> **Sobre qué representa `amount`** — **P-05b · DECIDIDO**: es la **base imponible final** de la
+> línea. El importe que teclea el consultor **ya incluye** todo lo que él estime: indirectos,
+> honorarios, gastos generales, beneficio industrial y contingencia. Los impuestos van **encima**,
+> calculados desde el perfil, de forma uniforme haya o no desglose por medición. Es lo que hace que
 > «impuestos configurables y separados del coste base» `[REQ]` se cumpla igual en toda la tabla.
 >
-> Cuando existe desglose por medición, la cascada calcula `computed_base` y el usuario lo **traslada**
-> a `amount` con un botón explícito, quedando `amount_source = MEDICION`. **La cascada no se aplica
-> automáticamente sobre un importe tecleado a mano**: hacerlo duplicaría los porcentajes que el
-> consultor ya había incluido en su estimación.
+> **Consecuencia sobre los porcentajes del perfil de costes** `[REC]`: de los seis, **solo `tax_pct`
+> se aplica a todas las líneas**. Los otros cinco (`indirect_pct`, `overhead_pct`, `profit_pct`,
+> `fees_pct`, `contingency_pct`) se usan **exclusivamente dentro del desglose por medición**, y por eso
+> son anulables: una línea sin medición no los tiene. El perfil de costes es, en la práctica, un
+> impuesto aplicable a todo más una **preconfiguración de la calculadora**.
+>
+> Cuando existe desglose, la cascada calcula `computed_base` y el usuario lo **traslada** a `amount`
+> con un botón explícito, quedando `amount_source = MEDICION`. **La cascada nunca se aplica
+> automáticamente sobre un importe tecleado a mano**: hacerlo duplicaría porcentajes que el consultor
+> ya había incluido.
 
 #### `equipment` — inventario opcional `[REQ]` §7 / P-15
 `id` · `organization_id` · `project_id` · `asset_id` · `technical_system_id` · `zone_id` NULL ·
@@ -479,10 +485,21 @@ quien no, no la ve. La vida residual se calcula, no se teclea (P-15).
 ### 8.7. Precios
 
 #### `cost_profile` `[REC]`
-`id` · `organization_id` · `name` · `indirect_pct` · `overhead_pct` · `profit_pct` · `fees_pct` ·
-`contingency_pct` · `tax_pct` · `tax_label` · `cascade_config` JSONB ·
-`rounding_mode` ENUM · `rounding_decimals` · `is_default` · auditoría · soft delete.
+`id` · `organization_id` · `name` · `tax_pct` · `tax_label` · `indirect_pct` · `overhead_pct` ·
+`profit_pct` · `fees_pct` · `contingency_pct` · `cascade_config` JSONB · `rounding_mode` ENUM ·
+`rounding_decimals` · `is_default` · auditoría · soft delete.
 Todos los `*_pct` con `CHECK (0 <= v <= 100)`.
+
+**Dos grupos de campos con alcance distinto** `[REC]` (P-05b):
+
+| Campo | Se aplica a | Alcance |
+|---|---|---|
+| `tax_pct`, `tax_label` | **Todas** las líneas del proyecto | Impuesto sobre `amount` |
+| `indirect_pct` · `overhead_pct` · `profit_pct` · `fees_pct` · `contingency_pct` | **Solo** al desglose por medición | Valores por defecto de la calculadora, editables por línea |
+
+Separarlos evita el malentendido más caro posible en este bloque: creer que cambiar el porcentaje de
+contingencia del perfil recalcula los 63 importes del proyecto. No lo hace, y no debe hacerlo: esos
+importes ya llevan dentro la contingencia que decidió el consultor.
 
 #### `price_source`
 `id` · `organization_id` NULL · `code` · `name` ·

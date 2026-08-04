@@ -661,8 +661,8 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 │ │ ══════════════════════════════════════════════════════════               │ │
 │ │ TOTAL con impuestos 🔒                58.685,00 €                         │ │
 │ └──────────────────────────────────────────────────────────────────────────┘ │
-│ ⓘ El importe es la base imponible de la actuación: incluye lo que usted      │
-│   estime de indirectos, honorarios y contingencia. Los impuestos van encima. │
+│ ⓘ El importe incluye todo lo que usted estime: indirectos, honorarios y     │
+│   contingencia. Solo los impuestos se aplican encima.                       │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ ▾ DESGLOSE POR MEDICIÓN (opcional)                    [ Ocultar desglose ]  │
 │ Unidad ┌────┐ Cantidad ┌──────┐ Precio unitario ┌───────────┐ EUR           │

@@ -314,7 +314,7 @@ quadrantChart
     "R1 Fidelidad PPTX": [0.72, 0.95]
     "R2 Precio Centro": [0.70, 0.75]
     "R3 Catalogos incompletos": [0.35, 0.70]
-    "R4 Modelo de importes": [0.20, 0.80]
+    "R4 Modelo de importes": [0.10, 0.80]
     "R5 Desbordamiento texto": [0.80, 0.55]
     "R6 Clonado diapositivas": [0.65, 0.75]
     "R7 Fuga entre organizaciones": [0.20, 0.98]
@@ -378,8 +378,8 @@ pendiente el desglose de tres categorías del árbol de códigos.
 | Cambio de tipología con previsualización de impacto y sin destruir datos |
 
 #### R4 · El modelo de importes no coincide con el trabajo real
-**Probabilidad baja · Impacto alto.** `[RESUELTO en gran parte]` P-05 está cerrada: **una línea, un
-horizonte, un importe**. Queda un supuesto asociado.
+**Probabilidad muy baja · Impacto alto.** `[RESUELTO]` P-05 y P-05b están cerradas: **una línea, un
+horizonte, un importe que lo incluye todo**. No queda ninguna cuestión estructural abierta.
 
 | Mitigación |
 |---|
@@ -387,7 +387,7 @@ horizonte, un importe**. Queda un supuesto asociado.
 | La rejilla **pivota** a cinco columnas, de modo que la vista sigue siendo la de la hoja de cálculo actual sin que el dato se pueda repartir por error |
 | El desglose por medición es **opcional** y se traslada con acción explícita, nunca automáticamente |
 | El total con impuestos es columna generada, nunca tecleado |
-| `[SUP]` **Riesgo residual:** que el importe sea la *base imponible final* (y no un coste directo al que aplicar la cascada) es interpretación propia. Se confirma junto con P-16 antes de F7 |
+| **P-05b confirmada**: el importe incluye indirectos, honorarios y contingencia. La cascada nunca se aplica sobre lo tecleado, y solo el impuesto del perfil afecta a todas las líneas |
 
 #### R5 · La detección de desbordamiento no es fiable
 **Probabilidad alta · Impacto medio** (`[LIM]` L2).

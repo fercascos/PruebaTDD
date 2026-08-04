@@ -69,7 +69,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 
 ## Decisiones ya cerradas por el cliente ✅
 
-Cinco cuestiones que estaban abiertas y que estructuran el modelo de datos:
+Seis cuestiones que estaban abiertas y que estructuran el modelo de datos:
 
 | # | Decisión | Consecuencia |
 |---|---|---|
@@ -79,11 +79,9 @@ Cinco cuestiones que estaban abiertas y que estructuran el modelo de datos:
 | **P-04** | Horizonte corto = **1-2 años** | El plan de inversión por años cuadra con el catálogo |
 | **P-05** | **Una línea, un horizonte, un importe** | Corto, medio, largo, mejora potencial u otro tipo de petición son **mutuamente excluyentes**. El modelo es `time_horizon_id` + `amount`; la rejilla y el informe pivotan a cinco columnas para leerse como la hoja de siempre, pero una línea no puede quedar repartida entre dos plazos |
 
-Queda un supuesto asociado a P-05, pendiente de confirmar junto con la cascada de costes: que el
-importe tecleado sea la **base imponible final** de la línea —ya incluidos los indirectos, honorarios
-y contingencia que el consultor estime— y no un coste directo al que la aplicación deba aplicar la
-cascada. De ello depende que el desglose por medición se traslade con un botón, como está diseñado, o
-se aplique de forma automática.
+| **P-05b** | El importe tecleado **lo incluye todo** | Es la base imponible final: lleva dentro indirectos, honorarios y contingencia. La aplicación **nunca** aplica la cascada por encima. Del perfil de costes, solo el impuesto afecta a todas las líneas; el resto de porcentajes son la preconfiguración de la calculadora de medición |
+
+Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos.**
 
 ---
 
@@ -95,7 +93,8 @@ se aplique de forma automática.
    conservando el formato corporativo es el riesgo número uno, y sin plantillas reales queda sin medir.
    El plan reserva las semanas 2-3 para una prueba de concepto dedicada.
 3. **`P-16` · ¿Cuál es la cascada de costes real y en qué orden se aplican los porcentajes?** Debe
-   coincidir con los Excel que la consultora ya usa. Resuelve también el supuesto pendiente de P-05.
+   coincidir con los Excel que la consultora ya usa. Tras P-05b su alcance está acotado: afecta solo a
+   la calculadora de medición, no al dato que se almacena.
 
 Las 24 preguntas restantes, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
