@@ -40,7 +40,7 @@ tdd-inmobiliaria/
 │   │   ├── 0005-contrato-de-plantilla-pptx.md
 │   │   ├── 0006-estado-y-fases-como-ejes-independientes.md
 │   │   ├── 0007-catalogos-como-datos.md
-│   │   ├── 0008-importe-por-horizonte-y-medicion-opcional.md
+│   │   ├── 0008-horizonte-unico-y-medicion-opcional.md
 │   │   └── 0009-zona-normalizada-frente-a-location-node.md
 │   ├── plantilla-pptx/
 │   │   ├── contrato-de-plantilla.md
@@ -86,7 +86,7 @@ tdd-inmobiliaria/
 ```
 
 `[REC]` **Los catálogos viven en CSV dentro de `docs/`, no incrustados en una migración de Python.**
-Motivos: son 121 códigos y 106 relaciones que el cliente debe poder revisar sin leer código; un CSV se
+Motivos: son 121 códigos y 86 relaciones que el cliente debe poder revisar sin leer código; un CSV se
 abre en Excel y se comenta; y el `diff` de un cambio en el árbol es legible en una revisión de código.
 La migración los lee; la fuente de verdad es el CSV.
 
@@ -182,7 +182,7 @@ apps/api/
 │   │   ├── capex/                  ⚠ Motor de cálculo
 │   │   │   ├── router.py · service.py
 │   │   │   ├── engine.py           ⚠⚠ PURO: sin E/S, sin base de datos, sin reloj
-│   │   │   ├── horizons.py         Total = suma de los cinco
+│   │   │   ├── horizons.py         Un horizonte por línea · pivote a columnas
 │   │   │   ├── cascade.py          Cascada configurable
 │   │   │   ├── rounding.py · scenarios.py · indices.py
 │   │   │   ├── views.py            Las diez vistas agregadas
@@ -240,7 +240,7 @@ apps/api/
     ├── fixtures/
     │   ├── permission_matrix.yaml  ⚠ La matriz de §11.3 como datos
     │   ├── capex_golden_cases.yaml Casos dorados verificados a mano
-    │   ├── zone_typology_matrix.yaml  ⚠ Las 106 combinaciones
+    │   ├── zone_typology_matrix.yaml  ⚠ Las 86 combinaciones
     │   ├── templates/              Corpus T1-T20
     │   ├── images/                 Válidas, corruptas, maliciosas, EXIF variado
     │   └── expected_renders/
@@ -346,7 +346,7 @@ apps/web/
     │   ├── findings/               Pantallas 11, 12
     │   ├── capex/                  Pantallas 13, 14
     │   │   ├── CapexTable.tsx      TanStack Table, columnas por horizonte
-    │   │   ├── HorizonInputs.tsx   ⚠ Cinco importes + total con candado
+    │   │   ├── HorizonPicker.tsx   ⚠ Un horizonte + un importe
     │   │   ├── CascadePanel.tsx    ⚠ «Cómo se calcula»
     │   │   └── PriceComparator.tsx ⚠ Con skipped_sources visibles
     │   ├── reports/                Pantallas 15, 16, 17, 18
@@ -434,7 +434,7 @@ seed-catalogs:  ## Carga los catálogos desde docs/catalogos/*.csv
 seed-demo:      ## Datos ficticios reproducibles
 test:           ## Suite completa
 test-unit:      ## Unitarias (~35 s)
-test-catalogs:  ## Las 106 combinaciones zona × tipología
+test-catalogs:  ## Las 86 combinaciones zona × tipología
 test-perms:     ## Matriz de permisos y aislamiento RLS
 test-pptx:      ## Corpus T1-T20
 lint:           ## ruff · mypy · eslint · tsc · import-linter
@@ -451,7 +451,7 @@ down:           ## Detiene y limpia
 ## Invariantes que nunca se rompen
 1. Nunca se sobrescribe un objeto original (fotografía, documento, plantilla).
 2. Nunca se usa `float` para dinero. Solo `Decimal` y `NUMERIC`.
-3. El total de una línea de CAPEX es SIEMPRE la suma de sus horizontes.
+3. Una línea de CAPEX tiene UN horizonte y UN importe. Nunca cinco columnas editables.
 4. Nunca se marca un precio como validado sin un usuario identificado.
 5. Nunca se modifica una versión de informe emitida.
 6. Nunca se escribe a mano el estado de una fase derivada.

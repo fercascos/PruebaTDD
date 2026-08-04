@@ -14,7 +14,7 @@ de la misma cartera. Tres consecuencias de diseño:
 
 | Decisión | Motivo |
 |---|---|
-| **Catálogo en tabla, no enumerado compilado** | El árbol de códigos tiene ~120 hojas y está incompleto (P-03). Cada corrección no puede ser una migración |
+| **Catálogo en tabla, no enumerado compilado** | El árbol tiene 121 hojas y tres categorías pendientes de desglose (P-03). Cada corrección no puede ser una migración |
 | **Semilla del sistema + extensión por organización** | `organization_id IS NULL` marca las filas del sistema, comunes y no editables; cada organización puede añadir las suyas sin tocar las demás |
 | **Retirada por `deprecated_at`, nunca borrado** | Un código retirado debe seguir resolviéndose en informes antiguos, pero no ofrecerse al crear líneas nuevas |
 
@@ -22,38 +22,40 @@ de la misma cartera. Tres consecuencias de diseño:
 
 ## 5.1. Tipologías de activo
 
-`[PDV]` **P-01: la especificación da dos listas distintas.**
+> **P-01 · DECIDIDO.** La especificación daba dos listas distintas. El cliente ha resuelto:
+> **los valores de §3.1.3 se sustituyen por los de §3.3.1**, que es la lista correcta.
 
-| §3.1.3 (ficha de activo) | §3.3.1 (datos para el CAPEX) |
-|---|---|
-| oficinas · logística · retail · hotel · residencial · industrial · otra | Industrial · Oficinas · Hotel · Comercial · Sanitario · Otros |
+### Catálogo único `[REQ]`
 
-Diferencias: *logística* y *residencial* solo están en la primera; *sanitario* solo en la segunda;
-*retail* y *Comercial* parecen el mismo concepto con dos nombres.
+Seis tipologías. Son las de §3.3.1, y su juego de zonas es el que define §3.3.2 para cada una:
 
-### Propuesta de reconciliación `[REC]`
+| `code` | Nombre | Zonas aplicables (§3.3.2) | Campos específicos que muestra |
+|---|---|:--:|---|
+| `INDUSTRIAL` | Industrial | 11 | **Almacén: superficie y altura** |
+| `OFICINAS` | Oficinas | 10 | Superficie alquilable |
+| `HOTEL` | Hotel | 16 | — |
+| `COMERCIAL` | Comercial | 13 | Superficie alquilable |
+| `SANITARIO` | Sanitario | 16 | — |
+| `OTROS` | Otros | 20 `[SUP]` | — |
 
-Un catálogo **único** de 8 tipologías. Las que la especificación no cubre en §3.3.2 heredan el juego
-de zonas de la tipología más próxima, marcado como supuesto revisable:
+`asset_typology` queda con **6 filas**, todas del sistema (`organization_id IS NULL`,
+`is_system = true`). El campo `typology_id` de `asset` referencia esta tabla y **determina qué zonas
+ofrece el selector** en hallazgos y líneas de CAPEX.
 
-| `code` | Nombre | Zonas que aplica | Campos específicos que muestra |
-|---|---|---|---|
-| `OFICINAS` | Oficinas | Juego «Oficinas» de §3.3.2 | Superficie alquilable |
-| `INDUSTRIAL` | Industrial | Juego «Industrial» de §3.3.2 | Almacén: superficie y altura |
-| `LOGISTICA` | Logística | Juego «Industrial» `[SUP]` | Almacén: superficie y altura |
-| `COMERCIAL` | Comercial / Retail | Juego «Comercial» de §3.3.2 | Superficie alquilable |
-| `HOTEL` | Hotel | Juego «Hotel» de §3.3.2 | — |
-| `SANITARIO` | Sanitario | Juego «Sanitario» de §3.3.2 | — |
-| `RESIDENCIAL` | Residencial | Juego «Oficinas» + «Habitaciones» `[SUP]` | Superficie alquilable |
-| `OTROS` | Otros | **Todas las zonas**, sin filtrar `[SUP]` | — |
+### Consecuencias de la decisión
 
-`[SUP]` Tres decisiones que conviene confirmar:
-- **Logística = Industrial** a efectos de zonas. Es lo razonable: comparten almacén, muelles y
-  vestuarios.
-- **Residencial** no está en §3.3.2. Se le asigna el juego de oficinas más «Habitaciones», que es lo
-  mínimo utilizable.
-- **Otros** ofrece el catálogo completo en lugar de solo «–», porque un activo atípico sigue
-  necesitando clasificar una cubierta o un cuadro técnico.
+Tres, que conviene tener presentes porque no son evidentes a primera vista:
+
+| # | Consecuencia | Valoración |
+|---|---|---|
+| 1 | **Los activos logísticos se clasifican como `INDUSTRIAL`** | Encaja bien: es la única tipología que ofrece *Almacén* y *Vestuarios*, que es exactamente lo que una nave logística necesita. No se pierde capacidad de clasificación |
+| 2 | **Los activos residenciales caen en `OTROS`** | §3.3.2 no define un juego de zonas para residencial. `[PDV]` Si aparecen activos residenciales con frecuencia, conviene definir su juego de zonas y añadir la tipología: es una fila de catálogo y una columna en la matriz, sin migración de código |
+| 3 | **Los campos de almacén solo se muestran en `INDUSTRIAL`** | Antes se preveían también para logística. Al fundirse, la regla queda más simple: superficie y altura de almacén aparecen **solo** en Industrial |
+
+`[SUP]` **Zonas de «Otros»:** §3.3.2 asigna a esta tipología únicamente el valor «–», es decir, ninguna
+zona. Se mantiene la propuesta ya aceptada de ofrecerle **el catálogo completo de 20 zonas**: un activo
+atípico sigue teniendo cubierta, cuadros técnicos y aseos, y dejarlo sin zonas obligaría a clasificar
+todo como «sin zona». Es un supuesto revisable con una sola línea de la matriz.
 
 ---
 
@@ -95,28 +97,32 @@ Unión de las seis listas, deduplicada. 20 zonas:
 
 Tabla puente `zone_typology`. `●` = disponible.
 
-| Zona | Oficinas | Industrial | Logística | Comercial | Hotel | Sanitario | Residencial | Otros |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| Cuadros técnicos | ● | ● | ● | ● | ● | ● | ● | ● |
-| Aparcamiento | ● | ● | ● | ● | ● | ● | ● | ● |
-| Oficinas | ● | ● | ● | ● | ● | ● | ● | ● |
-| Aseos | ● | ● | ● | ● | ● | ● | ● | ● |
-| Cubierta | ● | ● | ● | ● | ● | ● | ● | ● |
-| Zonas exteriores | ● | ● | ● | ● | ● | ● | ● | ● |
-| Vestíbulo principal | ● | ● | ● | ● | ● | ● | ● | ● |
-| Núcleo escaleras | ● | ● | ● | ● | ● | ● | ● | ● |
-| General | ● | ● | ● | ● | ● | ● | ● | ● |
-| Vestíbulo de planta | ● | | | ● | ● | ● | ● | ● |
-| Salas de personal | | | | ● | ● | ● | | ● |
-| Almacén | | ● | ● | | | | | ● |
-| Vestuarios | | ● | ● | | | | | ● |
-| Habitaciones | | | | | ● | ● | ● | ● |
-| Cocina | | | | | ● | | | ● |
-| Restaurante | | | | ● | ● | ● | | ● |
-| Gimnasio | | | | | ● | ● | | ● |
-| Piscina | | | | | ● | ● | | ● |
-| Zona comercial | | | | ● | | | | ● |
-| Salas de uso sanitario | | | | | | ● | | ● |
+| Zona | Industrial | Oficinas | Hotel | Comercial | Sanitario | Otros `[SUP]` |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Cuadros técnicos | ● | ● | ● | ● | ● | ● |
+| Aparcamiento | ● | ● | ● | ● | ● | ● |
+| Oficinas | ● | ● | ● | ● | ● | ● |
+| Aseos | ● | ● | ● | ● | ● | ● |
+| Cubierta | ● | ● | ● | ● | ● | ● |
+| Zonas exteriores | ● | ● | ● | ● | ● | ● |
+| Vestíbulo principal | ● | ● | ● | ● | ● | ● |
+| Núcleo escaleras | ● | ● | ● | ● | ● | ● |
+| General | ● | ● | ● | ● | ● | ● |
+| Vestíbulo de planta | | ● | ● | ● | ● | ● |
+| Salas de personal | | | ● | ● | ● | ● |
+| Almacén | ● | | | | | ● |
+| Vestuarios | ● | | | | | ● |
+| Habitaciones | | | ● | | ● | ● |
+| Cocina | | | ● | | | ● |
+| Restaurante | | | ● | ● | ● | ● |
+| Gimnasio | | | ● | | ● | ● |
+| Piscina | | | ● | | ● | ● |
+| Zona comercial | | | | ● | | ● |
+| Salas de uso sanitario | | | | | ● | ● |
+| **Total por tipología** | **11** | **10** | **16** | **13** | **16** | **20** |
+
+**86 relaciones** en total: 66 definidas literalmente en §3.3.2 (11 + 10 + 16 + 13 + 16) más 20 del
+supuesto sobre «Otros».
 
 `[REC]` **El valor «–» no es una fila.** Se representa como `zone_id IS NULL` con etiqueta de
 presentación «–». Si fuera una fila del catálogo, toda agregación tendría que excluirla
@@ -164,13 +170,14 @@ flowchart LR
 | `code` | Nombre | Estado |
 |---|---|---|
 | `HC` | Hard Costs | ✅ Desarrollada (15 capítulos) |
-| `MA` | Medioambiental | ⚠️ **Sin desglose** `[PDV]` P-03 |
-| `ESG` | ESG & Energía | ⚠️ **Sin desglose** `[PDV]` P-03 |
-| `SC` | Soft Costs | ⚠️ **Sin desglose** `[PDV]` P-03 |
+| `MA` | Medioambiental | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
+| `ESG` | ESG & Energía | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
+| `SC` | Soft Costs | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
 
-`[REC]` Las tres sin desglose se siembran con un único capítulo `General` y un elemento `General`,
-para que sean utilizables desde el primer día. En cuanto se reciba el desglose, se añade sin migración
-de datos: las líneas ya codificadas como `MA.General` siguen siendo válidas.
+> **P-03 · DECIDIDO.** Las tres categorías sin desglose se siembran con un único capítulo `General` y
+> un elemento `General`, para que sean utilizables desde el primer día. Cuando se reciba su desglose se
+> añade **sin migración de datos**: las líneas ya codificadas como `MA.General` siguen siendo válidas, y
+> el consultor puede reclasificarlas si quiere afinar.
 
 ### Nivel 2 y 3 · Hard Costs, completo
 
@@ -294,29 +301,54 @@ color como refuerzo.
 
 ## 5.6. Horizontes temporales `[REQ]` §3.3.4
 
-| `code` | Nombre | Años | Columna en `capex_item` |
+> **P-05 · DECIDIDO.** El importe **se rellena en una sola columna**: cada línea pertenece a **un
+> único horizonte**. Una actuación se aplica en corto, medio o largo plazo, o se considera mejora
+> potencial —que decide el cliente—, o es otro tipo de petición. Son valores **mutuamente
+> excluyentes**.
+
+| `code` | Nombre | Años | Naturaleza |
 |---|---|---|---|
-| `CORTO` | Corto plazo | **1-2** `[SUP]` | `amount_short` |
-| `MEDIO` | Medio plazo | 3-5 | `amount_mid` |
-| `LARGO` | Largo plazo | 6-10 | `amount_long` |
-| `MEJORAS` | Mejoras | — | `amount_improvements` |
-| `OTRO` | Otro | — | `amount_other` |
-| `TOTAL` | Total | — | `total_cost` (**calculado**) |
+| `CORTO` | Corto plazo | **1-2** | Plazo de ejecución |
+| `MEDIO` | Medio plazo | 3-5 | Plazo de ejecución |
+| `LARGO` | Largo plazo | 6-10 | Plazo de ejecución |
+| `MEJORAS` | Mejoras | — | **Mejora potencial**: la decide el cliente, no es una necesidad técnica |
+| `OTRO` | Otro | — | Otro tipo de petición |
 
-`[PDV]` **P-04: incoherencia en el rango del corto plazo.** El literal dice «Corto plazo (0-2 años)»
-y la glosa dice «1 a 2 años». Se adopta **1-2 años**, configurable en el catálogo. Importa porque el
-plan de inversión del informe suele presentarse por años y un desfase de un año descuadra la tabla.
+En `capex_item` esto es **un campo, no cinco**: `time_horizon_id` (FK obligatoria) más `amount`. Ver
+[`04-modelo-de-datos.md`](./04-modelo-de-datos.md) §8.6.
 
-**Sobre «Mejoras»** `[REQ]`: la especificación lo define como «mejoras a realizar por la propiedad
-para incrementar el valor del activo». No es un horizonte temporal, sino una **naturaleza de gasto**
-que convive con los tres plazos. Se modela como columna propia igual que los demás porque así aparece
-en la tabla, pero conviene tenerlo presente: en las vistas por año, la columna «Mejoras» no se reparte
-en el tiempo salvo que se le asigne `planned_year`. `[REC]`
+`[REC]` **«Total» no es un horizonte**, aunque aparezca en la lista de §3.3.4: es el agregado de las
+líneas. No se modela como fila del catálogo, igual que «–» no se modela como zona. Un total tecleado a
+mano que no cuadra con sus sumandos es el defecto más común de las hojas de cálculo que esta
+aplicación viene a sustituir.
 
-**Sobre «Total»** `[REC]`: nunca es un campo escribible. Es
-`amount_short + amount_mid + amount_long + amount_improvements + amount_other`, calculado en base de
-datos. Un total tecleado a mano que no cuadra con sus sumandos es el defecto más común de las hojas de
-cálculo que esta aplicación viene a sustituir.
+### Modelo frente a presentación `[REC]`
+
+Que el modelo tenga un solo campo **no impide** que la tabla siga viéndose con cinco columnas, que es
+como los equipos la usan hoy:
+
+```
+Código   Descripción              Corto    Medio    Largo   Mejoras   Otro     TOTAL
+CX-0117  Sustitución enfriadora   48.500        —        —        —      —    48.500
+CX-0118  Limpieza de conductos         —   22.855        —        —      —    22.855
+CX-0125  Renovación de aseos           —        —        —   35.000      —    35.000
+                                 ───────  ───────  ───────  ───────  ─────   ───────
+                                  48.500   22.855        0   35.000      0   106.355
+```
+
+La rejilla **pivota** el horizonte de cada línea a su columna: exactamente una casilla tiene valor por
+fila, y las demás muestran «—». Es la vista de siempre, pero el dato subyacente es un único importe
+con su clasificación, de modo que **es imposible que una línea quede repartida por error entre dos
+plazos**.
+
+**Sobre «Mejoras»** `[REQ]`: la especificación la define como «mejoras a realizar por la propiedad
+para incrementar el valor del activo». Con el modelo de horizonte único queda claro lo que es: una
+línea **no es a la vez** una necesidad a corto plazo y una mejora potencial. En las vistas por año, las
+líneas de `MEJORAS` y `OTRO` no se reparten en el tiempo salvo que se les asigne `planned_year`.
+
+**Rango del corto plazo** — **P-04 · DECIDIDO**: el literal de §3.3.4 decía «0-2 años» y la glosa
+«1 a 2 años». Se adopta **1-2 años**, configurable en el catálogo (`year_from`, `year_to`). Importa
+porque el plan de inversión del informe se presenta por años y un desfase descuadra la tabla.
 
 ---
 
@@ -370,15 +402,15 @@ Lo que se carga en la migración `seed_catalogs`:
 
 | Catálogo | Filas | Origen |
 |---|:--:|---|
-| `asset_typology` | 8 | §3.1.3 + §3.3.1 reconciliados (P-01) |
+| `asset_typology` | **6** | §3.3.1 (decisión P-01) |
 | `zone` | 20 | §3.3.2 deduplicado |
-| `zone_typology` | 106 | Matriz de §5.2 |
+| `zone_typology` | **86** | Matriz de §5.2: 66 de §3.3.2 + 20 de «Otros» `[SUP]` |
 | `capex_code` nivel 1 | 4 | §3.3.4 |
-| `capex_code` nivel 2 | 18 | 15 de Hard Costs + 3 provisionales (P-03) |
+| `capex_code` nivel 2 | 18 | 15 de Hard Costs + 3 «General» (decisión P-03) |
 | `capex_code` nivel 3 | 121 | §3.3.4 |
 | `risk_level` | 4 | §3.3.4, con definición íntegra |
 | `capex_concept` | 10 | §3.3.3 |
-| `time_horizon` | 5 + total | §3.3.4 |
+| `time_horizon` | **5** | §3.3.4 · mutuamente excluyentes (decisión P-05) |
 | `technical_system` | 14 | §3.2 |
 | `doc_request_category` | 5 | §3.1.5 |
 | `phase_definition` | 8 | §3.1.5 |

@@ -68,7 +68,7 @@ Un grupo propio, porque en esta aplicación los catálogos son estructura, no co
 | `GET` | `/catalogs/capex-codes?level=&parent_id=&q=` | Árbol de códigos. Con `q`, búsqueda por texto sobre todo el árbol |
 | `GET` | `/catalogs/capex-codes/tree` | Árbol completo en una llamada, para precargar el selector en cliente |
 | `GET` | `/catalogs/risk-levels` | **Incluye la definición íntegra de cada grado** `[REQ]` |
-| `GET` | `/catalogs/capex-concepts` · `/time-horizons` · `/technical-systems` · `/specialties` · `/doc-request-categories` | |
+| `GET` | `/catalogs/capex-concepts` · `/time-horizons` · `/technical-systems` · `/specialties` · `/doc-request-categories` | `time-horizons` devuelve los cinco valores con su rango de años |
 | `POST`/`PATCH` | `/catalogs/{tipo}` | Solo `ADMIN`. Las filas del sistema no son editables |
 | `POST` | `/catalogs/capex-codes/{id}/deprecate` | Retira un código sin borrarlo: deja de ofrecerse, sigue resolviéndose en informes antiguos |
 | `GET` | `/catalogs/version` | Huella del catálogo, para que el cliente sepa si debe refrescar su caché `[REC]` |
@@ -240,7 +240,7 @@ sequenceDiagram
 | `GET`/`PATCH`/`DELETE` | `/capex-items/{id}` | Cualquier cambio devuelve **los totales recalculados** `[REQ]` |
 | `POST` | `/capex-items/bulk-update` | Cambio masivo de porcentajes, año, prioridad, recuperabilidad |
 | `POST` | `/capex/preview-calculation` | **Sin persistir**: entradas → desglose paso a paso. Alimenta el panel «cómo se calcula» `[REC]` |
-| `GET` | `/projects/{id}/capex/summary?group_by=` | `asset` · `capex_code` · `zone` · `risk` · `concept` · `horizon` · `year` · `priority` · `tenant_recoverable` `[REQ]` |
+| `GET` | `/projects/{id}/capex/summary?group_by=` | `asset` · `capex_code` · `zone` · `risk` · `concept` · **`horizon`** · `year` · `priority` · `tenant_recoverable` `[REQ]`. Con `horizon` devuelve las cinco categorías, cada línea en una sola |
 | `GET` | `/projects/{id}/capex/scenarios` | Totales bajo / probable / alto |
 | `POST` | `/projects/{id}/capex/exports` | `{format:"xlsx"\|"csv", group_by, include_traceability}` → `202` `[REQ]` |
 
@@ -258,10 +258,8 @@ POST /api/v1/projects/{id}/findings
   "risk_level_id": "…",             // 03 Alto
   "capex_concept_id": "…",          // Vida útil
   "tenant_recoverable": "NO",
-  "amounts": {
-    "short": "48500.00", "mid": "0", "long": "0",
-    "improvements": "0", "other": "0"
-  },
+  "time_horizon_code": "CORTO",     // uno solo: CORTO|MEDIO|LARGO|MEJORAS|OTRO
+  "amount": "48500.00",             // base imponible; los impuestos van encima
   "measurement": {                   // opcional [SUP] S-10
     "unit": "ud", "quantity": "1", "unit_price": "48500.00"
   }

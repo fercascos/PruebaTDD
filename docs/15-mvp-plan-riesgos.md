@@ -26,9 +26,9 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | 4 | Asignación del equipo | Miembros con rol, activos, especialidades, matriz de cobertura, responsables de fase, alcance aplicado en el servidor | Delegación temporal |
 | 5 | Repositorio de fotografías | Carga múltiple, captura desde cámara, original inmutable con cuatro barreras, EXIF y GPS, duplicados por hash exacto y perceptual, clasificación por zona y sistema, etiquetas, comentarios, selección y orden para informe, papelera, versiones, descarga individual y ZIP con eliminación de metadatos, **anotación básica** | Anotación avanzada, reconocimiento de contenido |
 | 6 | Renombrado sin modificar originales | Plantilla configurable con 12 tokens, previsualización obligatoria con colisiones, lote, reversión, extensión inalterable, auditado | — |
-| 7 | **Catálogos** | 8 tipologías, 20 zonas con su matriz, **121 códigos CAPEX en árbol de 3 niveles**, 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
+| 7 | **Catálogos** | **6 tipologías**, 20 zonas con su matriz de **86 relaciones**, **121 códigos CAPEX en árbol de 3 niveles**, 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
 | 8 | Hallazgos e inventario | Línea con código, zona validada, descripción, comentarios, riesgo, concepto y recuperabilidad; atajo «hallazgo desde foto»; recomendaciones alternativas; matriz riesgo × horizonte; inventario de equipos opcional con importación XLSX | Plantillas de hallazgo por tipología |
-| 9 | CAPEX con precio manual | **Importes por los cinco horizontes con total calculado**; desglose por medición opcional con cascada visible y editable peldaño a peldaño; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; exportación XLSX con hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
+| 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; exportación XLSX con hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
 | 10 | Registro de referencias y URLs | `PriceSourceAdapter` completo, adaptador manual con justificación obligatoria, importador de catálogo propio, comparador con `skipped_sources`, validación humana con restricción en base de datos, registro de fuentes con revisión de condiciones y control de licencia | Integración con Precio Centro ni ninguna otra fuente externa |
 | 11 | Carga de plantilla PPTX | Original inmutable con WORM, análisis completo, detección de marcadores y directivas, previsualización de estructura, avisos de no soportados, validaciones de seguridad del paquete | Editor de plantillas en la aplicación |
 | 12 | Mapeo básico de marcadores | Catálogo cerrado ampliado (incluye `{{finding.risk_definition}}` y `{{report_limitations}}`), mapeo manual de lo desconocido, guardado y clonado, reglas de repetición, partición de tablas con subtotales, reglas de fotos, validación | Mapeo visual por arrastre |
@@ -43,7 +43,7 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | Añadido | Coste ahora | Coste si se posterga |
 |---|---|---|
 | **Multi-organización con RLS desde el día uno** | ~1 semana | Reescribir el acceso a datos y migrar todos los proyectos. Es la decisión menos reversible |
-| **Catálogos como datos, no como enumerados** | ~4 días | Una migración por cada corrección del árbol de códigos, que está incompleto (P-03) |
+| **Catálogos como datos, no como enumerados** | ~4 días | Una migración por cada corrección del árbol, que tiene tres categorías pendientes de desglose (P-03) |
 | **Cola de subida persistente e idempotencia** | ~1 semana | Rehacer la capa de datos del cliente. Sin ella el trabajo con red intermitente no funciona |
 | **i18n con catálogo de traducción** | ~3 días | Recorrer cientos de componentes buscando cadenas incrustadas |
 | **`AsyncTask` con progreso visible** | ~3 días | El usuario mirando una pantalla congelada al cargar 200 fotos |
@@ -75,9 +75,10 @@ Con datos ficticios y sobre una plantilla PPTX real del cliente:
       diapositivas sin retocar) `[SUP]`.
 - [ ] El hash del original de cada plantilla y fotografía es idéntico al de subida tras 100
       renombrados y 20 generaciones.
-- [ ] Las 106 combinaciones zona × tipología se comportan según la matriz, y un cambio de tipología no
-      destruye ningún dato.
-- [ ] La suma de los cinco horizontes coincide exactamente con el total en las 10 vistas agregadas.
+- [ ] Las **86 combinaciones** zona × tipología se comportan según la matriz, y un cambio de tipología
+      no destruye ningún dato.
+- [ ] Cada línea cae en **un solo horizonte**, y la suma de las cinco columnas pivotadas coincide
+      exactamente con el total del proyecto en las 10 vistas agregadas.
 - [ ] Las fases derivadas reflejan el trabajo real y no son marcables a mano.
 - [ ] La suite completa está verde, con las puertas de cobertura por módulo cumplidas.
 - [ ] Permisos, RLS y aislamiento entre organizaciones pasan al 100 %.
@@ -103,7 +104,7 @@ gantt
     section Preparación
     F0 · Cimientos técnicos            :f0, 2026-09-01, 14d
     Corpus de plantillas reales (P-07) :crit, p07, 2026-09-01, 10d
-    Reconciliar catálogos (P-01..P-05) :crit, pcat, 2026-09-01, 10d
+    Semilla de catálogos (P-01..P-05 ✓) :pcat, 2026-09-01, 10d
 
     section Núcleo
     F1 · Catálogos y taxonomías        :f1, after f0, 10d
@@ -149,19 +150,19 @@ OpenAPI e i18n; CI con todas las puertas; observabilidad.
 
 **Hito:** un usuario entra y todo lo que hace queda auditado.
 
-> **En paralelo y con máxima prioridad:** obtener las plantillas reales (P-07), arrancar la **prueba
-> de concepto de PPTX** (§21.3), y **cerrar con el cliente las cuatro incoherencias de catálogo**
-> (P-01 a P-04). Lo segundo y lo tercero condicionan F1 y F8.
+> **En paralelo y con máxima prioridad:** obtener las plantillas reales (P-07) y arrancar la **prueba
+> de concepto de PPTX** (§21.3). Las incoherencias de catálogo (P-01 a P-05) ya están **resueltas**, de
+> modo que F1 puede sembrar datos definitivos desde el primer día.
 
 #### F1 · Catálogos y taxonomías — 2 semanas `[REC]`
 
-Modelo de catálogos; semilla completa (8 tipologías, 20 zonas, 106 relaciones, 121 códigos, 4 riesgos
+Modelo de catálogos; semilla completa (6 tipologías, 20 zonas, 86 relaciones, 121 códigos, 4 riesgos
 con definición, 10 conceptos, 5 horizontes, 14 sistemas, 8 fases, 5 categorías de documentación);
 `CatalogService`; endpoints con filtrado dependiente; validación de zona por tipología y de código
 seleccionable; retirada por `deprecated_at`; componentes de frontend (selector de árbol de 3 niveles,
 selector de zona filtrado, selector de riesgo **con definición visible**).
 
-**Hito:** las 106 combinaciones zona × tipología se comportan según la matriz, verificado en pruebas.
+**Hito:** las 86 combinaciones zona × tipología se comportan según la matriz, verificado en pruebas.
 
 #### F2 · Proyectos, clientes y activos — 2,5 semanas
 
@@ -312,8 +313,8 @@ quadrantChart
     quadrant-4 "Mitigar cuando aparezca"
     "R1 Fidelidad PPTX": [0.72, 0.95]
     "R2 Precio Centro": [0.70, 0.75]
-    "R3 Catalogos incompletos": [0.75, 0.70]
-    "R4 Modelo de importes": [0.55, 0.80]
+    "R3 Catalogos incompletos": [0.35, 0.70]
+    "R4 Modelo de importes": [0.20, 0.80]
     "R5 Desbordamiento texto": [0.80, 0.55]
     "R6 Clonado diapositivas": [0.65, 0.75]
     "R7 Fuga entre organizaciones": [0.20, 0.98]
@@ -362,13 +363,13 @@ la decisión de cambio de motor **en la semana 4**, no en la 18.
 criterio del consultor. Limitación de alcance consciente y comunicada.
 
 #### R3 · Los catálogos están incompletos o mal reconciliados `[REC]`
-**Probabilidad alta · Impacto alto.** Riesgo específico de esta especificación: el árbol solo está
-desarrollado para Hard Costs, las tipologías no coinciden entre apartados y las zonas tienen
-duplicidades de nomenclatura.
+**Probabilidad media-baja · Impacto alto.** Riesgo muy reducido tras las decisiones del cliente: las
+tipologías están fijadas (las 6 de §3.3.1), las zonas deduplicadas y los horizontes cerrados. Queda
+pendiente el desglose de tres categorías del árbol de códigos.
 
 | Mitigación |
 |---|
-| Las cuatro incoherencias están **identificadas y documentadas** (P-01 a P-04), no descubiertas a mitad del desarrollo |
+| Las cinco cuestiones de catálogo (P-01 a P-05) están **resueltas antes de escribir código**, no descubiertas a mitad del desarrollo |
 | **Catálogos como datos**: ampliar o corregir no requiere migración de código |
 | Las categorías sin desglose se siembran con un capítulo «General» utilizable desde el día uno |
 | `deprecated_at` en lugar de borrado: retirar un código no rompe informes antiguos |
@@ -377,15 +378,16 @@ duplicidades de nomenclatura.
 | Cambio de tipología con previsualización de impacto y sin destruir datos |
 
 #### R4 · El modelo de importes no coincide con el trabajo real
-**Probabilidad media · Impacto alto.** P-05 sigue abierta: cinco columnas de importe frente a una
-línea con un solo horizonte.
+**Probabilidad baja · Impacto alto.** `[RESUELTO en gran parte]` P-05 está cerrada: **una línea, un
+horizonte, un importe**. Queda un supuesto asociado.
 
 | Mitigación |
 |---|
-| Se ha elegido la opción **más general**: reducir cinco columnas a una es trivial; lo contrario obliga a partir líneas ya introducidas |
-| El desglose por medición es **opcional**, no impuesto |
-| El total es siempre calculado, nunca tecleado: sea cual sea la respuesta, esa invariante se mantiene |
-| P-05 y P-08 planteadas como preguntas de impacto crítico, para responderlas **antes** de F7 |
+| P-05 respondida antes de escribir código: el modelo es `time_horizon_id` + `amount`, no cinco columnas |
+| La rejilla **pivota** a cinco columnas, de modo que la vista sigue siendo la de la hoja de cálculo actual sin que el dato se pueda repartir por error |
+| El desglose por medición es **opcional** y se traslada con acción explícita, nunca automáticamente |
+| El total con impuestos es columna generada, nunca tecleado |
+| `[SUP]` **Riesgo residual:** que el importe sea la *base imponible final* (y no un coste directo al que aplicar la cascada) es interpretación propia. Se confirma junto con P-16 antes de F7 |
 
 #### R5 · La detección de desbordamiento no es fiable
 **Probabilidad alta · Impacto medio** (`[LIM]` L2).

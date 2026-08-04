@@ -230,8 +230,8 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 │ └────────────────────────────────┘                                          │
 │                                                                              │
 │ ┌── ACTIVOS ─────────────────────────────────────────────────────────────┐  │
-│ │ ▓ Nave A     Logística · Madrid · 18.500 m² · 412 fotos · 21 hallaz. → │  │
-│ │ ▓ Nave B     Logística · Madrid · 12.100 m² · 380 fotos · 18 hallaz. → │  │
+│ │ ▓ Nave A     Industrial · Madrid · 18.500 m² · 412 fotos · 21 hallaz.→ │  │
+│ │ ▓ Nave B     Industrial · Madrid · 12.100 m² · 380 fotos · 18 hallaz.→ │  │
 │ │ ▓ Ed. Oficinas Oficinas · Madrid · 3.400 m² · 492 fotos · 8 hallaz.  → │  │
 │ │                                                    [ + Añadir activo ] │  │
 │ └────────────────────────────────────────────────────────────────────────┘  │
@@ -248,7 +248,7 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ ┌── FICHA: Nave A ───────────────────────────────────────────────────────┐  │
 │ │ ┌───────────┐ Nombre    Nave A               Código     NA-01          │  │
-│ │ │  ▓▓▓▓▓▓▓  │ Tipología │ Logística        ▾│  ⚠ cambiarla afecta a    │  │
+│ │ │  ▓▓▓▓▓▓▓  │ Tipología │ Industrial       ▾│  ⚠ cambiarla afecta a    │  │
 │ │ │  imagen   │                                  las zonas de 8 líneas   │  │
 │ │ │ principal │ Uso princ. Almacenaje                                     │  │
 │ │ │[ Cambiar ]│ Dirección  Pol. Ind. Ficticio, 12                        │  │
@@ -261,10 +261,10 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 │ │ Total edificio   ┌──────────┐ m²     Plantas sobre ras.┌──┐            │  │
 │ │                  │  18.500  │        Bajo rasante      ┌──┐            │  │
 │ │ Alquilable       ┌──────────┐ m²                                       │  │
-│ │ Almacén          ┌──────────┐ m²  ← solo Industrial / Logística        │  │
+│ │ Almacén          ┌──────────┐ m²  ← solo Industrial                    │  │
 │ │                  │  17.000  │                                          │  │
 │ │ Oficinas         ┌──────────┐ m²                                       │  │
-│ │ Altura almacén   ┌──────────┐ m   ← solo Industrial / Logística        │  │
+│ │ Altura almacén   ┌──────────┐ m   ← solo Industrial                    │  │
 │ │                  │   11,00  │                                          │  │
 │ │                                                                        │  │
 │ │ ┌── UBICACIÓN ───────────────┐ ┌── ESTRUCTURA INTERNA ──────────────┐  │  │
@@ -284,7 +284,7 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│ Cambiar tipología: Logística → Comercial                     ✕   │
+│ Cambiar tipología: Industrial → Comercial                    ✕   │
 ├──────────────────────────────────────────────────────────────────┤
 │ ⚠ 8 líneas usan zonas que no existen en la tipología Comercial: │
 │                                                                  │
@@ -522,9 +522,9 @@ FICHA DEL HALLAZGO
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ HAL-0042 · Corrosión en enfriadora                   ● VALIDADO        [⋯]  │
 ├────────────────────────────────────────────┬─────────────────────────────────┤
-│ Activo    Nave A (Logística)             ▾ │ ▸ EVIDENCIA FOTOGRÁFICA        │
+│ Activo    Nave A (Industrial)            ▾ │ ▸ EVIDENCIA FOTOGRÁFICA        │
 │ Zona      Cubierta                       ▾ │  ▓▓▓▓  ▓▓▓▓  ▓▓▓▓             │
-│   ⓘ 12 zonas disponibles para Logística    │  007   008   011                │
+│   ⓘ 11 zonas disponibles para Industrial   │  007   008   011                │
 │ Espacio   Sala de máquinas               ▾ │      [ + Asociar fotos ]        │
 │ Equipo    CL-01 Enfriadora CH-300        ▾ ├─────────────────────────────────┤
 │                                            │ ▸ RIESGO                        │
@@ -611,24 +611,32 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 │ Activo: Todos ▾ │ Capítulo: Todos ▾ │ ☑ Mostrar IVA  ☐ Solo sin validar     │
 │ Escenario: ○Bajo ◉Probable ○Alto                                             │
 ├────────┬──────────────┬──────────┬────┬────────┬────────┬────────┬────┬─────┤
-│ Código │ Descripción  │ Zona     │Ries│ Corto  │ Medio  │ Largo  │Mej.│TOTAL│
+│ Código │ Descripción  │ Zona     │Ries│ Corto  │ Medio  │ Largo  │Mej.│ Otro│
 ├────────┼──────────────┼──────────┼────┼────────┼────────┼────────┼────┼─────┤
 │▾ HC.H08 · HVAC                              184.320 € (4 líneas)             │
-│CX-0117 │Sustitución   │ Cubierta │ 03 │ 48.500 │      0 │      0 │  0 │48.500│
-│        │enfriadora    │          │    │        │        │        │    │  ✓  │
-│CX-0118 │Limpieza      │ Almacén  │ 02 │      0 │ 22.855 │      0 │  0 │22.855│
-│        │conductos     │          │    │        │        │        │    │  ⚠  │
+│CX-0117 │Sustitución   │ Cubierta │ 03 │ 48.500 │    —   │    —   │ —  │  —  │
+│        │enfriadora    │          │    │   ✓    │        │        │    │     │
+│CX-0118 │Limpieza      │ Almacén  │ 02 │    —   │ 22.855 │    —   │ —  │  —  │
+│        │conductos     │          │    │        │   ⚠    │        │    │     │
 │▾ HC.H09 · Electricidad                       96.400 € (3 líneas)             │
-│CX-0121 │Renovación    │ Cuadros  │ 03 │ 48.760 │      0 │      0 │  0 │48.760│
-│        │cuadro general│ técnicos │    │        │        │        │    │  ✓  │
+│CX-0121 │Renovación    │ Cuadros  │ 03 │ 48.760 │    —   │    —   │ —  │  —  │
+│        │cuadro general│ técnicos │    │   ✓    │        │        │    │     │
 │▾ HC.H10 · Protección activa contra incendios 142.500 € (5 líneas)            │
-│CX-0119 │Adecuación    │ General  │ 04 │144.780 │      0 │      0 │  0 │144.7k│
-│        │RIPCI         │          │    │        │        │        │    │  ✓  │
+│CX-0119 │Adecuación    │ General  │ 04 │144.780 │    —   │    —   │ —  │  —  │
+│        │RIPCI         │          │    │   ✓    │        │        │    │     │
+│▾ HC.H04 · Interiores                          35.000 € (2 líneas)            │
+│CX-0125 │Renovación    │ Aseos    │ 01 │    —   │    —   │    —   │35k │  —  │
+│        │de aseos      │          │    │        │        │        │ ✓  │     │
 ├────────┴──────────────┴──────────┴────┴────────┴────────┴────────┴────┴─────┤
+│ SUMA        684.200 │ 512.800 │ 298.000 │205.000│142.500  = 1.842.500 €      │
 │ Base imponible 1.842.500 € · IVA 386.925 € · TOTAL 2.229.425 €               │
 │ ⚠ 12 líneas con precio sin validar (248.000 €) — bloquean la fase Red Flag   │
 │ Escenarios: Bajo 1.894 k€ · Probable 2.229 k€ · Alto 2.713 k€                │
 └──────────────────────────────────────────────────────────────────────────────┘
+
+ⓘ Cada línea tiene UN horizonte: la rejilla lo pivota a su columna y el resto
+  muestra «—». No son cinco campos editables, es un dato con su clasificación.
+  El importe se edita en el panel de la línea, junto al selector de horizonte.
 ```
 
 ### Panel de línea — la cascada, siempre visible y editable
@@ -638,16 +646,23 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 │ CX-0117 · Sustitución de enfriadora 300 kW      Nave A · Cubierta · HC.H08.01│
 │ Hallazgo HAL-0042 → │ Riesgo 03 Alto │ Concepto Vida útil │ Recuperable: NO  │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CAPEX ESTIMADO POR HORIZONTE                                                 │
+│ CAPEX ESTIMADO                                                               │
 │ ┌──────────────────────────────────────────────────────────────────────────┐ │
-│ │ Corto plazo   (1-2 años)   ┌────────────┐   48.500,00 €                  │ │
-│ │ Medio plazo   (3-5 años)   ┌────────────┐        0,00 €                  │ │
-│ │ Largo plazo   (6-10 años)  ┌────────────┐        0,00 €                  │ │
-│ │ Mejoras                    ┌────────────┐        0,00 €                  │ │
-│ │ Otro                       ┌────────────┐        0,00 €                  │ │
+│ │ Horizonte *   ◉ Corto plazo (1-2 años)                                   │ │
+│ │               ○ Medio plazo (3-5 años)                                   │ │
+│ │               ○ Largo plazo (6-10 años)                                  │ │
+│ │               ○ Mejoras    ⓘ mejora potencial: la decide el cliente      │ │
+│ │               ○ Otro       ⓘ otro tipo de petición                       │ │
+│ │                                                                          │ │
+│ │ Importe *     ┌──────────────┐ EUR                                       │ │
+│ │               │  48.500,00   │  base imponible                           │ │
+│ │               └──────────────┘                                           │ │
+│ │ + IVA (21 %)                          10.185,00 €                        │ │
 │ │ ══════════════════════════════════════════════════════════               │ │
-│ │ TOTAL 🔒 calculado                            48.500,00 €                 │ │
+│ │ TOTAL con impuestos 🔒                58.685,00 €                         │ │
 │ └──────────────────────────────────────────────────────────────────────────┘ │
+│ ⓘ El importe es la base imponible de la actuación: incluye lo que usted      │
+│   estime de indirectos, honorarios y contingencia. Los impuestos van encima. │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ ▾ DESGLOSE POR MEDICIÓN (opcional)                    [ Ocultar desglose ]  │
 │ Unidad ┌────┐ Cantidad ┌──────┐ Precio unitario ┌───────────┐ EUR           │
@@ -662,16 +677,17 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 │ │                │6,00│                                                     │ │
 │ │ + Contingencia ┌─────┐= (52.380 + 3.142,80) × 10 %=    5.552,28 €        │ │
 │ │                │10,00│                                                    │ │
-│ │ ─────────────────────────────────────────────────────────────────────    │ │
-│ │ = Base imponible                                  =   61.075,08 €        │ │
-│ │ + IVA          ┌─────┐= 61.075,08 × 21,00 %       =   12.825,77 €        │ │
-│ │                │21,00│                                                    │ │
 │ │ ══════════════════════════════════════════════════════════════════════   │ │
-│ │ = COSTE TOTAL CALCULADO                           =   73.900,85 €        │ │
+│ │ = BASE IMPONIBLE CALCULADA                        =   61.075,08 €        │ │
 │ │ Redondeo 2 decimales HALF_UP · Perfil «Estándar 2026» · calc v1          │ │
-│ │                          [ Llevar al horizonte «Corto plazo» ]           │ │
+│ │                                                                          │ │
+│ │ ⓘ La cascada llega hasta la base imponible. Los impuestos se aplican     │ │
+│ │   una sola vez, arriba, sobre el importe de la línea.                    │ │
+│ │        [ Trasladar 61.075,08 € al importe de la línea ]                  │ │
 │ └──────────────────────────────────────────────────────────────────────────┘ │
-│ Escenarios:  Bajo ×0,85 = 62.815,72 €  │  Alto ×1,25 = 92.376,06 €          │
+│ ⚠ El importe actual (48.500,00 €) se introdujo a mano y no coincide con la    │
+│   medición. Trasládelo si quiere usar el cálculo, o ajuste la medición.       │
+│ Escenarios:  Bajo ×0,85 = 41.225,00 €  │  Alto ×1,25 = 60.625,00 €          │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ PRECIO · ✓ VALIDADO por L. Pérez el 28/07/2026 10:42                         │
 │ Fuente: Catálogo interno 2026 · ref. CI-4471 · consultado 28/07/2026         │
@@ -980,7 +996,7 @@ sin ella sugiere que se ha buscado en todas partes.
 │   condiciones de uso. Esta restricción se aplica en la base de datos.        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ CATÁLOGOS                                                                    │
-│ Tipologías (8) │ Zonas (20) │ Códigos CAPEX (121) │ Riesgos (4) │            │
+│ Tipologías (6) │ Zonas (20) │ Códigos CAPEX (121) │ Riesgos (4) │            │
 │ Conceptos (10) │ Horizontes (5) │ Sistemas técnicos (14) │ Especialidades(10)│
 │ ⓘ Los catálogos del sistema no son editables: se versionan con la aplicación.│
 │   Puede añadir los suyos propios, que convivirán con ellos.                  │
@@ -1003,7 +1019,7 @@ sin ella sugiere que se ha buscado en todas partes.
 |---|---|
 | **Puntos de ruptura** | < 640 px móvil (una columna, filtros en hoja inferior) · 640-1024 tableta · > 1024 escritorio |
 | **Tablas en móvil** | Se convierten en tarjetas apiladas; nunca desplazamiento horizontal del cuerpo |
-| **La tabla de CAPEX en móvil** | Se reduce a: código, descripción, riesgo y total. Los cinco horizontes se ven al abrir la línea `[REC]` |
+| **La tabla de CAPEX en móvil** | Se reduce a: código, descripción, riesgo, horizonte e importe. El pivote a cinco columnas solo tiene sentido en escritorio `[REC]` |
 | **Objetivos táctiles** | ≥ 44 × 44 px; ≥ 48 px en el flujo de campo |
 | **Contraste** | ≥ 4,5:1 texto normal, ≥ 3:1 texto grande y elementos de interfaz |
 | **Color nunca solo** | Riesgo y estado siempre con código y etiqueta además del color |

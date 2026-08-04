@@ -17,8 +17,8 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 | # | Decisión | Por qué importa |
 |---|---|---|
 | 1 | **Estado y fases son ejes distintos** | El `estado` del proyecto describe el ciclo administrativo; las **fases** (documentación, VDR, visita, Q&A, Red Flag/CAPEX, Full Report, presentación, defensa) describen el trabajo real, se eligen a la carta al dar de alta y avanzan en paralelo. Un encargo puede tener la documentación pendiente, la visita hecha y el Q&A en curso a la vez |
-| 2 | **La fila que rellena el consultor es una sola cosa** | Hallazgo y partida CAPEX son la misma línea de trabajo. La interfaz muestra una fila; por debajo se persisten `Finding` y `CapexItem` con relación 1:1, para conservar el modelo exigido y permitir que un hallazgo genere varias partidas |
-| 3 | **Los catálogos son datos, no código** | Zonas dependientes de la tipología, 121 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
+| 2 | **La fila que rellena el consultor es una sola cosa** | Hallazgo y partida CAPEX son la misma línea: código, zona, riesgo, concepto, **un horizonte y un importe**. La interfaz muestra una fila; por debajo se persisten `Finding` y `CapexItem` con relación 1:1, para conservar el modelo exigido y permitir que un hallazgo genere varias partidas |
+| 3 | **Los catálogos son datos, no código** | 6 tipologías, 20 zonas dependientes de ellas, 121 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra, cinco horizontes. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
 | 4 | **El original nunca se toca** | Fotografías, documentos y plantillas son objetos inmutables, garantizado por cuatro barreras independientes: API, dominio, base de datos y almacenamiento WORM |
 | 5 | **El precio es un dato con procedencia** | Fuente, URL, fecha de consulta, ámbito, alcance incluido y excluido, tratamiento fiscal, y el usuario que lo validó. Ningún proceso automático valida un precio |
 
@@ -67,47 +67,37 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 
 ---
 
-## Cuatro incoherencias detectadas en la especificación
+## Decisiones ya cerradas por el cliente ✅
 
-No son objeciones: son cosas que conviene cerrar **antes** de sembrar los catálogos, porque migrarlos
-después es caro. Cada una tiene una propuesta provisional con la que se puede avanzar ya.
+Cinco cuestiones que estaban abiertas y que estructuran el modelo de datos:
 
-1. **`P-01` · Las tipologías de activo no coinciden entre apartados.** §3.1.3 propone oficinas,
-   logística, retail, hotel, residencial e industrial; §3.3.1 propone Industrial, Oficinas, Hotel,
-   Comercial y Sanitario. Faltan *logística* y *residencial* en la segunda, falta *sanitario* en la
-   primera, y *retail* y *Comercial* parecen lo mismo.
-2. **`P-02` · Los datos del activo aparecen en dos sitios con campos distintos.** §3.1.3 pide
-   superficie construida, alquilable y plantas; §3.3.1 pide parcela, almacén, oficinas y altura de
-   almacén.
-3. **`P-03` · El árbol de códigos solo está desarrollado para Hard Costs.** «Medioambiental»,
-   «ESG & Energía» y «Soft Costs» se nombran como categorías hermanas, pero sin capítulos ni elementos.
-4. **`P-04` · El rango del horizonte corto no cuadra.** El literal dice «0-2 años» y la glosa dice
-   «1 a 2 años».
+| # | Decisión | Consecuencia |
+|---|---|---|
+| **P-01** | Las tipologías de §3.1.3 se sustituyen por las de **§3.3.1** | **6 tipologías**: Industrial, Oficinas, Hotel, Comercial, Sanitario, Otros. Los activos logísticos se clasifican como **Industrial** (la única con *Almacén* y *Vestuarios*); los residenciales, como **Otros**. Los campos de almacén se muestran solo en Industrial |
+| **P-02** | Una sola entidad `Asset` con la **unión** de los campos de ambos apartados | Parcela, total, alquilable, almacén, oficinas y altura en una ficha; se muestran según tipología y no se borran al reclasificar |
+| **P-03** | Las tres categorías sin desarrollar se siembran con capítulo y elemento «General» | `MA`, `ESG` y `SC` utilizables desde el día uno; su desglose se añade sin migración |
+| **P-04** | Horizonte corto = **1-2 años** | El plan de inversión por años cuadra con el catálogo |
+| **P-05** | **Una línea, un horizonte, un importe** | Corto, medio, largo, mejora potencial u otro tipo de petición son **mutuamente excluyentes**. El modelo es `time_horizon_id` + `amount`; la rejilla y el informe pivotan a cinco columnas para leerse como la hoja de siempre, pero una línea no puede quedar repartida entre dos plazos |
 
-Además, tres valores —*Soft Cost*, *Medioambiental* y *ESG*— aparecen a la vez como **concepto**
-(§3.3.3) y como **categoría del árbol de códigos** (§3.3.4). La propuesta es mantener ambos campos,
-porque miden cosas distintas, con una regla de coherencia que avisa sin bloquear.
-
-Detalle y propuestas en [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.1 y
-[`docs/05`](docs/05-catalogos-y-taxonomias.md).
+Queda un supuesto asociado a P-05, pendiente de confirmar junto con la cascada de costes: que el
+importe tecleado sea la **base imponible final** de la línea —ya incluidos los indirectos, honorarios
+y contingencia que el consultor estime— y no un coste directo al que la aplicación deba aplicar la
+cascada. De ello depende que el desglose por medición se traslade con un botón, como está diseñado, o
+se aplique de forma automática.
 
 ---
 
-## Las cuatro decisiones que hay que tomar para avanzar
+## Las tres decisiones que faltan para avanzar
 
-1. **`P-05` · ¿El importe se introduce por horizonte (varias columnas) o cada línea tiene un solo
-   horizonte?** Cambia la tabla de CAPEX, las vistas, la exportación y el informe. Se ha modelado la
-   opción **más general** (cinco columnas con total calculado) porque reducirla es trivial y lo
-   contrario obligaría a partir líneas ya introducidas.
-2. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
+1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
    diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
-3. **`P-07` · ¿Pueden facilitarse 2-3 plantillas PPTX reales?** La pregunta más urgente: la generación
+2. **`P-07` · ¿Pueden facilitarse 2-3 plantillas PPTX reales?** La más urgente: la generación
    conservando el formato corporativo es el riesgo número uno, y sin plantillas reales queda sin medir.
    El plan reserva las semanas 2-3 para una prueba de concepto dedicada.
-4. **`P-08` · ¿Es obligatorio el desglose por medición o basta el importe a tanto alzado?** Si es
-   obligatorio, la captura en campo se ralentiza mucho.
+3. **`P-16` · ¿Cuál es la cascada de costes real y en qué orden se aplican los porcentajes?** Debe
+   coincidir con los Excel que la consultora ya usa. Resuelve también el supuesto pendiente de P-05.
 
-Las 29 preguntas ordenadas por impacto están en
+Las 24 preguntas restantes, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
 
 ---

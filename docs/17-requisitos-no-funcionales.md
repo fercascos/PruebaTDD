@@ -23,7 +23,7 @@ limitación técnica real · `CONF` confirmado por el cliente *(hoy: ninguno)*.
 | P-5 | Listado de 200 fotografías | < 1,5 s | SUP | Carga con 10.000 fotos en el proyecto | Es la pantalla más pesada |
 | P-6 | Miniatura visible tras captura | < 200 ms | REC | Cliente | Es local y optimista: no depende de la red |
 | P-7 | Miniaturas listas tras subida (p95) | < 30 s | SUP | Duración del trabajo | Tolerable con progreso visible |
-| P-8 | **Recálculo del total por horizontes** | < 50 ms | SUP | Prueba unitaria | Es una suma de cinco decimales: debe ser inmediato |
+| P-8 | **Agregación por horizonte (300 líneas)** | < 200 ms | SUP | Prueba de integración | Es un `GROUP BY` sobre una columna indexada |
 | P-9 | Recálculo de la cascada de una línea | < 50 ms | SUP | Prueba unitaria | Aritmética decimal pura |
 | P-10 | **Vista agregada de CAPEX (300 líneas, 10 agrupaciones)** | < 500 ms | SUP | Integración con conjunto voluminoso | Agregación en PostgreSQL con índices |
 | P-11 | **Filtrado de zonas por tipología** | < 100 ms | REC | Cliente (catálogo cacheado) | Es un desplegable: debe abrirse sin latencia |
@@ -203,7 +203,7 @@ herramienta como se diseñó o rellenando importes sin procedencia.
 | T-12 | Regresión visual PPTX | 4 plantillas con referencia | REC |
 | T-13 | Determinismo de generación | Mismo snapshot ⇒ mismo SHA-256 | REC |
 | T-14 | Equivalencia Python ↔ SQL del CAPEX | Coincidencia al céntimo en 1.000 casos | REC |
-| T-15 | **Matriz zona × tipología** | Las 106 combinaciones probadas | REC |
+| T-15 | **Matriz zona × tipología** | Las 86 combinaciones probadas | REC |
 | T-16 | Escenarios end to end | 12 (E1-E12) | REC |
 
 ---

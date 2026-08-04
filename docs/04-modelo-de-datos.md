@@ -395,20 +395,19 @@ costes distintos, y el informe debe poder mostrar la elegida.
 | `zone_id` | UUID FK NULL | heredada del hallazgo |
 | `description` | TEXT NOT NULL | |
 | `tenant_recoverable` | ENUM(`SI`,`NO`,`NA`) NULL | `[REQ]` §3.3.3 |
-| **`amount_short`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | corto plazo (1-2 años) `[REQ]` |
-| **`amount_mid`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | medio plazo (3-5 años) |
-| **`amount_long`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | largo plazo (6-10 años) |
-| **`amount_improvements`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | mejoras |
-| **`amount_other`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | otro |
-| **`total_cost`** | NUMERIC(18,4) GENERATED | suma de los cinco `[REQ]` |
+| **`time_horizon_id`** | UUID FK → `time_horizon` **NOT NULL** | **Un solo horizonte por línea** `[REQ]` P-05 |
+| **`amount`** | NUMERIC(18,4) NOT NULL DEFAULT 0 | Importe estimado de la actuación, **base imponible** |
+| `tax_pct` | NUMERIC(7,4) NOT NULL | copiado del perfil, editable por línea `[REQ]` |
+| `tax_amount` | NUMERIC(18,4) GENERATED | `amount × tax_pct` |
+| **`total_cost`** | NUMERIC(18,4) GENERATED | `amount + tax_amount` |
 | `currency` | CHAR(3) NOT NULL | |
 | *Desglose por medición (opcional)* | | `[SUP]` S-10 |
 | `unit` · `quantity` · `unit_price` | TEXT · NUMERIC | |
 | `direct_cost` | NUMERIC(18,4) NULL | cantidad × precio |
-| `indirect_pct` · `overhead_pct` · `profit_pct` · `fees_pct` · `contingency_pct` · `tax_pct` | NUMERIC(7,4) | copiados del perfil, **editables por línea** `[REQ]` |
-| `indirect_amount` · `overhead_amount` · `profit_amount` · `fees_amount` · `contingency_amount` · `tax_amount` | NUMERIC(18,4) | cada peldaño persistido y visible `[REQ]` |
-| `subtotal_before_tax` | NUMERIC(18,4) NULL | base imponible |
-| `computed_total` | NUMERIC(18,4) NULL | resultado de la cascada |
+| `indirect_pct` · `overhead_pct` · `profit_pct` · `fees_pct` · `contingency_pct` | NUMERIC(7,4) NULL | copiados del perfil, **editables por línea** `[REQ]` |
+| `indirect_amount` · `overhead_amount` · `profit_amount` · `fees_amount` · `contingency_amount` | NUMERIC(18,4) NULL | cada peldaño persistido y visible `[REQ]` |
+| `computed_base` | NUMERIC(18,4) NULL | base imponible que resulta de la cascada |
+| `amount_source` | ENUM(`MANUAL`,`MEDICION`) NOT NULL DEFAULT `MANUAL` | de dónde salió `amount` `[REC]` |
 | *Precio y escenarios* | | |
 | `scenario_low_factor` · `scenario_high_factor` | NUMERIC(7,4) | `[REQ]` |
 | `planned_year` | SMALLINT NULL | |
@@ -427,23 +426,40 @@ costes distintos, y el informe debe poder mostrar la elegida.
   → **imposible marcar un precio como validado sin un humano identificado**
 - `CHECK (price_status = 'SIN_PRECIO' OR selected_price_reference_id IS NOT NULL)`
   → **toda línea con precio conserva la trazabilidad de su origen**, incluida la entrada manual
-- `CHECK (amount_short >= 0 AND amount_mid >= 0 AND amount_long >= 0 AND amount_improvements >= 0 AND amount_other >= 0)`
+- `CHECK (amount >= 0)`
 - `CHECK (quantity IS NULL OR quantity >= 0)`, `CHECK (unit_price IS NULL OR unit_price >= 0)`
 - `CHECK (capex_code_id` referencia un código con `is_selectable = true` y `deprecated_at IS NULL)` —
   vía disparador
 
 **Recálculo** `[REQ]` §9: disparador `BEFORE INSERT OR UPDATE` que recalcula la cascada y
-`total_cost` cuando cambian cantidad, precio, porcentajes o importes por horizonte. Se implementa
-**además** en `CapexEngine` (Python), y una prueba verifica que ambas coinciden al céntimo. `[REC]`
+`computed_base` cuando cambian cantidad, precio o porcentajes; `tax_amount` y `total_cost` son
+columnas generadas. Se implementa **además** en `CapexEngine` (Python), y una prueba verifica que
+ambas coinciden al céntimo. `[REC]`
 
 **Índices:** `(project_id, asset_id)`, `(project_id, capex_code_id)`, `(project_id, zone_id)`,
-`(project_id, price_status)`, `(project_id, planned_year)`, `(finding_id)`.
+**`(project_id, time_horizon_id)`**, `(project_id, price_status)`, `(project_id, planned_year)`,
+`(finding_id)`.
 
-> **Sobre los cinco importes por horizonte** `[SUP]` S-09 / **P-05**: se modelan como cinco columnas
-> porque la especificación los presenta como una fila con un total, que es la forma de la hoja de
-> cálculo que estos equipos ya usan. Si la respuesta a P-05 es «una línea, un solo horizonte», el
-> cambio es sencillo: `time_horizon_id` + `amount`. Se ha elegido la opción **más general**, porque
-> convertir cinco columnas en una es trivial y lo contrario obliga a partir líneas ya introducidas.
+> **Sobre el horizonte único** — **P-05 · DECIDIDO**: cada línea pertenece a **un solo horizonte**
+> (`time_horizon_id` obligatorio) y lleva **un solo importe** (`amount`). Una actuación se aplica a
+> corto, medio o largo plazo, o es una mejora potencial que decide el cliente, o es otro tipo de
+> petición: son alternativas mutuamente excluyentes, no columnas independientes.
+>
+> La tabla de CAPEX puede seguir mostrándose con cinco columnas —es como se lee mejor—, pero eso es
+> **presentación**: la rejilla pivota el horizonte de cada línea a su columna y el resto muestra «—».
+> Con un solo campo es **imposible que una línea quede repartida por error entre dos plazos**, y la
+> suma por horizonte es un `GROUP BY`, no cinco sumas independientes que podrían descuadrar.
+
+> **Sobre qué representa `amount`** `[SUP]`: es la **base imponible final** de la línea, es decir, el
+> importe que el consultor considera necesario para ejecutar la actuación, ya incluidos los conceptos
+> que estime (indirectos, honorarios, contingencia). Los impuestos van **encima**, calculados desde el
+> perfil de costes, de forma uniforme haya o no desglose por medición. Es lo que hace que
+> «impuestos configurables y separados del coste base» `[REQ]` se cumpla igual en toda la tabla.
+>
+> Cuando existe desglose por medición, la cascada calcula `computed_base` y el usuario lo **traslada**
+> a `amount` con un botón explícito, quedando `amount_source = MEDICION`. **La cascada no se aplica
+> automáticamente sobre un importe tecleado a mano**: hacerlo duplicaría los porcentajes que el
+> consultor ya había incluido en su estimación.
 
 #### `equipment` — inventario opcional `[REQ]` §7 / P-15
 `id` · `organization_id` · `project_id` · `asset_id` · `technical_system_id` · `zone_id` NULL ·
@@ -856,6 +872,7 @@ erDiagram
     ZONE ||--o{ LOCATION_NODE : "normaliza"
     CAPEX_CODE ||--o{ CAPEX_CODE : "categoria a capitulo a elemento"
     CAPEX_CODE ||--o{ CAPEX_ITEM : codifica
+    TIME_HORIZON ||--o{ CAPEX_ITEM : "planifica (1 por linea)"
     RISK_LEVEL ||--o{ FINDING : gradua
     CAPEX_CONCEPT ||--o{ FINDING : clasifica
     TECHNICAL_SYSTEM ||--o{ FINDING : clasifica
@@ -904,6 +921,14 @@ erDiagram
         text name
         int display_order
     }
+    TIME_HORIZON {
+        uuid id PK
+        text code UK
+        text name
+        smallint year_from
+        smallint year_to
+        int display_order
+    }
     FINDING {
         uuid id PK
         uuid project_id FK
@@ -943,11 +968,10 @@ erDiagram
         text code UK
         text description
         enum tenant_recoverable
-        numeric amount_short
-        numeric amount_mid
-        numeric amount_long
-        numeric amount_improvements
-        numeric amount_other
+        uuid time_horizon_id FK
+        numeric amount
+        numeric tax_pct
+        numeric tax_amount
         numeric total_cost
         char currency
         text unit
@@ -960,10 +984,8 @@ erDiagram
         numeric fees_amount
         numeric contingency_pct
         numeric contingency_amount
-        numeric tax_pct
-        numeric tax_amount
-        numeric subtotal_before_tax
-        numeric computed_total
+        numeric computed_base
+        enum amount_source
         smallint planned_year
         enum priority
         enum confidence

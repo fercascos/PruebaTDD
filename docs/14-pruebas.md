@@ -47,12 +47,12 @@ aserciones que no comprueban nada. `[REC]`
 
 | Familia | Casos |
 |---|---|
-| **Total por horizontes** | Los cinco importes a cero → total 0; uno relleno; los cinco rellenos; el total es **siempre** la suma y **nunca** escribible |
+| **Horizonte único** | `time_horizon_id` obligatorio: sin él, `422`. Importe 0 admitido. El total con impuestos es columna generada y **nunca** escribible |
 | **Cascada** | Casos dorados calculados a mano y verificados por un tercero. El ejemplo 48.500 € → 73.900,85 € es el caso canónico |
 | **Exactitud decimal** | `Decimal("0.1") + Decimal("0.2") == Decimal("0.3")`; cantidades y precios con 4 decimales; **ninguna aparición de `float` en la ruta de cálculo**, verificada por una prueba que inspecciona los tipos |
 | **Redondeo** | Los cuatro modos; frontera `0,005`, `0,015`, `0,025` (donde `HALF_UP` y `HALF_EVEN` difieren); por peldaño frente a solo total |
 | **Suma coherente** | La suma de totales de línea coincide **exactamente** con el total del proyecto, con 300 líneas de importes aleatorios. Propiedad con `hypothesis` |
-| **Suma por horizonte** | La suma de cada columna coincide con el agregado de la vista por horizonte |
+| **Pivote a columnas** | Una línea produce valor en **exactamente una** de las cinco columnas y «—» en las otras cuatro; la suma de las cinco columnas coincide con el total del proyecto |
 | **Porcentajes** | 0 %; 100 %; decimales (`8,25 %`); todos a cero (total = coste directo) |
 | **Escenarios** | Bajo < probable < alto siempre; factor 1,0 devuelve el probable; factores derivados de `confidence` |
 | **Índices** | Actualización con índices válidos; **índice ausente ⇒ no calcula y avisa** (no interpola); índice cero o negativo ⇒ error |
@@ -67,9 +67,9 @@ Familia nueva, y de las más importantes del modelo revisado:
 
 | Caso | Verificación |
 |---|---|
-| Zona válida para la tipología | Las 106 combinaciones de la matriz de §5.2, una a una |
+| Zona válida para la tipología | Las **86 combinaciones** de la matriz de §5.2, una a una |
 | Zona inválida | `Almacén` en `Oficinas` ⇒ rechazo con la lista de zonas válidas |
-| Zona común | `Cubierta` es válida en las 8 tipologías |
+| Zona común | `Cubierta` es válida en las **6 tipologías** |
 | Código no seleccionable | Nivel 1 y nivel 2 ⇒ `CAPEX_CODE_NOT_SELECTABLE` |
 | Código retirado | No aparece en el selector; **sí se resuelve** en un informe antiguo |
 | Cambio de tipología | Las líneas conservan su zona y se marcan `REVISAR_ZONA`; **nunca se borra la zona** |
@@ -122,7 +122,7 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 |---|---|
 | **Restricciones** | Que sea **imposible** insertar: línea con `price_status = VALIDADO` sin validador; línea con precio y sin referencia; proyecto fuera de borrador sin cliente; versión emitida sin `is_locked`; fuente habilitada sin revisión de condiciones; código no seleccionable |
 | **Disparadores de inmutabilidad** | Que `UPDATE` sobre `photo.storage_key`, `photo.sha256`, `report_template.storage_key` o un `report_version` bloqueado **falle en base de datos** |
-| **Total generado** | Que `total_cost` sea siempre la suma de los cinco horizontes, incluso escribiendo por SQL directo |
+| **Total generado** | Que `total_cost` sea siempre `amount + tax_amount`, y que `time_horizon_id` sea obligatorio, incluso escribiendo por SQL directo |
 | **Recálculo** | Que cambiar cantidad o precio por SQL recalcule la cascada |
 | **Estado derivado de fase** | Que un `UPDATE` directo del estado de una fase derivada sea revertido por el disparador |
 | **RLS** | Con dos organizaciones sembradas: que A **no pueda leer ni escribir** ninguna fila de B, en las ~40 tablas. Prueba paramétrica sobre la lista de tablas: una tabla nueva sin política **rompe la suite** `[REC]` |
@@ -134,7 +134,7 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 | **API completa** | Cada endpoint: camino feliz, validación, autorización, `404` entre organizaciones, `409` de concurrencia, `422` de negocio |
 | **Contrato OpenAPI** | Esquema válido y cliente TypeScript comprometido igual al generado |
 | **Migraciones** | Ida y vuelta sobre base vacía y sobre base con datos de prueba |
-| **Semilla de catálogos** | Que la migración cargue 8 tipologías, 20 zonas, 106 relaciones, 121 códigos, 4 riesgos, 10 conceptos, 5 horizontes, 8 fases |
+| **Semilla de catálogos** | Que la migración cargue **6 tipologías, 20 zonas, 86 relaciones**, 121 códigos, 4 riesgos, 10 conceptos, 5 horizontes, 8 fases |
 
 ---
 
@@ -223,7 +223,7 @@ Corpus T1-T20 de [`12-pptx.md`](./12-pptx.md) §17.10.
 | **Original intacto** | El SHA-256 de la plantilla no cambia tras 20 generaciones |
 | **Repetición** | T4: 3 activos ⇒ 3 diapositivas; 0 con `if_empty: skip_slide` ⇒ 0; 1 ⇒ 1; 50 ⇒ 50 |
 | **Filtros y orden** | 40 hallazgos con filtro de riesgo `[03,04]` y `max: 20` ⇒ exactamente 20, en el orden esperado |
-| **Tablas** | T5: 1, 17, 18, 19, 36, 37 y 62 filas con 18 por diapositiva; encabezado repetido; **subtotales por capítulo**; totales solo en la última; grupo no partido dejando una fila huérfana; las **nueve columnas** (cinco horizontes + total) |
+| **Tablas** | T5: 1, 17, 18, 19, 36, 37 y 62 filas con 18 por diapositiva; encabezado repetido; **subtotales por capítulo**; totales solo en la última; grupo no partido dejando una fila huérfana; las **nueve columnas** (pivote de los cinco horizontes + total), con **una sola casilla con valor por fila** |
 | **Fotografías** | Proporción conservada (4:3 en marco 16:9 y al revés); `contain` y `cover`; vertical; 0, 1, 2, 3 y 7 fotos con 3 marcos; pie presente y ausente |
 | **Desbordamiento** | T8: textos de longitud creciente contra el mismo marco, verificando el umbral; con y sin fuente disponible; con y sin autoajuste |
 | **Definición de riesgo** | T19: `{{finding.risk_definition}}` con la definición del grado 04 (412 caracteres) en un marco justo ⇒ aviso `[REC]` |
@@ -294,7 +294,7 @@ Playwright, en Chromium y WebKit (por Safari e iOS), con datos ficticios.
 | E3 | Asignación de equipo con alcance por activo, y verificación de que el técnico no ve lo que no debe | HU-03 |
 | E4 | **Emulando móvil:** fijar contexto, capturar 5 fotos, esperar procesado, crear hallazgo desde una foto con código, zona y riesgo | HU-04, HU-06, HU-08 |
 | E5 | Renombrado en lote con previsualización, colisión, confirmación y verificación del hash original | HU-05 |
-| E6 | Línea de CAPEX completa: código del árbol, zona filtrada por tipología, riesgo con su definición, importes por horizonte, desglose y validación de precio | HU-08, HU-09, HU-11 |
+| E6 | Línea de CAPEX completa: código del árbol, zona filtrada por tipología, riesgo con su definición, **horizonte e importe**, desglose con traslado explícito y validación de precio | HU-08, HU-09, HU-11 |
 | E7 | **Cambio de tipología de activo** con líneas afectadas: aviso, confirmación, marcado `REVISAR_ZONA` y bloqueo de la emisión | HU-02 |
 | E8 | Carga de plantilla, mapeo de un marcador desconocido, previsualización con avisos, corrección, generación, revisión, aprobación, emisión y comprobación del bloqueo | HU-12 a HU-15 |
 | E9 | Consulta y filtrado de auditoría; verificación de que lo anterior dejó rastro | HU-16 |
@@ -379,8 +379,9 @@ Una CI de 40 minutos se acaba saltando; una de 15 se respeta.
 | 13 | Renombrado con fallo parcial de permisos | Se aplica a las permitidas; se informa del resto |
 | 14 | Pérdida de red subiendo 200 fotos | Reintento automático; **sin duplicados** |
 | 15 | Importe o cantidad negativos | `422` en frontend y backend |
-| 16 | Todos los horizontes a cero | Total 0; línea marcada como pendiente de valorar |
-| 17 | Intento de escribir el total de la línea | Campo no editable; `422` por API |
+| 16 | Importe a cero | Total 0; línea marcada como pendiente de valorar |
+| 17 | Intento de escribir el total con impuestos | Campo no editable; `422` por API |
+| 17b | Línea sin horizonte asignado | `422 TIME_HORIZON_REQUIRED` |
 | 18 | Índice de precio ausente | No se calcula; se avisa; se ofrece entrada manual |
 | 19 | Ninguna fuente devuelve resultados | Aviso explícito; **ningún importe propuesto** |
 | 20 | Fuente de precios caída | Los demás resultados llegan; se avisa |

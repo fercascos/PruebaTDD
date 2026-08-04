@@ -96,7 +96,7 @@ transiciones.
 | **Fases** `[REC]` | `{{phase.visit_dates}}`, `{{phase.doc_status_table}}`, `{{report_limitations}}` |
 | Activo | `{{asset.name}}`, `{{asset.code}}`, `{{asset.typology}}`, `{{asset.address}}`, `{{asset.city}}`, `{{asset.plot_area}}`, `{{asset.gfa}}`, `{{asset.lettable_area}}`, `{{asset.warehouse_area}}`, `{{asset.office_area}}`, `{{asset.warehouse_height}}`, `{{asset.year_built}}`, `{{asset.year_last_refurb}}`, `{{asset.floors}}`, `{{asset.main_use}}`, `{{asset.description}}`, `{{@asset.main_photo}}` |
 | Hallazgo | `{{finding.code}}`, `{{finding.title}}`, `{{finding.description}}`, `{{finding.comments}}`, `{{finding.zone}}`, `{{finding.capex_code}}`, `{{finding.capex_chapter}}`, `{{finding.risk_code}}`, `{{finding.risk_name}}`, **`{{finding.risk_definition}}`**, `{{finding.concept}}`, `{{finding.recommendation}}`, `{{finding.regulatory_reference}}`, `{{@finding.photos}}` |
-| CAPEX | `{{capex.total}}`, `{{capex.total_before_tax}}`, `{{capex.tax}}`, `{{capex.short}}`, `{{capex.mid}}`, `{{capex.long}}`, `{{capex.improvements}}`, `{{capex.other}}`, `{{capex.recoverable_yes}}`, `{{capex.recoverable_no}}`, `{{capex.scenario_low}}`, `{{capex.scenario_high}}`, `{{capex_table}}`, `{{capex_by_chapter_table}}`, `{{capex_by_zone_table}}`, `{{capex_by_risk_table}}`, `{{capex_by_horizon_table}}` |
+| CAPEX | `{{capex.total}}`, `{{capex.total_before_tax}}`, `{{capex.tax}}`, `{{capex.short}}`, `{{capex.mid}}`, `{{capex.long}}`, `{{capex.improvements}}`, `{{capex.other}}` *(agregados por horizonte)*, `{{capex.recoverable_yes}}`, `{{capex.recoverable_no}}`, `{{capex.scenario_low}}`, `{{capex.scenario_high}}`, `{{capex_table}}`, `{{capex_by_chapter_table}}`, `{{capex_by_zone_table}}`, `{{capex_by_risk_table}}`, `{{capex_by_horizon_table}}` |
 | Equipo | `{{equipment.type}}`, `{{equipment.manufacturer}}`, `{{equipment.model}}`, `{{equipment.install_year}}`, `{{equipment.remaining_life}}` |
 | Fotos | `{{@selected_photos}}`, `{{photo.caption}}`, `{{photo.date}}` |
 | Agregados | `{{executive_summary}}`, `{{findings}}`, `{{risk_legend}}`, `{{visit_summary}}`, `{{access_limitations}}` |
@@ -252,8 +252,8 @@ usuario realice el mapeo. No adivines ni sobrescribas elementos sin confirmació
   "table_rules": [
     { "slide_index": 14, "token": "{{capex_table}}",
       "columns": ["code", "description", "zone", "risk_code",
-                  "amount_short", "amount_mid", "amount_long",
-                  "amount_improvements", "total_cost"],
+                  "h_short", "h_mid", "h_long", "h_improvements", "h_other"],
+      "pivot_by": "time_horizon",
       "group_by": "capex_chapter", "subtotals": true,
       "rows_per_slide": 18, "repeat_header": true, "totals": "last",
       "number_slides": true, "decimals": 0 }
@@ -503,7 +503,7 @@ Ficheros versionados en el repositorio, **sin datos reales de cliente**:
 | T2 | 16:9 con tema completo, logos, encabezado y pie | Conservación de identidad corporativa |
 | T3 | 4:3 | Adaptación de proporción de imágenes |
 | T4 | Con diseños de repetición por activo y por hallazgo | Generación de N diapositivas desde diseño |
-| T5 | Con tabla de 9 columnas (los cinco horizontes) y fila modelo formateada | Partición, subtotales por capítulo, clonado de formato |
+| T5 | Con tabla de 9 columnas (pivote de los cinco horizontes) y fila modelo formateada | Partición, subtotales por capítulo, clonado de formato, **pivote correcto: una sola casilla con valor por fila** |
 | T6 | Con gráfico preexistente | Sustitución de datos |
 | T7 | Con SmartArt en zona de datos | Aviso correcto y SmartArt intacto |
 | T8 | Texto deliberadamente largo en marco pequeño | Detección de desbordamiento |

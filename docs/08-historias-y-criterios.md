@@ -85,7 +85,7 @@ Escenario: Edición concurrente
 ```gherkin
 Escenario: Alta de activos con tipologías distintas
   Dado un proyecto en "EN_PREPARACION"
-  Cuando añado "Nave A" con tipología Logística, 18.500 m² totales,
+  Cuando añado "Nave A" con tipología Industrial, 18.500 m² totales,
         17.000 m² de almacén y 11 m de altura de almacén
   Y añado "Edificio Oficinas" con tipología Oficinas y 3.400 m² totales
   Entonces el proyecto muestra 2 activos
@@ -93,7 +93,7 @@ Escenario: Alta de activos con tipologías distintas
   Y ambos aparecen como filtro en fotos, hallazgos y CAPEX
 
 Escenario: Los campos del formulario dependen de la tipología
-  Cuando selecciono tipología "Logística"
+  Cuando selecciono tipología "Industrial"
   Entonces el formulario muestra superficie de almacén y altura de almacén
   Cuando cambio la tipología a "Oficinas"
   Entonces esos campos dejan de mostrarse
@@ -101,7 +101,7 @@ Escenario: Los campos del formulario dependen de la tipología
   Y vuelven a mostrarse si restauro la tipología anterior
 
 Escenario: Las zonas disponibles dependen de la tipología
-  Dado el activo "Nave A" con tipología Logística
+  Dado el activo "Nave A" con tipología Industrial
   Cuando creo un hallazgo y despliego el selector de zona
   Entonces veo "Almacén" y "Vestuarios"
   Y no veo "Habitaciones", "Piscina" ni "Zona comercial"
@@ -109,7 +109,7 @@ Escenario: Las zonas disponibles dependen de la tipología
   Entonces veo "Vestíbulo de planta" y no veo "Almacén"
 
 Escenario: Cambiar la tipología avisa del impacto antes de aplicar
-  Dado el activo "Nave A" (Logística) con 8 líneas en zona "Almacén"
+  Dado el activo "Nave A" (Industrial) con 8 líneas en zona "Almacén"
   Cuando cambio su tipología a "Comercial"
   Entonces el sistema me muestra las 8 líneas afectadas ANTES de confirmar
   Y me indica que "Almacén" no está disponible en la tipología Comercial
@@ -427,7 +427,7 @@ Escenario: Año de instalación imposible
 
 ```gherkin
 Escenario: Alta completa de un hallazgo
-  Dado un proyecto en "EN_ANALISIS" y el activo "Nave A" (Logística)
+  Dado un proyecto en "EN_ANALISIS" y el activo "Nave A" (Industrial)
   Cuando creo un hallazgo con código CAPEX "HC.H08.01 Producción de climatización",
         zona "Cubierta", título "Corrosión en enfriadora",
         descripción, comentarios, riesgo "03 Alto" y concepto "Vida útil"
@@ -501,49 +501,68 @@ Escenario: No se puede borrar un hallazgo usado en un informe emitido
 
 ## HU-09 · Crear una línea de CAPEX — P0
 
-> **Como** consultor **quiero** asignar el importe de la actuación por horizonte temporal **para**
+> **Como** consultor **quiero** clasificar la actuación en su horizonte y asignarle un importe **para**
 > entregar un plan de inversión defendible y comprobable línea a línea.
 
 ```gherkin
-Escenario: Importe por horizonte y total calculado
+Escenario: Un horizonte y un importe
   Dado el hallazgo "HAL-0042" con su línea "CX-0117"
-  Cuando introduzco 48.500,00 € en el horizonte "Corto plazo (1-2 años)"
-  Y dejo el resto de horizontes a cero
-  Entonces el total de la línea es 48.500,00 €
-  Y la línea aparece en la vista por horizonte bajo "Corto plazo"
+  Cuando selecciono el horizonte "Corto plazo (1-2 años)"
+  Y introduzco un importe de 48.500,00 €
+  Entonces la línea queda clasificada en corto plazo
+  Y aparece en la vista por horizonte bajo "Corto plazo"
+  Y en la rejilla el importe se muestra en la columna "Corto" y las otras cuatro muestran "—"
   Y el total del proyecto se actualiza al instante
 
-Escenario: Importe repartido en varios horizontes
-  Cuando introduzco 20.000,00 € en corto plazo y 35.000,00 € en medio plazo
-  Entonces el total de la línea es 55.000,00 €
-  Y la línea aparece en ambas columnas de la vista por horizonte
-  Y la suma de las columnas de la vista coincide exactamente con el total del proyecto
+Escenario: El horizonte es obligatorio y único
+  Cuando intento guardar una línea sin horizonte
+  Entonces recibo un error 422 con código "TIME_HORIZON_REQUIRED"
+  Cuando cambio el horizonte de "Corto plazo" a "Mejoras"
+  Entonces el importe se mueve íntegro a la columna "Mejoras"
+  Y deja de contar en el total de corto plazo
+  Y no existe ninguna forma de que el importe quede repartido entre dos horizontes
 
-Escenario: El total nunca se teclea
-  Cuando intento modificar directamente el campo de total
-  Entonces el campo no es editable
-  Y el total se recalcula siempre como suma de los cinco horizontes
+Escenario: Mejora potencial frente a necesidad técnica
+  Dado una actuación que el cliente puede decidir acometer o no
+  Cuando la clasifico con horizonte "Mejoras"
+  Entonces queda fuera de los totales de corto, medio y largo plazo
+  Y el informe puede presentarla en un apartado separado
+
+Escenario: El total con impuestos nunca se teclea
+  Dado una línea con importe 48.500,00 € y un perfil con IVA 21 %
+  Entonces el total con impuestos se muestra como 58.685,00 €
+  Y el campo no es editable
+  Cuando intento modificarlo mediante la API
+  Entonces recibo un error 422
 
 Escenario: Desglose por medición opcional con cascada visible
-  Dado un perfil de costes con indirectos 8 %, honorarios 6 %,
-        contingencia 10 % e IVA 21 %
+  Dado un perfil de costes con indirectos 8 %, honorarios 6 % y contingencia 10 %
   Cuando introduzco unidad "ud", cantidad 1 y precio unitario 48.500,00 €
   Entonces veo el desglose completo y editable:
-        coste directo        48.500,00
-        indirectos (8 %)      3.880,00
-        honorarios (6 %)      3.142,80
-        contingencia (10 %)   5.552,28
-        base imponible       61.075,08
-        IVA (21 %)           12.825,77
-        coste total          73.900,85
+        coste directo               48.500,00
+        indirectos (8 %)             3.880,00
+        honorarios (6 %)             3.142,80
+        contingencia (10 %)          5.552,28
+        base imponible calculada    61.075,08
   Y cada porcentaje es visible y modificable en la propia línea
   Y ningún importe intermedio está oculto
-  Y puedo trasladar el total calculado al horizonte que corresponda
+  Y la cascada termina en la base imponible: los impuestos se aplican una sola vez,
+     sobre el importe de la línea
+
+Escenario: El resultado de la medición se traslada, no se aplica solo
+  Dado una línea con importe 48.500,00 € introducido a mano
+  Y un desglose por medición que calcula una base imponible de 61.075,08 €
+  Entonces la interfaz me avisa de que ambos valores no coinciden
+  Y el importe de la línea sigue siendo 48.500,00 €
+  Cuando pulso "Trasladar al importe de la línea"
+  Entonces el importe pasa a 61.075,08 €
+  Y la línea queda marcada con origen "MEDICION"
+  Y en ningún momento se aplica la cascada por encima de un importe ya tecleado
 
 Escenario: Recálculo inmediato al cambiar la cantidad
   Cuando cambio la cantidad de 1 a 2
   Entonces el coste directo pasa a 97.000,00
-  Y todos los importes derivados y el total se recalculan al instante
+  Y todos los importes derivados de la cascada se recalculan al instante
   Y la interfaz señala qué valores han cambiado
 
 Escenario: Porcentaje personalizado en una sola línea
@@ -564,7 +583,7 @@ Escenario: Impuestos separados del coste base
   Y puedo alternar entre vista con impuestos y sin impuestos
 
 Escenario: Una línea sin importe es válida pero se señala
-  Cuando creo una línea con todos los horizontes a cero
+  Cuando creo una línea con horizonte asignado e importe a cero
   Entonces se guarda con estado de precio "SIN_PRECIO"
   Y aparece destacada como pendiente de valorar
   Y bloquea que la fase "Red Flag / CAPEX" se marque como completada
@@ -584,6 +603,12 @@ Escenario: Vista por recuperabilidad
   Dado un proyecto con líneas marcadas SI, NO y N.A.
   Cuando agrupo el CAPEX por "Recuperable a inquilino"
   Entonces veo el importe que recae sobre la propiedad separado del repercutible
+
+Escenario: Las cinco columnas de la rejilla cuadran con el total
+  Dado un proyecto con 63 líneas repartidas entre los cinco horizontes
+  Cuando consulto la tabla de CAPEX
+  Entonces cada fila tiene valor en exactamente una columna y "—" en las otras cuatro
+  Y la suma de las cinco columnas coincide exactamente con el total del proyecto
 ```
 
 ---

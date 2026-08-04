@@ -9,7 +9,7 @@
 | 1 | **El cálculo es una función pura** | `CapexEngine` no accede a base de datos, red ni reloj. Entran datos, salen datos. Testeable al céntimo, en milisegundos `[REC]` |
 | 2 | **Ninguna fórmula oculta** | Cada peldaño se persiste y se muestra con sus operandos `[REQ]` |
 | 3 | **Decimal exacto, nunca coma flotante** | `Decimal` en Python, `NUMERIC` en PostgreSQL. El redondeo es una decisión explícita |
-| 4 | **El total nunca se teclea** | Es la suma de los cinco horizontes, calculada en base de datos |
+| 4 | **Una línea, un horizonte, un importe** | Mutuamente excluyentes. El total con impuestos es columna generada `[REQ]` P-05 |
 | 5 | **Un precio sin procedencia no existe** | Toda línea con precio tiene una `price_reference`, incluida la entrada manual `[REQ]` |
 | 6 | **La validación es humana, siempre** | No hay ruta de código que ponga `price_status = VALIDADO` sin usuario identificado `[REQ]` |
 | 7 | **Las fuentes son adaptadores** | El núcleo no conoce ninguna fuente concreta `[REQ]` |
@@ -29,47 +29,68 @@ flowchart TD
         B --> C["+ Indirectos · GG · BI"]
         C --> D["+ Honorarios técnicos"]
         D --> E["+ Contingencia"]
-        E --> F["= Base imponible"]
-        F --> G["+ Impuestos"]
-        G --> H["= Coste total calculado"]
+        E --> F["= BASE IMPONIBLE CALCULADA"]
     end
-    subgraph N1["Nivel 1 · IMPORTE POR HORIZONTE (siempre)"]
-        I["Corto plazo (1-2 años)"]
-        J["Medio plazo (3-5 años)"]
-        K["Largo plazo (6-10 años)"]
-        L["Mejoras"]
-        M["Otro"]
-        N["TOTAL 🔒 = suma de los cinco"]
-        I --> N
-        J --> N
-        K --> N
-        L --> N
-        M --> N
+    subgraph N1["Nivel 1 · LA LÍNEA (siempre)"]
+        H["HORIZONTE · uno solo<br/>Corto | Medio | Largo | Mejoras | Otro"]
+        I["IMPORTE · uno solo<br/>base imponible"]
+        J["+ Impuestos (del perfil)"]
+        K["= Total de la línea 🔒"]
+        H --- I
+        I --> J --> K
     end
-    H -.->|"«Llevar al horizonte»<br/>decisión del usuario"| I
+    F -.->|"«Trasladar al importe»<br/>ACCIÓN EXPLÍCITA del usuario"| I
 
-    style N fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style I fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style H fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     style N2 fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:4 4
 ```
 
-| | Nivel 1 · Horizontes | Nivel 2 · Medición |
+| | Nivel 1 · La línea | Nivel 2 · Medición |
 |---|---|---|
 | Origen | §3.3.4 «CAPEX estimado» | §3.3.5 (precios, GG, BI, contingencias) |
 | Obligatorio | **Sí** | **No** `[SUP]` S-10 / P-08 |
+| Contenido | **Un horizonte + un importe** | Cantidad, precio unitario y cascada |
 | Para qué | Plan de inversión: cuánto y cuándo | Justificar de dónde sale el importe |
-| Quién lo usa | Siempre | Cuando hay una medición real o una referencia de precio |
+| Quién lo usa | Siempre | Cuando hay medición real o referencia de precio |
 | Dónde se ve | Tabla principal de CAPEX | Panel de la línea, desplegable |
 
-`[REC]` **Por qué se modela así.** La especificación revisada presenta el CAPEX como una fila con
-columnas por plazo y un total, que es exactamente la forma de la hoja de cálculo que estos equipos ya
-usan: en muchas líneas el consultor pone un importe a tanto alzado basado en su criterio, y solo en
-algunas hace una medición. Obligar a medir todo ralentizaría el trabajo sin mejorar el resultado;
-eliminar la medición dejaría el CAPEX sin trazabilidad donde sí la hay. Los dos niveles conviven, y el
-segundo alimenta al primero cuando existe.
+### Decisión P-05: un horizonte por línea
 
-`[PDV]` **P-05 sigue abierta**: se ha elegido la opción **más general** (cinco columnas de importe).
-Si la respuesta es «una línea, un solo horizonte», reducirlo a `time_horizon_id` + `amount` es
-trivial; lo contrario obligaría a partir líneas ya introducidas.
+> **P-05 · DECIDIDO.** El importe se rellena **en una sola columna**. Una actuación se aplica en corto,
+> medio o largo plazo; o se considera **mejora potencial** —que ahí decide el cliente—; o es **otro
+> tipo de petición**. Son alternativas mutuamente excluyentes.
+
+En el modelo esto es `time_horizon_id` (FK obligatoria) + `amount`, no cinco columnas. Tres
+consecuencias, todas favorables:
+
+| # | Consecuencia |
+|---|---|
+| 1 | **Es imposible que una línea quede repartida por error entre dos plazos.** Con cinco campos editables, un importe tecleado en la columna equivocada y olvidado en la otra pasa desapercibido |
+| 2 | **La suma por horizonte es un `GROUP BY`**, no cinco sumas independientes que podrían descuadrar entre sí |
+| 3 | **«Mejoras» queda bien definido.** No es un plazo, es una naturaleza: una línea no puede ser a la vez una necesidad a corto plazo y una mejora potencial que decide el cliente |
+
+**La tabla puede seguir viéndose con cinco columnas** —es como se lee mejor y como está la hoja de
+cálculo actual—, pero eso es **presentación**: la rejilla pivota el horizonte de cada línea a su
+columna y el resto muestra «—». Ver [`09-ux-pantallas.md`](./09-ux-pantallas.md) pantalla 13.
+
+### Qué representa el importe `[SUP]`
+
+`amount` es la **base imponible final** de la línea: el importe que el consultor considera necesario
+para ejecutar la actuación, **ya incluidos** los conceptos que estime (indirectos, honorarios,
+contingencia). Los impuestos van **encima**, calculados desde el perfil de costes, de forma uniforme
+haya o no desglose por medición.
+
+`[REC]` **La cascada no se aplica automáticamente sobre un importe tecleado a mano.** Cuando alguien
+escribe 48.500 € de memoria, esa cifra ya lleva dentro lo que esa persona considera: aplicarle encima
+un 8 % de indirectos y un 10 % de contingencia sería duplicar. Por eso el desglose es una herramienta
+de cálculo cuyo resultado se **traslada con un botón**, dejando constancia en `amount_source`, y la
+interfaz avisa cuando el importe y la medición no coinciden.
+
+`[REC]` **Por qué el desglose sigue siendo opcional.** En muchas líneas el consultor pone un importe a
+tanto alzado basado en su criterio, y solo en algunas hace una medición. Obligar a medir todo
+ralentizaría el trabajo sin mejorar el resultado; eliminar la medición dejaría sin trazabilidad las
+líneas donde sí la hay.
 
 ---
 
@@ -89,17 +110,25 @@ porcentajes cambia el resultado y debe coincidir con lo que la consultora ya usa
 (6)  honorarios_tecnicos  = subtotal_ejecucion × %honorarios
 (7)  subtotal_con_hon.    = (5)+(6)
 (8)  contingencia         = subtotal_con_honorarios × %contingencia
-(9)  base_imponible       = (7)+(8)
-(10) impuestos            = base_imponible × %impuesto
-(11) coste_total          = (9)+(10)
+(9)  base_imponible       = (7)+(8)      ← FIN de la cascada: es `computed_base`
+  ─────────────────────────────────────────────────────────────────────────
+     ↓ el usuario traslada (9) al importe de la línea (`amount`)
+  ─────────────────────────────────────────────────────────────────────────
+(10) impuestos            = amount × %impuesto      ← A NIVEL DE LÍNEA
+(11) total_cost           = amount + impuestos      ← columna generada
 ```
+
+`[REC]` **Los pasos 10 y 11 están fuera de la cascada a propósito.** La cascada es una herramienta de
+medición opcional; los impuestos se aplican **siempre**, sobre el importe de la línea, exista o no
+desglose. Así, «impuestos configurables y separados del coste base» `[REQ]` se cumple igual en las 63
+líneas del proyecto, y no solo en las que llevan medición.
 
 | Decisión | Razón |
 |---|---|
 | Indirectos, GG y BI **sobre el coste directo** | Práctica habitual de presupuestación de obra: son porcentajes sobre la ejecución material |
 | Honorarios **sobre la ejecución completa** | Los honorarios de proyecto y dirección se pactan sobre el presupuesto de ejecución, no sobre el coste desnudo del equipo |
 | Contingencia **después de honorarios** | La incertidumbre afecta a todo el coste, incluidos sus honorarios |
-| Impuestos **al final, sobre la base imponible** | `[REQ]` «Impuestos configurables y separados del coste base»: son columnas independientes en todas las vistas |
+| Impuestos **fuera de la cascada, sobre el importe de la línea** | Se aplican una sola vez y a todas las líneas por igual, lleven medición o no |
 
 ### Configurabilidad `[REC]`
 
@@ -114,9 +143,9 @@ práctica del cliente es configuración, no desarrollo.
     { "key": "overhead",    "base": ["direct"],                        "pct_field": "overhead_pct" },
     { "key": "profit",      "base": ["direct"],                        "pct_field": "profit_pct" },
     { "key": "fees",        "base": ["direct","indirect","overhead","profit"], "pct_field": "fees_pct" },
-    { "key": "contingency", "base": ["direct","indirect","overhead","profit","fees"], "pct_field": "contingency_pct" },
-    { "key": "tax",         "base": ["__subtotal_before_tax__"],       "pct_field": "tax_pct" }
+    { "key": "contingency", "base": ["direct","indirect","overhead","profit","fees"], "pct_field": "contingency_pct" }
   ],
+  "// nota": "El impuesto NO es un paso de la cascada: se aplica sobre capex_item.amount.",
   "rounding": { "mode": "HALF_UP", "decimals": 2, "apply_at": ["step","total"] }
 }
 ```
@@ -131,9 +160,15 @@ Perfil: indirectos 8 %, honorarios 6 %, contingencia 10 %, IVA 21 %. GG y BI a 0
 | Indirectos (8 %) | 48.500,00 × 0,08 | 3.880,00 € |
 | Honorarios (6 %) | (48.500,00 + 3.880,00) × 0,06 | 3.142,80 € |
 | Contingencia (10 %) | (52.380,00 + 3.142,80) × 0,10 | 5.552,28 € |
-| **Base imponible** | | **61.075,08 €** |
+| **Base imponible calculada** | fin de la cascada → `computed_base` | **61.075,08 €** |
+
+Si el consultor traslada esa cifra al importe de la línea, el total con impuestos de la línea es:
+
+| Paso | Operación | Importe |
+|---|---|---:|
+| Importe de la línea | trasladado desde la medición | 61.075,08 € |
 | IVA (21 %) | 61.075,08 × 0,21 | 12.825,77 € |
-| **Coste total** | | **73.900,85 €** |
+| **Total de la línea** | columna generada | **73.900,85 €** |
 
 ### Redondeo `[REQ]`
 
@@ -411,7 +446,7 @@ precio_actualizado = precio_origen
 | **Por zona** | `zone_id` | Total por zona | Nueva con el modelo revisado: «la cubierta se lleva el 30 %» |
 | **Por riesgo** | `risk_level_id` | Total por grado 01-04 | Justificar la urgencia |
 | **Por concepto** | `capex_concept_id` | Normativa frente a mejora frente a vida útil | Negociación con el cliente |
-| **Por horizonte** | columnas | Corto / medio / largo / mejoras / otro | **La tabla central del informe** |
+| **Por horizonte** | `time_horizon_id` | Corto / medio / largo / mejoras / otro | **La tabla central del informe**. Cada línea cae en una sola categoría |
 | Por año | `planned_year` | Total y acumulado | Plan de inversión plurianual |
 | Por prioridad | `priority` | Total por nivel | Negociación |
 | **Por recuperabilidad** | `tenant_recoverable` | Sí / No / N.A. | «¿Cuánto recae sobre la propiedad?» `[REC]` |
@@ -435,7 +470,7 @@ añadiría el problema de la invalidación.
 | Hoja | Contenido |
 |---|---|
 | `Resumen` | Totales por horizonte, escenarios, perfil de costes aplicado, fecha |
-| `CAPEX` | Una fila por línea con **todas las columnas**: código, capítulo, zona, riesgo, concepto, recuperable, los cinco horizontes, total, y la cascada completa si existe |
+| `CAPEX` | Una fila por línea con **todas las columnas**: código, capítulo, zona, riesgo, concepto, recuperable, horizonte, importe, impuestos, total, y la cascada completa si existe. Además, las cinco columnas pivotadas para leerla como la hoja de siempre |
 | `Trazabilidad` | Una fila por referencia de precio: fuente, URL, fecha de consulta, alcance, quién validó y cuándo |
 | `Por capítulo` / `Por zona` / `Por riesgo` / `Por horizonte` | Tablas agregadas |
 | `Hallazgos` | Hallazgos vinculados con su descripción, riesgo y comentarios |
@@ -473,7 +508,7 @@ flowchart LR
 *«¿De dónde salió este importe de 48.500 € en el corto plazo?»*
 
 → Línea `CX-0117`, código `HC.H08.01 Producción de climatización`, zona Cubierta, riesgo 03 Alto,
-concepto Vida útil, no recuperable a inquilino. Importe asignado al horizonte corto (1-2 años). Precio
+concepto Vida útil, no recuperable a inquilino, horizonte **corto plazo (1-2 años)**. Precio
 unitario del catálogo interno, referencia `CI-4471`, importada el 15/01/2026 de un catálogo con
 licencia propia, precio con fecha 01/11/2025, ámbito ES-MAD, sin impuestos, instalación incluida, obra
 civil y grúa excluidas. Validado por Luis Pérez el 28/07/2026 a las 10:42 desde la IP registrada.
@@ -505,5 +540,5 @@ Esa cadena completa es el producto real de este bloque.
 | 3 | `[LIM]` Sin conversión automática de moneda | Multi-moneda en un proyecto queda pendiente de P-19 |
 | 4 | `[LIM]` Los índices se cargan manualmente | Automatizarlos exige una fuente con condiciones validadas |
 | 5 | `[LIM]` La cascada por defecto es un supuesto | Debe confirmarse contra los Excel reales del cliente antes del primer informe (P-16) |
-| 6 | `[LIM]` El modelo de cinco columnas de importe es una interpretación | Pendiente de P-05. Se ha elegido la opción más general, reversible a la más simple |
+| 6 | `[SUP]` Que el importe sea la **base imponible final** de la línea (y no un coste directo al que aplicar la cascada) es una interpretación | Determina si la cascada se aplica o no sobre lo tecleado. Confirmar junto con P-16 |
 | 7 | `[LIM]` `PrecioCentroSource` es un andamio no funcional | Marcado como tal en código, documentación e interfaz. No se presenta como integración operativa |

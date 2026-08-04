@@ -85,7 +85,7 @@ la cartera de encargos por cliente sin duplicar datos.
 
 #### 4.1.4. Activos
 
-Unión de los campos de §3.1.3 y §3.3.1 (ver P-02 sobre la duplicidad detectada):
+Unión de los campos de §3.1.3 y §3.3.1 (**P-02 decidido**: una sola entidad con la unión):
 
 | Grupo | Campos |
 |---|---|
@@ -96,9 +96,10 @@ Unión de los campos de §3.1.3 y §3.3.1 (ver P-02 sobre la duplicidad detectad
 | Cronología | Año de construcción, año de última reforma |
 | Descriptivos | Descripción, observaciones, imagen principal |
 
-`[REC]` Los campos se muestran **según tipología**: la altura de almacén solo aparece en industrial y
-logística; la superficie de almacén, en industrial, logística y retail. Un formulario que pide altura
-de almacén para un hotel enseña que nadie ha pensado en quien lo rellena.
+`[REC]` Los campos se muestran **según tipología**: la superficie y la altura de almacén solo aparecen
+en **Industrial**. Un formulario que pide altura de almacén para un hotel enseña que nadie ha pensado
+en quien lo rellena. Los valores no se borran al reclasificar: dejan de mostrarse y vuelven si se
+restaura la tipología.
 
 Visualización en mapa mediante adaptador `MapProvider` configurable. `[REQ]`
 
@@ -166,12 +167,14 @@ Lo que el consultor rellena es **una fila** con estos campos, en este orden:
 | Descripción | Texto libre | |
 | Riesgo | 01 Bajo · 02 Moderado · 03 Alto · 04 Extremo · – | Con su definición visible `[REQ]` |
 | Comentarios | Texto libre | |
-| CAPEX estimado | Importe **por horizonte**: corto, medio, largo, mejoras, otro | Total calculado `[SUP]` S-09 |
+| Horizonte | Corto (1-2) · Medio (3-5) · Largo (6-10) · Mejoras · Otro | **Uno solo por línea** `[REQ]` P-05 |
+| CAPEX estimado | Un importe, en el horizonte elegido | Base imponible; los impuestos van encima |
 | Concepto | 11 valores (§3.3.3) | |
 | Recuperable a inquilino | SI · NO · N.A. · – | |
 
 Y, opcionalmente `[SUP]` S-10, un **desglose por medición**: unidad, cantidad, precio unitario y
-cascada de costes, que alimenta el importe del horizonte y le aporta trazabilidad.
+cascada de costes, cuyo resultado el usuario **traslada** al importe con una acción explícita,
+aportándole trazabilidad.
 
 `[REC]` Bajo la interfaz, cada fila persiste como `Finding` (el diagnóstico: zona, descripción,
 riesgo, comentarios, concepto) más `CapexItem` (el dinero: código, importes, recuperabilidad), con
