@@ -77,7 +77,7 @@ Familia nueva, y de las más importantes del modelo revisado:
 | Cambio de tipología | Las líneas conservan su zona y se marcan `REVISAR_ZONA`; **nunca se borra la zona** |
 | Coherencia código ↔ concepto | Código `SC.*` con concepto distinto de `Soft Cost` ⇒ **aviso, no bloqueo** (§5.5) |
 | Valor «–» | `NULL` en zona, riesgo, concepto y recuperabilidad; las agregaciones lo tratan como «sin clasificar», no como una categoría |
-| Integridad del árbol | 4 categorías, 18 capítulos, 121 elementos; `path` coherente con `parent_id`; sin ciclos |
+| Integridad del árbol | **4 categorías, 18 capítulos, 103 elementos, 125 nodos**; `path` coherente con `parent_id`; sin ciclos |
 | Definiciones de riesgo | Las cuatro presentes, no vacías, y expuestas por la API |
 
 ### Motor de fases `[REC]`
@@ -136,7 +136,7 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 | **API completa** | Cada endpoint: camino feliz, validación, autorización, `404` entre organizaciones, `409` de concurrencia, `422` de negocio |
 | **Contrato OpenAPI** | Esquema válido y cliente TypeScript comprometido igual al generado |
 | **Migraciones** | Ida y vuelta sobre base vacía y sobre base con datos de prueba |
-| **Semilla de catálogos** | Que la migración cargue **6 tipologías, 20 zonas, 86 relaciones**, 121 códigos, 4 riesgos, 10 conceptos, 5 horizontes, 8 fases |
+| **Semilla de catálogos** | Que la migración cargue **6 tipologías, 20 zonas, 86 relaciones, 125 códigos** (4+18+103), 4 riesgos, 10 conceptos, 5 horizontes, 8 fases |
 
 ---
 

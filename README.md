@@ -5,10 +5,11 @@ proyectos de **due diligence técnica (TDD) de activos inmobiliarios**: gestión
 fases, repositorio fotográfico, elaboración del CAPEX con trazabilidad, y generación de informes
 PowerPoint desde la plantilla PPTX de cada proyecto.
 
-> **Estado actual: fase de diseño.**
-> Este repositorio contiene el análisis funcional, la arquitectura, el modelo de datos y el plan de
-> implementación (entregables 1 a 23). **Todavía no contiene código de aplicación**: el código inicial
-> del MVP (entregable 24) se desarrolla tras la validación de este diseño, conforme a §16 del encargo.
+> **Estado actual: diseño cerrado + código inicial del MVP en marcha.**
+> Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
+> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **102 pruebas
+> en verde contra PostgreSQL real**. Qué está construido y qué no, sin adornos, en
+> [`apps/api/README.md`](apps/api/README.md).
 
 ---
 
@@ -18,7 +19,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 |---|---|---|
 | 1 | **Estado y fases son ejes distintos** | El `estado` del proyecto describe el ciclo administrativo; las **fases** (documentación, VDR, visita, Q&A, Red Flag/CAPEX, Full Report, presentación, defensa) describen el trabajo real, se eligen a la carta al dar de alta y avanzan en paralelo. Un encargo puede tener la documentación pendiente, la visita hecha y el Q&A en curso a la vez |
 | 2 | **La fila que rellena el consultor es una sola cosa** | Hallazgo y partida CAPEX son la misma línea: código, zona, riesgo, concepto, **un horizonte y un importe**. La interfaz muestra una fila; por debajo se persisten `Finding` y `CapexItem` con relación 1:1, para conservar el modelo exigido y permitir que un hallazgo genere varias partidas |
-| 3 | **Los catálogos son datos, no código** | 6 tipologías, 20 zonas dependientes de ellas, 121 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra, cinco horizontes. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
+| 3 | **Los catálogos son datos, no código** | 6 tipologías, 20 zonas dependientes de ellas, 125 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra, cinco horizontes. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
 | 4 | **El original nunca se toca** | Fotografías, documentos y plantillas son objetos inmutables, garantizado por cuatro barreras independientes: API, dominio, base de datos y almacenamiento WORM |
 | 5 | **El precio es un dato con procedencia** | Fuente, URL, fecha de consulta, ámbito, alcance incluido y excluido, tratamiento fiscal, y el usuario que lo validó. Ningún proceso automático valida un precio |
 | 6 | **La tabla de CAPEX se diseña una sola vez** | La tabla nativa del informe y la hoja `CAPEX` del Excel exportado salen de la **misma estructura intermedia**. Añadir una columna en un solo sitio hace fallar la suite. Sin esa pieza, en seis meses el PPTX y el Excel que viajan en el mismo correo tendrían columnas distintas |
@@ -57,6 +58,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | [17](docs/17-requisitos-no-funcionales.md) | Objetivos no funcionales verificables | §10 |
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 | **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
+| **[apps/api](apps/api/README.md)** | **Código inicial del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 
 ### Convención de etiquetas
 

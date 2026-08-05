@@ -50,7 +50,7 @@ tdd-inmobiliaria/
 │   │   ├── tipologias.csv
 │   │   ├── zonas.csv
 │   │   ├── zonas_por_tipologia.csv        ← la matriz de §5.2
-│   │   ├── codigos_capex.csv              ← los 121 elementos
+│   │   ├── codigos_capex.csv              ← los 125 nodos del árbol
 │   │   ├── riesgos.csv                    ← con la definición íntegra
 │   │   ├── conceptos.csv · horizontes.csv
 │   │   ├── sistemas_tecnicos.csv
@@ -86,7 +86,7 @@ tdd-inmobiliaria/
 ```
 
 `[REC]` **Los catálogos viven en CSV dentro de `docs/`, no incrustados en una migración de Python.**
-Motivos: son 121 códigos y 86 relaciones que el cliente debe poder revisar sin leer código; un CSV se
+Motivos: son 125 códigos y 86 relaciones que el cliente debe poder revisar sin leer código; un CSV se
 abre en Excel y se comenta; y el `diff` de un cambio en el árbol es legible en una revisión de código.
 La migración los lee; la fuente de verdad es el CSV.
 

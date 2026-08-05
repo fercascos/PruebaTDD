@@ -1,0 +1,160 @@
+"""Infraestructura de pruebas.
+
+Las pruebas marcadas `@pytest.mark.db` corren contra **PostgreSQL real**, no
+contra SQLite ni contra un doble. No hay alternativa: la Row Level Security, los
+`CHECK`, los triggers y las columnas generadas son justo lo que se quiere
+comprobar, y ninguna de esas cosas existe fuera de PostgreSQL.
+"""
+
+from __future__ import annotations
+
+import os
+import uuid
+from collections.abc import Iterator
+from pathlib import Path
+
+import pytest
+from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.orm import Session, sessionmaker
+
+from tdd.catalogs.seeding import sembrar_catalogos
+from tdd.core.db import ContextoRLS, aplicar_contexto
+
+RAIZ = Path(__file__).resolve().parents[3]
+ESQUEMA = RAIZ / "apps" / "api" / "src" / "tdd" / "db" / "schema.sql"
+
+URL_ADMIN = os.environ.get("TEST_DATABASE_URL")
+USUARIO_APP = "tdd_app"
+CLAVE_APP = "prueba-local-sin-valor-real"  # noqa: S105 — base efímera de pruebas
+
+
+def _url_como_app(url_admin: str) -> str:
+    """Misma base, pero conectando como el usuario de aplicación."""
+    cola = url_admin.split("@", 1)[1]
+    return f"postgresql+psycopg://{USUARIO_APP}:{CLAVE_APP}@{cola}"
+
+
+@pytest.fixture(scope="session")
+def motor_admin() -> Iterator[Engine]:
+    if not URL_ADMIN:
+        pytest.skip("TEST_DATABASE_URL no definida: se omiten las pruebas de base de datos")
+    engine = create_engine(URL_ADMIN, future=True)
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE"))
+        conn.execute(text("CREATE SCHEMA public"))
+        conn.execute(text(ESQUEMA.read_text(encoding="utf-8")))
+        sembrar_catalogos(conn)
+
+        # El usuario de aplicación NO es propietario de las tablas y NO tiene
+        # BYPASSRLS. Si lo tuviera, las políticas no se le aplicarían y toda la
+        # seguridad de este esquema sería decorativa. `test_el_usuario_de_
+        # aplicacion_no_puede_saltarse_la_rls` lo verifica.
+        conn.execute(text("GRANT USAGE ON SCHEMA public TO " + USUARIO_APP))
+        conn.execute(
+            text(
+                "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "
+                + USUARIO_APP
+            )
+        )
+        conn.execute(
+            text("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO " + USUARIO_APP)
+        )
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def motor_app(motor_admin: Engine) -> Iterator[Engine]:
+    engine = create_engine(_url_como_app(str(URL_ADMIN)), future=True)
+    yield engine
+    engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def fabrica(motor_app: Engine) -> sessionmaker[Session]:
+    return sessionmaker(bind=motor_app, expire_on_commit=False, future=True)
+
+
+@pytest.fixture(scope="session")
+def datos_base(motor_admin: Engine) -> dict[str, uuid.UUID]:
+    """Dos organizaciones con sus usuarios. Es el escenario del aislamiento."""
+    ids: dict[str, uuid.UUID] = {}
+    with motor_admin.begin() as conn:
+        for etiqueta, slug in (("org_a", "alfa"), ("org_b", "beta")):
+            ids[etiqueta] = conn.execute(
+                text(
+                    "INSERT INTO organization (name, slug) VALUES (:n, :s) RETURNING id"
+                ),
+                {"n": slug.title(), "s": slug},
+            ).scalar_one()
+
+        usuarios = [
+            ("admin_a", "org_a", "admin@alfa.example", "ADMIN", True),
+            ("consultor_a", "org_a", "consultor@alfa.example", "CONSULTOR", False),
+            ("consultor2_a", "org_a", "otro@alfa.example", "CONSULTOR", False),
+            ("lector_a", "org_a", "lector@alfa.example", "LECTOR", False),
+            ("admin_b", "org_b", "admin@beta.example", "ADMIN", True),
+        ]
+        for etiqueta, org, email, rol, gestiona in usuarios:
+            ids[etiqueta] = conn.execute(
+                text(
+                    "INSERT INTO app_user (organization_id, email, full_name, password_hash, "
+                    "org_role, can_manage_suggestions) "
+                    "VALUES (:o, :e, :n, 'x', CAST(:r AS org_role), :g) RETURNING id"
+                ),
+                {"o": ids[org], "e": email, "n": etiqueta, "r": rol, "g": gestiona},
+            ).scalar_one()
+
+        for etiqueta, org, nombre in (("cliente_a", "org_a", "Inversora Ficticia S.L."),):
+            ids[etiqueta] = conn.execute(
+                text("INSERT INTO client (organization_id, name) VALUES (:o, :n) RETURNING id"),
+                {"o": ids[org], "n": nombre},
+            ).scalar_one()
+
+        ids["proyecto_a"] = conn.execute(
+            text(
+                "INSERT INTO project (organization_id, client_id, internal_code, name) "
+                "VALUES (:o, :c, '2026-014', 'TDD Cartera Norte') RETURNING id"
+            ),
+            {"o": ids["org_a"], "c": ids["cliente_a"]},
+        ).scalar_one()
+    return ids
+
+
+@pytest.fixture
+def como(fabrica: sessionmaker[Session], datos_base: dict[str, uuid.UUID]):
+    """Devuelve una sesión actuando como el usuario indicado.
+
+    Uso:  with como("consultor_a") as s: ...
+    """
+    from contextlib import contextmanager
+
+    org_de = {
+        "admin_a": "org_a",
+        "consultor_a": "org_a",
+        "consultor2_a": "org_a",
+        "lector_a": "org_a",
+        "admin_b": "org_b",
+    }
+    gestiona = {"admin_a", "admin_b"}
+
+    @contextmanager
+    def _abrir(usuario: str) -> Iterator[Session]:
+        ctx = ContextoRLS(
+            organization_id=datos_base[org_de[usuario]],
+            user_id=datos_base[usuario],
+            can_manage_suggestions=usuario in gestiona,
+        )
+        s = fabrica()
+        try:
+            s.begin()
+            aplicar_contexto(s, ctx)
+            yield s
+            s.commit()
+        except Exception:
+            s.rollback()
+            raise
+        finally:
+            s.close()
+
+    return _abrir

@@ -85,7 +85,7 @@ más fricción encuentra en la herramienta.
 | **Registrar revisión de condiciones de uso de una fuente** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Ejecutar política de borrado definitivo | ⚠️⁴ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-> Los catálogos del sistema (los 121 códigos, las 20 zonas, los 4 grados de riesgo) **no son editables
+> Los catálogos del sistema (los 125 códigos, las 20 zonas, los 4 grados de riesgo) **no son editables
 > por nadie desde la aplicación**: se versionan con el código y se cambian por migración. Una
 > organización puede *añadir* los suyos, no alterar los comunes. `[REC]` Es lo que garantiza que dos
 > proyectos de dos consultoras sigan siendo comparables.

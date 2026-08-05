@@ -1,0 +1,42 @@
+# ── Secretos ─────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Fuentes corporativas ─────────────────────────────────────────────────────
+# Gotham es comercial y licenciada. Versionarla sería redistribuirla y
+# exponerla a cualquiera con acceso al repositorio. Se provisionan en el
+# contenedor desde un artefacto privado. Ver docs/operacion/instalar-fuentes.md
+# Hay además una prueba de CI que falla si aparece alguna: un .gitignore se
+# salta con `git add -f`, la prueba no.
+assets/fonts/**/*.otf
+assets/fonts/**/*.ttf
+assets/fonts/**/*.woff*
+!assets/fonts/README.md
+
+# ── Material real de cliente ─────────────────────────────────────────────────
+# Plantillas y fotografías reales llevan datos de activos identificables.
+tests/fixtures/real/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ── Node ─────────────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.vite/
+
+# ── Sistema ──────────────────────────────────────────────────────────────────
+.DS_Store
+*.log

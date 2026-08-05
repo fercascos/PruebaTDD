@@ -1,0 +1,6 @@
+code,name_es,year_from,year_to,is_execution_term
+CORTO,Corto plazo,1,2,true
+MEDIO,Medio plazo,3,5,true
+LARGO,Largo plazo,6,10,true
+MEJORAS,Mejoras,,,false
+OTRO,Otro,,,false

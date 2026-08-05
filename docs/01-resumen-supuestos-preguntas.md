@@ -45,7 +45,7 @@ El producto se articula en cinco dominios:
    en §7 y permitir que un hallazgo genere varias partidas cuando haga falta. `[REC]`
 
 3. **Los catálogos son datos, no código.** Seis tipologías, veinte zonas dependientes de ellas, un
-   árbol de 121 códigos, cuatro grados de riesgo con definición escrita y cinco horizontes. Todo vive
+   árbol de 125 códigos, cuatro grados de riesgo con definición escrita y cinco horizontes. Todo vive
    en tablas versionadas y editables, no en enumerados compilados: cambiar un capítulo del árbol no
    puede exigir un despliegue, y tres categorías siguen pendientes de desglose.
 

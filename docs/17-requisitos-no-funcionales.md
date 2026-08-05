@@ -62,7 +62,7 @@ importa no es el tiempo absoluto, sino que **el usuario pueda seguir trabajando 
 | E-4 | Fotografías por proyecto | 10.000 sin degradación | SUP | 6× el caso alto de S-03 |
 | E-5 | Fotografías totales | 10 millones | SUP | Limitado por el almacenamiento, no por el diseño |
 | E-6 | Líneas de CAPEX por proyecto | 2.000 | SUP | 6× el caso alto de S-03 |
-| E-7 | **Códigos en el árbol** | 2.000 sin degradar el selector | REC | Hoy son 121; el desglose de las tres categorías pendientes podría multiplicarlo |
+| E-7 | **Códigos en el árbol** | 2.000 sin degradar el selector | REC | Hoy son 125; el desglose de las tres categorías pendientes podría multiplicarlo |
 | E-8 | Diapositivas por informe | 300 | SUP | Muy por encima de un informe de TDD habitual |
 | E-9 | Escalado horizontal de la API | Sin estado, N instancias | REC | Sin sesión en memoria |
 | E-10 | Escalado de workers | Independiente por cola | REC | `heavy` escala con la demanda de informes sin afectar a `io` |

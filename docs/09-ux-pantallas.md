@@ -1046,7 +1046,7 @@ sin ella sugiere que se ha buscado en todas partes.
 │   condiciones de uso. Esta restricción se aplica en la base de datos.        │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ CATÁLOGOS                                                                    │
-│ Tipologías (6) │ Zonas (20) │ Códigos CAPEX (121) │ Riesgos (4) │            │
+│ Tipologías (6) │ Zonas (20) │ Códigos CAPEX (125) │ Riesgos (4) │            │
 │ Conceptos (10) │ Horizontes (5) │ Sistemas técnicos (14) │ Especialidades(10)│
 │ ⓘ Los catálogos del sistema no son editables: se versionan con la aplicación.│
 │   Puede añadir los suyos propios, que convivirán con ellos.                  │

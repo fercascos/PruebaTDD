@@ -134,7 +134,7 @@ desnudo, o sobre todo lo acumulado hasta ese punto. Con indirectos 8 %, GG 13 %,
 | Criterio | Base imponible | Desviación |
 |---|---:|---:|
 | Todos los porcentajes sobre el **coste directo** (sin componer) | 69.355,00 € | −4,6 % |
-| **Práctica estándar española** (PEM → PEC → honorarios → contingencia) | **72.679,35 €** | referencia |
+| **Práctica estándar española** (PEM → PEC → honorarios → contingencia) | **72.679,34 €** | referencia |
 | Todo compuesto en cadena, cada uno sobre lo acumulado | 73.155,73 € | +0,7 % |
 
 **Ese es el rango real de P-16: un 5 %.** Sobre un CAPEX de 1,84 M€ son unos 84.000 €. No es
@@ -186,7 +186,7 @@ líneas del proyecto, y no solo en las que llevan medición.
 ### Qué queda anotado, ahora que P-16 está cerrada
 
 La estructura de la cascada queda fijada y hay una prueba que la ancla: con los porcentajes del
-ejemplo, un coste directo de 48.500 € debe dar **72.679,35 €** de base imponible. Si alguien cambia un
+ejemplo, un coste directo de 48.500 € debe dar **72.679,34 €** de base imponible. Si alguien cambia un
 peldaño sin querer, la prueba lo detecta.
 
 Dos matices que conviene tener presentes, sin que ninguno reabra nada:
@@ -233,16 +233,22 @@ Perfil: indirectos 8 %, GG 13 %, BI 6 %, honorarios 6 %, contingencia 10 %, IVA 
 | Beneficio industrial (6 %) | 52.380,00 × 0,06 | 3.142,80 € |
 | **PEC** | ejecución por contrata | **62.332,20 €** |
 | Honorarios (6 %) | 62.332,20 × 0,06 | 3.739,93 € |
-| Contingencia (10 %) | 66.072,13 × 0,10 | 6.607,22 € |
-| **Base imponible calculada** | fin de la cascada → `computed_base` | **72.679,35 €** |
+| Contingencia (10 %) | 66.072,13 × 0,10 | 6.607,21 € |
+| **Base imponible calculada** | fin de la cascada → `computed_base` | **72.679,34 €** |
+
+`[REC]` **Por qué 72.679,34 y no 72.679,35.** Cada peldaño se redondea a céntimos *antes* de servir de
+base al siguiente. Dejar correr la precisión completa y redondear solo al final daría un céntimo más,
+pero entonces **los importes que se ven en pantalla no sumarían el total que se ve en pantalla**, y el
+bloque «Cómo se calcula» perdería justo lo que lo hace útil. Se prefiere que el usuario pueda sumar a
+mano lo que lee. Es configurable (`round_each_step`), y hay una prueba que ancla este valor exacto.
 
 Si el consultor traslada esa cifra al importe de la línea, el total con impuestos de la línea es:
 
 | Paso | Operación | Importe |
 |---|---|---:|
-| Importe de la línea | trasladado desde la medición | 72.679,35 € |
-| IVA (21 %) | 72.679,35 × 0,21 | 15.262,66 € |
-| **Total de la línea** | columna generada | **87.942,01 €** |
+| Importe de la línea | trasladado desde la medición | 72.679,34 € |
+| IVA (21 %) | 72.679,34 × 0,21 | 15.262,66 € |
+| **Total de la línea** | columna generada | **87.942,00 €** |
 
 `[SUP]` Los porcentajes del ejemplo son los habituales del sector; **los reales los fija el cliente en
 el perfil de costes**. Lo que este documento fija es la **estructura**, no los valores.

@@ -1,0 +1,614 @@
+-- =============================================================================
+--  Esquema inicial · TDD inmobiliaria
+--
+--  Cuatro cosas se hacen cumplir AQUÍ, en la base de datos, y no solo en la
+--  capa de aplicación. Un servicio nuevo que olvide una comprobación no puede
+--  saltárselas:
+--
+--   1. Aislamiento entre organizaciones ......... Row Level Security
+--   2. Visibilidad de las sugerencias [REQ] ..... Row Level Security
+--   3. Los originales nunca se sobrescriben ..... trigger
+--   4. Reglas del CAPEX y de los precios ........ CHECK
+-- =============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS ltree;
+
+-- ── Identidad y organización ────────────────────────────────────────────────
+
+CREATE TABLE organization (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name         VARCHAR(160) NOT NULL,
+    slug         VARCHAR(80)  NOT NULL UNIQUE,
+    is_active    BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TYPE org_role AS ENUM (
+    'ADMIN', 'DIRECTOR_PROYECTO', 'CONSULTOR', 'TECNICO_ESPECIALISTA', 'REVISOR', 'LECTOR'
+);
+
+CREATE TABLE app_user (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    email            VARCHAR(320) NOT NULL,
+    full_name        VARCHAR(160) NOT NULL,
+    password_hash    TEXT NOT NULL,
+    org_role         org_role NOT NULL DEFAULT 'LECTOR',
+    -- [REC] P-41 · permiso separable: atender el buzón de sugerencias sin ser
+    -- ADMIN, que además gestiona usuarios, catálogos y organización.
+    can_manage_suggestions BOOLEAN NOT NULL DEFAULT FALSE,
+    is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (organization_id, email)
+);
+
+-- ── Catálogos del sistema ───────────────────────────────────────────────────
+-- organization_id NULL = fila del sistema, no editable por nadie.
+
+CREATE TABLE asset_typology (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(120) NOT NULL,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order      INT NOT NULL DEFAULT 0,
+    UNIQUE (organization_id, code)
+);
+
+CREATE TABLE zone (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(120) NOT NULL,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order      INT NOT NULL DEFAULT 0,
+    UNIQUE (organization_id, code)
+);
+
+-- La matriz de §5.2: 86 relaciones. Es lo que hace que el selector de zona
+-- dependa de la tipología del activo, con la regla en un solo sitio.
+CREATE TABLE zone_typology (
+    zone_id     UUID NOT NULL REFERENCES zone(id) ON DELETE CASCADE,
+    typology_id UUID NOT NULL REFERENCES asset_typology(id) ON DELETE CASCADE,
+    PRIMARY KEY (zone_id, typology_id)
+);
+
+CREATE TABLE capex_code (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(200) NOT NULL,
+    level           SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 3),
+    parent_id       UUID REFERENCES capex_code(id),
+    path            LTREE,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    deprecated_at   TIMESTAMPTZ,
+    UNIQUE (organization_id, code),
+    -- Un nodo de nivel 1 no tiene padre; los demás, sí. Sin esto, un árbol
+    -- puede quedarse con capítulos huérfanos que no aparecen en el selector.
+    CONSTRAINT capex_code_parent_coherente
+        CHECK ((level = 1 AND parent_id IS NULL) OR (level > 1 AND parent_id IS NOT NULL))
+);
+CREATE INDEX capex_code_path_idx ON capex_code USING GIST (path);
+CREATE INDEX capex_code_parent_idx ON capex_code (parent_id);
+
+CREATE TABLE risk_level (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(4) NOT NULL,
+    name_es         VARCHAR(60) NOT NULL,
+    score           SMALLINT NOT NULL CHECK (score BETWEEN 1 AND 4),
+    -- [REQ] La definición íntegra vive en base de datos, no en el frontend:
+    -- se muestra al clasificar y se vuelca al informe como leyenda.
+    definition_es   TEXT NOT NULL,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (organization_id, code)
+);
+
+CREATE TABLE capex_concept (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(120) NOT NULL,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (organization_id, code)
+);
+
+CREATE TABLE time_horizon (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID REFERENCES organization(id),
+    code              VARCHAR(20) NOT NULL,
+    name_es           VARCHAR(60) NOT NULL,
+    year_from         SMALLINT,
+    year_to           SMALLINT,
+    is_execution_term BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order        INT NOT NULL DEFAULT 0,
+    is_system         BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (organization_id, code),
+    CONSTRAINT horizonte_rango_coherente
+        CHECK (year_from IS NULL OR year_to IS NULL OR year_from <= year_to)
+);
+
+-- Traducciones de catálogo. [REQ] El informe se emite en el idioma de la
+-- plantilla, y las definiciones de riesgo están traducidas palabra por palabra
+-- en las plantillas reales: por eso viven en tabla, no en una columna única.
+CREATE TABLE catalog_i18n (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    catalog      VARCHAR(40) NOT NULL,
+    row_id       UUID NOT NULL,
+    locale       VARCHAR(10) NOT NULL,
+    name         VARCHAR(200) NOT NULL,
+    definition   TEXT,
+    UNIQUE (catalog, row_id, locale)
+);
+
+-- ── Cliente, proyecto y activo ──────────────────────────────────────────────
+
+CREATE TYPE project_status AS ENUM (
+    'BORRADOR', 'PREPARACION', 'VISITA_PROGRAMADA', 'VISITA_REALIZADA',
+    'EN_ANALISIS', 'EN_REVISION', 'EMITIDO', 'CERRADO', 'ARCHIVADO'
+);
+
+CREATE TABLE client (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    name            VARCHAR(200) NOT NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at      TIMESTAMPTZ
+);
+
+CREATE TABLE project (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    client_id        UUID NOT NULL REFERENCES client(id),
+    internal_code    VARCHAR(40) NOT NULL,
+    name             VARCHAR(200) NOT NULL,
+    status           project_status NOT NULL DEFAULT 'BORRADOR',
+    currency         CHAR(3) NOT NULL DEFAULT 'EUR',
+    report_due_date  DATE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at       TIMESTAMPTZ,
+    UNIQUE (organization_id, internal_code)
+);
+
+CREATE TABLE asset (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organization(id),
+    project_id        UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    typology_id       UUID NOT NULL REFERENCES asset_typology(id),
+    name              VARCHAR(200) NOT NULL,
+    city              VARCHAR(120),
+    -- [REQ] P-02 · La UNIÓN de los campos de §3.1.3 y §3.3.1 en una sola ficha.
+    -- Se muestran según tipología y NO se borran al reclasificar.
+    plot_area_sqm       NUMERIC(14, 2),
+    total_built_sqm     NUMERIC(14, 2),
+    lettable_area_sqm   NUMERIC(14, 2),
+    warehouse_area_sqm  NUMERIC(14, 2),
+    office_area_sqm     NUMERIC(14, 2),
+    warehouse_height_m  NUMERIC(6, 2),
+    floors_above        SMALLINT,
+    floors_below        SMALLINT,
+    year_built          SMALLINT,
+    year_last_refurb    SMALLINT,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at        TIMESTAMPTZ
+);
+
+-- ── Perfil de costes ────────────────────────────────────────────────────────
+
+CREATE TABLE cost_profile (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    name             VARCHAR(120) NOT NULL,
+    -- [REQ] P-05b · De los seis porcentajes, SOLO el impuesto se aplica a todas
+    -- las líneas. Los otros cinco son la preconfiguración de la calculadora de
+    -- medición y NO recalculan ningún importe ya tecleado.
+    tax_pct          NUMERIC(7, 4) NOT NULL DEFAULT 0.2100,
+    indirect_pct     NUMERIC(7, 4) NOT NULL DEFAULT 0.0800,
+    overhead_pct     NUMERIC(7, 4) NOT NULL DEFAULT 0.1300,
+    profit_pct       NUMERIC(7, 4) NOT NULL DEFAULT 0.0600,
+    fees_pct         NUMERIC(7, 4) NOT NULL DEFAULT 0.0600,
+    contingency_pct  NUMERIC(7, 4) NOT NULL DEFAULT 0.1000,
+    -- [REQ] P-16 · La estructura de la cascada: sobre qué base se aplica cada
+    -- porcentaje. Cambiarla es configuración, no despliegue.
+    cascade_config   JSONB NOT NULL,
+    is_default       BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (organization_id, name)
+);
+
+-- ── Precios ─────────────────────────────────────────────────────────────────
+
+CREATE TYPE price_source_type AS ENUM (
+    'MANUAL', 'CATALOGO_INTERNO', 'BASE_PRECIOS_LICENCIADA', 'API_OFICIAL', 'CATALOGO_FABRICANTE'
+);
+
+CREATE TABLE price_source (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organization(id),
+    code                VARCHAR(60) NOT NULL,
+    name                VARCHAR(160) NOT NULL,
+    source_type         price_source_type NOT NULL,
+    is_enabled          BOOLEAN NOT NULL DEFAULT FALSE,
+    tos_reviewed        BOOLEAN NOT NULL DEFAULT FALSE,
+    tos_reviewed_by     UUID REFERENCES app_user(id),
+    tos_reviewed_at     TIMESTAMPTZ,
+    tos_url             TEXT,
+    license_reference   VARCHAR(160),
+    license_expires_at  DATE,
+    disabled_reason     TEXT,
+    UNIQUE (organization_id, code),
+    -- [REQ] Una fuente externa NO puede habilitarse sin revisión documentada de
+    -- sus condiciones de uso. En la base de datos, para que no dependa de que
+    -- una pantalla recuerde comprobarlo.
+    CONSTRAINT fuente_exige_revision_de_condiciones CHECK (
+        is_enabled = FALSE
+        OR source_type = 'MANUAL'
+        OR (tos_reviewed = TRUE AND tos_reviewed_by IS NOT NULL AND tos_reviewed_at IS NOT NULL)
+    )
+);
+
+CREATE TABLE price_reference (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id       UUID NOT NULL REFERENCES organization(id),
+    price_source_id       UUID NOT NULL REFERENCES price_source(id),
+    description           TEXT NOT NULL,
+    unit                  VARCHAR(20) NOT NULL,
+    unit_price            NUMERIC(18, 4) NOT NULL,
+    currency              CHAR(3) NOT NULL DEFAULT 'EUR',
+    source_url            TEXT,
+    retrieved_at          TIMESTAMPTZ,
+    price_date            DATE,
+    geo_scope             VARCHAR(40),
+    includes_tax          BOOLEAN,
+    includes_installation BOOLEAN,
+    scope_included        TEXT,
+    scope_excluded        TEXT,
+    -- [REQ] P-06 · Nota de procedencia OPCIONAL. Los precios se teclean a mano
+    -- y exigir un párrafo en cada línea no produce trazabilidad, produce ruido.
+    -- La trazabilidad real la da audit_log, que no depende de que nadie escriba.
+    provenance_note       TEXT,
+    created_by            UUID NOT NULL REFERENCES app_user(id),
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── Diagnóstico y CAPEX ─────────────────────────────────────────────────────
+
+CREATE TYPE tenant_recoverable AS ENUM ('SI', 'NO', 'NA');
+CREATE TYPE price_status AS ENUM ('SIN_PRECIO', 'PENDIENTE_VALIDACION', 'VALIDADO');
+CREATE TYPE amount_source AS ENUM ('MANUAL', 'MEDICION');
+
+CREATE TABLE finding (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id    UUID NOT NULL REFERENCES organization(id),
+    project_id         UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    asset_id           UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    capex_code_id      UUID NOT NULL REFERENCES capex_code(id),
+    zone_id            UUID NOT NULL REFERENCES zone(id),
+    risk_level_id      UUID REFERENCES risk_level(id),
+    capex_concept_id   UUID REFERENCES capex_concept(id),
+    title              VARCHAR(240) NOT NULL,
+    description        TEXT NOT NULL DEFAULT '',
+    comments           TEXT,
+    tenant_recoverable tenant_recoverable NOT NULL DEFAULT 'NA',
+    created_by         UUID NOT NULL REFERENCES app_user(id),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at         TIMESTAMPTZ
+);
+
+CREATE TABLE capex_item (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    project_id       UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    finding_id       UUID NOT NULL REFERENCES finding(id) ON DELETE CASCADE,
+    cost_profile_id  UUID NOT NULL REFERENCES cost_profile(id),
+
+    -- [REQ] P-05 · UN horizonte y UN importe. No cinco columnas: así es
+    -- imposible que una línea quede repartida entre dos plazos por descuido.
+    time_horizon_id  UUID NOT NULL REFERENCES time_horizon(id),
+    -- [REQ] P-05b · Es la BASE IMPONIBLE FINAL: lleva dentro indirectos,
+    -- honorarios y contingencia. La cascada nunca se aplica encima.
+    amount           NUMERIC(18, 4) NOT NULL DEFAULT 0 CHECK (amount >= 0),
+    tax_pct          NUMERIC(7, 4) NOT NULL DEFAULT 0 CHECK (tax_pct >= 0),
+    tax_amount       NUMERIC(18, 4) GENERATED ALWAYS AS (ROUND(amount * tax_pct, 2)) STORED,
+    total_cost       NUMERIC(18, 4) GENERATED ALWAYS AS (amount + ROUND(amount * tax_pct, 2)) STORED,
+    amount_source    amount_source NOT NULL DEFAULT 'MANUAL',
+
+    -- Desglose por medición: opcional [SUP] S-10
+    measurement_unit       VARCHAR(20),
+    measurement_quantity   NUMERIC(18, 4) CHECK (measurement_quantity IS NULL OR measurement_quantity >= 0),
+    measurement_unit_price NUMERIC(18, 4) CHECK (measurement_unit_price IS NULL OR measurement_unit_price >= 0),
+    computed_base          NUMERIC(18, 4),
+    cascade_breakdown      JSONB,
+
+    -- Trazabilidad del precio
+    selected_price_reference_id UUID REFERENCES price_reference(id),
+    price_status         price_status NOT NULL DEFAULT 'SIN_PRECIO',
+    price_validated_by   UUID REFERENCES app_user(id),
+    price_validated_at   TIMESTAMPTZ,
+    price_validation_note TEXT,
+
+    calc_version     SMALLINT NOT NULL DEFAULT 1,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- [REQ] La validación es SIEMPRE humana: no hay ruta de código que pueda
+    -- dejar VALIDADO sin usuario identificado y sin nota.
+    CONSTRAINT validado_exige_persona_y_nota CHECK (
+        price_status <> 'VALIDADO'
+        OR (price_validated_by IS NOT NULL
+            AND price_validated_at IS NOT NULL
+            AND price_validation_note IS NOT NULL
+            AND length(trim(price_validation_note)) >= 10)
+    ),
+    -- [REQ] Una partida con precio conserva su procedencia.
+    CONSTRAINT precio_exige_referencia CHECK (
+        price_status = 'SIN_PRECIO' OR selected_price_reference_id IS NOT NULL
+    ),
+    -- La medición es todo o nada: media medición no se puede recalcular ni
+    -- explicar en el panel «cómo se calcula».
+    CONSTRAINT medicion_completa_o_ausente CHECK (
+        (measurement_unit IS NULL AND measurement_quantity IS NULL AND measurement_unit_price IS NULL)
+        OR (measurement_unit IS NOT NULL AND measurement_quantity IS NOT NULL
+            AND measurement_unit_price IS NOT NULL)
+    )
+);
+CREATE INDEX capex_item_project_idx ON capex_item (organization_id, project_id);
+CREATE INDEX capex_item_horizon_idx ON capex_item (project_id, time_horizon_id);
+CREATE UNIQUE INDEX capex_item_finding_uniq ON capex_item (finding_id);
+
+-- ── Sugerencias [REQ] ───────────────────────────────────────────────────────
+
+CREATE TYPE suggestion_type AS ENUM ('CATALOGO', 'PRECIO', 'PLANTILLA', 'APLICACION');
+CREATE TYPE suggestion_status AS ENUM (
+    'NUEVA', 'EN_REVISION', 'ACEPTADA', 'RECHAZADA', 'DUPLICADA', 'APLICADA'
+);
+
+CREATE TABLE suggestion (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    type            suggestion_type NOT NULL,
+    status          suggestion_status NOT NULL DEFAULT 'NUEVA',
+    title           VARCHAR(160) NOT NULL CHECK (length(trim(title)) > 0),
+    body            TEXT NOT NULL,
+    payload         JSONB,
+    created_by      UUID NOT NULL REFERENCES app_user(id),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- [REC] El contexto se guarda POR REFERENCIA, nunca copiado. El
+    -- administrador ve «sugerencia sobre el proyecto X»; para ver el dato tiene
+    -- que entrar en el proyecto, con la auditoría de siempre. Sin esto, el
+    -- buzón sería una vía lateral para sacar datos confidenciales.
+    context_project_id  UUID REFERENCES project(id) ON DELETE SET NULL,
+    context_entity_type VARCHAR(40),
+    context_entity_id   UUID,
+    context_screen      VARCHAR(60),
+
+    duplicate_of_id     UUID REFERENCES suggestion(id),
+    resolved_by         UUID REFERENCES app_user(id),
+    resolved_at         TIMESTAMPTZ,
+    resolution_note     TEXT,
+    applied_entity_type VARCHAR(40),
+    applied_entity_id   UUID,
+
+    -- Rechazar exige explicarse. En la base de datos, no solo en la interfaz:
+    -- es la única regla que impide que el buzón se convierta en un cementerio.
+    CONSTRAINT rechazo_exige_motivo CHECK (
+        status <> 'RECHAZADA'
+        OR (resolution_note IS NOT NULL AND length(trim(resolution_note)) >= 10)
+    ),
+    CONSTRAINT resuelta_deja_quien_y_cuando CHECK (
+        status IN ('NUEVA', 'EN_REVISION')
+        OR (resolved_by IS NOT NULL AND resolved_at IS NOT NULL)
+    ),
+    CONSTRAINT duplicada_apunta_a_otra CHECK (
+        status <> 'DUPLICADA' OR (duplicate_of_id IS NOT NULL AND duplicate_of_id <> id)
+    ),
+    CONSTRAINT aplicada_apunta_a_lo_creado CHECK (
+        status <> 'APLICADA' OR applied_entity_id IS NOT NULL
+    )
+);
+CREATE INDEX suggestion_bandeja_idx ON suggestion (organization_id, status, created_at DESC);
+CREATE INDEX suggestion_autor_idx ON suggestion (created_by, created_at DESC);
+CREATE INDEX suggestion_duplicado_idx ON suggestion (duplicate_of_id);
+
+CREATE TABLE suggestion_comment (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    suggestion_id UUID NOT NULL REFERENCES suggestion(id) ON DELETE CASCADE,
+    author_id     UUID NOT NULL REFERENCES app_user(id),
+    body          TEXT NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── Auditoría: solo se añade, nunca se modifica ─────────────────────────────
+
+CREATE TYPE audit_severity AS ENUM ('INFO', 'AVISO', 'CRITICO');
+
+CREATE TABLE audit_log (
+    id              BIGSERIAL PRIMARY KEY,
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    occurred_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    actor_user_id   UUID REFERENCES app_user(id),
+    action          TEXT NOT NULL,
+    entity_type     VARCHAR(60),
+    entity_id       UUID,
+    project_id      UUID,
+    before_data     JSONB,
+    after_data      JSONB,
+    ip_address      INET,
+    severity        audit_severity NOT NULL DEFAULT 'INFO'
+);
+CREATE INDEX audit_log_org_idx ON audit_log (organization_id, occurred_at DESC);
+CREATE INDEX audit_log_entidad_idx ON audit_log (entity_type, entity_id);
+
+-- =============================================================================
+--  Barrera 3 · El original nunca se sobrescribe
+-- =============================================================================
+
+CREATE TABLE stored_object (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    project_id      UUID REFERENCES project(id) ON DELETE CASCADE,
+    kind            VARCHAR(40) NOT NULL,       -- PHOTO_ORIGINAL, DOCUMENT, TEMPLATE…
+    storage_key     TEXT NOT NULL UNIQUE,
+    sha256          CHAR(64) NOT NULL,
+    byte_size       BIGINT NOT NULL,
+    mime_type       VARCHAR(120) NOT NULL,
+    is_original     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION impedir_sobrescritura_de_original() RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.is_original THEN
+        IF NEW.storage_key IS DISTINCT FROM OLD.storage_key
+           OR NEW.sha256 IS DISTINCT FROM OLD.sha256
+           OR NEW.byte_size IS DISTINCT FROM OLD.byte_size THEN
+            RAISE EXCEPTION
+                'Un objeto original no se sobrescribe: cree un derivado (objeto %)', OLD.id
+                USING ERRCODE = 'raise_exception';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER stored_object_original_inmutable
+    BEFORE UPDATE ON stored_object
+    FOR EACH ROW EXECUTE FUNCTION impedir_sobrescritura_de_original();
+
+CREATE OR REPLACE FUNCTION impedir_borrado_de_original() RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.is_original THEN
+        RAISE EXCEPTION 'Un objeto original no se borra (objeto %)', OLD.id
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER stored_object_original_no_borrable
+    BEFORE DELETE ON stored_object
+    FOR EACH ROW EXECUTE FUNCTION impedir_borrado_de_original();
+
+-- La auditoría solo crece.
+CREATE OR REPLACE FUNCTION auditoria_solo_se_anade() RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'El registro de auditoría no se modifica ni se borra'
+        USING ERRCODE = 'raise_exception';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_log_inmutable
+    BEFORE UPDATE OR DELETE ON audit_log
+    FOR EACH ROW EXECUTE FUNCTION auditoria_solo_se_anade();
+
+-- =============================================================================
+--  Barreras 1 y 2 · Row Level Security
+--
+--  El usuario de aplicación NO es propietario de estas tablas y NO tiene
+--  BYPASSRLS: si lo fuera, las políticas no se le aplicarían y todo esto sería
+--  decorativo. La prueba `test_rls` lo comprueba.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION org_actual() RETURNS UUID AS $$
+    SELECT NULLIF(current_setting('app.current_org_id', TRUE), '')::UUID;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION usuario_actual() RETURNS UUID AS $$
+    SELECT NULLIF(current_setting('app.current_user_id', TRUE), '')::UUID;
+$$ LANGUAGE sql STABLE;
+
+CREATE OR REPLACE FUNCTION puede_gestionar_sugerencias() RETURNS BOOLEAN AS $$
+    SELECT COALESCE(NULLIF(current_setting('app.can_manage_suggestions', TRUE), ''), 'false')::BOOLEAN;
+$$ LANGUAGE sql STABLE;
+
+-- Aislamiento por organización: la misma política en todas las tablas con
+-- organization_id. Se aplica también a INSERT/UPDATE (WITH CHECK), no solo a
+-- SELECT: sin eso, un usuario podría escribir filas en otra organización.
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY[
+        'app_user', 'client', 'project', 'asset', 'cost_profile',
+        'price_source', 'price_reference', 'finding', 'capex_item',
+        'stored_object', 'audit_log', 'suggestion_comment'
+    ] LOOP
+        EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+        EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+        EXECUTE format($f$
+            CREATE POLICY %1$I_aislamiento_org ON %1$I
+            USING (organization_id = org_actual())
+            WITH CHECK (organization_id = org_actual())
+        $f$, t);
+    END LOOP;
+END $$;
+
+-- Catálogos: las filas del sistema (organization_id IS NULL) las ve todo el
+-- mundo; las propias, solo su organización.
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY[
+        'asset_typology', 'zone', 'capex_code', 'risk_level',
+        'capex_concept', 'time_horizon'
+    ] LOOP
+        EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+        EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+        EXECUTE format($f$
+            CREATE POLICY %1$I_catalogo ON %1$I
+            USING (organization_id IS NULL OR organization_id = org_actual())
+            WITH CHECK (organization_id = org_actual())
+        $f$, t);
+    END LOOP;
+END $$;
+
+-- =============================================================================
+--  [REQ] «Solo el administrador ve las propuestas»
+--
+--  El requisito del cliente vive AQUÍ, y solo aquí. Si mañana alguien escribe
+--  una consulta nueva y olvida filtrar por autor, la fila sigue sin aparecer.
+--  Implementarlo en el servicio habría dejado el requisito a merced de que
+--  nadie se despiste.
+-- =============================================================================
+
+ALTER TABLE suggestion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE suggestion FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY suggestion_lectura ON suggestion FOR SELECT
+    USING (
+        organization_id = org_actual()
+        AND (
+            created_by = usuario_actual()      -- [REQ] P-40 · el autor ve las suyas
+            OR puede_gestionar_sugerencias()   -- [REQ] el administrador, todas
+        )
+    );
+
+-- Crear puede cualquiera, pero solo en su organización y a su propio nombre:
+-- así un cuerpo malicioso con created_by ajeno no cuela.
+CREATE POLICY suggestion_alta ON suggestion FOR INSERT
+    WITH CHECK (organization_id = org_actual() AND created_by = usuario_actual());
+
+-- Resolver es exclusivo de quien gestiona el buzón.
+CREATE POLICY suggestion_resolucion ON suggestion FOR UPDATE
+    USING (organization_id = org_actual() AND puede_gestionar_sugerencias())
+    WITH CHECK (organization_id = org_actual());
+
+-- El hilo de comentarios sigue la visibilidad de su sugerencia.
+DROP POLICY IF EXISTS suggestion_comment_aislamiento_org ON suggestion_comment;
+CREATE POLICY suggestion_comment_visibilidad ON suggestion_comment
+    USING (
+        organization_id = org_actual()
+        AND EXISTS (
+            SELECT 1 FROM suggestion s
+            WHERE s.id = suggestion_comment.suggestion_id
+              AND (s.created_by = usuario_actual() OR puede_gestionar_sugerencias())
+        )
+    )
+    WITH CHECK (organization_id = org_actual() AND author_id = usuario_actual());

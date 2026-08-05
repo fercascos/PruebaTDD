@@ -14,7 +14,7 @@ de la misma cartera. Tres consecuencias de diseño:
 
 | Decisión | Motivo |
 |---|---|
-| **Catálogo en tabla, no enumerado compilado** | El árbol tiene 121 hojas y tres categorías pendientes de desglose (P-03). Cada corrección no puede ser una migración |
+| **Catálogo en tabla, no enumerado compilado** | El árbol tiene 103 hojas y tres categorías pendientes de desglose (P-03). Cada corrección no puede ser una migración |
 | **Cada catálogo tiene tabla de traducción** `[REC]` | Las plantillas reales existen en español e inglés y traducen nombres de capítulo, de zona y **las definiciones de riesgo**. Ver [`18`](./18-analisis-plantillas-reales.md) C-5 |
 | **Semilla del sistema + extensión por organización** | `organization_id IS NULL` marca las filas del sistema, comunes y no editables; cada organización puede añadir las suyas sin tocar las demás |
 | **Retirada por `deprecated_at`, nunca borrado** | Un código retirado debe seguir resolviéndose en informes antiguos, pero no ofrecerse al crear líneas nuevas |
@@ -200,8 +200,12 @@ flowchart LR
 | **H14. Telecomunicaciones, voz y datos** | WIFI · PPV · Voz y datos · Interfono · General |
 | **H15. Otros** | General |
 
-**Totales de la semilla:** 4 categorías · 18 capítulos (15 de Hard Costs + 3 provisionales) ·
-**121 elementos**.
+**Totales de la semilla:** **4 categorías · 18 capítulos** (15 de Hard Costs + 3 provisionales) ·
+**103 elementos** (100 de Hard Costs + 3 «General» provisionales). **125 nodos** en total.
+
+`[REC]` La cifra de «121» que arrastraba una versión anterior de este documento era **capítulos más
+elementos** (18 + 103), no elementos. Se corrige aquí y hay una prueba que fija los cuatro recuentos,
+para que no vuelva a desajustarse.
 
 ### Codificación
 
@@ -412,7 +416,7 @@ Lo que se carga en la migración `seed_catalogs`:
 | `zone_typology` | **86** | Matriz de §5.2: 66 de §3.3.2 + 20 de «Otros» `[SUP]` |
 | `capex_code` nivel 1 | 4 | §3.3.4 |
 | `capex_code` nivel 2 | 18 | 15 de Hard Costs + 3 «General» (decisión P-03) |
-| `capex_code` nivel 3 | 121 | §3.3.4 |
+| `capex_code` nivel 3 | 103 | §3.3.4 |
 | `risk_level` | 4 | §3.3.4, con definición íntegra |
 | `capex_concept` | 10 | §3.3.3 |
 | `time_horizon` | **5** | §3.3.4 · mutuamente excluyentes (decisión P-05) |

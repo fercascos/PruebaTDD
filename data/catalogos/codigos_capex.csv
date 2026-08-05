@@ -1,0 +1,126 @@
+code,name_es,level,parent_code
+HC,Hard Costs,1,
+MA,Medioambiental,1,
+ESG,ESG & Energía,1,
+SC,Soft Costs,1,
+HC.H01,Estructura,2,HC
+HC.H01.01,Cimentación,3,HC.H01
+HC.H01.02,Solera,3,HC.H01
+HC.H01.03,Forjados,3,HC.H01
+HC.H01.04,Estructura,3,HC.H01
+HC.H01.05,General,3,HC.H01
+HC.H02,Cubierta,2,HC
+HC.H02.01,Cubierta,3,HC.H02
+HC.H02.02,General,3,HC.H02
+HC.H03,Fachadas,2,HC
+HC.H03.01,Fachadas,3,HC.H03
+HC.H03.02,General,3,HC.H03
+HC.H04,Interiores,2,HC
+HC.H04.01,Particiones interiores y revestimientos interiores,3,HC.H04
+HC.H04.02,Carpintería y cerrajería,3,HC.H04
+HC.H04.03,Suelos y techos,3,HC.H04
+HC.H04.04,General,3,HC.H04
+HC.H05,Zonas exteriores,2,HC
+HC.H05.01,Exteriores,3,HC.H05
+HC.H05.02,General,3,HC.H05
+HC.H06,Protección pasiva contra incendios,2,HC
+HC.H06.01,Sectorización,3,HC.H06
+HC.H06.02,Zonas de riesgo especial,3,HC.H06
+HC.H06.03,Espacios ocultos y pasos de instalaciones,3,HC.H06
+HC.H06.04,Resistencia al fuego de la estructura,3,HC.H06
+HC.H06.05,Reacción al fuego de los elementos constructivos,3,HC.H06
+HC.H06.06,Propagación exterior horizontal,3,HC.H06
+HC.H06.07,Propagación exterior vertical,3,HC.H06
+HC.H06.08,Propagación exterior por cubierta,3,HC.H06
+HC.H06.09,Evacuación de ocupantes,3,HC.H06
+HC.H06.10,General,3,HC.H06
+HC.H07,Accesibilidad,2,HC
+HC.H07.01,Accesibilidad desde el exterior,3,HC.H07
+HC.H07.02,Accesibilidad entre plantas,3,HC.H07
+HC.H07.03,Accesibilidad en las plantas,3,HC.H07
+HC.H07.04,Dotación de plazas de aparcamiento accesibles,3,HC.H07
+HC.H07.05,Dotación de servicios higiénicos accesibles,3,HC.H07
+HC.H07.06,Mobiliario fijo,3,HC.H07
+HC.H07.07,Evacuación de personas con discapacidad,3,HC.H07
+HC.H07.08,Señalética SIA,3,HC.H07
+HC.H07.09,Instalaciones,3,HC.H07
+HC.H07.10,General,3,HC.H07
+HC.H08,HVAC,2,HC
+HC.H08.01,Producción de climatización,3,HC.H08
+HC.H08.02,Producción de calor,3,HC.H08
+HC.H08.03,Distribución,3,HC.H08
+HC.H08.04,Grupos de presión,3,HC.H08
+HC.H08.05,Elementos terminales,3,HC.H08
+HC.H08.06,Humectación,3,HC.H08
+HC.H08.07,Ventilación de aire primario,3,HC.H08
+HC.H08.08,Extracción,3,HC.H08
+HC.H08.09,Ventilación natural de humos,3,HC.H08
+HC.H08.10,General,3,HC.H08
+HC.H09,Electricidad,2,HC
+HC.H09.01,Acometida-Centro de transformación,3,HC.H09
+HC.H09.02,CGBT,3,HC.H09
+HC.H09.03,BTV,3,HC.H09
+HC.H09.04,Centralización de contadores,3,HC.H09
+HC.H09.05,Cuadros secundarios de distribución,3,HC.H09
+HC.H09.06,Batería de condensadores,3,HC.H09
+HC.H09.07,Grupo electrógeno,3,HC.H09
+HC.H09.08,Cableado,3,HC.H09
+HC.H09.09,UPS,3,HC.H09
+HC.H09.10,Alumbrado,3,HC.H09
+HC.H09.11,Alumbrado de emergencia,3,HC.H09
+HC.H09.12,Pararrayos,3,HC.H09
+HC.H09.13,Red de tierras,3,HC.H09
+HC.H09.14,Placas fotovoltaicas,3,HC.H09
+HC.H09.15,General,3,HC.H09
+HC.H10,Protección activa contra incendios,2,HC
+HC.H10.01,Grupo de presión,3,HC.H10
+HC.H10.02,Hidrantes,3,HC.H10
+HC.H10.03,Aljibe,3,HC.H10
+HC.H10.04,Columna seca,3,HC.H10
+HC.H10.05,BIEs,3,HC.H10
+HC.H10.06,Extintores portátiles,3,HC.H10
+HC.H10.07,Extinción automática por gas,3,HC.H10
+HC.H10.08,Detección de CO2,3,HC.H10
+HC.H10.09,Extracción de CO2 y ventilación del parking,3,HC.H10
+HC.H10.10,Rociadores,3,HC.H10
+HC.H10.11,Detección y alarma de incendios,3,HC.H10
+HC.H10.12,Inspección RIPCI,3,HC.H10
+HC.H10.13,Exutorios,3,HC.H10
+HC.H10.14,General,3,HC.H10
+HC.H11,Fontanería y saneamiento,2,HC
+HC.H11.01,Acometida,3,HC.H11
+HC.H11.02,Grupo de presión,3,HC.H11
+HC.H11.03,Aljibes,3,HC.H11
+HC.H11.04,Aseos,3,HC.H11
+HC.H11.05,Producción de ACS,3,HC.H11
+HC.H11.06,Saneamiento,3,HC.H11
+HC.H11.07,Contribución mínima de renovables,3,HC.H11
+HC.H11.08,General,3,HC.H11
+HC.H12,Transporte vertical y puertas mecánicas,2,HC
+HC.H12.01,Ascensor,3,HC.H12
+HC.H12.02,Acceso al parking,3,HC.H12
+HC.H12.03,Góndola,3,HC.H12
+HC.H12.04,Escaleras mecánicas,3,HC.H12
+HC.H12.05,Puerta de acceso principal,3,HC.H12
+HC.H12.06,General,3,HC.H12
+HC.H13,"Seguridad, CCTV y BMS",2,HC
+HC.H13.01,Control de accesos,3,HC.H13
+HC.H13.02,Instalación CCTV,3,HC.H13
+HC.H13.03,Central de seguridad,3,HC.H13
+HC.H13.04,Sistemas de megafonía,3,HC.H13
+HC.H13.05,BMS,3,HC.H13
+HC.H13.06,General,3,HC.H13
+HC.H14,"Telecomunicaciones, voz y datos",2,HC
+HC.H14.01,WIFI,3,HC.H14
+HC.H14.02,PPV,3,HC.H14
+HC.H14.03,Voz y datos,3,HC.H14
+HC.H14.04,Interfono,3,HC.H14
+HC.H14.05,General,3,HC.H14
+HC.H15,Otros,2,HC
+HC.H15.01,General,3,HC.H15
+MA.General,General,2,MA
+MA.General.01,General,3,MA.General
+ESG.General,General,2,ESG
+ESG.General.01,General,3,ESG.General
+SC.General,General,2,SC
+SC.General.01,General,3,SC.General

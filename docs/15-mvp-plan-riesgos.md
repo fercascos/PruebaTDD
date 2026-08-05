@@ -26,7 +26,7 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | 4 | Asignación del equipo | Miembros con rol, activos, especialidades, matriz de cobertura, responsables de fase, alcance aplicado en el servidor | Delegación temporal |
 | 5 | Repositorio de fotografías | Carga múltiple, captura desde cámara, original inmutable con cuatro barreras, EXIF y GPS, duplicados por hash exacto y perceptual, clasificación por zona y sistema, etiquetas, comentarios, selección y orden para informe, papelera, versiones, descarga individual y ZIP con eliminación de metadatos, **anotación básica** | Anotación avanzada, reconocimiento de contenido |
 | 6 | Renombrado sin modificar originales | Plantilla configurable con 12 tokens, previsualización obligatoria con colisiones, lote, reversión, extensión inalterable, auditado | — |
-| 7 | **Catálogos** | **6 tipologías**, 20 zonas con su matriz de **86 relaciones**, **121 códigos CAPEX en árbol de 3 niveles**, 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
+| 7 | **Catálogos** | **6 tipologías**, 20 zonas con su matriz de **86 relaciones**, **125 códigos CAPEX en árbol de 3 niveles** (4 categorías, 18 capítulos, 103 elementos), 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
 | 8 | Hallazgos e inventario | Línea con código, zona validada, descripción, comentarios, riesgo, concepto y recuperabilidad; atajo «hallazgo desde foto»; recomendaciones alternativas; matriz riesgo × horizonte; inventario de equipos opcional con importación XLSX | Plantillas de hallazgo por tipología |
 | 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; **botón de exportar el CAPEX a XLSX** `[REQ]` P-31, con la hoja `CAPEX` en el mismo formato que la tabla del informe y hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
 | 10 | Precios editables a mano `[REQ]` P-06 | **Precio unitario, cantidad y unidad editables en la propia rejilla, sin fricción**; nota de procedencia opcional; `PriceSourceAdapter` completo con adaptador manual e importador de catálogo propio; validación humana con restricción en base de datos —**y ahí sí con nota obligatoria**—; trazabilidad automática por auditoría e historial de campo | Integración con Precio Centro ni ninguna otra fuente externa. **Ni prevista** |
@@ -166,7 +166,7 @@ OpenAPI e i18n; CI con todas las puertas; observabilidad.
 
 #### F1 · Catálogos y taxonomías — 2 semanas `[REC]`
 
-Modelo de catálogos; semilla completa (6 tipologías, 20 zonas, 86 relaciones, 121 códigos, 4 riesgos
+Modelo de catálogos; semilla completa (6 tipologías, 20 zonas, 86 relaciones, 125 códigos, 4 riesgos
 con definición, 10 conceptos, 5 horizontes, 14 sistemas, 8 fases, 5 categorías de documentación);
 `CatalogService`; endpoints con filtrado dependiente; validación de zona por tipología y de código
 seleccionable; retirada por `deprecated_at`; componentes de frontend (selector de árbol de 3 niveles,
@@ -480,7 +480,7 @@ Fusión asistida en F13.
 | **El total por horizontes es una columna generada**: imposible que no cuadre con sus sumandos |
 | **La cascada se muestra con sus operandos**: el consultor es la última barrera |
 | `calc_version` para reproducir informes antiguos |
-| ✅ Cascada cerrada por P-16 y anclada con una prueba de valor exacto (72.679,35 €) |
+| ✅ Cascada cerrada por P-16 y anclada con una prueba de valor exacto (72.679,34 €) |
 
 #### R11 · LibreOffice no coincide con PowerPoint
 **Probabilidad alta · Impacto bajo-medio** (`[LIM]` L3). Va a ocurrir; la cuestión es la expectativa.
