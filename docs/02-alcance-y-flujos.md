@@ -194,9 +194,20 @@ humana obligatoria**; índices, factores geográficos, inflación, gastos genera
 industrial, contingencias, escenarios bajo/probable/alto y redondeo configurable. Vistas de CAPEX por
 proyecto, activo, sistema, prioridad, año, horizonte y nivel de riesgo. Exportación XLSX y CSV.
 
-**Precio Centro** `[PDV]`: la especificación indica que esta parte queda pendiente de revisión porque
-podría conectarse directamente a `online.preciocentro.com`. Se diseña el adaptador y se deja **sin
-implementar**, por las razones de [`11-capex-precios.md`](./11-capex-precios.md) §16.3.
+**Fuentes externas** `[REQ]` **P-06 · cerrada:** no hay ninguna, ni está prevista. Los precios se
+**teclean y se editan a mano** en la propia rejilla, sin diálogo intermedio ni justificación
+obligatoria; esta última solo se exige al marcar un precio como `VALIDADO`. El adaptador de Precio
+Centro queda como andamio documentado y deshabilitado. Ver
+[`11-capex-precios.md`](./11-capex-precios.md) §16.5.
+
+#### 4.3.4. Sugerencias `[REQ]`
+
+Módulo transversal añadido a petición del cliente: **cualquier usuario propone cambios y solo los
+administradores ven las propuestas.** Cuatro tipos (catálogos, precios, plantilla, aplicación), alta
+contextual desde cualquier pantalla, ciclo de estados con respuesta obligatoria al rechazar, y
+visibilidad impuesta por Row Level Security. Es además el mecanismo por el que una corrección de precio
+detectada en un proyecto llega al catálogo que usan los demás — lo que importa ahora que P-06 se ha
+cerrado sin fuente externa. Documento propio: [`19-sugerencias.md`](./19-sugerencias.md).
 
 ### 4.4. Bloque 4 — Informe desde plantilla PPTX `[REQ]`
 

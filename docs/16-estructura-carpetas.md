@@ -219,6 +219,14 @@ apps/api/
 │   │   │   ├── sheets.py           Resumen, detalle, trazabilidad, agregados
 │   │   │   └── filenames.py        ⚠ PURO: plantilla de nombre de fichero
 │   │   │
+│   │   ├── suggestions/            Módulo de Sugerencias
+│   │   │   ├── router.py · service.py
+│   │   │   ├── models.py           suggestion · suggestion_comment
+│   │   │   ├── payloads.py         ⚠ PURO: esquemas por tipo (CATALOGO, PRECIO…)
+│   │   │   ├── transitions.py      ⚠ PURO: guardas del ciclo de vida
+│   │   │   ├── apply.py            Convierte una sugerencia en el cambio real
+│   │   │   └── policies.sql        Política RLS: autor + administrador
+│   │   │
 │   │   ├── collaboration/
 │   │   └── audit/
 │   │       ├── router.py · logger.py · hash_chain.py
@@ -361,6 +369,11 @@ apps/web/
     │   │   └── PriceComparator.tsx ⚠ Con skipped_sources visibles
     │   ├── reports/                Pantallas 15, 16, 17, 18
     │   ├── admin/                  Pantalla 19
+    │   ├── suggestions/            Pantallas 20, 21, 22
+    │   │   ├── SuggestButton.tsx   ⚠ Contextual: va en la barra de CADA pantalla
+    │   │   ├── SuggestionForm.tsx  Campos variables según el tipo
+    │   │   ├── MySuggestions.tsx · AdminInbox.tsx
+    │   │   └── ApplyDialog.tsx     ⚠ Abre el editor de catálogo/precio relleno
     │   └── audit/
     │
     └── tests/unit · tests/e2e      E1-E12 de §19.10

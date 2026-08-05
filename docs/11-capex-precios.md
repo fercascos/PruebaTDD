@@ -439,25 +439,65 @@ dependa de que un servicio externo siga respondiendo. Una importación periódic
 licenciado da precios reales **y** trazabilidad estable. El importador ya está en el MVP: si el
 cliente puede exportar su suscripción, funciona desde el primer día.
 
-### Qué hace falta para avanzar (P-06)
+### P-06 · DECIDIDO: sin fuente externa, precios editables a mano
 
-Cuatro pasos, y **los dos primeros no son técnicos**:
+> **P-06 · DECIDIDO por el cliente.** *«A falta de conectar una base de datos de precios externa, deja
+> esos campos editables para que cada uno modifique a mano esa parte.»*
+
+`[REQ]` **No hay integración con ninguna fuente externa, ni en el MVP ni en el horizonte visible.** El
+precio es un campo que el consultor teclea y edita libremente. La arquitectura de adaptadores se
+mantiene —cuesta lo mismo y deja la puerta abierta—, pero **no hay ningún adaptador externo activo** y
+el sistema no afirma en ninguna pantalla que se haya consultado nada.
+
+**Qué cambia respecto del diseño anterior** — y es un cambio de fricción, no de modelo:
+
+| Antes | Ahora `[REQ]` |
+|---|---|
+| El precio venía de una referencia; a mano era la excepción, con justificación obligatoria | **A mano es el caso normal.** Precio unitario, cantidad y unidad se editan en la propia rejilla, sin diálogo intermedio |
+| Justificación escrita obligatoria para cualquier precio manual | **La justificación deja de bloquear.** Se pide, no se exige. Ver abajo |
+| El comparador de referencias era una pantalla central | Queda para comparar entradas del **catálogo interno importado**, que sigue siendo la vía recomendada |
+
+`[REC]` **Por qué la justificación deja de ser obligatoria y qué se conserva en su lugar.** Exigir un
+párrafo escrito en cada una de las 63 líneas de un proyecto, cuando *todas* son manuales porque no hay
+otra cosa, no produce trazabilidad: produce sesenta y tres veces el texto «estimación propia». La
+trazabilidad se conserva donde de verdad sirve y **sin pedirle nada al consultor**:
+
+| Se conserva | Cómo |
+|---|---|
+| Quién puso el importe y cuándo | Automático, en `audit_log`. No depende de que nadie escriba nada |
+| Qué importe había antes | El historial de cambios campo a campo, que ya existe |
+| De dónde salió, cuando el consultor quiera decirlo | Campo de nota **opcional** y visible, con la fuente y la fecha |
+| La revisión humana antes de emitir | `price_status` sigue existiendo. **Pasar a `VALIDADO` sí exige nota**, porque ahí sí hay una afirmación que alguien firma |
+| El catálogo interno | Sigue siendo la vía recomendada: se importa una vez y se reutiliza entre proyectos |
+
+`[REC]` **Esa es la diferencia útil:** teclear un precio es trabajo en curso y no debe costar nada;
+declararlo validado es un acto de responsabilidad y sí debe pedir una línea de explicación.
+
+`[LIM]` **Consecuencia que conviene asumir de frente: el catálogo de precios se va a desfasar.** Nada
+lo actualiza solo. Quien lo detecta es el consultor que pide un presupuesto real, no el administrador
+que mantiene el catálogo. Sin un canal, esa corrección se queda en un proyecto y el resto del equipo
+sigue con el precio viejo. Es justo lo que resuelve el módulo de **Sugerencias**, tipo `PRECIO`:
+[`19`](./19-sugerencias.md) §19.3. Los dos cambios llegan juntos y no es casualidad.
+
+### Si algún día hay fuente externa
+
+Los cuatro pasos siguen siendo los mismos, y **los dos primeros no son técnicos**:
 
 1. Confirmar que existe **licencia vigente** y a nombre de quién.
 2. Obtener y **revisar sus condiciones de uso**, y registrarlas en la ficha de la fuente.
 3. Determinar el modo de acceso disponible (API, exportación, ninguno).
 4. Implementar y **probar contra la fuente real** el adaptador correspondiente.
 
-Hasta entonces, la fuente existe en el sistema **deshabilitada**, con su motivo visible en la pantalla
-de administración y en el comparador de precios, para que ningún consultor crea que se ha consultado.
+Mientras tanto, la fuente existe en el sistema **deshabilitada**, con su motivo visible en la pantalla
+de administración, para que ningún consultor crea que se ha consultado.
 
 ### Adaptadores del MVP
 
 | Adaptador | Qué hace | Estado |
 |---|---|---|
-| `ManualPriceSource` | Registra un precio introducido por un usuario, con justificación obligatoria. Genera una `price_reference` para que **incluso el precio a mano tenga trazabilidad** | ✅ **Real** |
-| `InternalCatalogSource` | Busca en el catálogo propio importado (XLSX/CSV con esquema documentado), con FTS en español sobre descripción y código | ✅ **Real** |
-| `PrecioCentroSource` | **Andamio explícito.** Declara la interfaz, valida el contrato con datos de prueba y lanza `NotImplementedError` en producción. Documenta los cuatro pasos anteriores | ⚠️ **ANDAMIO — no funcional** |
+| `ManualPriceSource` | **La vía principal** `[REQ]` P-06. Registra el precio que teclea el consultor y genera la `price_reference` en segundo plano, sin pedirle nada. La nota de procedencia es opcional | ✅ **Real** |
+| `InternalCatalogSource` | Busca en el catálogo propio importado (XLSX/CSV con esquema documentado), con FTS en español sobre descripción y código. **La vía recomendada** para no reteclear entre proyectos | ✅ **Real** |
+| `PrecioCentroSource` | **Andamio explícito.** Declara la interfaz, valida el contrato con datos de prueba y lanza `NotImplementedError` en producción | ⚠️ **ANDAMIO — no funcional, y sin fecha** |
 
 ---
 

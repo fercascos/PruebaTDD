@@ -58,6 +58,28 @@ flowchart TD
 | **Modificar catálogos de organización** | ✅ | ⚠️³ | ❌ | ❌ | ❌ | ❌ |
 | **Modificar catálogos del sistema** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | Retirar (`deprecate`) un código CAPEX | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+
+### Sugerencias `[REQ]` — ver [`19`](./19-sugerencias.md)
+
+| Acción | ADMIN | DIR. | CONS. | TÉC. | REV. | LECT. |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| **Crear una sugerencia** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Ver las propias**, con su estado y la respuesta | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Ver todas las sugerencias** | ✅ | ⚠️⁶ | ❌ | ❌ | ❌ | ❌ |
+| **Cambiar el estado y responder** | ✅ | ⚠️⁶ | ❌ | ❌ | ❌ | ❌ |
+| **Aplicar** una sugerencia de catálogo o de precio | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| Comentar en el hilo | ✅ | ⚠️⁶ | ⚠️⁷ | ⚠️⁷ | ⚠️⁷ | ⚠️⁷ |
+
+⁶ Solo con el permiso separable `GESTIONAR_SUGERENCIAS` `[REC]` P-41. Sin él, `403`.
+⁷ Solo en el hilo de **sus propias** sugerencias.
+
+`[REQ]` **«Solo el administrador ve las propuestas»** es requisito explícito del cliente. No se
+implementa filtrando en el servicio, sino con **Row Level Security**, igual que el aislamiento entre
+organizaciones: si mañana alguien escribe una consulta nueva y olvida el filtro, la fila sigue sin
+aparecer. La política está en [`19`](./19-sugerencias.md) §19.6.
+
+`[REC]` **Crear puede hacerlo hasta un `LECTOR`**, que es el rol de menor privilegio y, a menudo, quien
+más fricción encuentra en la herramienta.
 | Gestionar perfiles de coste | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Gestionar fuentes de precios** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Registrar revisión de condiciones de uso de una fuente** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |

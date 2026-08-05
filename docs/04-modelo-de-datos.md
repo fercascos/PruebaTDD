@@ -707,6 +707,30 @@ evolucionado este campo». Son consultas distintas y mezclarlas degrada ambas.
 `total_items` · `processed_items` · `failed_items` · `result` JSONB · `error_message` (**sin datos
 sensibles**) · `storage_key` NULL · `expires_at` · auditoría.
 
+#### `suggestion` · `suggestion_comment` `[REQ]` — módulo de Sugerencias
+
+`suggestion`: `id` · `organization_id` · `type` ENUM(`CATALOGO`,`PRECIO`,`PLANTILLA`,`APLICACION`) ·
+`status` ENUM(`NUEVA`,`EN_REVISION`,`ACEPTADA`,`RECHAZADA`,`DUPLICADA`,`APLICADA`) · `title` ·
+`body` · `payload` JSONB · `created_by` · `created_at` · **`context_project_id` NULL** ·
+`context_entity_type` · `context_entity_id` · `context_screen` · `duplicate_of_id` NULL ·
+`resolved_by/at` · `resolution_note` · `applied_entity_type/id`.
+
+`suggestion_comment`: `id` · `suggestion_id` · `author_id` · `body` · `created_at`.
+
+**Dos rasgos que la separan de `comment`**, y por los que no se reutiliza aquella tabla:
+
+1. **La visibilidad es al revés.** Un `comment` lo ve el equipo del proyecto; una `suggestion` la ven
+   **solo su autor y los administradores**, y eso se impone con una política RLS propia `[REQ]`.
+2. **El contexto se guarda por referencia, nunca copiado.** `context_project_id` apunta al proyecto;
+   no se duplica dentro ni el nombre del cliente ni ningún importe. Es lo que impide que el buzón se
+   convierta en una vía lateral para sacar datos confidenciales de un proyecto `[REC]`.
+
+**Índices:** `(organization_id, status, created_at DESC)`, `(created_by, created_at DESC)`,
+`(duplicate_of_id)`, `(context_project_id)`.
+
+Modelo completo, restricciones, política RLS y ciclo de vida en
+[`19-sugerencias.md`](./19-sugerencias.md).
+
 ---
 
 ### 8.11. Estrategia de borrado lógico y purga

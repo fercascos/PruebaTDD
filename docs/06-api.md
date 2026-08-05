@@ -410,6 +410,26 @@ Una lista de resultados sin esa información sugiere que se ha buscado en todas 
 | `POST` | `/audit-logs/exports` | La propia exportación queda auditada |
 | `GET` | `/health` · `/ready` · `/metrics` | |
 
+### Sugerencias `[REQ]` — ver [`19`](./19-sugerencias.md)
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `POST` | `/suggestions` | **Cualquier usuario autenticado**, incluido `LECTOR` |
+| `GET` | `/suggestions/mine` | Las del usuario, con su estado y la respuesta recibida `[REC]` P-40 |
+| `GET` | `/suggestions?status=&type=&project_id=` | **Solo con `GESTIONAR_SUGERENCIAS`**. Para el resto, `403` |
+| `GET` | `/suggestions/{id}` | La RLS decide. Si lleva contexto de proyecto, abrirla audita `SUGGESTION_VIEWED` |
+| `POST` | `/suggestions/{id}/transitions` | `{to, resolution_note, duplicate_of_id}`. `RECHAZADA` sin motivo → `422` |
+| `POST` | `/suggestions/{id}/apply` | Solo desde `ACEPTADA`, si no `409`. Crea el cambio y enlaza `applied_entity_id` |
+| `GET`/`POST` | `/suggestions/{id}/comments` | Hilo autor ↔ administrador |
+| `GET` | `/suggestions/summary` | Contadores para la insignia del menú |
+
+`[REC]` **`POST /suggestions` ignora `organization_id` y `created_by` si vienen en el cuerpo**: se
+toman siempre del token. Es el fallo clásico de un endpoint abierto a todos los roles, y hay una
+prueba que lo cubre.
+
+`[REQ]` Un usuario sin permiso que pida una sugerencia ajena recibe **`404`, no `403`**: no se
+confirma que exista, igual que entre organizaciones.
+
 ---
 
 ## 10.12. Soporte al modo de baja conectividad `[REC]`

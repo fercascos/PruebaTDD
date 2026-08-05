@@ -29,7 +29,8 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | 7 | **Catálogos** | **6 tipologías**, 20 zonas con su matriz de **86 relaciones**, **121 códigos CAPEX en árbol de 3 niveles**, 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
 | 8 | Hallazgos e inventario | Línea con código, zona validada, descripción, comentarios, riesgo, concepto y recuperabilidad; atajo «hallazgo desde foto»; recomendaciones alternativas; matriz riesgo × horizonte; inventario de equipos opcional con importación XLSX | Plantillas de hallazgo por tipología |
 | 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; **botón de exportar el CAPEX a XLSX** `[REQ]` P-31, con la hoja `CAPEX` en el mismo formato que la tabla del informe y hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
-| 10 | Registro de referencias y URLs | `PriceSourceAdapter` completo, adaptador manual con justificación obligatoria, importador de catálogo propio, comparador con `skipped_sources`, validación humana con restricción en base de datos, registro de fuentes con revisión de condiciones y control de licencia | Integración con Precio Centro ni ninguna otra fuente externa |
+| 10 | Precios editables a mano `[REQ]` P-06 | **Precio unitario, cantidad y unidad editables en la propia rejilla, sin fricción**; nota de procedencia opcional; `PriceSourceAdapter` completo con adaptador manual e importador de catálogo propio; validación humana con restricción en base de datos —**y ahí sí con nota obligatoria**—; trazabilidad automática por auditoría e historial de campo | Integración con Precio Centro ni ninguna otra fuente externa. **Ni prevista** |
+| **16** | **Sugerencias** `[REQ]` — alcance mínimo | Los cuatro tipos, alta con contexto capturado por referencia, bandeja del administrador, «Mis sugerencias», ciclo de estados con respuesta obligatoria al rechazar, visibilidad por **RLS**, auditoría | `payload` estructurado, botón «Aplicar» que rellena el editor, agrupación de duplicados, hilo de comentarios, avisos por correo |
 | 11 | Carga de plantilla PPTX | Original inmutable con WORM, análisis completo, detección de marcadores y directivas, previsualización de estructura, avisos de no soportados, validaciones de seguridad del paquete | Editor de plantillas en la aplicación |
 | 12 | Mapeo básico de marcadores | Catálogo cerrado ampliado (incluye `{{finding.risk_definition}}` y `{{report_limitations}}`), mapeo manual de lo desconocido, guardado y clonado, reglas de repetición, partición de tablas con subtotales, reglas de fotos, validación | Mapeo visual por arrastre |
 | 13 | Generación de un informe | Generación real conservando tema, patrón, tipografías, colores, logos, posiciones y proporciones. Previsualización con LibreOffice. Avisos de campos vacíos, desbordamiento, imágenes ausentes y tablas | Fidelidad garantizada con plantillas arbitrarias `[LIM]` |
@@ -97,7 +98,7 @@ Con datos ficticios y sobre una plantilla PPTX real del cliente:
 
 ```mermaid
 gantt
-    title Plan de implementación · MVP en 18 semanas (supuesto S-06)
+    title Plan de implementación · MVP en 19,5 semanas (supuesto S-06)
     dateFormat YYYY-MM-DD
     axisFormat S%W
 
@@ -124,7 +125,8 @@ gantt
     F9 · PPTX: generación y versiones  :crit, f9, after f8, 17d
 
     section Cierre
-    F10 · Endurecimiento y entrega     :f10, after f9, 14d
+    F10bis · Sugerencias (mínimo)      :f10b, after f9, 8d
+    F10 · Endurecimiento y entrega     :f10, after f10b, 14d
 
     section Riesgo
     Prueba de concepto PPTX            :crit, poc, 2026-09-08, 14d
@@ -132,6 +134,15 @@ gantt
 
 `[SUP]` Estimaciones para el equipo de S-06. **No son un compromiso contractual**: cambian con el
 equipo real, con las respuestas a las preguntas abiertas y con la complejidad de las plantillas.
+
+> **F10bis · Sugerencias, y por qué no está al final del todo.** `[REC]` El módulo lo pide el cliente
+> tras cerrar P-06, y se planifica **dentro del MVP en su alcance mínimo** (1,5 semanas), no en F11.
+> Motivo: el canal vale mucho más cuando la herramienta es nueva. Las primeras semanas de uso real son
+> cuando aparecen los códigos que faltan y los precios desfasados; si el módulo llega seis meses
+> después, esa información ya se ha perdido. **El MVP pasa de 18 a 19,5 semanas.** Si el compromiso de
+> 18 semanas fuese firme, el módulo entero se va a F11 y no ocurre nada grave: es la única parte del
+> plan que se puede mover sin arrastrar a ninguna otra. Alcance y coste en
+> [`19`](./19-sugerencias.md) §19.12.
 
 > **Diferencia respecto de una planificación genérica:** hay una fase **F1 dedicada a catálogos**,
 > antes que los proyectos. Motivo: zonas, códigos, riesgos y conceptos son la estructura sobre la que
@@ -290,16 +301,18 @@ indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas c
 | Fase | Contenido | Duración `[SUP]` | Depende de |
 |:--:|---|---|---|
 | **F11** | SSO/OIDC · MFA obligatorio · aprobación multinivel · panel de auditoría | 4 semanas | P-17, P-22 |
-| **F12** | **Adaptador de Precio Centro** (API o importación) · sincronización de índices | 3-6 semanas | **P-06 y validación legal. Sin ella no empieza** |
+| **F11bis** | **Sugerencias, alcance completo**: `payload` estructurado, botón «Aplicar», duplicados, hilo, avisos | 1,5 semanas | Uso real del alcance mínimo |
+| **F12** | **Adaptador de fuente de precios externa** (API o importación) · sincronización de índices | 3-6 semanas | `[PDV]` **Aparcada.** P-06 se cerró sin fuente externa. Si algún día la hay, y con validación legal |
 | **F13** | Modo offline completo · fusión asistida de conflictos | 6-8 semanas | P-11. La fase más cara |
 | **F14** | Q&A estructurado · anotación avanzada · comparación antes/después | 4 semanas | P-12 |
 | **F15** | Funciones de IA con consentimiento explícito y revisión humana | 6 semanas | Política del cliente y §18.10 |
 | **F16** | Integraciones corporativas · webhooks · API pública | variable | P-23 |
 | **F17** | Analítica de cartera · comparativas entre activos | 4 semanas | Datos históricos suficientes |
 
-`[REC]` **F12 antes que F13.** Los precios reales aumentan el valor del producto para todos los
-usuarios; el offline completo resuelve el problema de una minoría de visitas. Salvo que P-11 revele
-que sin offline la herramienta no se usa en campo, en cuyo caso el orden se invierte.
+`[REC]` **F11bis pronto, F12 sin fecha.** Tras cerrar P-06 sin fuente externa, la fase del adaptador
+deja de ser prioridad y pasa a ser una posibilidad. Lo que sí conviene adelantar es el alcance completo
+de Sugerencias: con precios que se mantienen a mano, **el buzón es el mecanismo real de actualización
+del catálogo**, y el botón «Aplicar» es lo que hace que el administrador no abandone la tarea.
 
 ---
 

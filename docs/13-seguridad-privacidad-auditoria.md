@@ -17,6 +17,7 @@ Antes de las medidas: qué se protege y de quién. `[REC]`
 | Plantilla PPTX corporativa | Sobrescritura o pérdida | Pérdida de un activo de la consultora |
 | Credenciales | Robo, reutilización, fuerza bruta | Acceso completo suplantando a un usuario |
 | Infraestructura | Archivo malicioso, ataque XML | Ejecución de código en el servidor |
+| **Buzón de sugerencias** `[REC]` | Que se use como **vía lateral** para sacar datos de un proyecto: un usuario pega un importe o un nombre de cliente, y el administrador lo lee sin dejar rastro de acceso a ese proyecto | Se rodea, sin querer, el control que audita el acceso de administrador al contenido. Mitigado en [`19`](./19-sugerencias.md) §19.4: el contexto se guarda **por referencia**, se avisa en el formulario, y abrir una sugerencia con contexto de proyecto **se audita** |
 
 **Actores considerados:** usuario legítimo con exceso de curiosidad (el más frecuente); usuario de
 otra organización; atacante externo no autenticado; atacante con cuenta válida de baja privilegio; y
@@ -209,6 +210,7 @@ quedar auditada.»
 | **Catálogos** | `CATALOG_ITEM_CREATED`, `CAPEX_CODE_DEPRECATED` | AVISO |
 | **Informe** | `TEMPLATE_UPLOADED`, `MAPPING_SAVED`, `REPORT_GENERATED`, `REPORT_FORCED_GENERATION`, `REPORT_SUBMITTED`, `REPORT_APPROVED/REJECTED`, `REPORT_ISSUED`, `REPORT_DOWNLOADED` | INFO / **CRÍTICO** |
 | **Datos** | `EXPORT_CREATED`, `HARD_DELETE`, `RETENTION_PURGE_EXECUTED`, `GDPR_EXPORT`, `GDPR_ERASURE` | **CRÍTICO** |
+| **Sugerencias** `[REQ]` | `SUGGESTION_CREATED`, **`SUGGESTION_VIEWED`** (solo si lleva contexto de proyecto), `SUGGESTION_STATUS_CHANGED`, `SUGGESTION_APPLIED` | INFO / **AVISO** |
 | **Administración** | `USER_INVITED/SUSPENDED/DELETED`, `ROLE_PERMISSIONS_CHANGED`, `ORG_SETTINGS_CHANGED`, `RETENTION_POLICY_CHANGED` | AVISO / **CRÍTICO** |
 
 ### Integridad

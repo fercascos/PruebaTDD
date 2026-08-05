@@ -68,7 +68,7 @@ descartadas en [`03-arquitectura.md`](./03-arquitectura.md).
 | Riesgo | Por qué importa | Mitigación |
 |---|---|---|
 | **Fidelidad del PPTX** | Si el informe sale descuadrado, el producto no se usa | **Riesgo ya medido** sobre las plantillas reales (doc 18 §18.7): baja de *alta* a *media* porque no hay gráficos, SmartArt ni OLE, y hay una sola estructura. Sube por la ausencia de marcadores de posición y las fuentes Gotham |
-| **Precio Centro** | Es una base de precios **comercial y licenciada**; su uso automatizado no es una decisión técnica | No se integra nada sin licencia vigente y revisión de condiciones. Vía preferente: importación del catálogo exportado, no extracción del sitio `[PDV]` |
+| **Precios que se desfasan** | `[REQ]` P-06 cerrada sin fuente externa: los precios se mantienen a mano, y **nada los actualiza solo** | Catálogo interno importable y reutilizable entre proyectos, más el módulo de **Sugerencias** tipo `PRECIO`, que es la vía por la que una corrección detectada en campo llega al catálogo del resto del equipo |
 | **Desglose del árbol de códigos** | Tres categorías (Medioambiental, ESG & Energía, Soft Costs) quedan pendientes de desarrollar | Catálogos como datos: se siembran con «General», son utilizables desde el día uno y se amplían sin migración. Las cinco cuestiones de catálogo están **resueltas** (§3.1) |
 
 ---
@@ -124,7 +124,7 @@ Ordenadas por impacto. **Ninguna bloquea el inicio**: para cada una hay un supue
 
 ### 3.1. Decisiones cerradas por el cliente ✅
 
-Diez cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí con su consecuencia,
+Doce cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí con su consecuencia,
 porque son las que estructuran el modelo de datos y condicionan la semilla de catálogos.
 
 | # | Cuestión | **Decisión** | Consecuencia |
@@ -141,7 +141,10 @@ porque son las que estructuran el modelo de datos y condicionan la semilla de ca
 | **P-37** ✅ | La imagen de la plantilla tenía **cuatro** columnas de plazo. ¿Se muestra «Otro tipo de petición» como quinta? | **Sí, se deja «Otro»**: el Excel de trabajo la tiene y es la versión más actualizada | La tabla lleva **cinco columnas de plazo** en el informe y en el XLSX. El desfase entre la imagen pegada y la hoja real es el mejor argumento para la tabla nativa: **se genera desde el dato, no desde una captura** |
 | **P-38** ✅ | La tabla original venía en **Century Gothic**. ¿Se respeta o se unifica? | **Todo en Gotham**: hay que unificar tipografías | Medido sobre 3.769 caracteres reales de las tablas, Gotham es un **4,9 % más ancha** con la variante Light. Se absorbe usando `Gotham Light` en el cuerpo y trasvasando un 5 % de anchura de `Comments` a `Description`. Ver [`18`](./18-analisis-plantillas-reales.md) §18.7bis |
 
-Con estas diez decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
+| **P-06** ✅ | ¿Hay licencia de una base de precios externa? | **No, y no se espera.** *«A falta de conectar una base de datos de precios externa, deja esos campos editables para que cada uno modifique a mano esa parte»* | **Ninguna integración externa**, ni en el MVP ni planificada. El precio se teclea y se edita **en la propia rejilla, sin fricción**: la justificación escrita deja de bloquear y solo se exige al marcar un precio como `VALIDADO`. La trazabilidad se conserva **sin pedir nada**, vía auditoría e historial de campo. `[LIM]` Contrapartida asumida: el catálogo se desfasará, y por eso llega a la vez el módulo de Sugerencias |
+| **P-42** ✅ | *(nuevo)* Módulo de **Sugerencias** | **Se añade**: cualquier usuario propone cambios y **solo los administradores ven las propuestas** | Documento propio: [`19-sugerencias.md`](./19-sugerencias.md). Cuatro tipos, contexto capturado por referencia, visibilidad impuesta por **RLS** y no por filtro de servicio, respuesta obligatoria al rechazar. **Añade 1,5 semanas al MVP** en su alcance mínimo (F10bis) |
+
+Con estas doce decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
 cuestión estructural pendiente sobre cómo se captura y se calcula una línea de CAPEX. Lo único que
 sigue abierto en materia de costes es **P-16**, el orden concreto de los porcentajes *dentro* de la
 calculadora de medición, que afecta a una herramienta de apoyo y no al dato que se almacena.
@@ -150,7 +153,7 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 
 | # | Pregunta | Por qué es crítica | Se avanza con |
 |---|---|---|---|
-| **P-06** | ¿Disponen de **licencia vigente de Precio Centro** y ofrece exportación o API? ¿Permiten sus condiciones el uso desde una aplicación propia? | Determina si el CAPEX arranca con precios reales. **No es una decisión técnica** | Solo entrada manual + importación de catálogo propio |
+| ~~**P-06**~~ ✅ | ~~¿Disponen de licencia vigente de Precio Centro?~~ **CERRADA:** no hay fuente externa. Los precios se **editan a mano** | Ya no bloquea nada. Ver §3.1 | Ver §3.1 y [`11`](./11-capex-precios.md) §16.5 |
 | ~~**P-07**~~ ✅ | ~~¿Pueden facilitarse plantillas PPTX reales?~~ **RESUELTA**: el cliente ha facilitado las **cuatro** plantillas de Full Report (Modelo A y B, en español e inglés) | El mayor riesgo del proyecto ya está **medido** | Analizadas en [`18-analisis-plantillas-reales.md`](./18-analisis-plantillas-reales.md). Abre P-30 a P-36 |
 | **P-08** | ¿Es obligatorio el **desglose por medición** (cantidad × precio) o basta el importe a tanto alzado por línea? | Si fuera obligatorio, la captura en campo se ralentiza mucho. *(La parte sobre qué incluye el importe ya está resuelta: P-05b)* | S-10: opcional |
 | **P-09** | ¿**SaaS multi-cliente** o instalación única para una consultora? | Multi-tenancy, RLS, onboarding y permisos | S-01: SaaS multi-organización |
@@ -204,6 +207,16 @@ cerradas** —P-31, P-32, P-37 y P-38— y han pasado a §3.1. Queda esto:
 | **P-35** | Las diapositivas de **Mediciones AEO** y **Disclaimer** son contenido fijo. ¿Se marcan como intocables? | Bajo | Sí, con `@keep` |
 | **P-39** | `[PDV]` ¿Permite el **contrato de licencia de Gotham** incrustar las fuentes en los PPTX que se envían al cliente? Los ficheros lo admiten (`fsType = Preview & Print`), pero el contrato no lo he visto | Bajo | Dejarlo **desactivado**, como hoy: las plantillas actuales tampoco incrustan. Es una comprobación de minutos, y **no bloquea nada** |
 
+### 3.7. Preguntas del módulo de Sugerencias
+
+Ninguna bloquea: las dos tienen respuesta por defecto y se construye con ella salvo indicación
+contraria. Detalle en [`19`](./19-sugerencias.md) §19.4.
+
+| # | Pregunta | Impacto | Propuesta |
+|---|---|---|---|
+| **P-40** | El requisito dice que **solo el administrador ve las propuestas**. ¿Incluye eso que **el autor no vuelva a ver la suya**? | Medio | **Que el autor sí vea las suyas**, con su estado y la respuesta. Sin eso escribe en un buzón sin fondo, no sabe si se leyó y a la tercera deja de escribir. Si se prefiere lo contrario, es más sencillo de implementar |
+| **P-41** | Ver las sugerencias exige hoy ser `ADMIN`, que además gestiona usuarios, catálogos y organización. ¿Hace falta que alguien atienda el buzón **sin** esas llaves? | Bajo | Permiso separable `GESTIONAR_SUGERENCIAS`, asignable a un `DIRECTOR_PROYECTO`. Media jornada, y evita repartir cuentas de administrador por un motivo menor |
+
 ---
 
 ## Índice de la documentación
@@ -227,6 +240,8 @@ cerradas** —P-31, P-32, P-37 y P-38— y han pasado a §3.1. Queda esto:
 | [`15`](./15-mvp-plan-riesgos.md) | Alcance del MVP · plan por fases · riesgos | 20-22 |
 | [`16`](./16-estructura-carpetas.md) | Estructura inicial del proyecto | 23 |
 | [`17`](./17-requisitos-no-funcionales.md) | Objetivos no funcionales verificables | §10 |
+| [`18`](./18-analisis-plantillas-reales.md) | Análisis de las 4 plantillas PPTX reales | 17 (rev.) |
+| [`19`](./19-sugerencias.md) | **Módulo de Sugerencias** | añadido |
 
 El entregable **24 (código inicial del MVP)** se aborda tras la validación de este diseño,
 conforme a §16 del encargo.

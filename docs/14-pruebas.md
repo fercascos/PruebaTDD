@@ -169,6 +169,27 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 | Denegaciones auditadas | Cada denegación produce `ACCESS_DENIED` |
 | Acceso de administrador | Permitido **y** con evento crítico |
 
+### Sugerencias: el aislamiento entre autores `[REQ]`
+
+«Solo el administrador ve las propuestas» es un requisito explícito del cliente, así que se prueba con
+el mismo rigor que el aislamiento entre organizaciones.
+
+| Prueba | Verifica |
+|---|---|
+| **Un consultor no lista** | `GET /suggestions` con rol `CONSULTOR` → `403` |
+| **Un consultor no lee la ajena** | `GET /suggestions/{id}` de otro autor → **`404`, no `403`**: no se confirma que exista |
+| **Sí lee la suya** | `GET /suggestions/mine` devuelve solo las del usuario, con estado y respuesta |
+| **RLS, no filtro de servicio** | Consulta **directa a la tabla** con el rol de aplicación y el `SET LOCAL` de un consultor: devuelve solo las suyas. Es la prueba que sostiene el requisito aunque un servicio futuro olvide filtrar `[REC]` |
+| **Entre organizaciones** | Un `ADMIN` de la organización A no ve ninguna sugerencia de la B |
+| **Escalada por el cuerpo** | `POST /suggestions` con `organization_id` y `created_by` ajenos en el cuerpo: se **ignoran**, se toman del token |
+| **Todos pueden crear** | Los seis roles, incluido `LECTOR`, crean una sugerencia con `201` |
+| **Rechazo sin motivo** | `422` desde la API **y** violación de `CHECK` por SQL directo. Dos barreras |
+| **Aplicar sin aceptar** | `409` |
+| **Aplicar crea y enlaza** | Aplicar una de tipo `CATALOGO` crea el código y deja `applied_entity_id` apuntando a él |
+| **El contexto no copia datos** | Una sugerencia creada desde una línea de CAPEX guarda **identificadores**; su `payload` no contiene nombre de cliente ni importes del proyecto salvo los que escriba el usuario `[REC]` |
+| **Auditoría del contexto** | Abrir una con `context_project_id` deja `SUGGESTION_VIEWED` con el proyecto referenciado |
+| **Contador de duplicados** | Tres agrupadas en una: la original muestra 3 |
+
 ---
 
 ## 19.5. Pruebas de seguridad

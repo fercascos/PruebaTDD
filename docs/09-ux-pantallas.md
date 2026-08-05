@@ -1063,6 +1063,24 @@ sin ella sugiere que se ha buscado en todas partes.
 
 ---
 
+## 20-22 · Sugerencias
+
+Tres pantallas nuevas `[REQ]`, detalladas con sus bocetos en
+[`19-sugerencias.md`](./19-sugerencias.md) §19.9:
+
+| # | Pantalla | Quién la ve |
+|:--:|---|---|
+| **20** | **Enviar una sugerencia** — se abre desde el menú o desde el botón «Sugerir» de cualquier pantalla, que es como se usará casi siempre. Los campos cambian según el tipo | Todos los roles |
+| **21** | **Mis sugerencias** — estado, respuesta recibida y, si se aplicó, enlace a lo que cambió | Todos los roles, solo las propias |
+| **22** | **Bandeja del administrador** — todas las propuestas, agrupadas por duplicado, con el botón que **abre el editor de catálogos o de precios ya relleno** | Solo `ADMIN` (o `GESTIONAR_SUGERENCIAS`) |
+
+`[REC]` **El botón «Sugerir» es contextual y está en la barra de cada pantalla.** Un formulario en
+blanco al que hay que navegar produce quejas vagas; un botón en la línea de CAPEX que está mal produce
+una propuesta accionable con su contexto ya capturado. Es la diferencia entre un módulo que se usa y
+uno que se abandona.
+
+---
+
 ## 14.1. Accesibilidad y responsive
 
 | Aspecto | Decisión |

@@ -56,6 +56,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | [16](docs/16-estructura-carpetas.md) | Estructura inicial del proyecto | 23 |
 | [17](docs/17-requisitos-no-funcionales.md) | Objetivos no funcionales verificables | §10 |
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
+| **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
 
 ### Convención de etiquetas
 
@@ -93,21 +94,20 @@ pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 ---
 
-## Las dos decisiones que faltan para avanzar
+## Ya no queda ninguna decisión que bloquee el diseño
 
-1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
-   diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
-2. **`P-16` · ¿Sobre qué base se aplica cada porcentaje de la cascada de costes?** No es una cuestión
+Quedan tres cuestiones abiertas, y **ninguna detiene el trabajo**:
+
+1. **`P-16` · ¿Sobre qué base se aplica cada porcentaje de la cascada de costes?** No es una cuestión
    de orden —intercambiar dos peldaños que se componen da el mismo resultado—, sino de sobre qué se
-   calcula cada uno. Entre criterios razonables hay un **5 %** de diferencia. **No bloquea**: es
-   configuración, y tras P-05b solo afecta a la calculadora de medición opcional. La vía rápida para
-   cerrarla es **enviar un Excel real con una línea ya calculada** y deducirla del propio fichero.
-
-**El bloque de PPTX ya no bloquea nada.** Las seis fuentes Gotham están recibidas y verificadas, la
-tabla de CAPEX está decidida y medida, y las cuatro plantillas reales están analizadas. Solo queda una
-comprobación menor, que no detiene el trabajo: `P-39`, si el contrato de licencia de Gotham permite
-**incrustar** las fuentes en los PPTX enviados. Los ficheros lo admiten; el contrato no lo he visto. Se
-deja desactivado, que es exactamente lo que hacen hoy las plantillas del cliente.
+   calcula cada uno. Entre criterios razonables hay un **5 %** de diferencia. Es configuración, y tras
+   P-05b solo afecta a la calculadora de medición opcional. La vía rápida para cerrarla es **enviar un
+   Excel real con una línea ya calculada** y deducirla del propio fichero.
+2. **`P-40` · ¿El autor puede volver a ver la sugerencia que escribió?** Se construye con que **sí**,
+   salvo indicación contraria: un buzón sin acuse de recibo se abandona.
+3. **`P-39` · ¿Permite el contrato de Gotham incrustar las fuentes en los PPTX enviados?** Los ficheros
+   lo admiten; el contrato no lo he visto. Se deja **desactivado**, que es lo que hacen hoy las
+   plantillas del cliente.
 
 Las demás preguntas, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
@@ -143,11 +143,11 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
 - `[LIM]` **Las fuentes corporativas no están en el repositorio y no deben estarlo.** Gotham es
   comercial y licenciada; versionarla sería redistribuirla. Se provisionan en el contenedor desde un
   artefacto privado, con verificación en el arranque.
-- `[LIM]` **Precio Centro no está integrado, y no se afirma que vaya a funcionar.** No se realiza
-  extracción automatizada del sitio: es una base de precios comercial protegida y su uso requiere
-  licencia y revisión de condiciones. La vía preferente es la **importación del catálogo exportado**,
-  no la consulta en línea. El MVP incluye entrada manual con justificación obligatoria e importación de
-  catálogo propio.
+- `[LIM]` **No hay ninguna fuente de precios externa, ni está prevista** `[REQ]` P-06. Los precios se
+  teclean y se editan a mano, sin fricción. La contrapartida, asumida a conciencia: **el catálogo de
+  precios se irá desfasando**, porque nada lo actualiza solo. Por eso el módulo de Sugerencias llega en
+  el mismo paso — su tipo `PRECIO` es el mecanismo por el que una corrección detectada en un proyecto
+  llega al catálogo que usan los demás.
 - `[LIM]` La resolución de conflictos del MVP es *última escritura gana a nivel de campo*, con registro
   del valor descartado y aviso. El modo offline completo es fase posterior.
 - `[LIM]` **Ninguna función de IA en el MVP.** Y si se incorpora, será con consentimiento explícito,
@@ -161,8 +161,12 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
 > el encargo y pedir la documentación hasta emitir el PPTX— **sin salirse de la herramienta ni una sola
 > vez.**
 
-Estimación: **18 semanas** con el equipo supuesto (1 tech lead + 2 full stack + diseñador y QA a media
-jornada), en 11 fases. Incluye una **fase dedicada a catálogos antes que a proyectos**: zonas, códigos,
+Estimación: **19,5 semanas** con el equipo supuesto (1 tech lead + 2 full stack + diseñador y QA a media
+jornada), en 12 fases. Eran 18 antes de añadir el **módulo de Sugerencias** (F10bis, 1,5 semanas en su
+alcance mínimo): se planifica dentro del MVP porque el canal vale más cuando la herramienta es nueva,
+que es cuando aparecen los códigos que faltan y los precios desfasados. **Es la única pieza del plan
+que se puede mover a después sin arrastrar ninguna otra**, si las 18 semanas fuesen un compromiso
+firme. Incluye una **fase dedicada a catálogos antes que a proyectos**: zonas, códigos,
 riesgos y conceptos son la estructura sobre la que se apoya todo el CAPEX, y sembrarlos mal obliga a
 migrar datos reales después.
 
