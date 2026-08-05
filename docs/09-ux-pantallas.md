@@ -726,7 +726,7 @@ y por eso ocupa sitio propio en la barra mientras `CSV` se repliega al menú `�
 │   ☑ Resumen   ☑ CAPEX detalle   ☑ Trazabilidad   ☑ Catálogos         │
 │   ☑ Agregados por capítulo, zona, riesgo y horizonte  ☐ Hallazgos    │
 │                                                                       │
-│  ☑ Incluir la columna «Otro tipo de petición»                        │
+│  ☑ Incluir la columna «Otro tipo de petición»   ⓘ activada por defecto│
 │  ☑ Incluir impuestos    Idioma del fichero: Español ▾                │
 │                                                                       │
 │  ⚠ 12 líneas tienen el precio sin validar. Se exportan marcadas.      │

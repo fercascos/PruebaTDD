@@ -124,7 +124,7 @@ Ordenadas por impacto. **Ninguna bloquea el inicio**: para cada una hay un supue
 
 ### 3.1. Decisiones cerradas por el cliente ✅
 
-Siete cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí con su consecuencia,
+Diez cuestiones que estaban abiertas y **ya están resueltas**. Se registran aquí con su consecuencia,
 porque son las que estructuran el modelo de datos y condicionan la semilla de catálogos.
 
 | # | Cuestión | **Decisión** | Consecuencia |
@@ -137,7 +137,11 @@ porque son las que estructuran el modelo de datos y condicionan la semilla de ca
 | **P-05b** ✅ | ¿El importe tecleado ya incluye indirectos, honorarios y contingencia, o es un coste directo al que aplicar la cascada? | **Lo incluye todo**: el importe es la **base imponible final** de la línea | La aplicación **nunca** aplica la cascada por encima de un importe tecleado. El desglose por medición es una **calculadora opcional** cuyo resultado se traslada con un botón. Del perfil de costes, **solo el impuesto se aplica a todas las líneas**; indirectos, honorarios, gastos generales, beneficio industrial y contingencia se usan únicamente dentro de esa calculadora |
 | **P-31** ✅ | ¿La tabla de CAPEX del informe sigue siendo una **imagen pegada desde Excel** o pasa a ser **tabla nativa**? | **Tabla nativa respetando el formato del Excel**, y además un **botón de exportar el CAPEX a XLSX** para adjuntarlo en los envíos que el equipo haga fuera de la plataforma | La estructura de la tabla se ha recuperado de los propios metarchivos de las plantillas y está especificada en [`11`](./11-capex-precios.md) §16.8bis. El generador de PPTX y el exportador de XLSX **comparten una misma estructura intermedia**, para que no puedan divergir. La exportación queda auditada como `EXPORT_CREATED` |
 
-Con estas siete decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
+| **P-32** ✅ | ¿Pueden facilitarse los **ficheros de las fuentes Gotham**? | **Facilitadas las seis familias**: Light, Book, Medium, Bold, Black y Ultra | Verificadas una a una: OTF válidas, 1000 upm, 637 glifos, cobertura completa del español, y nombre de familia coincidente con el `typeface` de las plantillas. **La medición del desbordamiento ya no usa sustitutas para nada**: `Gotham Light` mide 0,4971 em y `Gotham Ultra` 0,6326 em sobre titulares reales |
+| **P-37** ✅ | La imagen de la plantilla tenía **cuatro** columnas de plazo. ¿Se muestra «Otro tipo de petición» como quinta? | **Sí, se deja «Otro»**: el Excel de trabajo la tiene y es la versión más actualizada | La tabla lleva **cinco columnas de plazo** en el informe y en el XLSX. El desfase entre la imagen pegada y la hoja real es el mejor argumento para la tabla nativa: **se genera desde el dato, no desde una captura** |
+| **P-38** ✅ | La tabla original venía en **Century Gothic**. ¿Se respeta o se unifica? | **Todo en Gotham**: hay que unificar tipografías | Medido sobre 3.769 caracteres reales de las tablas, Gotham es un **4,9 % más ancha** con la variante Light. Se absorbe usando `Gotham Light` en el cuerpo y trasvasando un 5 % de anchura de `Comments` a `Description`. Ver [`18`](./18-analisis-plantillas-reales.md) §18.7bis |
+
+Con estas diez decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
 cuestión estructural pendiente sobre cómo se captura y se calcula una línea de CAPEX. Lo único que
 sigue abierto en materia de costes es **P-16**, el orden concreto de los porcentajes *dentro* de la
 calculadora de medición, que afecta a una herramienta de apoyo y no al dato que se almacena.
@@ -188,19 +192,17 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 
 ### 3.6. Preguntas abiertas por el análisis de las plantillas reales
 
-Surgen del análisis del doc [`18`](./18-analisis-plantillas-reales.md). **P-31 ya está cerrada** y ha
-pasado a §3.1; **P-32 está resuelta a medias** y es ahora la que más urge.
+Surgen del análisis del doc [`18`](./18-analisis-plantillas-reales.md). **Cuatro de las nueve ya están
+cerradas** —P-31, P-32, P-37 y P-38— y han pasado a §3.1. Queda esto:
 
 | # | Pregunta | Impacto | Propuesta / estado |
 |---|---|---|---|
-| **P-32** 🟡 | ¿Pueden facilitarse los **ficheros de las fuentes Gotham** o su licencia, para instalarlas en el servidor? | **Alto** | **Parcialmente resuelta.** Recibidas y verificadas `Gotham Light`, `Book`, `Medium`, `Bold` y `Black`. **Falta `Gotham Ultra`**, que es la de titulares y supone **la mitad del uso de Gotham** en las plantillas. Sin ella, los titulares se miden y se renderizan con una sustituta, y el aviso **lo declara** en lugar de disimularlo |
 | **P-30** | Tres capítulos del árbol (`H11` fontanería, `H13` seguridad/CCTV/BMS, `H15` otros) **no tienen sección en la plantilla**. ¿Se añaden, se agrupan o solo se generan si hay hallazgos? | Alto | Generarlas solo si hay hallazgos, sin tocar la plantilla |
 | **P-33** | Los idiomas confirmados son **español e inglés**. ¿Habrá más? | Medio | Traducción por catálogo, con `locale` abierto |
 | **P-34** | El informe agrupa **Cimentación y Estructura** en una diapositiva y desglosa `H04` en tres. ¿Se mantiene o se normaliza al árbol? | Medio | Mantener la plantilla; la agrupación se resuelve en el mapeo |
 | **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, y cuándo se usa cada uno? | Medio | Se tratan como dos variantes de portada del mismo mapeo |
-| **P-37** | La tabla real del Excel tiene **cuatro columnas de plazo**, no cinco: no aparece «Otro tipo de petición». ¿Se muestra como quinta columna en el informe, o solo existe dentro de la aplicación? | Medio | Columna configurable en el mapeo, **oculta por defecto** en el informe y **siempre presente** en el XLSX exportado |
 | **P-35** | Las diapositivas de **Mediciones AEO** y **Disclaimer** son contenido fijo. ¿Se marcan como intocables? | Bajo | Sí, con `@keep` |
-| **P-38** | La tabla de CAPEX del original está compuesta en **Century Gothic**, no en Gotham. ¿Se respeta esa tipografía en la tabla nativa, o se unifica con el resto del informe? | Bajo | Respetar Century Gothic, que es lo que hay hoy |
+| **P-39** | `[PDV]` ¿Permite el **contrato de licencia de Gotham** incrustar las fuentes en los PPTX que se envían al cliente? Los ficheros lo admiten (`fsType = Preview & Print`), pero el contrato no lo he visto | Bajo | Dejarlo **desactivado**, como hoy: las plantillas actuales tampoco incrustan. Es una comprobación de minutos, y **no bloquea nada** |
 
 ---
 

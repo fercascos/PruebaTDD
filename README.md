@@ -71,7 +71,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 
 ## Decisiones ya cerradas por el cliente ✅
 
-Seis cuestiones que estaban abiertas y que estructuran el modelo de datos:
+Diez cuestiones que estaban abiertas y que estructuran el modelo de datos y el informe:
 
 | # | Decisión | Consecuencia |
 |---|---|---|
@@ -84,30 +84,27 @@ Seis cuestiones que estaban abiertas y que estructuran el modelo de datos:
 
 | **P-07** | Facilitadas las **4 plantillas reales** de Full Report | Analizadas en [`docs/18`](docs/18-analisis-plantillas-reales.md). Son **una sola estructura** × 2 portadas × 2 idiomas: 67 diapositivas, 4:3, 14 sistemas, 56 marcos de foto. **Corrige cinco decisiones del bloque 4** |
 | **P-31** | La tabla de CAPEX pasa a ser **nativa, respetando el formato del Excel**, y la aplicación incorpora un **botón de exportar el CAPEX a XLSX** | Hoy son imágenes EMF pegadas desde Excel. Su estructura se ha **recuperado de los propios metarchivos** y está especificada en [`docs/11`](docs/11-capex-precios.md) §16.8bis. El generador de PPTX y el exportador de XLSX **comparten una misma pieza** para que no puedan divergir. El XLSX existe para adjuntarlo en los envíos que el equipo haga fuera de la plataforma, y por eso **queda auditado** |
+| **P-32** | Facilitadas las **seis familias Gotham** | Verificadas una a una. El desbordamiento se mide con las fuentes reales, texto y titulares, **sin sustitutas** |
+| **P-37** | La tabla lleva **cinco columnas de plazo**, «Otro» incluida | La imagen pegada en la plantilla solo tenía cuatro: estaba desfasada respecto del Excel de trabajo. La tabla nativa se genera **desde el dato**, así que no puede volver a quedarse atrás |
+| **P-38** | **Toda la tipografía unificada en Gotham** | La tabla deja Century Gothic. Cuesta un **+4,9 %** de anchura de texto —medido sobre 3.769 caracteres reales—, absorbido con `Gotham Light` en el cuerpo y un reajuste de columnas |
 
 Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos** y el riesgo del bloque 4
 pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 ---
 
-## Lo que falta para avanzar
-
-**Un fichero concreto** — y no es una decisión, es un envío:
-
-> 🟡 **Falta `Gotham Ultra`.** De las cinco fuentes recibidas (Light, Book, Medium, Bold, Black), la que
-> la plantilla usa para **todos los titulares** no está. Es la mitad del uso de Gotham en el informe:
-> 86-94 apariciones por plantilla, frente a 86-130 de Gotham Light. Mientras no llegue, los titulares se
-> medirán y se renderizarán con una sustituta. **No se sustituye en silencio**: Gotham Black es la más
-> próxima en peso pero no es métricamente equivalente, y el aviso de desbordamiento lo declarará.
-
-**Y tres decisiones:**
+## Las dos decisiones que faltan para avanzar
 
 1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
    diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
 2. **`P-16` · ¿Cuál es la cascada de costes real?** Debe coincidir con los Excel que la consultora ya
    usa. Tras P-05b su alcance está acotado a la calculadora de medición.
-3. **`P-37` · ¿Sale «Otro tipo de petición» como quinta columna del informe?** La tabla real del Excel
-   solo tiene cuatro plazos. Se propone ocultarla por defecto en el PPTX y mantenerla siempre en el XLSX.
+
+**El bloque de PPTX ya no bloquea nada.** Las seis fuentes Gotham están recibidas y verificadas, la
+tabla de CAPEX está decidida y medida, y las cuatro plantillas reales están analizadas. Solo queda una
+comprobación menor, que no detiene el trabajo: `P-39`, si el contrato de licencia de Gotham permite
+**incrustar** las fuentes en los PPTX enviados. Los ficheros lo admiten; el contrato no lo he visto. Se
+deja desactivado, que es exactamente lo que hacen hoy las plantillas del cliente.
 
 Las demás preguntas, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
@@ -127,13 +124,19 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   en [`docs/18`](docs/18-analisis-plantillas-reales.md) procede del fichero, que es exacto y
   verificable; la validación visual es parte de la prueba de concepto.
 - `[LIM]` La detección de textos que desbordan es una **estimación** por métricas de fuente, con margen
-  de ±10-15 %. El aviso lo dice explícitamente al usuario. Medida ya con `Gotham Light` real, la
-  desviación de la heurística resultó del **2,8 %**; para los titulares en `Gotham Ultra` seguirá siendo
-  una estimación con sustituta **mientras no llegue el fichero**, y el aviso lo declarará.
+  de ±10-15 %. El aviso lo dice explícitamente al usuario. Ya se mide con las **fuentes Gotham reales**,
+  texto y titulares, sin sustitutas.
+- `[LIM]` **Un PPTX no contiene tipografías, contiene nombres de tipografía.** Que el destinatario vea
+  el informe en Gotham depende de que tenga Gotham instalada, no de esta aplicación. Es el mismo
+  comportamiento que hoy: las cuatro plantillas facilitadas **no incrustan** las fuentes. Incrustarlas
+  es posible y está valorado en [`docs/18`](docs/18-analisis-plantillas-reales.md) §18.7bis, pero
+  **no entra en el MVP**.
 - `[LIM]` **La fidelidad de la tabla nativa de CAPEX no está verificada.** Su estructura —columnas,
   cabecera de dos niveles, formato— se recuperó de los metarchivos EMF de las plantillas, que son
   exactos, pero los anchos son una reconstrucción y no se ha visto ningún render. La comparación lado a
-  lado con la imagen original es criterio de salida de la prueba de concepto.
+  lado con la imagen original es criterio de salida de la prueba de concepto. Tras P-38 esa comparación
+  **no busca identidad**: la tabla irá en Gotham y no en Century Gothic, con un **4,9 % más de anchura
+  de texto** ya medido y compensado en los anchos de columna.
 - `[LIM]` **Las fuentes corporativas no están en el repositorio y no deben estarlo.** Gotham es
   comercial y licenciada; versionarla sería redistribuirla. Se provisionan en el contenedor desde un
   artefacto privado, con verificación en el arranque.

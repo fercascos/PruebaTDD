@@ -277,6 +277,11 @@ de Gotham (o su licencia) e instalarlos en el contenedor del worker. Sin eso, ta
 desbordamiento como la previsualización pierden buena parte de su valor en un informe de 67
 diapositivas cuyo riesgo principal es, precisamente, el texto que se sale.
 
+> ✅ **Resuelto.** El cliente ha facilitado **las seis familias Gotham**, verificadas en §18.7bis. Los
+> dos problemas de arriba desaparecen. Conviene además leer §18.7bis para deshacer un malentendido que
+> este apartado puede inducir: **la fuente hace falta para medir y para previsualizar, no para
+> generar**. El PPTX sale con los textos en Gotham aunque el servidor no la tenga instalada.
+
 ### C-5 · Los catálogos necesitan traducción
 
 **Evidencia:** las plantillas EN traducen **todo** el contenido que en el diseño procede de catálogos:
@@ -390,33 +395,42 @@ concreta, y se responde con dos diapositivas, no con un prototipo entero.
 El cliente ha facilitado las fuentes y ha resuelto P-31. Esto permite **sustituir estimaciones por
 mediciones** y recuperar la estructura de la tabla de CAPEX desde los propios EMF.
 
-### Fuentes: 4 de 5 recibidas, **falta Gotham Ultra**
+### Fuentes: las seis recibidas y verificadas ✅ P-32 CERRADA
 
-| Fichero recibido | Familia | Estado |
-|---|---|:--:|
-| `GOTHAMLIGHT.OTF` | Gotham Light | ✅ **La usa la plantilla** |
-| `GOTHAMBOOK.OTF` | Gotham Book | ✅ recibida (no usada en las plantillas) |
-| `GOTHAMMEDIUM.OTF` | Gotham Medium | ✅ recibida (no usada) |
-| `GOTHAMBOLD.OTF` | Gotham Bold | ✅ recibida (no usada) |
-| `GOTHAMBLACK.OTF` | Gotham Black | ✅ recibida (no usada) |
-| — | **Gotham Ultra** | ❌ **NO recibida, y la plantilla la usa** |
+| Fichero recibido | Familia (nombre Windows) | PostScript | Uso en las plantillas |
+|---|---|---|:--:|
+| `GOTHAMLIGHT.OTF` | Gotham Light | `Gotham-Light` | ✅ **86-130 apariciones** · texto corrido |
+| `GOTHAMULTRA.OTF` | Gotham Ultra | `Gotham-Ultra` | ✅ **86-94 apariciones** · titulares |
+| `GOTHAMBOOK.OTF` | Gotham Book | `Gotham-Book` | recibida, sin uso hoy |
+| `GOTHAMMEDIUM.OTF` | Gotham Medium | `Gotham-Medium` | recibida, sin uso hoy |
+| `GOTHAMBOLD.OTF` | Gotham Bold | `Gotham-Bold` | recibida, sin uso hoy |
+| `GOTHAMBLACK.OTF` | Gotham Black | `Gotham-Black` | recibida, sin uso hoy |
 
-Las cinco son OTF válidas, 1000 upm, 770 glifos. Pero el recuento de uso en las plantillas es:
+Las seis son OTF válidas: 1000 upm, 637 glifos, interlineado natural 1,200 em, y **ninguna carece de
+los caracteres del español** —acentos, `ñ`, `¿`, `¡`, `€`, comillas tipográficas—, cosa que se ha
+comprobado glifo a glifo. El nombre de familia Windows de cada fichero (`Gotham Light`, `Gotham
+Ultra`…) **coincide exactamente** con el `typeface` que las plantillas escriben en su XML, de modo que
+la correspondencia es directa y no hace falta ningún mapeo de nombres.
 
-| Plantilla | Gotham Light | **Gotham Ultra** |
-|---|:--:|:--:|
-| A_ES | 86 | **86** |
-| A_EN | 94 | **94** |
-| B_ES | 128 | **89** |
-| B_EN | 130 | **91** |
+`[REQ]` **P-32 queda cerrada.** Ya no hay ninguna familia que medir con sustituta.
 
-`[PDV]` **P-32 queda parcialmente resuelta.** Gotham Ultra representa **la mitad del uso de Gotham** en
-las plantillas —es la de titulares— y no está entre las recibidas. Sin ella, los titulares se medirán y
-se renderizarán con una sustituta. **Hace falta el fichero de Gotham Ultra.** Gotham Black es la más
-próxima en peso, pero **no es métricamente equivalente** y usarla como sustituta silenciosa sería
-introducir un error sin declararlo.
+### Qué se puede y qué no se puede hacer con estas fuentes
 
-### Medición real del texto, ya sin heurística
+`[LIM]` **Dato leído del propio fichero, no una suposición:** las seis declaran `fsType = 0x0004`, que
+en la especificación OpenType significa **«Preview & Print embedding»**. Traducido:
+
+| Operación | ¿Lo permite el fichero? |
+|---|:--:|
+| Instalarla en el servidor para medir y previsualizar | ✅ Sí |
+| Incrustarla en un PPTX para que el destinatario **lo vea y lo imprima** igual | ✅ Sí |
+| Incrustarla para que el destinatario **edite** el documento con ella | ❌ No |
+| Redistribuir el `.otf` como fichero suelto | ❌ No |
+
+`[PDV]` La lectura de `fsType` es objetiva; **la interpretación de la licencia comercial concreta que la
+consultora tiene contratada no lo es**, y no la he visto. Antes de activar la incrustación conviene que
+alguien con acceso al contrato lo confirme. Es una comprobación de cinco minutos, no un proyecto.
+
+### Medición real del texto, ya sin heurística ni sustitutas
 
 Con `Gotham Light` cargada en `fontTools`: **ancho medio de carácter = 0,4971 em**, **interlineado
 natural = 1,20 em**. Capacidad real de los marcos principales a 10 pt:
@@ -428,12 +442,70 @@ natural = 1,20 em**. Capacidad real de los marcos principales a 10 pt:
 | Definición de riesgo | 7,70 × 5,20 in | **3.389 car.** (109 × 31) | — | — |
 
 `[REC]` **La heurística de estimación queda validada**: se desviaba menos del 3 % de la medición con la
-fuente real. Eso da confianza en el aviso de desbordamiento **incluso para los titulares en Gotham
-Ultra**, donde habrá que seguir usando sustituta: el margen del 15 % previsto en L4 es más que
-suficiente para un error de ese orden.
+fuente real.
+
+**Y los titulares ya no son una estimación.** Con `Gotham Ultra` medida sobre los titulares reales de
+las plantillas, el ancho medio es **0,6326 em** —bastante más ancha que el texto corrido, como
+corresponde a una tipografía de titular—:
+
+| Cuerpo | Caracteres por línea en un marco de 8,79 in |
+|:--:|:--:|
+| 24 pt | **42** |
+| 18 pt | **56** |
+| 14 pt | **71** |
+
+`[REC]` Ese dato es el que evita un error caro y frecuente: *«Sistema de climatización y ventilación:
+descripción y valoración»* son 62 caracteres, y **a 24 pt no cabe en una línea**. Ahora el aviso puede
+decirlo antes de generar, en vez de descubrirse en la revisión del borrador.
 
 **Cifra para la interfaz:** el editor debe mostrar al consultor un contador de **4.400 caracteres**
 para la descripción y valoración conjuntas de una diapositiva de sistema, y avisar al 90 %.
+
+### Para qué hace falta la fuente, y para qué no
+
+Conviene deshacer un malentendido razonable, porque cambia por completo la magnitud del problema:
+**la fuente instalada en el servidor no es lo que hace que el PPTX salga en Gotham.**
+
+Un PPTX **no contiene tipografías**, contiene **nombres de tipografía**. Cuando el generador escribe un
+titular, deja en el XML `typeface="Gotham Ultra"` y nada más. Quien decide qué se ve es el programa que
+abre el fichero, con las fuentes que tenga esa máquina.
+
+Comprobado, no supuesto: se ha generado un PPTX con `python-pptx` **en una máquina donde Gotham no está
+instalada** (`fc-list` devuelve cero coincidencias). El XML resultante contiene
+`typeface="Gotham Ultra"` correctamente y el fichero no incluye ningún dato tipográfico. Es decir:
+
+| Tarea | ¿Necesita la fuente en el servidor? |
+|---|:--:|
+| **Generar el PPTX con textos en Gotham** | ❌ **No.** Se escribe el nombre; el fichero sale igual |
+| Calcular si un texto **desborda** su marco | ✅ Sí — hay que medirlo, y medir exige métricas reales |
+| **Previsualizar** el informe en la aplicación (LibreOffice → PDF/PNG) | ✅ Sí — aquí sí se dibuja |
+| Que el **destinatario** lo vea en Gotham | ❌ No depende del servidor: depende de **su** equipo |
+
+Esa última fila es la que importa de verdad, y **no la introduce esta aplicación: ya ocurre hoy.** Las
+cuatro plantillas facilitadas **no llevan las fuentes incrustadas** —cero registros `embeddedFont`, cero
+ficheros de fuente dentro del `.pptx`, verificado en las cuatro—. Cualquier informe que la consultora
+haya enviado hasta ahora se ve en Gotham si el receptor tiene Gotham, y con una sustituta si no. El
+comportamiento de la aplicación será **exactamente el mismo**, ni mejor ni peor.
+
+`[REC]` **Y se puede mejorar, si interesa.** PowerPoint permite incrustar las fuentes en el fichero, y
+`fsType = 0x0004` lo admite para ver e imprimir. Consecuencias de activarlo, para decidirlo con datos:
+
+| | Sin incrustar (como hoy) | Incrustando |
+|---|---|---|
+| El receptor sin Gotham | Ve una sustituta; el texto puede descuadrar | **Lo ve en Gotham** |
+| Tamaño del fichero | Los informes actuales rondan 8-9 MB | **+300-600 KB** con las seis familias, menos si se subconjunta |
+| Edición por el receptor | Sin restricción | La fuente incrustada **no le permite editar** con ella (`Preview & Print`) |
+| Soporte | Universal | PowerPoint sí; **Google Slides y Keynote la descartan al importar** `[LIM]` |
+| Licencia | Sin discusión | `[PDV]` Conviene confirmarlo contra el contrato antes de activarlo |
+
+`[REC]` **Propuesta:** dejarlo como **opción por proyecto, desactivada por defecto**. Mantiene el
+comportamiento actual sin sorpresas, y permite activarla para el envío final a un cliente concreto una
+vez que alguien haya mirado el contrato. Cuesta poco implementarlo y evita cerrarse una puerta.
+
+`[LIM]` `python-pptx` **no incrusta fuentes**: no expone la parte `fontTable` del paquete. Si se decide
+activarlo hay que escribir esa parte manipulando el `.pptx` como zip y añadiendo los `p:embeddedFont`
+en `presentation.xml`. Es trabajo conocido pero **no gratuito**: estimo 2-3 jornadas, y **no está
+incluido en el MVP**. Fuera de eso, ninguna decisión sobre fuentes bloquea nada.
 
 ### Provisión de las fuentes: no van al repositorio `[REC]`
 
@@ -490,7 +562,7 @@ Drafting of Projects and Technical Management (DF)               1.040.078,95 �
 
 | # | Observación | Consecuencia |
 |---|---|---|
-| 1 | La tabla real tiene **4 columnas de horizonte**, no 5: no aparece «Otro» | `[PDV]` **P-37**: ¿se muestra «Otro» como quinta columna, o se omite del informe y solo existe en la aplicación? Propuesta: columna configurable en el mapeo, oculta por defecto |
+| 1 | La imagen EMF de la plantilla tiene **4 columnas de horizonte**, no 5: no aparece «Otro» | ✅ **P-37 DECIDIDO: se deja «Otro»**, porque el Excel de trabajo sí lo tiene y es la versión más actualizada. La imagen pegada en la plantilla estaba **desfasada respecto de la hoja real**, y esto lo confirma: la tabla nativa se genera desde el dato, no desde una captura, así que este desfase deja de poder ocurrir |
 | 2 | La tabla **no lleva ni código ni riesgo**. El riesgo se explica aparte, en las diapositivas 56 y 58 | Confirma que el código es de trabajo interno y de agregación, no de presentación. El mapeo ya permite elegir columnas |
 | 3 | El resumen final añade **«Drafting of Projects and Technical Management»** como línea propia | `[REC]` Dato relevante para **P-16**: los honorarios técnicos aparecen como **partida separada al final**, no repartidos dentro de cada línea. Encaja con P-05b (el importe de línea ya lo incluye todo) y sugiere que los honorarios de proyecto y DF se tratan como una línea más |
 
@@ -504,16 +576,58 @@ Drafting of Projects and Technical Management (DF)               1.040.078,95 �
 
 | Elemento | Cómo se reproduce |
 |---|---|
-| Cabecera de dos niveles (`ESTIMATED CAPEX` sobre las 4 columnas de plazo) | Celdas combinadas en la primera fila de la tabla nativa |
+| Cabecera de dos niveles (`ESTIMATED CAPEX` sobre las columnas de plazo) | Celdas combinadas en la primera fila de la tabla nativa |
 | Título de bloque (`…: ARCHITECTURE`) | Fila de título o marcador de la diapositiva, según el mapeo |
-| Anchos de columna | Se toman de la geometría medida en el EMF (9,06 in de ancho total) |
-| Tipografía y cuerpo | Century Gothic en la tabla original *(dato leído del EMF)*; se respeta salvo indicación contraria |
+| **Columnas de plazo** | **Cinco**, incluyendo «Otro» ✅ P-37 |
+| Anchos de columna | Parten de la geometría medida en el EMF (9,06 in de ancho total), reajustados por P-38 |
+| **Tipografía** | **Gotham** ✅ P-38 — *no* Century Gothic, que es lo que llevaba el Excel original |
 | Formato de importe | `#.##0,00 €`, separador de miles con punto y decimal con coma, como en el original |
 | Celdas vacías | En blanco, no «0,00 €» — es como está hoy |
 | Partición | 18 filas por diapositiva, encabezado repetido, subtotales por capítulo |
 
+### Decisión P-38: se unifica todo en Gotham, y esto es lo que cuesta
+
+> **P-38 · DECIDIDO.** Toda la tipografía del informe en **Gotham**. La tabla de CAPEX deja de ir en
+> Century Gothic.
+
+Es la decisión coherente: hoy el informe mezcla **Gotham** en las diapositivas de texto con **Century
+Gothic** (y algún resto de **Calibri**) dentro de las imágenes de tabla, sencillamente porque esas
+tablas venían de un Excel ajeno a la plantilla. Al generar la tabla de forma nativa, esa frontera
+desaparece y no tiene sentido conservar la mezcla.
+
+**Tiene un coste medible, y conviene tenerlo delante:** Gotham es más ancha que Century Gothic. Medido
+sobre **el texto real de las tablas** —3.769 caracteres extraídos de los propios EMF, comparados glifo
+a glifo con las métricas de los `.otf` recibidos—:
+
+| Tipografía | Ancho medio sobre ese texto | Diferencia |
+|---|:--:|:--:|
+| Century Gothic *(medida en el EMF)* | 0,5241 em | referencia |
+| **Gotham Light** | 0,5499 em | **+4,9 %** |
+| Gotham Book | 0,5564 em | +6,2 % |
+| Gotham Medium | 0,5672 em | +8,2 % |
+| Gotham Bold | 0,5746 em | +9,6 % |
+| Gotham Ultra | 0,5751 em | +9,7 % |
+
+`[REC]` **Consecuencia práctica:** con `Gotham Light` para el cuerpo de la tabla, el texto ocupa un
+**4,9 % más**. Sobre columnas de 0,95 in eso son 0,05 in — no rompe nada, pero sí basta para que alguna
+descripción larga pase de dos a tres líneas. Tres medidas, por orden de preferencia:
+
+1. **Gotham Light para el cuerpo de la tabla**, que es la variante más estrecha y además la que ya usa
+   el texto corrido del informe. Coherente y con la menor penalización.
+2. **Ensanchar la columna `Description` un 5 %** a costa de `Comments`, que en las tablas reales va casi
+   siempre vacía. Absorbe la diferencia sin tocar el resto.
+3. Reservar `Gotham Medium` o `Bold` para **encabezados y subtotales**, donde el texto es corto y el
+   ensanchamiento no tiene efecto.
+
+`[LIM]` No he visto ninguna de las dos tipografías renderizada: la comparación es de **métricas de
+avance**, que es lo que determina si el texto cabe, pero **no captura diferencias de altura de x, de
+color de página ni de legibilidad a cuerpo pequeño**. Century Gothic tiene un ojo medio notablemente
+grande; si a 8-9 pt la tabla en Gotham resulta menos legible, se verá en la prueba de concepto y la
+respuesta será subir medio punto el cuerpo, no volver atrás.
+
 `[REC]` La reproducción se validará **en la prueba de concepto**, comparando la tabla generada con la
-imagen EMF original puesta al lado. Es una comparación que se puede hacer sin ambigüedad.
+imagen EMF original puesta al lado. Con P-38 la comparación **ya no busca identidad**: busca que el
+cambio de tipografía sea el único cambio visible y que nada descuadre.
 
 **Exportación a XLSX** `[REQ]` — ya estaba en el diseño ([`11`](./11-capex-precios.md) §16.8) y ahora
 queda confirmada con un propósito concreto: **adjuntar el fichero en envíos fuera de la plataforma**.
@@ -538,23 +652,27 @@ Consecuencias:
 |---|---|---|---|
 | **P-30** | Tres capítulos del árbol (`H11` fontanería, `H13` seguridad/CCTV/BMS, `H15` otros) **no tienen sección en la plantilla**. ¿Se añaden secciones, se agrupan, o solo se generan si hay hallazgos? | Alto | Generarlas solo si hay hallazgos (`@if_empty: skip_slide`), sin tocar la plantilla |
 | ~~**P-31**~~ | ~~¿Se aprueba que la tabla de CAPEX pase de **imagen pegada de Excel** a **tabla nativa**?~~ | — | ✅ **CERRADA.** Tabla nativa respetando el formato del Excel **+ botón de exportar a XLSX**. Detalle en §18.7bis |
-| **P-32** | ¿Se pueden facilitar los **ficheros de las fuentes Gotham**? | **Alto** | 🟡 **PARCIAL.** Recibidas Light, Book, Medium, Bold y Black. **Falta Gotham Ultra**, que es la mitad del uso |
+| ~~**P-32**~~ | ~~¿Se pueden facilitar los **ficheros de las fuentes Gotham**?~~ | — | ✅ **CERRADA.** Las seis familias recibidas y verificadas, incluida `Gotham Ultra`. Medición sin sustitutas |
 | **P-33** | Los idiomas confirmados son **español e inglés**. ¿Habrá más? | Medio | Modelo de traducción por catálogo, `locale` abierto |
 | **P-34** | El informe agrupa **Cimentación y Estructura** en una diapositiva, y desglosa `H04` en tres. ¿Se mantiene esa agrupación o se normaliza al árbol? | Medio | Mantener la plantilla como está: la agrupación se resuelve en el mapeo |
 | **P-35** | Las diapositivas de **Mediciones AEO** (42-49) y **Disclaimer** (63-66) son contenido fijo. ¿Se marcan como intocables (`@keep`) o alguna parte se rellena? | Bajo | `@keep`, salvo indicación contraria |
 | **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, más allá de portada e índice? ¿Cuándo se usa cada uno? | Medio | Se tratan como dos variantes de portada del mismo mapeo |
-| **P-37** | La tabla real del Excel tiene **cuatro columnas de plazo**, no cinco: no aparece «Otro tipo de petición». ¿Se muestra como quinta columna en el informe, o solo existe en la aplicación? | Medio | Columna configurable en el mapeo, **oculta por defecto** en el informe y siempre presente en el XLSX |
-| **P-38** | La tabla original está compuesta en **Century Gothic**, no en Gotham. ¿Se respeta esa tipografía en la tabla nativa o se unifica con el resto del informe? | Bajo | Respetar Century Gothic, que es lo que hay hoy |
+| ~~**P-37**~~ | ~~¿«Otro tipo de petición» sale como quinta columna del informe?~~ | — | ✅ **CERRADA: sí.** El Excel de trabajo la tiene y es la versión más actualizada; la imagen de la plantilla estaba desfasada. **Cinco columnas de plazo** |
+| ~~**P-38**~~ | ~~¿La tabla nativa mantiene Century Gothic o se unifica?~~ | — | ✅ **CERRADA: todo en Gotham.** Cuesta un **+4,9 %** de anchura de texto, absorbible con Gotham Light y un reajuste de columnas |
 
 ---
 
 ## 18.9. Qué hacer a continuación
 
-1. **Conseguir el fichero de Gotham Ultra** — es lo único que falta de P-32.
+1. ✅ **Fuentes completas.** Las seis familias recibidas y verificadas. No queda nada pendiente aquí.
 2. **Provisionar las fuentes** en el contenedor del worker según §18.7bis (**no** en el repositorio:
    son comerciales y licenciadas).
-3. **Prueba de concepto acotada** (semanas 2-3), con un objetivo único: clonar la diapositiva 13-14
-   (Cimentación) para tres sistemas y comparar el resultado con el original en PowerPoint.
-4. **Preparar `A_ES` como plantilla piloto**: 35 marcadores y 28 directivas, ~1,5 jornadas.
-5. Incorporar las cuatro plantillas al **corpus de pruebas** como T21-T24, sustituyendo a las
+3. `[PDV]` **Confirmar contra el contrato de licencia** si se permite incrustar las fuentes en los
+   PPTX que se envían. El fichero lo admite (`fsType = Preview & Print`); el contrato no lo he visto.
+   No bloquea nada: hoy las plantillas tampoco incrustan.
+4. **Prueba de concepto acotada** (semanas 2-3), con un objetivo único: clonar la diapositiva 13-14
+   (Cimentación) para tres sistemas y comparar el resultado con el original en PowerPoint. **Con P-38,
+   incluye comprobar la legibilidad de la tabla en Gotham a cuerpo pequeño.**
+5. **Preparar `A_ES` como plantilla piloto**: 35 marcadores y 28 directivas, ~1,5 jornadas.
+6. Incorporar las cuatro plantillas al **corpus de pruebas** como T21-T24, sustituyendo a las
    plantillas sintéticas que se habían previsto para lo que ahora está cubierto por las reales.

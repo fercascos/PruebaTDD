@@ -415,8 +415,13 @@ PPTX_RENDER_TIMEOUT_SECONDS=180
 CORPORATE_FONTS_BUCKET= · CORPORATE_FONTS_PREFIX=fonts/
 CORPORATE_FONTS_INSTALL_DIR=/usr/share/fonts/opentype/corporate
 # Familias exigidas. El arranque FALLA si fc-list no las encuentra todas.
-CORPORATE_FONTS_REQUIRED=Gotham Light,Gotham Book,Gotham Medium,Gotham Bold,Gotham Black,Gotham Ultra,Century Gothic
+# Century Gothic NO está en la lista: P-38 unifica toda la tipografía en Gotham.
+CORPORATE_FONTS_REQUIRED=Gotham Light,Gotham Book,Gotham Medium,Gotham Bold,Gotham Black,Gotham Ultra
 FONT_FALLBACK_WARN=true            # si falta una familia, el aviso lo declara
+# Incrustar las fuentes en el PPTX generado. Desactivado: los ficheros lo
+# permiten (fsType = Preview & Print) pero está PENDIENTE de confirmar contra
+# el contrato de licencia, y hoy las plantillas del cliente tampoco incrustan.
+PPTX_EMBED_FONTS=false
 
 # ── Límites de archivo ──────────────────────────────────────
 MAX_UPLOAD_MB=50 · MAX_BATCH_UPLOAD_MB=500

@@ -279,7 +279,7 @@ indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas c
 | ¿La estimación de desbordamiento es útil (±15 %)? | Comparar con el render de LibreOffice en 20 casos | Se baja la ambición: aviso por umbral de caracteres |
 | ¿Cuánta desviación hay entre LibreOffice y PowerPoint? | Renderizar en ambos y comparar | Se ajusta la expectativa y se documenta |
 | ¿Los **4.405 caracteres** de capacidad **medida con Gotham Light real** por diapositiva de sistema bastan para dos subsistemas? | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
-| ¿Cuánto se desvía la medición de los titulares mientras **falte Gotham Ultra**? | Medir los mismos titulares con la sustituta y con la real cuando llegue | Se declara el margen en el aviso y se espera al fichero |
+| ¿La tabla en **Gotham** (P-38) sigue siendo legible a cuerpo pequeño, y cabe en las 9,06 in? | Generar la tabla con descripciones reales y compararla con la imagen original | Se sube medio punto el cuerpo, o se reajustan los anchos otra vez |
 | ¿La resolución de catálogos **en inglés** produce un informe coherente? | Generar la misma sección con `A_ES` y `A_EN` | Se revisa el modelo de traducción (C-5) |
 
 **Coste: 2 semanas de una persona. Beneficio: conocer el riesgo mayor en la semana 3 en lugar de la
@@ -344,9 +344,9 @@ siendo crítico en impacto: si el informe sale descuadrado, el producto no se us
 | Mitigación | Cuándo |
 |---|---|
 | ✅ **Plantillas reales obtenidas y analizadas** (doc 18) | Hecho |
-| ✅ **Cuatro de las cinco fuentes Gotham recibidas y verificadas**, con métricas reales medidas | Hecho |
+| ✅ **Las seis fuentes Gotham recibidas y verificadas**, con métricas reales medidas para texto y titulares | Hecho |
 | ✅ **P-31 decidida**: tabla nativa respetando el formato del Excel, con la estructura recuperada del propio EMF | Hecho |
-| 🟡 **Conseguir `Gotham Ultra`** — es la de titulares y falta | **Antes de la prueba de concepto** |
+| ✅ **P-37 y P-38 decididas**: cinco columnas de plazo y tipografía unificada en Gotham, con el +4,9 % de anchura ya medido y absorbido | Hecho |
 | Instalar las fuentes en el worker desde el artefacto privado, con verificación de arranque | Antes de la prueba de concepto |
 | Prueba de concepto dedicada de 2 semanas (§21.3) | Semanas 2-3 |
 | Contrato de plantilla + plantilla de referencia + validador | F8 |

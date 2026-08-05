@@ -505,7 +505,7 @@ el PowerPoint». Se marca en la propia hoja `Resumen`, con la versión y la fech
 
 | Hoja | Contenido |
 |---|---|
-| **`CAPEX`** | **Layout idéntico al de la tabla del informe** — ver §16.8bis. Es la hoja que se abre al abrir el fichero |
+| **`CAPEX`** | **Layout idéntico al de la tabla del informe** — ver §16.8bis, con las **cinco** columnas de plazo. Es la hoja que se abre al abrir el fichero |
 | `Resumen` | Totales por horizonte, escenarios, perfil de costes aplicado, proyecto, versión de informe si procede, fecha y hora |
 | `CAPEX detalle` | Una fila por línea con **todas las columnas**: código, capítulo, zona, riesgo, concepto, recuperable, horizonte, importe, impuestos, total, y la cascada completa si existe |
 | `Trazabilidad` | Una fila por referencia de precio: fuente, URL, fecha de consulta, alcance, quién validó y cuándo |
@@ -539,37 +539,53 @@ la consultora ya usa.
 
 ```
 ESTIMATE ASSESSMENT OF THE ACTIONS REQUIRED IN THE PROPERTY: <CAPÍTULO>
-┌───────────────┬─────────┬─────────────┬───────────────────────────────────────┬──────────┐
-│ Affected area │ Purpose │ Description │           ESTIMATED CAPEX             │ Comments │
-│               │         │             ├──────────┬─────────┬────────┬────────┤          │
-│               │         │             │Short term│Mid term │Long t. │Improv. │          │
-└───────────────┴─────────┴─────────────┴──────────┴─────────┴────────┴────────┴──────────┘
+┌───────────────┬─────────┬────────────┬─────────────────────────────────────────────┬──────────┐
+│ Affected area │ Purpose │ Description│              ESTIMATED CAPEX                │ Comments │
+│               │         │            ├─────────┬────────┬────────┬───────┬────────┤          │
+│               │         │            │Short term│Mid term│Long t. │Improv.│ Other  │          │
+└───────────────┴─────────┴────────────┴─────────┴────────┴────────┴───────┴────────┴──────────┘
 ```
 
 | Columna | Origen en el modelo | Ancho `[SUP]` | Nota |
 |---|---|:--:|---|
-| Zona afectada | `zone.name` (i18n) | 1,15 in | |
-| Concepto | `capex_concept.name` (i18n) | 0,95 in | |
-| Descripción | `capex_item.description` | 2,60 in | La que absorbe el desbordamiento |
-| Corto plazo | `amount` si `horizon = CORTO` | 0,95 in | Vacío, **no «0,00 €»** |
-| Medio plazo | `amount` si `horizon = MEDIO` | 0,95 in | |
-| Largo plazo | `amount` si `horizon = LARGO` | 0,95 in | |
-| Mejora potencial | `amount` si `horizon = MEJORA` | 0,95 in | |
-| *(Otro tipo de petición)* | `amount` si `horizon = OTRO` | 0,95 in | `[PDV]` **P-37: oculta por defecto** en el informe, **siempre presente** en el XLSX |
-| Comentarios | `capex_item.comments` | 1,50 in | |
+| Zona afectada | `zone.name` (i18n) | 1,10 in | |
+| Concepto | `capex_concept.name` (i18n) | 0,90 in | |
+| Descripción | `capex_item.description` | **2,65 in** | La que absorbe el desbordamiento. Ensanchada por P-38 |
+| Corto plazo | `amount` si `horizon = CORTO` | 0,90 in | Vacío, **no «0,00 €»** |
+| Medio plazo | `amount` si `horizon = MEDIO` | 0,90 in | |
+| Largo plazo | `amount` si `horizon = LARGO` | 0,90 in | |
+| Mejora potencial | `amount` si `horizon = MEJORA` | 0,90 in | |
+| **Otro tipo de petición** | `amount` si `horizon = OTRO` | 0,90 in | ✅ **P-37: se muestra siempre**, en el informe y en el XLSX |
+| Comentarios | `capex_item.comments` | 1,10 in | Estrechada: en las tablas reales va casi siempre vacía |
+
+`[REQ]` **P-37 · las cinco columnas de plazo se muestran.** La imagen pegada en las plantillas solo
+tenía cuatro, pero el Excel de trabajo del equipo sí lleva «Otro» y es la versión más actualizada. Ese
+desfase es, por sí mismo, el mejor argumento para la tabla nativa: **se genera desde el dato, no desde
+una captura de pantalla**, así que no puede volver a quedarse atrasada respecto de la hoja real.
 
 **Reglas de composición, comunes a los dos formatos:**
 
 | Regla | Valor |
 |---|---|
-| Cabecera | **Dos niveles**, con `ESTIMATED CAPEX` combinado sobre las columnas de plazo |
+| Cabecera | **Dos niveles**, con `ESTIMATED CAPEX` combinado sobre las **cinco** columnas de plazo |
 | Título de bloque | Una fila por capítulo, con el texto `…: <CAPÍTULO>` |
 | Formato de importe | `#.##0,00 €` — miles con punto, decimales con coma, según `output_locale` |
 | Celda sin importe | **En blanco**. Es como está hoy y distingue «no aplica» de «cero» |
 | Subtotales | Por capítulo, al cierre de cada bloque |
 | Resumen final | `TOTAL CONTRACT BUDGET` y, como línea propia, los honorarios técnicos `[PDV]` P-16 |
-| Tipografía | **Century Gothic** en el original `[PDV]` P-38 |
+| **Tipografía** | **Gotham** ✅ P-38. `Gotham Light` en el cuerpo, `Gotham Medium` en encabezados y subtotales |
 | Partición | 18 filas por diapositiva en el PPTX, encabezado repetido. Sin límite en el XLSX |
+
+`[REQ]` **P-38 · se unifica todo en Gotham.** El Excel original venía en Century Gothic (y algún resto
+de Calibri) simplemente porque era un fichero ajeno a la plantilla; al generar la tabla de forma nativa
+esa frontera desaparece.
+
+`[LIM]` **Tiene un coste medido:** Gotham es más ancha. Sobre el texto real de las tablas —3.769
+caracteres extraídos de los metarchivos y comparados con las métricas de los `.otf`—, `Gotham Light`
+ocupa un **+4,9 %** frente a Century Gothic (`Book` +6,2 %, `Medium` +8,2 %, `Bold` +9,6 %). De ahí las
+dos correcciones de la tabla de arriba: **cuerpo en la variante más estrecha** y **5 % de anchura
+trasvasado de `Comments` a `Description`**, que es donde el texto largo aparece de verdad. Con eso el
+ancho total se mantiene en las 9,06 in medidas en el original.
 
 `[LIM]` **La fidelidad no está verificada visualmente.** La estructura procede de los registros de texto
 del EMF, que son exactos, pero los anchos son una reconstrucción a partir de las posiciones de dibujo y

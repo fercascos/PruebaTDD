@@ -260,7 +260,7 @@ POST /api/v1/projects/{id}/capex/exports
   "filters": null,                     // los mismos que /capex-items, si scope = FILTERED
   "sheets": ["CAPEX", "RESUMEN", "CAPEX_DETALLE",
              "TRAZABILIDAD", "AGREGADOS", "CATALOGOS"],
-  "include_other_horizon": true,       // la quinta columna [PDV] P-37
+  "include_other_horizon": true,       // la quinta columna. Por defecto TRUE [REQ] P-37
   "include_taxes": true,
   "locale": "es-ES",                   // rige encabezados, catálogos y formato de número
   "filename_template": "[Proyecto]_CAPEX_[Fecha]_v[N].xlsx"

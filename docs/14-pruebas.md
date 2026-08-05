@@ -261,7 +261,9 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Columnas y orden** | Zona · Concepto · Descripción · plazos · Comentarios, exactamente en ese orden y con los encabezados del `output_locale` |
 | **Celda sin importe** | Queda **en blanco**. Una prueba busca el literal `0,00 €` en columnas de plazo y falla si aparece `[REC]` |
 | **Formato de importe** | `#.##0,00 €` en `es-ES` y el equivalente en `en-GB`, verificado carácter a carácter sobre el texto de la celda |
-| **Columna «Otro»** | Con `include_other_horizon` a falso, la tabla del PPTX tiene 8 columnas; el XLSX **siempre** tiene 9 `[PDV]` P-37 |
+| **Columna «Otro»** | Por defecto la tabla tiene **9 columnas** en los dos formatos, con «Otro» incluida `[REQ]` P-37. Con `include_other_horizon` a falso, 8 |
+| **Tipografía unificada** | Se recorre el XML de la tabla generada y se afirma que **todos** los `typeface` son de la familia `Gotham`. Falla si se cuela `Century Gothic` o `Calibri` `[REQ]` P-38 |
+| **Ancho tras P-38** | Con textos de descripción reales, la tabla en `Gotham Light` **no excede las 9,06 in** del original. Es la prueba que cubre el +4,9 % de anchura |
 | **Una sola casilla por fila** | Se recorre cada fila y se afirma que exactamente una columna de plazo lleva valor. Es P-05 comprobado en la salida |
 | **Suma cuadrada** | La suma de las columnas de plazo de la tabla coincide con el total del `data_snapshot`, al céntimo |
 | **PPTX y XLSX no divergen** | Prueba de contrato sobre `CapexTableLayout`: se genera el mismo proyecto en los dos formatos y se comparan encabezados, número de columnas, orden y valores celda a celda. **Falla si alguien añade una columna en un solo generador** `[REC]` |
@@ -274,10 +276,11 @@ diverjan**. Ambas cosas se prueban explícitamente:
 
 | Caso | Verificación |
 |---|---|
-| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra todas las familias declaradas en la configuración. **Falla el arranque del worker si falta alguna** `[REC]` |
-| **Gotham Ultra ausente** | Mientras no se reciba el fichero, la prueba está marcada como *expected failure* documentada, no desactivada. Que quede en verde silenciando el problema sería lo peor de los dos mundos `[LIM]` |
+| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra **las seis familias Gotham**. **Falla el arranque del worker si falta alguna** `[REC]` |
 | **Sustitución declarada** | Si una familia falta, la estimación de desbordamiento **lo dice en el aviso** en vez de medir en silencio con una sustituta. Se prueba el texto del aviso |
-| **Métricas** | Con `Gotham Light` instalada, el ancho medio de carácter medido es 0,4971 em ± 0,001. Detecta que se haya colado una fuente distinta con el mismo nombre |
+| **Métricas** | `Gotham Light` mide 0,4971 em de ancho medio y `Gotham Ultra` 0,6326 em sobre titulares, ± 0,001. Detecta que se haya colado una fuente distinta con el mismo nombre |
+| **Cobertura del español** | Cada familia contiene los glifos de `áéíóúüñÁÉÍÓÚÑ¿¡€ºª–—“”·`. Un informe en español con una fuente sin `ñ` es un fallo que no debe descubrirse en producción `[REC]` |
+| **La generación no depende de la fuente** | Se genera un PPTX **con las fuentes desinstaladas** y se comprueba que el XML sigue llevando `typeface="Gotham Ultra"`. Documenta en código que el fichero de salida es correcto aunque el servidor no tenga la tipografía `[REC]` |
 | **No están en el repositorio** | Prueba de CI que falla si aparece cualquier `.otf` o `.ttf` versionado bajo `assets/fonts/` `[REC]` |
 
 ---
