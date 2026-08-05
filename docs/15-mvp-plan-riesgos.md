@@ -30,12 +30,12 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | 8 | Hallazgos e inventario | Línea con código, zona validada, descripción, comentarios, riesgo, concepto y recuperabilidad; atajo «hallazgo desde foto»; recomendaciones alternativas; matriz riesgo × horizonte; inventario de equipos opcional con importación XLSX | Plantillas de hallazgo por tipología |
 | 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; **botón de exportar el CAPEX a XLSX** `[REQ]` P-31, con la hoja `CAPEX` en el mismo formato que la tabla del informe y hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
 | 10 | Precios editables a mano `[REQ]` P-06 | **Precio unitario, cantidad y unidad editables en la propia rejilla, sin fricción**; nota de procedencia opcional; `PriceSourceAdapter` completo con adaptador manual e importador de catálogo propio; validación humana con restricción en base de datos —**y ahí sí con nota obligatoria**—; trazabilidad automática por auditoría e historial de campo | Integración con Precio Centro ni ninguna otra fuente externa. **Ni prevista** |
-| **16** | **Sugerencias** `[REQ]` — alcance mínimo | Los cuatro tipos, alta con contexto capturado por referencia, bandeja del administrador, «Mis sugerencias», ciclo de estados con respuesta obligatoria al rechazar, visibilidad por **RLS**, auditoría | `payload` estructurado, botón «Aplicar» que rellena el editor, agrupación de duplicados, hilo de comentarios, avisos por correo |
 | 11 | Carga de plantilla PPTX | Original inmutable con WORM, análisis completo, detección de marcadores y directivas, previsualización de estructura, avisos de no soportados, validaciones de seguridad del paquete | Editor de plantillas en la aplicación |
 | 12 | Mapeo básico de marcadores | Catálogo cerrado ampliado (incluye `{{finding.risk_definition}}` y `{{report_limitations}}`), mapeo manual de lo desconocido, guardado y clonado, reglas de repetición, partición de tablas con subtotales, reglas de fotos, validación | Mapeo visual por arrastre |
 | 13 | Generación de un informe | Generación real conservando tema, patrón, tipografías, colores, logos, posiciones y proporciones. Previsualización con LibreOffice. Avisos de campos vacíos, desbordamiento, imágenes ausentes y tablas | Fidelidad garantizada con plantillas arbitrarias `[LIM]` |
 | 14 | Control de versiones básico | `ReportVersion` con snapshot **incluidos los catálogos usados**, hash del PPTX, linaje, estados, revisión y aprobación de un nivel, bloqueo del emitido, comparación entre versiones | Aprobación multinivel, firma electrónica |
 | 15 | Auditoría de operaciones críticas | Las 13 categorías de eventos, escritura transaccional, tabla append-only particionada, cadena hash, consulta filtrada, exportación CSV, historial por campo | Panel de análisis de auditoría |
+| **16** | **Sugerencias** `[REQ]` — alcance mínimo | Los cuatro tipos, alta con contexto capturado por referencia, bandeja del administrador, «Mis sugerencias», ciclo de estados con respuesta obligatoria al rechazar, visibilidad por **RLS**, auditoría | `payload` estructurado, botón «Aplicar» que rellena el editor, agrupación de duplicados, hilo de comentarios, avisos por correo |
 
 ### 20.3. Añadidos no pedidos explícitamente
 
@@ -53,8 +53,7 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 
 | Funcionalidad | Fase | Motivo |
 |---|:--:|---|
-| **Integración con Precio Centro** | F10 | Depende de **licencia y condiciones de uso** (P-06), no de decisiones técnicas. Arquitectura lista |
-| Consulta automatizada multi-fuente | F10 | Ídem |
+| **Cualquier fuente de precios externa** | F12 `[PDV]` | **P-06 cerrada sin fuente externa**: los precios se editan a mano. La arquitectura de adaptadores queda lista por si algún día la hay, pero **no está planificada** |
 | Modo offline completo | F11 | El componente más caro. El MVP incluye lo que da el 80 % del valor |
 | Anotación avanzada de imágenes | F12 | La básica cubre el caso real: señalar dónde está el problema |
 | Extracción inteligente de información de fotos | F13 | Requiere IA, consentimiento y validación de precisión. Riesgo alto, valor no demostrado |
@@ -330,7 +329,7 @@ quadrantChart
     quadrant-3 "Aceptar"
     quadrant-4 "Mitigar cuando aparezca"
     "R1 Fidelidad PPTX": [0.45, 0.95]
-    "R2 Precio Centro": [0.70, 0.75]
+    "R2 Catalogo de precios desfasado": [0.80, 0.50]
     "R3 Catalogos incompletos": [0.35, 0.70]
     "R4 Modelo de importes": [0.10, 0.80]
     "R5 Desbordamiento texto": [0.80, 0.55]
@@ -372,21 +371,27 @@ siendo crítico en impacto: si el informe sale descuadrado, el producto no se us
 **Alarma:** si en la prueba de concepto menos del 70 % de las diapositivas son aceptables, se convoca
 la decisión de cambio de motor **en la semana 4**, no en la 18.
 
-#### R2 · Precio Centro no puede integrarse
-**Probabilidad alta · Impacto alto.** Es un riesgo jurídico y comercial, no técnico.
+#### R2 · El catálogo de precios se desfasa `[REEVALUADO tras P-06]`
+**Probabilidad alta · Impacto medio.** El riesgo original —«Precio Centro no puede integrarse»— **ya no
+existe**: P-06 se cerró decidiendo que no habrá fuente externa, así que no hay integración que pueda
+fallar. Lo que queda en su lugar es la consecuencia asumida de esa decisión: **nada actualiza los
+precios solos**, y un catálogo interno envejece sin avisar.
+
+Baja de impacto alto a medio porque no compromete el producto, pero sube de probabilidad a alta porque
+es lo que **va a pasar** salvo que algo lo contrarreste.
 
 | Mitigación |
 |---|
-| **El MVP no depende de ninguna fuente externa.** Entrada manual + catálogo propio |
-| Ninguna fuente se activa sin revisión documentada, exigida por restricción de base de datos |
-| Control de licencia con caducidad y deshabilitación automática |
-| **No se hace extracción automatizada del sitio.** Se respetan `robots.txt` y controles técnicos |
-| Se prefiere la **importación del catálogo licenciado** a la consulta en línea, incluso si hubiera API: da precios reales *y* reproducibilidad |
+| **Módulo de Sugerencias, tipo `PRECIO`** ([`19`](./19-sugerencias.md) §19.3): la vía por la que una corrección detectada en un proyecto llega al catálogo del resto. **Es la mitigación principal**, y por eso el módulo entra en el MVP |
+| Catálogo interno importable desde XLSX/CSV y reutilizable entre proyectos: se actualiza en bloque, no línea a línea |
+| Fecha de la referencia visible en la línea de CAPEX, para que la antigüedad se vea sin buscarla |
+| `[REC]` Aviso al usar una referencia con más de N meses, configurable. Barato y evita el error silencioso |
+| Índices de actualización de costes, ya en el MVP: permiten envejecer un catálogo entero con un factor |
+| Ninguna fuente externa puede activarse sin revisión documentada, si algún día se añade |
 | Prueba que verifica que **no sale ninguna petición de red** hacia una fuente deshabilitada |
-| P-06 planteada como pregunta de impacto crítico, con los cuatro pasos necesarios enumerados |
 
-**Riesgo residual aceptado:** el valor del CAPEX en el MVP depende del catálogo del cliente o del
-criterio del consultor. Limitación de alcance consciente y comunicada.
+**Riesgo residual aceptado:** el valor del CAPEX depende del criterio del consultor y de la disciplina
+del equipo al mantener el catálogo. Es una consecuencia directa de P-06, comunicada y asumida.
 
 #### R3 · Los catálogos están incompletos o mal reconciliados `[REC]`
 **Probabilidad media-baja · Impacto alto.** Riesgo muy reducido tras las decisiones del cliente: las
@@ -475,7 +480,7 @@ Fusión asistida en F13.
 | **El total por horizontes es una columna generada**: imposible que no cuadre con sus sumandos |
 | **La cascada se muestra con sus operandos**: el consultor es la última barrera |
 | `calc_version` para reproducir informes antiguos |
-| Validación contra los Excel reales del cliente antes del primer informe (P-16) |
+| ✅ Cascada cerrada por P-16 y anclada con una prueba de valor exacto (72.679,35 €) |
 
 #### R11 · LibreOffice no coincide con PowerPoint
 **Probabilidad alta · Impacto bajo-medio** (`[LIM]` L3). Va a ocurrir; la cuestión es la expectativa.

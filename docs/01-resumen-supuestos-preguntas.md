@@ -146,7 +146,8 @@ porque son las que estructuran el modelo de datos y condicionan la semilla de ca
 
 Con estas doce decisiones, **el bloque 3 queda cerrado a nivel de modelo de datos**: no hay ninguna
 cuestión estructural pendiente sobre cómo se captura y se calcula una línea de CAPEX. Lo único que
-sigue abierto en materia de costes es **P-16**, el orden concreto de los porcentajes *dentro* de la
+quedaba abierto en materia de costes era **P-16**, ya cerrado también: la base sobre la que se aplica
+cada porcentaje *dentro* de la
 calculadora de medición, que afecta a una herramienta de apoyo y no al dato que se almacena.
 
 ### 3.2. Impacto crítico
@@ -168,7 +169,7 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 | **P-13** | ¿Qué **VDR** se usa y hace falta más que guardar el enlace (por ejemplo, control de qué se ha subido)? | S-12: enlace + notas |
 | **P-14** | ¿Los **conceptos** (mantenimiento, reparación, normativa…) y los grados de riesgo son cerrados o el cliente los amplía? ¿Y el solapamiento entre concepto y categoría del árbol (*Soft Cost*, *Medioambiental*, *ESG*) se mantiene? | Catálogo editable con los valores dados como semilla; ambos campos se conservan con una regla de coherencia que avisa sin bloquear |
 | **P-15** | ¿Se sigue queriendo **inventario de equipos** con ficha propia (fabricante, modelo, nº de serie, vida útil)? La especificación revisada ya no detalla sus campos, pero §7 mantiene la entidad `Equipment` | Se conserva `Equipment` como ficha **opcional**, enlazable desde la línea de CAPEX |
-| **P-16** | ¿Cuál es la **cascada de costes** real? Ojo: la pregunta **no es el orden** —intercambiar dos peldaños que se componen da el mismo resultado— sino **sobre qué base se aplica cada porcentaje**. El rango entre criterios razonables es de un **5 %** | Cascada configurable en [`11`](./11-capex-precios.md) §16.3, con la convención española (PEM → PEC → honorarios → contingencia) como valor por defecto `[SUP]`. **No bloquea**: es configuración, y tras P-05b solo afecta a la calculadora de medición. **La forma rápida de cerrarla es enviar un Excel real con una línea ya calculada**, y deducirla por ingeniería inversa |
+| ~~**P-16**~~ ✅ | ~~¿Sobre qué base se aplica cada porcentaje de la cascada de costes?~~ **CERRADA:** *«se queda así»*. Se adopta la convención española PEM → PEC → honorarios → contingencia | Ver §3.1 y [`11`](./11-capex-precios.md) §16.3 |
 | **P-17** | ¿Es obligatorio **SSO corporativo** desde el primer despliegue? | S-17: auth propia, interfaz OIDC-ready |
 
 ### 3.4. Impacto medio
@@ -205,7 +206,7 @@ cerradas** —P-31, P-32, P-37 y P-38— y han pasado a §3.1. Queda esto:
 | **P-34** | El informe agrupa **Cimentación y Estructura** en una diapositiva y desglosa `H04` en tres. ¿Se mantiene o se normaliza al árbol? | Medio | Mantener la plantilla; la agrupación se resuelve en el mapeo |
 | **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, y cuándo se usa cada uno? | Medio | Se tratan como dos variantes de portada del mismo mapeo |
 | **P-35** | Las diapositivas de **Mediciones AEO** y **Disclaimer** son contenido fijo. ¿Se marcan como intocables? | Bajo | Sí, con `@keep` |
-| **P-39** | `[PDV]` ¿Permite el **contrato de licencia de Gotham** incrustar las fuentes en los PPTX que se envían al cliente? Los ficheros lo admiten (`fsType = Preview & Print`), pero el contrato no lo he visto | Bajo | Dejarlo **desactivado**, como hoy: las plantillas actuales tampoco incrustan. Es una comprobación de minutos, y **no bloquea nada** |
+| **P-39** 🟡 | `[PDV]` ¿Permite el **contrato de licencia de Gotham** incrustar las fuentes en los PPTX enviados? **Aplazada: el cliente no localiza el contrato.** Los ficheros lo admiten (`fsType = Preview & Print`); el contrato, sin verificar | Bajo | **Queda desactivado** (`PPTX_EMBED_FONTS=false`), que es exactamente lo que hacen hoy las plantillas del cliente. **No bloquea nada** y se puede reabrir cuando aparezca el contrato, sin tocar nada de lo construido |
 
 ### 3.7. Preguntas del módulo de Sugerencias
 
@@ -214,7 +215,7 @@ contraria. Detalle en [`19`](./19-sugerencias.md) §19.4.
 
 | # | Pregunta | Impacto | Propuesta |
 |---|---|---|---|
-| **P-40** | El requisito dice que **solo el administrador ve las propuestas**. ¿Incluye eso que **el autor no vuelva a ver la suya**? | Medio | **Que el autor sí vea las suyas**, con su estado y la respuesta. Sin eso escribe en un buzón sin fondo, no sabe si se leyó y a la tercera deja de escribir. Si se prefiere lo contrario, es más sencillo de implementar |
+| ~~**P-40**~~ ✅ | ~~¿El autor vuelve a ver la sugerencia que escribió?~~ | — | **CERRADA: sí.** El autor ve las suyas con su estado y la respuesta. La pantalla «Mis sugerencias» entra en el alcance mínimo |
 | **P-41** | Ver las sugerencias exige hoy ser `ADMIN`, que además gestiona usuarios, catálogos y organización. ¿Hace falta que alguien atienda el buzón **sin** esas llaves? | Bajo | Permiso separable `GESTIONAR_SUGERENCIAS`, asignable a un `DIRECTOR_PROYECTO`. Media jornada, y evita repartir cuentas de administrador por un motivo menor |
 
 ---

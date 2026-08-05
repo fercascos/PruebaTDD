@@ -415,7 +415,7 @@ Una lista de resultados sin esa información sugiere que se ha buscado en todas 
 | Método | Ruta | Descripción |
 |---|---|---|
 | `POST` | `/suggestions` | **Cualquier usuario autenticado**, incluido `LECTOR` |
-| `GET` | `/suggestions/mine` | Las del usuario, con su estado y la respuesta recibida `[REC]` P-40 |
+| `GET` | `/suggestions/mine` | Las del usuario, con su estado y la respuesta recibida `[REQ]` P-40 |
 | `GET` | `/suggestions?status=&type=&project_id=` | **Solo con `GESTIONAR_SUGERENCIAS`**. Para el resto, `403` |
 | `GET` | `/suggestions/{id}` | La RLS decide. Si lleva contexto de proyecto, abrirla audita `SUGGESTION_VIEWED` |
 | `POST` | `/suggestions/{id}/transitions` | `{to, resolution_note, duplicate_of_id}`. `RECHAZADA` sin motivo → `422` |

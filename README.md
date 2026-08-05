@@ -94,20 +94,22 @@ pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 ---
 
-## Ya no queda ninguna decisión que bloquee el diseño
+## El diseño está cerrado
 
-Quedan tres cuestiones abiertas, y **ninguna detiene el trabajo**:
+**No queda ninguna decisión pendiente que condicione el diseño.** Las quince cuestiones que
+estructuraban el modelo están resueltas por el cliente, y las últimas —P-06, P-16 y P-40— cerraron con
+la aplicación de las decisiones ya propagada a toda la documentación.
 
-1. **`P-16` · ¿Sobre qué base se aplica cada porcentaje de la cascada de costes?** No es una cuestión
-   de orden —intercambiar dos peldaños que se componen da el mismo resultado—, sino de sobre qué se
-   calcula cada uno. Entre criterios razonables hay un **5 %** de diferencia. Es configuración, y tras
-   P-05b solo afecta a la calculadora de medición opcional. La vía rápida para cerrarla es **enviar un
-   Excel real con una línea ya calculada** y deducirla del propio fichero.
-2. **`P-40` · ¿El autor puede volver a ver la sugerencia que escribió?** Se construye con que **sí**,
-   salvo indicación contraria: un buzón sin acuse de recibo se abandona.
-3. **`P-39` · ¿Permite el contrato de Gotham incrustar las fuentes en los PPTX enviados?** Los ficheros
-   lo admiten; el contrato no lo he visto. Se deja **desactivado**, que es lo que hacen hoy las
-   plantillas del cliente.
+Queda **una sola cuestión aplazada**, y no bloquea nada:
+
+- 🟡 **`P-39` · ¿Permite el contrato de licencia de Gotham incrustar las fuentes en los PPTX enviados?**
+  El cliente no localiza el contrato. Los ficheros lo admiten (`fsType = Preview & Print`), pero eso no
+  sustituye al contrato. **La incrustación queda desactivada** (`PPTX_EMBED_FONTS=false`), que es
+  exactamente lo que hacen hoy las plantillas de la consultora: ninguna de las cuatro incrusta fuentes.
+  Se puede reabrir cuando aparezca el contrato, sin tocar nada de lo construido.
+
+> **Siguiente paso: entregable 24** — el código inicial del MVP, que conforme a §16 del encargo se
+> aborda tras la validación de este diseño.
 
 Las demás preguntas, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.

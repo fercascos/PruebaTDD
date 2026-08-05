@@ -667,9 +667,9 @@ Consecuencias:
 1. ✅ **Fuentes completas.** Las seis familias recibidas y verificadas. No queda nada pendiente aquí.
 2. **Provisionar las fuentes** en el contenedor del worker según §18.7bis (**no** en el repositorio:
    son comerciales y licenciadas).
-3. `[PDV]` **Confirmar contra el contrato de licencia** si se permite incrustar las fuentes en los
-   PPTX que se envían. El fichero lo admite (`fsType = Preview & Print`); el contrato no lo he visto.
-   No bloquea nada: hoy las plantillas tampoco incrustan.
+3. 🟡 `[PDV]` **Aplazado:** el cliente no localiza el contrato de licencia, así que no se puede
+   confirmar si permite incrustar las fuentes. **La incrustación queda desactivada**, que es lo que
+   hacen hoy las plantillas. No bloquea nada y se retoma si el contrato aparece.
 4. **Prueba de concepto acotada** (semanas 2-3), con un objetivo único: clonar la diapositiva 13-14
    (Cimentación) para tres sistemas y comparar el resultado con el original en PowerPoint. **Con P-38,
    incluye comprobar la legibilidad de la tabla en Gotham a cuerpo pequeño.**

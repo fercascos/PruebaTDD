@@ -82,20 +82,20 @@ que el administrador puede aplicar leyendo tres campos. Ver §19.7.
 
 `[REQ]` **Solo los administradores ven las propuestas.** Un consultor no ve las de sus compañeros.
 
-`[REC]` **Con una excepción que propongo: el autor ve las suyas.** Sin eso, quien sugiere algo escribe
-en un buzón sin fondo: no sabe si se leyó, no sabe si se rechazó, y a la tercera vez deja de escribir —
-o peor, vuelve a sugerir lo mismo. Es exactamente el fallo descrito en §19.1.
+`[REQ]` **Con una excepción, ya confirmada por el cliente: el autor ve las suyas.** Sin eso, quien
+sugiere algo escribe en un buzón sin fondo: no sabe si se leyó, no sabe si se rechazó, y a la tercera
+vez deja de escribir — o peor, vuelve a sugerir lo mismo. Es exactamente el fallo descrito en §19.1.
 
 Resumen de quién ve qué:
 
 | | Ve sus propias | Ve las de otros | Cambia el estado | Ve quién la escribió |
 |---|:--:|:--:|:--:|:--:|
-| Autor (cualquier rol) | ✅ con su estado y la respuesta | ❌ | ❌ | — |
+| Autor (cualquier rol) | ✅ con su estado y la respuesta `[REQ]` P-40 | ❌ | ❌ | — |
 | **`ADMIN`** | ✅ | ✅ **todas** | ✅ | ✅ |
 | Resto de roles | ✅ solo las suyas | ❌ | ❌ | ❌ |
 
-`[PDV]` **P-40 · ¿Se acepta esa excepción?** Si la respuesta es que ni siquiera el autor debe volver a
-ver lo que escribió, se implementa así —es más sencillo— pero **recomiendo lo contrario** por lo dicho.
+> **P-40 · DECIDIDO por el cliente: sí.** El autor ve las suyas, con su estado y la respuesta
+> recibida. La pantalla 21 «Mis sugerencias» es, por tanto, parte del alcance mínimo.
 
 `[REC]` **P-41 · ¿Hace falta un rol intermedio?** Ver las sugerencias exige hoy ser `ADMIN`, que además
 gestiona usuarios, catálogos y organización. Si se quiere que alguien atienda el buzón sin darle esas
@@ -269,7 +269,7 @@ que es justo lo que interesa por lo dicho en §19.4.
 | Método | Ruta | Nota |
 |---|---|---|
 | `POST` | `/suggestions` | Cualquier usuario autenticado `[REQ]` |
-| `GET` | `/suggestions/mine` | Las del usuario, con estado y respuesta `[REC]` P-40 |
+| `GET` | `/suggestions/mine` | Las del usuario, con estado y respuesta `[REQ]` P-40 |
 | `GET` | `/suggestions?status=&type=&project_id=` | **Solo con `GESTIONAR_SUGERENCIAS`**. Para el resto, `403` |
 | `GET` | `/suggestions/{id}` | RLS decide. Abrirla con contexto de proyecto audita `SUGGESTION_VIEWED` |
 | `POST` | `/suggestions/{id}/transitions` | `{to, resolution_note, duplicate_of_id}`. Guardas de §19.5 |

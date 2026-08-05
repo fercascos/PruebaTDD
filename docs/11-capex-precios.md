@@ -140,7 +140,11 @@ desnudo, o sobre todo lo acumulado hasta ese punto. Con indirectos 8 %, GG 13 %,
 **Ese es el rango real de P-16: un 5 %.** Sobre un CAPEX de 1,84 M€ son unos 84.000 €. No es
 catastrófico, pero tampoco es ruido.
 
-### Cascada propuesta `[SUP]` — corregida
+### Cascada adoptada ✅ P-16 CERRADA
+
+> **P-16 · DECIDIDO por el cliente:** *«se queda así»*. Se adopta la cascada de este apartado —la
+> convención española PEM → PEC → honorarios → contingencia— como **la cascada del sistema**, no como
+> supuesto provisional.
 
 `[REC]` **Corrijo mi propia propuesta anterior.** Tenía gastos generales y beneficio industrial
 calculados sobre el coste directo desnudo. En la práctica española de presupuestación —y así lo recoge
@@ -179,22 +183,22 @@ líneas del proyecto, y no solo en las que llevan medición.
 | Contingencia **la última** | La incertidumbre afecta a todo el coste, incluidos sus honorarios |
 | Impuestos **fuera de la cascada, sobre el importe de la línea** | Se aplican una sola vez y a todas las líneas por igual, lleven medición o no |
 
-### Qué hace falta para cerrar P-16, y por qué no bloquea nada
+### Qué queda anotado, ahora que P-16 está cerrada
 
-`[PDV]` **P-16 sigue abierta**, pero su alcance está **muy acotado** tras P-05b: afecta solo a la
-calculadora de medición, **no al dato que se almacena** ni a las líneas introducidas a tanto alzado,
-que son la mayoría. Además, la cascada es **configuración** (`cascade_config`, abajo), de modo que
-ajustarla no es desarrollo ni migración.
+La estructura de la cascada queda fijada y hay una prueba que la ancla: con los porcentajes del
+ejemplo, un coste directo de 48.500 € debe dar **72.679,35 €** de base imponible. Si alguien cambia un
+peldaño sin querer, la prueba lo detecta.
 
-`[REC]` **La forma más rápida y fiable de cerrarla no es contestar a una pregunta, es enviar un
-fichero:** un Excel real de la consultora con **una sola línea ya calculada**, del precio unitario al
-total. Con eso se deduce la cascada exacta por ingeniería inversa —qué porcentajes, sobre qué base y
-con qué redondeo— sin depender de que nadie recuerde la convención. Es más fiable que preguntarlo,
-porque el fichero no se equivoca.
+Dos matices que conviene tener presentes, sin que ninguno reabra nada:
 
-**Mientras tanto se avanza con la cascada de arriba**, marcada como `[SUP]`, y hay una prueba que la
-fija: si el cliente aporta el Excel y no coincide, se cambia el `cascade_config` y se actualiza el
-valor esperado de la prueba. Nada más.
+`[REC]` **Los porcentajes no son la cascada.** Lo que queda fijado es **sobre qué se aplica cada uno**;
+los valores concretos (8 %, 13 %, 6 %, 6 %, 10 %) viven en el perfil de costes y **el cliente los edita
+sin tocar código**. Los del ejemplo son los habituales del sector, no una imposición.
+
+`[REC]` **Y si algún día no cuadra con un Excel de la consultora**, la corrección es cambiar
+`cascade_config` —cinco líneas de JSON— y actualizar el valor esperado de esa prueba. No es desarrollo,
+no es migración, y no afecta a ningún dato ya guardado: tras P-05b la cascada solo alimenta la
+calculadora de medición, que es opcional, y **nunca recalcula un importe ya tecleado**.
 
 ### Configurabilidad `[REC]`
 
@@ -669,7 +673,7 @@ una captura de pantalla**, así que no puede volver a quedarse atrasada respecto
 | Formato de importe | `#.##0,00 €` — miles con punto, decimales con coma, según `output_locale` |
 | Celda sin importe | **En blanco**. Es como está hoy y distingue «no aplica» de «cero» |
 | Subtotales | Por capítulo, al cierre de cada bloque |
-| Resumen final | `TOTAL CONTRACT BUDGET` y, como línea propia, los honorarios técnicos `[PDV]` P-16 |
+| Resumen final | `TOTAL CONTRACT BUDGET` y, como línea propia, los honorarios técnicos `[REC]` |
 | **Tipografía** | **Gotham** ✅ P-38. `Gotham Light` en el cuerpo, `Gotham Medium` en encabezados y subtotales |
 | Partición | 18 filas por diapositiva en el PPTX, encabezado repetido. Sin límite en el XLSX |
 
@@ -753,6 +757,6 @@ Esa cadena completa es el producto real de este bloque.
 | 2 | `[LIM]` La normalización de unidades solo cubre equivalencias exactas | Comparar €/m² con €/ud requiere criterio humano. El sistema avisa en lugar de inventar |
 | 3 | `[LIM]` Sin conversión automática de moneda | Multi-moneda en un proyecto queda pendiente de P-19 |
 | 4 | `[LIM]` Los índices se cargan manualmente | Automatizarlos exige una fuente con condiciones validadas |
-| 5 | `[LIM]` La cascada por defecto es un supuesto | Debe confirmarse contra los Excel reales del cliente antes del primer informe (P-16) |
+| 5 | La cascada quedó fijada por P-16 (convención española). Los **porcentajes** siguen siendo del cliente | Se editan en el perfil de costes, sin tocar código. Cambiar la **estructura** es editar `cascade_config` |
 | 6 | `[LIM]` Cambiar los porcentajes del perfil **no recalcula** los importes ya introducidos, por diseño (P-05b) | Si se quiere reestimar un proyecto entero con otra contingencia, hay que rehacer las mediciones línea a línea. Es el precio de que el importe sea la cifra que el consultor asume |
 | 7 | `[LIM]` `PrecioCentroSource` es un andamio no funcional | Marcado como tal en código, documentación e interfaz. No se presenta como integración operativa |
