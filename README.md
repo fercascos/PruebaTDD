@@ -97,8 +97,11 @@ pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
    diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
-2. **`P-16` · ¿Cuál es la cascada de costes real?** Debe coincidir con los Excel que la consultora ya
-   usa. Tras P-05b su alcance está acotado a la calculadora de medición.
+2. **`P-16` · ¿Sobre qué base se aplica cada porcentaje de la cascada de costes?** No es una cuestión
+   de orden —intercambiar dos peldaños que se componen da el mismo resultado—, sino de sobre qué se
+   calcula cada uno. Entre criterios razonables hay un **5 %** de diferencia. **No bloquea**: es
+   configuración, y tras P-05b solo afecta a la calculadora de medición opcional. La vía rápida para
+   cerrarla es **enviar un Excel real con una línea ya calculada** y deducirla del propio fichero.
 
 **El bloque de PPTX ya no bloquea nada.** Las seis fuentes Gotham están recibidas y verificadas, la
 tabla de CAPEX está decidida y medida, y las cuatro plantillas reales están analizadas. Solo queda una

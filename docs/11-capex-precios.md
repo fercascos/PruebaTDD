@@ -110,41 +110,91 @@ líneas donde sí la hay.
 
 ## 16.3. La cascada de costes
 
-`[PDV]` **P-16 sigue abierta**: el orden de aplicación de los porcentajes cambia el resultado y debe
-coincidir con lo que la consultora ya usa. Su alcance, no obstante, está **acotado**: afecta solo a la
-calculadora de medición (P-05b), no al dato que se almacena ni a las líneas introducidas a tanto
-alzado.
+### Qué es la cascada, en una frase
 
-### Cascada propuesta `[SUP]`
+Es el camino que lleva de **«el equipo cuesta 48.500 €»** a **«la actuación cuesta 72.679 €»**: los
+porcentajes que se van sumando encima del precio desnudo —costes indirectos, gastos generales,
+beneficio industrial, honorarios técnicos, contingencia— hasta llegar a la cifra que se presenta al
+cliente.
+
+### La pregunta de P-16 no es el orden, es la base `[REC]`
+
+Conviene deshacer un equívoco que arrastraba la redacción anterior de esta sección. **Intercambiar dos
+peldaños que se componen no cambia nada**, porque multiplicar es conmutativo:
+
+| Secuencia | Resultado |
+|---|---:|
+| directo → indirectos → honorarios → contingencia | 61.075,08 € |
+| directo → indirectos → **contingencia → honorarios** | 61.075,08 € |
+
+Lo que sí cambia el resultado es **sobre qué se aplica cada porcentaje**: sobre el coste directo
+desnudo, o sobre todo lo acumulado hasta ese punto. Con indirectos 8 %, GG 13 %, BI 6 %, honorarios
+6 % y contingencia 10 % sobre un coste directo de 48.500 €:
+
+| Criterio | Base imponible | Desviación |
+|---|---:|---:|
+| Todos los porcentajes sobre el **coste directo** (sin componer) | 69.355,00 € | −4,6 % |
+| **Práctica estándar española** (PEM → PEC → honorarios → contingencia) | **72.679,35 €** | referencia |
+| Todo compuesto en cadena, cada uno sobre lo acumulado | 73.155,73 € | +0,7 % |
+
+**Ese es el rango real de P-16: un 5 %.** Sobre un CAPEX de 1,84 M€ son unos 84.000 €. No es
+catastrófico, pero tampoco es ruido.
+
+### Cascada propuesta `[SUP]` — corregida
+
+`[REC]` **Corrijo mi propia propuesta anterior.** Tenía gastos generales y beneficio industrial
+calculados sobre el coste directo desnudo. En la práctica española de presupuestación —y así lo recoge
+el Reglamento General de la Ley de Contratos— **GG y BI se aplican sobre el PEM**, que ya incluye los
+costes indirectos. La diferencia era de un −1,2 %: unos 22.000 € en un CAPEX de 1,84 M€. Adopto la
+convención estándar como valor por defecto:
 
 ```
 (1)  coste_directo        = cantidad × precio_unitario
 (2)  indirectos           = coste_directo × %indirectos
-(3)  gastos_generales     = coste_directo × %gastos_generales
-(4)  beneficio_industrial = coste_directo × %beneficio_industrial
-(5)  subtotal_ejecucion   = (1)+(2)+(3)+(4)
-(6)  honorarios_tecnicos  = subtotal_ejecucion × %honorarios
-(7)  subtotal_con_hon.    = (5)+(6)
-(8)  contingencia         = subtotal_con_honorarios × %contingencia
-(9)  base_imponible       = (7)+(8)      ← FIN de la cascada: es `computed_base`
+(3)  PEM                  = (1)+(2)                      Presupuesto de Ejecución Material
+(4)  gastos_generales     = PEM × %gastos_generales       ← sobre PEM, no sobre (1)
+(5)  beneficio_industrial = PEM × %beneficio_industrial   ← sobre PEM, no sobre (1)
+(6)  PEC                  = (3)+(4)+(5)                  Presupuesto de Ejecución por Contrata
+(7)  honorarios_tecnicos  = PEC × %honorarios
+(8)  subtotal_con_hon.    = (6)+(7)
+(9)  contingencia         = (8) × %contingencia
+(10) base_imponible       = (8)+(9)      ← FIN de la cascada: es `computed_base`
   ─────────────────────────────────────────────────────────────────────────
-     ↓ el usuario traslada (9) al importe de la línea (`amount`)
+     ↓ el usuario traslada (10) al importe de la línea (`amount`)
   ─────────────────────────────────────────────────────────────────────────
-(10) impuestos            = amount × %impuesto      ← A NIVEL DE LÍNEA
-(11) total_cost           = amount + impuestos      ← columna generada
+(11) impuestos            = amount × %impuesto      ← A NIVEL DE LÍNEA
+(12) total_cost           = amount + impuestos      ← columna generada
 ```
 
-`[REC]` **Los pasos 10 y 11 están fuera de la cascada a propósito.** La cascada es una herramienta de
+`[REC]` **Los pasos 11 y 12 están fuera de la cascada a propósito.** La cascada es una herramienta de
 medición opcional; los impuestos se aplican **siempre**, sobre el importe de la línea, exista o no
 desglose. Así, «impuestos configurables y separados del coste base» `[REQ]` se cumple igual en las 63
 líneas del proyecto, y no solo en las que llevan medición.
 
 | Decisión | Razón |
 |---|---|
-| Indirectos, GG y BI **sobre el coste directo** | Práctica habitual de presupuestación de obra: son porcentajes sobre la ejecución material |
-| Honorarios **sobre la ejecución completa** | Los honorarios de proyecto y dirección se pactan sobre el presupuesto de ejecución, no sobre el coste desnudo del equipo |
-| Contingencia **después de honorarios** | La incertidumbre afecta a todo el coste, incluidos sus honorarios |
+| Indirectos **sobre el coste directo** | Es la definición de PEM: ejecución material = directo + indirecto |
+| GG y BI **sobre el PEM** | Convención española de presupuestación. GG suele ir al 13 % y BI al 6 %, ambos sobre PEM |
+| Honorarios **sobre el PEC** | Los honorarios de proyecto y dirección se pactan sobre el presupuesto de ejecución por contrata, no sobre el coste desnudo del equipo |
+| Contingencia **la última** | La incertidumbre afecta a todo el coste, incluidos sus honorarios |
 | Impuestos **fuera de la cascada, sobre el importe de la línea** | Se aplican una sola vez y a todas las líneas por igual, lleven medición o no |
+
+### Qué hace falta para cerrar P-16, y por qué no bloquea nada
+
+`[PDV]` **P-16 sigue abierta**, pero su alcance está **muy acotado** tras P-05b: afecta solo a la
+calculadora de medición, **no al dato que se almacena** ni a las líneas introducidas a tanto alzado,
+que son la mayoría. Además, la cascada es **configuración** (`cascade_config`, abajo), de modo que
+ajustarla no es desarrollo ni migración.
+
+`[REC]` **La forma más rápida y fiable de cerrarla no es contestar a una pregunta, es enviar un
+fichero:** un Excel real de la consultora con **una sola línea ya calculada**, del precio unitario al
+total. Con eso se deduce la cascada exacta por ingeniería inversa —qué porcentajes, sobre qué base y
+con qué redondeo— sin depender de que nadie recuerde la convención. Es más fiable que preguntarlo,
+porque el fichero no se equivoca.
+
+**Mientras tanto se avanza con la cascada de arriba**, marcada como `[SUP]`, y hay una prueba que la
+fija: si el cliente aporta el Excel y no coincide, se cambia el `cascade_config` y se actualiza el
+valor esperado de la prueba. Nada más.
 
 ### Configurabilidad `[REC]`
 
@@ -156,8 +206,8 @@ práctica del cliente es configuración, no desarrollo.
   "cascade_version": 1,
   "steps": [
     { "key": "indirect",    "base": ["direct"],                        "pct_field": "indirect_pct" },
-    { "key": "overhead",    "base": ["direct"],                        "pct_field": "overhead_pct" },
-    { "key": "profit",      "base": ["direct"],                        "pct_field": "profit_pct" },
+    { "key": "overhead",    "base": ["direct","indirect"],             "pct_field": "overhead_pct" },
+    { "key": "profit",      "base": ["direct","indirect"],             "pct_field": "profit_pct" },
     { "key": "fees",        "base": ["direct","indirect","overhead","profit"], "pct_field": "fees_pct" },
     { "key": "contingency", "base": ["direct","indirect","overhead","profit","fees"], "pct_field": "contingency_pct" }
   ],
@@ -168,23 +218,30 @@ práctica del cliente es configuración, no desarrollo.
 
 ### Ejemplo trabajado
 
-Perfil: indirectos 8 %, honorarios 6 %, contingencia 10 %, IVA 21 %. GG y BI a 0.
+Perfil: indirectos 8 %, GG 13 %, BI 6 %, honorarios 6 %, contingencia 10 %, IVA 21 %.
 
 | Paso | Operación | Importe |
 |---|---|---:|
 | Coste directo | 1 × 48.500,0000 | 48.500,00 € |
 | Indirectos (8 %) | 48.500,00 × 0,08 | 3.880,00 € |
-| Honorarios (6 %) | (48.500,00 + 3.880,00) × 0,06 | 3.142,80 € |
-| Contingencia (10 %) | (52.380,00 + 3.142,80) × 0,10 | 5.552,28 € |
-| **Base imponible calculada** | fin de la cascada → `computed_base` | **61.075,08 €** |
+| **PEM** | ejecución material | **52.380,00 €** |
+| Gastos generales (13 %) | 52.380,00 × 0,13 | 6.809,40 € |
+| Beneficio industrial (6 %) | 52.380,00 × 0,06 | 3.142,80 € |
+| **PEC** | ejecución por contrata | **62.332,20 €** |
+| Honorarios (6 %) | 62.332,20 × 0,06 | 3.739,93 € |
+| Contingencia (10 %) | 66.072,13 × 0,10 | 6.607,22 € |
+| **Base imponible calculada** | fin de la cascada → `computed_base` | **72.679,35 €** |
 
 Si el consultor traslada esa cifra al importe de la línea, el total con impuestos de la línea es:
 
 | Paso | Operación | Importe |
 |---|---|---:|
-| Importe de la línea | trasladado desde la medición | 61.075,08 € |
-| IVA (21 %) | 61.075,08 × 0,21 | 12.825,77 € |
-| **Total de la línea** | columna generada | **73.900,85 €** |
+| Importe de la línea | trasladado desde la medición | 72.679,35 € |
+| IVA (21 %) | 72.679,35 × 0,21 | 15.262,66 € |
+| **Total de la línea** | columna generada | **87.942,01 €** |
+
+`[SUP]` Los porcentajes del ejemplo son los habituales del sector; **los reales los fija el cliente en
+el perfil de costes**. Lo que este documento fija es la **estructura**, no los valores.
 
 ### Redondeo `[REQ]`
 
