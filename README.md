@@ -7,7 +7,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado + código inicial del MVP en marcha.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **102 pruebas
+> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **171 pruebas
 > en verde contra PostgreSQL real**. Qué está construido y qué no, sin adornos, en
 > [`apps/api/README.md`](apps/api/README.md).
 

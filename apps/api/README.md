@@ -10,7 +10,7 @@ abajo sin adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 102 pruebas
+make test        # 171 pruebas
 make run         # http://localhost:8000/docs
 ```
 
@@ -18,11 +18,40 @@ make run         # http://localhost:8000/docs
 
 | Pieza | Estado | Dónde se comprueba |
 |---|---|---|
-| **Motor de CAPEX** con la cascada de P-16 | ✅ Completo | `tests/unit/test_capex_engine.py` · 17 pruebas |
+| **Motor de CAPEX** con la cascada de P-16 | ✅ Completo | `tests/unit/test_capex_engine.py` · 17 |
+| **Motor de fases** · estados derivados y sugeridos | ✅ Completo | `tests/unit/test_fases.py` · 32 |
+| **Máquina de estados del proyecto** con sus guardas | ✅ Completo | `tests/unit/test_maquina_de_estados.py` · 21 |
 | **Esquema con RLS**, triggers y `CHECK` | ✅ Completo | `tests/integration/test_rls_y_restricciones.py` · 19 |
-| **Semilla de catálogos** generada desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 26 |
+| **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 26 |
 | **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 18 |
-| **API**: catálogos, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
+| **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 18 |
+| **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
+
+## Los dos ejes del proyecto
+
+Es la decisión que más se nota al usar la aplicación, y está construida así:
+
+| | **Estado** del encargo | **Fases** del proceso |
+|---|---|---|
+| Qué describe | El ciclo administrativo | El trabajo real |
+| Valores | Borrador → … → Archivado | Ocho, elegidas a la carta al dar de alta |
+| Cómo avanza | Una a una, con guardas | **En paralelo** |
+| Dónde está | `projects/state_machine.py` | `phases/engine.py` |
+
+Un encargo puede tener la documentación pendiente, la visita hecha y el Q&A en
+curso **a la vez**. Mezclar ambos ejes en un solo campo habría sido el error de
+modelado más caro del proyecto.
+
+**Dos fases no se marcan a mano.** Red Flag/CAPEX y Full Report se calculan del
+trabajo que hay debajo: 63 líneas con 12 precios sin validar dan `EN_CURSO`, y no
+hay forma de marcarlas `COMPLETADA` desde la API (`422`). Una lista de
+verificación que se puede marcar cuando el trabajo no está hecho es peor que no
+tenerla.
+
+**Las guardas explican qué falta.** `GET /projects/{id}/transitions` devuelve
+cada destino con su lista de impedimentos —«queda 1 activo por visitar (2 de 3
+realizadas)»— para que la interfaz muestre el botón **deshabilitado con su
+motivo** en vez de ocultarlo.
 
 ## Las cuatro garantías, y dónde viven
 
@@ -66,8 +95,9 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
   prueba de concepto está planificada para las semanas 2-3.
 - **Exportación a XLSX.** Decidida en P-31 y especificada; sin implementar.
 - **Frontend.** No hay nada de `apps/web`.
-- **Fases del proceso, equipo, visitas, Q&A.** Modelados en el diseño; el
-  esquema todavía no los incluye.
+- **Equipo del proyecto** (miembros, roles por proyecto, alcance por activo).
+- **Q&A y eventos de fase**: las tablas existen y el motor los cuenta, pero no
+  hay endpoints para gestionarlos.
 - **Alembic.** El esquema se aplica desde `schema.sql`. La migración inicial se
   genera cuando el modelo deje de moverse: versionar migraciones de un esquema
   que cambia cada día produce un historial inútil.

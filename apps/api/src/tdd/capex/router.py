@@ -130,10 +130,14 @@ _SELECT = (
 
 @router.get("/projects/{project_id}/capex-items", response_model=list[LineaCapex])
 def listar(project_id: uuid.UUID, s: SesionDep) -> Any:
-    filas = s.execute(
-        text(f"{_SELECT} WHERE ci.project_id = :p ORDER BY ci.created_at"),  # noqa: S608
-        {"p": project_id},
-    ).mappings().all()
+    filas = (
+        s.execute(
+            text(f"{_SELECT} WHERE ci.project_id = :p ORDER BY ci.created_at"),  # noqa: S608
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
     return [dict(f) for f in filas]
 
 
@@ -156,18 +160,22 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
     Con cinco columnas editables serían cinco sumas independientes que podrían
     descuadrar entre sí; así es imposible.
     """
-    filas = s.execute(
-        text(
-            "SELECT th.code AS time_horizon_code, th.name_es AS time_horizon_name, "
-            "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
-            "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
-            "COALESCE(sum(ci.total_cost), 0) AS total_cost "
-            "FROM time_horizon th LEFT JOIN capex_item ci "
-            "  ON ci.time_horizon_id = th.id AND ci.project_id = :p "
-            "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
-        ),
-        {"p": project_id},
-    ).mappings().all()
+    filas = (
+        s.execute(
+            text(
+                "SELECT th.code AS time_horizon_code, th.name_es AS time_horizon_name, "
+                "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
+                "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
+                "COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM time_horizon th LEFT JOIN capex_item ci "
+                "  ON ci.time_horizon_id = th.id AND ci.project_id = :p "
+                "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
+            ),
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
     return [dict(f) for f in filas]
 
 
@@ -190,9 +198,13 @@ def trasladar_medicion(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "El traslado exige confirmación explícita del usuario",
         )
-    fila = s.execute(
-        text("SELECT computed_base, amount FROM capex_item WHERE id = :i"), {"i": item_id}
-    ).mappings().first()
+    fila = (
+        s.execute(
+            text("SELECT computed_base, amount FROM capex_item WHERE id = :i"), {"i": item_id}
+        )
+        .mappings()
+        .first()
+    )
     if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea no encontrada")
     if fila["computed_base"] is None:
@@ -222,7 +234,12 @@ def trasladar_medicion(
             "despues": f'{{"amount": "{fila["computed_base"]}", "amount_source": "MEDICION"}}',
         },
     )
-    nueva = s.execute(
-        text(f"{_SELECT} WHERE ci.id = :i"), {"i": item_id}  # noqa: S608
-    ).mappings().one()
+    nueva = (
+        s.execute(
+            text(f"{_SELECT} WHERE ci.id = :i"),
+            {"i": item_id},  # noqa: S608
+        )
+        .mappings()
+        .one()
+    )
     return dict(nueva)

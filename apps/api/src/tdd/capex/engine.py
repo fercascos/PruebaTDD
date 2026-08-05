@@ -203,9 +203,7 @@ def compute_direct_cost(quantity: Decimal, unit_price: Decimal) -> Decimal:
     return quantity * unit_price
 
 
-def run_cascade(
-    *, quantity: Decimal, unit_price: Decimal, config: CascadeConfig
-) -> CascadeResult:
+def run_cascade(*, quantity: Decimal, unit_price: Decimal, config: CascadeConfig) -> CascadeResult:
     """Ejecuta la cascada de medición y devuelve el desglose completo.
 
     Devuelve **la base imponible calculada**, no el total: los impuestos se

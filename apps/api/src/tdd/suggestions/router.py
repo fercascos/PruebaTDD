@@ -70,27 +70,33 @@ _COLUMNAS = (
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=Sugerencia)
 def crear(cuerpo: CrearSugerencia, s: SesionDep, usuario: UsuarioDep) -> Any:
     """Cualquier usuario autenticado, incluido `LECTOR`."""
-    fila = s.execute(
-        text(
-            f"INSERT INTO suggestion (organization_id, type, status, title, body, payload, "  # noqa: S608
-            "created_by, context_project_id, context_entity_type, context_entity_id, "
-            "context_screen) VALUES (:org, CAST(:type AS suggestion_type), 'NUEVA', :title, "
-            ":body, CAST(:payload AS jsonb), :autor, :cp, :cet, :cei, :cs) "
-            f"RETURNING {_COLUMNAS}"
-        ),
-        {
-            "org": usuario.organization_id,
-            "autor": usuario.id,
-            "type": cuerpo.type.value,
-            "title": cuerpo.title,
-            "body": cuerpo.body,
-            "payload": None if cuerpo.payload is None else __import__("json").dumps(cuerpo.payload),
-            "cp": cuerpo.context_project_id,
-            "cet": cuerpo.context_entity_type,
-            "cei": cuerpo.context_entity_id,
-            "cs": cuerpo.context_screen,
-        },
-    ).mappings().one()
+    fila = (
+        s.execute(
+            text(
+                f"INSERT INTO suggestion (organization_id, type, status, title, body, payload, "  # noqa: S608
+                "created_by, context_project_id, context_entity_type, context_entity_id, "
+                "context_screen) VALUES (:org, CAST(:type AS suggestion_type), 'NUEVA', :title, "
+                ":body, CAST(:payload AS jsonb), :autor, :cp, :cet, :cei, :cs) "
+                f"RETURNING {_COLUMNAS}"
+            ),
+            {
+                "org": usuario.organization_id,
+                "autor": usuario.id,
+                "type": cuerpo.type.value,
+                "title": cuerpo.title,
+                "body": cuerpo.body,
+                "payload": None
+                if cuerpo.payload is None
+                else __import__("json").dumps(cuerpo.payload),
+                "cp": cuerpo.context_project_id,
+                "cet": cuerpo.context_entity_type,
+                "cei": cuerpo.context_entity_id,
+                "cs": cuerpo.context_screen,
+            },
+        )
+        .mappings()
+        .one()
+    )
     return dict(fila)
 
 
@@ -100,13 +106,17 @@ def mias(s: SesionDep, usuario: UsuarioDep) -> Any:
 
     Sin esto, quien propone escribe en un buzón sin fondo y deja de escribir.
     """
-    filas = s.execute(
-        text(
-            f"SELECT {_COLUMNAS} FROM suggestion WHERE created_by = :u "  # noqa: S608
-            "ORDER BY created_at DESC"
-        ),
-        {"u": usuario.id},
-    ).mappings().all()
+    filas = (
+        s.execute(
+            text(
+                f"SELECT {_COLUMNAS} FROM suggestion WHERE created_by = :u "  # noqa: S608
+                "ORDER BY created_at DESC"
+            ),
+            {"u": usuario.id},
+        )
+        .mappings()
+        .all()
+    )
     return [dict(f) for f in filas]
 
 
@@ -122,31 +132,39 @@ def bandeja(
     La RLS ya lo garantiza a nivel de fila; la dependencia devuelve un `403`
     explícito en vez de una lista vacía silenciosa.
     """
-    filas = s.execute(
-        text(
-            f"SELECT {_COLUMNAS} FROM suggestion "  # noqa: S608
-            # El CAST explícito es necesario: con un parámetro NULL suelto,
-            # PostgreSQL no puede inferir el tipo y rechaza la consulta.
-            "WHERE (CAST(:estado AS text) IS NULL "
-            "       OR status = CAST(:estado AS suggestion_status)) "
-            "  AND (CAST(:tipo AS text) IS NULL "
-            "       OR type = CAST(:tipo AS suggestion_type)) "
-            "ORDER BY created_at DESC"
-        ),
-        {
-            "estado": estado.value if estado else None,
-            "tipo": tipo.value if tipo else None,
-        },
-    ).mappings().all()
+    filas = (
+        s.execute(
+            text(
+                f"SELECT {_COLUMNAS} FROM suggestion "  # noqa: S608
+                # El CAST explícito es necesario: con un parámetro NULL suelto,
+                # PostgreSQL no puede inferir el tipo y rechaza la consulta.
+                "WHERE (CAST(:estado AS text) IS NULL "
+                "       OR status = CAST(:estado AS suggestion_status)) "
+                "  AND (CAST(:tipo AS text) IS NULL "
+                "       OR type = CAST(:tipo AS suggestion_type)) "
+                "ORDER BY created_at DESC"
+            ),
+            {
+                "estado": estado.value if estado else None,
+                "tipo": tipo.value if tipo else None,
+            },
+        )
+        .mappings()
+        .all()
+    )
     return [dict(f) for f in filas]
 
 
 @router.get("/{sugerencia_id}", response_model=Sugerencia)
 def detalle(sugerencia_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any:
-    fila = s.execute(
-        text(f"SELECT {_COLUMNAS} FROM suggestion WHERE id = :i"),  # noqa: S608
-        {"i": sugerencia_id},
-    ).mappings().first()
+    fila = (
+        s.execute(
+            text(f"SELECT {_COLUMNAS} FROM suggestion WHERE id = :i"),  # noqa: S608
+            {"i": sugerencia_id},
+        )
+        .mappings()
+        .first()
+    )
     if fila is None:
         # 404, no 403: no se confirma que exista una sugerencia ajena.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No encontrada")
@@ -194,26 +212,30 @@ def cambiar_estado(
     except TransicionInvalida as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
-    fila = s.execute(
-        text(
-            "UPDATE suggestion SET status = CAST(:to AS suggestion_status), "  # noqa: S608
-            "resolution_note = COALESCE(:nota, resolution_note), "
-            "duplicate_of_id = COALESCE(:dup, duplicate_of_id), "
-            "applied_entity_type = COALESCE(:aet, applied_entity_type), "
-            "applied_entity_id = COALESCE(:aei, applied_entity_id), "
-            "resolved_by = :u, resolved_at = now() "
-            f"WHERE id = :i RETURNING {_COLUMNAS}"
-        ),
-        {
-            "to": cuerpo.to.value,
-            "nota": cuerpo.resolution_note,
-            "dup": cuerpo.duplicate_of_id,
-            "aet": cuerpo.applied_entity_type,
-            "aei": cuerpo.applied_entity_id,
-            "u": usuario.id,
-            "i": sugerencia_id,
-        },
-    ).mappings().one()
+    fila = (
+        s.execute(
+            text(
+                "UPDATE suggestion SET status = CAST(:to AS suggestion_status), "  # noqa: S608
+                "resolution_note = COALESCE(:nota, resolution_note), "
+                "duplicate_of_id = COALESCE(:dup, duplicate_of_id), "
+                "applied_entity_type = COALESCE(:aet, applied_entity_type), "
+                "applied_entity_id = COALESCE(:aei, applied_entity_id), "
+                "resolved_by = :u, resolved_at = now() "
+                f"WHERE id = :i RETURNING {_COLUMNAS}"
+            ),
+            {
+                "to": cuerpo.to.value,
+                "nota": cuerpo.resolution_note,
+                "dup": cuerpo.duplicate_of_id,
+                "aet": cuerpo.applied_entity_type,
+                "aei": cuerpo.applied_entity_id,
+                "u": usuario.id,
+                "i": sugerencia_id,
+            },
+        )
+        .mappings()
+        .one()
+    )
 
     s.execute(
         text(
@@ -240,14 +262,18 @@ class Resumen(BaseModel):
 @router.get("/summary/contadores", response_model=Resumen)
 def resumen(s: SesionDep, _: GestorSugerenciasDep) -> Any:
     """Contadores para la insignia del menú."""
-    fila = s.execute(
-        text(
-            "SELECT count(*) FILTER (WHERE status = 'NUEVA') AS nuevas, "
-            "count(*) FILTER (WHERE status = 'EN_REVISION') AS en_revision, "
-            "count(*) FILTER (WHERE status IN ('ACEPTADA','RECHAZADA','DUPLICADA','APLICADA')) "
-            "AS cerradas FROM suggestion"
+    fila = (
+        s.execute(
+            text(
+                "SELECT count(*) FILTER (WHERE status = 'NUEVA') AS nuevas, "
+                "count(*) FILTER (WHERE status = 'EN_REVISION') AS en_revision, "
+                "count(*) FILTER (WHERE status IN ('ACEPTADA','RECHAZADA','DUPLICADA','APLICADA')) "
+                "AS cerradas FROM suggestion"
+            )
         )
-    ).mappings().one()
+        .mappings()
+        .one()
+    )
     return dict(fila)
 
 

@@ -35,9 +35,7 @@ class SuggestionStatus(StrEnum):
 
 #: Transiciones permitidas. Lo que no está aquí, no ocurre.
 TRANSICIONES: dict[SuggestionStatus, frozenset[SuggestionStatus]] = {
-    SuggestionStatus.NUEVA: frozenset(
-        {SuggestionStatus.EN_REVISION, SuggestionStatus.DUPLICADA}
-    ),
+    SuggestionStatus.NUEVA: frozenset({SuggestionStatus.EN_REVISION, SuggestionStatus.DUPLICADA}),
     SuggestionStatus.EN_REVISION: frozenset(
         {
             SuggestionStatus.ACEPTADA,
@@ -103,9 +101,7 @@ def validar_transicion(
 
     if peticion.a is SuggestionStatus.DUPLICADA:
         if peticion.duplicate_of_id is None:
-            raise TransicionInvalida(
-                "Marcar como duplicada exige indicar con cuál se agrupa"
-            )
+            raise TransicionInvalida("Marcar como duplicada exige indicar con cuál se agrupa")
         if peticion.duplicate_of_id == propia_id:
             raise TransicionInvalida("Una sugerencia no puede ser duplicada de sí misma")
 

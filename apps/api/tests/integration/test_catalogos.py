@@ -119,8 +119,14 @@ def test_las_86_combinaciones_zona_tipologia_son_las_documentadas(motor_admin) -
 
 @pytest.mark.parametrize(
     ("tipologia", "n_zonas"),
-    [("INDUSTRIAL", 11), ("OFICINAS", 10), ("HOTEL", 16), ("COMERCIAL", 13),
-     ("SANITARIO", 16), ("OTROS", 20)],
+    [
+        ("INDUSTRIAL", 11),
+        ("OFICINAS", 10),
+        ("HOTEL", 16),
+        ("COMERCIAL", 13),
+        ("SANITARIO", 16),
+        ("OTROS", 20),
+    ],
 )
 def test_cada_tipologia_ofrece_las_zonas_de_la_especificacion(
     motor_admin, tipologia: str, n_zonas: int
@@ -175,9 +181,7 @@ def test_nueve_zonas_estan_en_las_seis_tipologias(motor_admin) -> None:
 def test_el_arbol_no_tiene_huerfanos_ni_niveles_incoherentes(motor_admin) -> None:
     with motor_admin.connect() as c:
         huerfanos = c.execute(
-            text(
-                "SELECT count(*) FROM capex_code c WHERE c.level > 1 AND c.parent_id IS NULL"
-            )
+            text("SELECT count(*) FROM capex_code c WHERE c.level > 1 AND c.parent_id IS NULL")
         ).scalar_one()
         assert huerfanos == 0
 
@@ -251,12 +255,8 @@ def test_el_horizonte_corto_es_de_1_a_2_anos(motor_admin) -> None:
 def test_mejoras_y_otro_no_son_plazos_de_ejecucion(motor_admin) -> None:
     """P-05 · «Mejoras» no es un plazo, es una naturaleza: la decide el cliente."""
     with motor_admin.connect() as c:
-        filas = dict(
-            c.execute(text("SELECT code, is_execution_term FROM time_horizon")).all()
-        )
-    assert filas == {
-        "CORTO": True, "MEDIO": True, "LARGO": True, "MEJORAS": False, "OTRO": False
-    }
+        filas = dict(c.execute(text("SELECT code, is_execution_term FROM time_horizon")).all())
+    assert filas == {"CORTO": True, "MEDIO": True, "LARGO": True, "MEJORAS": False, "OTRO": False}
 
 
 def test_los_catalogos_del_sistema_no_son_editables_por_una_organizacion(como) -> None:

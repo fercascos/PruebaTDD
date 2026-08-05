@@ -48,8 +48,8 @@ def test_transiciones_permitidas(desde: S, hasta: S) -> None:
 @pytest.mark.parametrize(
     ("desde", "hasta"),
     [
-        (S.NUEVA, S.ACEPTADA),      # hay que revisarla antes
-        (S.NUEVA, S.APLICADA),      # no se aplica lo que no se ha aceptado
+        (S.NUEVA, S.ACEPTADA),  # hay que revisarla antes
+        (S.NUEVA, S.APLICADA),  # no se aplica lo que no se ha aceptado
         (S.ACEPTADA, S.RECHAZADA),  # ya se había aceptado
         (S.RECHAZADA, S.EN_REVISION),
         (S.APLICADA, S.NUEVA),

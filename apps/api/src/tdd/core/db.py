@@ -64,9 +64,7 @@ def aplicar_contexto(session: Session, ctx: ContextoRLS) -> None:
 
 
 @contextmanager
-def sesion_con_contexto(
-    factory: sessionmaker[Session], ctx: ContextoRLS
-) -> Iterator[Session]:
+def sesion_con_contexto(factory: sessionmaker[Session], ctx: ContextoRLS) -> Iterator[Session]:
     """Abre una sesión con el contexto RLS ya aplicado, dentro de transacción."""
     session = factory()
     try:

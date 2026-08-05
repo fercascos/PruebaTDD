@@ -13,6 +13,8 @@ from tdd.capex.router import router as capex_router
 from tdd.catalogs.router import router as catalogs_router
 from tdd.core.config import get_settings
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
+from tdd.phases.router import router as phases_router
+from tdd.projects.router import router as projects_router
 from tdd.suggestions.router import router as suggestions_router
 
 
@@ -20,9 +22,7 @@ from tdd.suggestions.router import router as suggestions_router
 async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     if not settings.database_url:
-        raise RuntimeError(
-            "DATABASE_URL no está definida. Copie .env.example a .env y rellénela."
-        )
+        raise RuntimeError("DATABASE_URL no está definida. Copie .env.example a .env y rellénela.")
     engine = crear_motor(
         str(settings.database_url),
         pool_size=settings.database_pool_size,
@@ -69,6 +69,8 @@ def crear_app() -> FastAPI:
 
     api = "/api/v1"
     app.include_router(catalogs_router, prefix=api)
+    app.include_router(projects_router, prefix=api)
+    app.include_router(phases_router, prefix=api)
     app.include_router(capex_router, prefix=api)
     app.include_router(suggestions_router, prefix=api)
     return app

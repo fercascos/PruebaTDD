@@ -147,9 +147,13 @@ CREATE TABLE catalog_i18n (
 
 -- ── Cliente, proyecto y activo ──────────────────────────────────────────────
 
+-- Los nombres son los de docs/02 §5.1. El `estado` describe el ciclo
+-- administrativo del encargo; las **fases** describen el trabajo real y son un
+-- eje independiente (ver `project_phase`). Mezclarlos en un solo campo sería el
+-- error de modelado más caro de este proyecto.
 CREATE TYPE project_status AS ENUM (
-    'BORRADOR', 'PREPARACION', 'VISITA_PROGRAMADA', 'VISITA_REALIZADA',
-    'EN_ANALISIS', 'EN_REVISION', 'EMITIDO', 'CERRADO', 'ARCHIVADO'
+    'BORRADOR', 'EN_PREPARACION', 'VISITA_PROGRAMADA', 'VISITA_REALIZADA',
+    'EN_ANALISIS', 'EN_REVISION', 'INFORME_EMITIDO', 'CERRADO', 'ARCHIVADO'
 );
 
 CREATE TABLE client (
@@ -197,6 +201,165 @@ CREATE TABLE asset (
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at        TIMESTAMPTZ
 );
+
+-- ── Fases del proceso [REQ] §3.1.5 ──────────────────────────────────────────
+--
+-- El otro eje del proyecto. Se crean SOLO las fases que el usuario marca al dar
+-- de alta el encargo: un proyecto sin Q&A no arrastra una fase vacía.
+
+CREATE TYPE phase_status AS ENUM (
+    'NO_APLICA', 'PENDIENTE', 'EN_CURSO', 'COMPLETADA', 'BLOQUEADA'
+);
+
+CREATE TABLE phase_definition (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code               VARCHAR(40) NOT NULL UNIQUE,
+    name_es            VARCHAR(120) NOT NULL,
+    display_order      SMALLINT NOT NULL,
+    has_checklist      BOOLEAN NOT NULL DEFAULT FALSE,
+    has_external_link  BOOLEAN NOT NULL DEFAULT FALSE,
+    has_visit_tracking BOOLEAN NOT NULL DEFAULT FALSE,
+    has_file_rounds    BOOLEAN NOT NULL DEFAULT FALSE,
+    -- [REC] Si el estado es derivado, la API NO lo acepta: lo calcula el motor
+    -- de fases a partir del trabajo real. Una lista de verificación que se puede
+    -- marcar a mano cuando el trabajo no está hecho es peor que no tenerla: da
+    -- una falsa sensación de avance justo en el punto donde más cuesta.
+    status_is_derived  BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE project_phase (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organization(id),
+    project_id          UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    phase_definition_id UUID NOT NULL REFERENCES phase_definition(id),
+    is_applicable       BOOLEAN NOT NULL DEFAULT TRUE,
+    status              phase_status NOT NULL DEFAULT 'PENDIENTE',
+    owner_user_id       UUID REFERENCES app_user(id),
+    planned_start_date  DATE,
+    planned_end_date    DATE,
+    started_at          TIMESTAMPTZ,
+    completed_at        TIMESTAMPTZ,
+    notes               TEXT,
+    display_order       SMALLINT NOT NULL DEFAULT 0,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (project_id, phase_definition_id),
+    CONSTRAINT completada_deja_fecha
+        CHECK (status <> 'COMPLETADA' OR completed_at IS NOT NULL),
+    CONSTRAINT no_aplica_es_coherente
+        CHECK (is_applicable OR status = 'NO_APLICA')
+);
+CREATE INDEX project_phase_orden_idx ON project_phase (project_id, display_order);
+CREATE INDEX project_phase_estado_idx ON project_phase (organization_id, status);
+
+CREATE TABLE doc_request_category (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(120) NOT NULL,
+    display_order   SMALLINT NOT NULL DEFAULT 0,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE (organization_id, code)
+);
+
+CREATE TYPE doc_request_status AS ENUM (
+    'SOLICITADA', 'RECIBIDA', 'PARCIAL', 'NO_DISPONIBLE', 'NO_APLICA'
+);
+
+CREATE TABLE doc_request_item (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id    UUID NOT NULL REFERENCES organization(id),
+    project_phase_id   UUID NOT NULL REFERENCES project_phase(id) ON DELETE CASCADE,
+    asset_id           UUID REFERENCES asset(id) ON DELETE CASCADE,
+    category_id        UUID NOT NULL REFERENCES doc_request_category(id),
+    title              VARCHAR(240) NOT NULL,
+    description        TEXT,
+    status             doc_request_status NOT NULL DEFAULT 'SOLICITADA',
+    requested_at       TIMESTAMPTZ,
+    received_at        TIMESTAMPTZ,
+    unavailable_reason TEXT,
+    -- [REC] Alimenta automáticamente el apartado de limitaciones del informe.
+    -- Declarar qué no se ha podido revisar es una obligación profesional en una
+    -- TDD, y hoy suele reconstruirse de memoria al final del encargo.
+    affects_report_limitations BOOLEAN
+        GENERATED ALWAYS AS (status IN ('NO_DISPONIBLE', 'PARCIAL')) STORED,
+    display_order      SMALLINT NOT NULL DEFAULT 0,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Decir «no disponible» sin decir por qué deja el informe sin poder
+    -- explicar la limitación, que es exactamente para lo que sirve el campo.
+    CONSTRAINT no_disponible_exige_motivo
+        CHECK (status <> 'NO_DISPONIBLE'
+               OR (unavailable_reason IS NOT NULL AND length(trim(unavailable_reason)) > 0))
+);
+CREATE INDEX doc_request_fase_idx ON doc_request_item (project_phase_id, display_order);
+
+CREATE TABLE vdr_link (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    project_phase_id UUID NOT NULL REFERENCES project_phase(id) ON DELETE CASCADE,
+    provider         VARCHAR(120),
+    url              TEXT NOT NULL,
+    -- [REC] NO hay columna de credenciales, y es deliberado: guardar la
+    -- contraseña de un repositorio de terceros multiplicaría la superficie de
+    -- riesgo sin aportar nada. El enlace y a quién pedir acceso bastan.
+    access_notes     TEXT,
+    granted_at       TIMESTAMPTZ,
+    expires_at       TIMESTAMPTZ,
+    is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX vdr_link_activo_uniq ON vdr_link (project_phase_id) WHERE is_active;
+
+CREATE TYPE visit_status AS ENUM ('PENDIENTE_DEFINIR', 'AGENDADO', 'VISITADO');
+
+CREATE TABLE asset_visit (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id    UUID NOT NULL REFERENCES organization(id),
+    project_id         UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    asset_id           UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    status             visit_status NOT NULL DEFAULT 'PENDIENTE_DEFINIR',
+    scheduled_date     DATE,
+    actual_date        DATE,
+    led_by             UUID REFERENCES app_user(id),
+    access_limitations TEXT,
+    summary            TEXT,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT agendado_exige_fecha
+        CHECK (status <> 'AGENDADO' OR scheduled_date IS NOT NULL),
+    CONSTRAINT visitado_exige_fecha_real
+        CHECK (status <> 'VISITADO' OR actual_date IS NOT NULL)
+);
+CREATE INDEX asset_visit_proyecto_idx ON asset_visit (project_id, status);
+
+CREATE TYPE qa_round_status AS ENUM ('ABIERTA', 'ENVIADA', 'RESPONDIDA', 'CERRADA');
+
+CREATE TABLE qa_round (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    project_phase_id UUID NOT NULL REFERENCES project_phase(id) ON DELETE CASCADE,
+    round_number     SMALLINT NOT NULL,
+    title            VARCHAR(240),
+    status           qa_round_status NOT NULL DEFAULT 'ABIERTA',
+    sent_at          TIMESTAMPTZ,
+    answered_at      TIMESTAMPTZ,
+    notes            TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (project_phase_id, round_number)
+);
+
+CREATE TABLE phase_event (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    project_phase_id UUID NOT NULL REFERENCES project_phase(id) ON DELETE CASCADE,
+    event_date       DATE NOT NULL,
+    counterparty     VARCHAR(200),
+    attendees        JSONB,
+    outcome          TEXT,
+    notes            TEXT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX phase_event_fase_idx ON phase_event (project_phase_id, event_date);
+
 
 -- ── Perfil de costes ────────────────────────────────────────────────────────
 
@@ -538,7 +701,9 @@ BEGIN
     FOREACH t IN ARRAY ARRAY[
         'app_user', 'client', 'project', 'asset', 'cost_profile',
         'price_source', 'price_reference', 'finding', 'capex_item',
-        'stored_object', 'audit_log', 'suggestion_comment'
+        'stored_object', 'audit_log', 'suggestion_comment',
+        'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
+        'qa_round', 'phase_event'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
@@ -557,7 +722,7 @@ DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'asset_typology', 'zone', 'capex_code', 'risk_level',
-        'capex_concept', 'time_horizon'
+        'capex_concept', 'time_horizon', 'doc_request_category'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

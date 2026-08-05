@@ -11,14 +11,20 @@ from __future__ import annotations
 import os
 import uuid
 from collections.abc import Iterator
+from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from tdd.catalogs.seeding import sembrar_catalogos
+from tdd.core.config import Settings, get_settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
+from tdd.core.security import crear_token
+from tdd.main import crear_app
+from tdd.phases.seeding import sembrar_fases
 
 RAIZ = Path(__file__).resolve().parents[3]
 ESQUEMA = RAIZ / "apps" / "api" / "src" / "tdd" / "db" / "schema.sql"
@@ -44,6 +50,7 @@ def motor_admin() -> Iterator[Engine]:
         conn.execute(text("CREATE SCHEMA public"))
         conn.execute(text(ESQUEMA.read_text(encoding="utf-8")))
         sembrar_catalogos(conn)
+        sembrar_fases(conn)
 
         # El usuario de aplicación NO es propietario de las tablas y NO tiene
         # BYPASSRLS. Si lo tuviera, las políticas no se le aplicarían y toda la
@@ -82,9 +89,7 @@ def datos_base(motor_admin: Engine) -> dict[str, uuid.UUID]:
     with motor_admin.begin() as conn:
         for etiqueta, slug in (("org_a", "alfa"), ("org_b", "beta")):
             ids[etiqueta] = conn.execute(
-                text(
-                    "INSERT INTO organization (name, slug) VALUES (:n, :s) RETURNING id"
-                ),
+                text("INSERT INTO organization (name, slug) VALUES (:n, :s) RETURNING id"),
                 {"n": slug.title(), "s": slug},
             ).scalar_one()
 
@@ -127,8 +132,6 @@ def como(fabrica: sessionmaker[Session], datos_base: dict[str, uuid.UUID]):
 
     Uso:  with como("consultor_a") as s: ...
     """
-    from contextlib import contextmanager
-
     org_de = {
         "admin_a": "org_a",
         "consultor_a": "org_a",
@@ -158,3 +161,61 @@ def como(fabrica: sessionmaker[Session], datos_base: dict[str, uuid.UUID]):
             s.close()
 
     return _abrir
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Cliente HTTP compartido por las pruebas de API
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Secreto de firma solo para la suite. No se parece a nada de producción.
+SECRETO_PRUEBAS = "secreto-solo-para-la-suite-de-pruebas-0123456789"  # noqa: S105
+
+#: Rol y permiso de gestión de sugerencias por usuario de prueba.
+PERFILES = {
+    "admin_a": ("org_a", "ADMIN", True),
+    "admin_b": ("org_b", "ADMIN", True),
+    "consultor_a": ("org_a", "CONSULTOR", False),
+    "consultor2_a": ("org_a", "CONSULTOR", False),
+    "lector_a": ("org_a", "LECTOR", False),
+}
+
+
+@asynccontextmanager
+async def _sin_ciclo_de_vida(app):  # type: ignore[no-untyped-def]
+    """El motor lo aporta la fixture: la aplicación no debe leer DATABASE_URL."""
+    yield
+
+
+@pytest.fixture(scope="session")
+def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestClient]:
+    app = crear_app()
+    app.router.lifespan_context = _sin_ciclo_de_vida
+    app.state.engine = motor_app
+    app.state.session_factory = fabrica
+    app.dependency_overrides[get_settings] = lambda: Settings(
+        app_env="test", app_secret_key=SECRETO_PRUEBAS
+    )
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture(scope="session")
+def cab(datos_base: dict[str, uuid.UUID]):
+    """Cabecera `Authorization` para un usuario de prueba.
+
+    Uso:  cliente.get("/api/v1/...", headers=cab("consultor_a"))
+    """
+
+    def _cabecera(usuario: str) -> dict[str, str]:
+        org, rol, gestiona = PERFILES[usuario]
+        token = crear_token(
+            secreto=SECRETO_PRUEBAS,
+            user_id=datos_base[usuario],
+            organization_id=datos_base[org],
+            org_role=rol,
+            can_manage_suggestions=gestiona,
+            ttl_minutos=15,
+        )
+        return {"Authorization": f"Bearer {token}"}
+
+    return _cabecera

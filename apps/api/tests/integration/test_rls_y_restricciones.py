@@ -23,12 +23,23 @@ pytestmark = pytest.mark.db
 
 
 def test_una_organizacion_no_ve_los_proyectos_de_otra(como, datos_base) -> None:
+    """Se comprueba sobre un proyecto concreto, no sobre el total.
+
+    Un recuento global ataría esta prueba al orden de ejecución: otras pruebas
+    crean proyectos en la misma organización y la cifra dejaría de cuadrar.
+    """
     with como("admin_a") as s:
-        assert s.execute(text("SELECT count(*) FROM project")).scalar_one() == 1
+        assert (
+            s.execute(
+                text("SELECT count(*) FROM project WHERE id = :i"),
+                {"i": datos_base["proyecto_a"]},
+            ).scalar_one()
+            == 1
+        )
 
     with como("admin_b") as s:
+        # Ni en el listado, ni pidiéndolo por su identificador exacto.
         assert s.execute(text("SELECT count(*) FROM project")).scalar_one() == 0
-        # Ni siquiera pidiéndolo por su identificador exacto.
         fila = s.execute(
             text("SELECT id FROM project WHERE id = :i"), {"i": datos_base["proyecto_a"]}
         ).first()
@@ -49,9 +60,7 @@ def test_no_se_puede_escribir_en_otra_organizacion(como, datos_base) -> None:
     """La política lleva WITH CHECK, no solo USING: escribir tampoco cuela."""
     with pytest.raises((IntegrityError, DBAPIError)), como("admin_b") as s:
         s.execute(
-            text(
-                "INSERT INTO client (organization_id, name) VALUES (:o, 'Intruso')"
-            ),
+            text("INSERT INTO client (organization_id, name) VALUES (:o, 'Intruso')"),
             {"o": datos_base["org_a"]},
         )
 
@@ -93,9 +102,10 @@ def test_el_autor_ve_las_suyas(como) -> None:
     with como("consultor_a") as s:
         sid = _crear_sugerencia(s, "La mía")
     with como("consultor_a") as s:
-        assert s.execute(
-            text("SELECT title FROM suggestion WHERE id = :i"), {"i": sid}
-        ).scalar_one() == "La mía"
+        assert (
+            s.execute(text("SELECT title FROM suggestion WHERE id = :i"), {"i": sid}).scalar_one()
+            == "La mía"
+        )
 
 
 def test_un_consultor_no_ve_las_de_sus_companeros(como) -> None:
@@ -105,27 +115,36 @@ def test_un_consultor_no_ve_las_de_sus_companeros(como) -> None:
 
     with como("consultor2_a") as s:
         # Misma organización, otro autor: no existe para él.
-        assert s.execute(
-            text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
-        ).scalar_one() == 0
+        assert (
+            s.execute(
+                text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
+            ).scalar_one()
+            == 0
+        )
 
 
 def test_el_administrador_las_ve_todas(como) -> None:
     with como("consultor_a") as s:
         sid = _crear_sugerencia(s, "Para el admin")
     with como("admin_a") as s:
-        assert s.execute(
-            text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
-        ).scalar_one() == 1
+        assert (
+            s.execute(
+                text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
+            ).scalar_one()
+            == 1
+        )
 
 
 def test_un_administrador_no_ve_las_sugerencias_de_otra_organizacion(como) -> None:
     with como("consultor_a") as s:
         sid = _crear_sugerencia(s, "De la organización A")
     with como("admin_b") as s:
-        assert s.execute(
-            text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
-        ).scalar_one() == 0
+        assert (
+            s.execute(
+                text("SELECT count(*) FROM suggestion WHERE id = :i"), {"i": sid}
+            ).scalar_one()
+            == 0
+        )
 
 
 def test_no_se_puede_crear_una_sugerencia_a_nombre_de_otro(como, datos_base) -> None:
@@ -308,10 +327,7 @@ def test_media_medicion_no_se_admite(como, linea_capex) -> None:
     with pytest.raises((IntegrityError, DBAPIError)), como("consultor_a") as s:
         _insertar_linea(s, linea_capex, cantidad=1)
         s.execute(
-            text(
-                "UPDATE capex_item SET measurement_unit = 'ud' "
-                "WHERE finding_id = :f"
-            ),
+            text("UPDATE capex_item SET measurement_unit = 'ud' WHERE finding_id = :f"),
             {"f": linea_capex["hallazgo"]},
         )
 
@@ -358,8 +374,7 @@ def test_un_original_no_se_borra(como, datos_base) -> None:
                 "p": datos_base["proyecto_a"],
                 "h": "c" * 64,
                 "mime": (
-                    "application/vnd.openxmlformats-officedocument"
-                    ".presentationml.presentation"
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 ),
             },
         ).scalar_one()
