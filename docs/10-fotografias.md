@@ -355,3 +355,60 @@ auditada) con cuatro diferencias:
 
 Tipos permitidos: PDF, DOCX, XLSX, DWG, imágenes. **Se rechazan** ejecutables, ficheros con macros y
 contenedores comprimidos anidados (riesgo de bomba de descompresión).
+
+---
+
+## 15.12. Estado de la implementación
+
+Escrito después de construirlo, y con las pruebas delante. Lo que aquí figura como implementado tiene
+prueba que lo respalda; lo que no, está marcado y **no se afirma que funcione**.
+
+### Lo que funciona y está probado
+
+| Capacidad | Dónde | Prueba |
+|---|---|---|
+| Subida desde **ordenador**, **carrete del móvil** y **cámara en directo** | `POST /projects/{id}/photos` | `test_fotografias.py` · un test por origen |
+| **HEIC** del iPhone: se lee y se convierte | `evidence/images.py` + `pillow-heif` | `test_el_heic_del_iphone_se_lee_y_se_convierte` |
+| Orientación EXIF aplicada al derivado | `generar_derivado()` | `test_el_derivado_aplica_la_orientacion_exif` |
+| EXIF, GPS, fecha y cámara a columnas | `leer()` | 8 tests de EXIF |
+| Duplicado exacto (SHA-256) y casi duplicado (perceptual) | `evidence/service.py` | 9 tests de duplicados |
+| Nombres configurables: 13 tokens y 8 reglas de saneado | `evidence/naming.py` | 33 tests, uno por regla |
+| Renombrado en lote con previsualización obligatoria | `POST /photos/bulk-rename` | previsualización + aplicación |
+| Papelera, restauración y borrado siempre lógico | `DELETE` / `POST …/restore` | 6 tests |
+| **El original nunca se sobrescribe** | disparadores `photo` y `photo_version` | 5 tests, escritos **saltándose la API** |
+| Aislamiento entre organizaciones | RLS sobre las 4 tablas nuevas | `test_otra_organizacion_no_ve_la_foto` |
+| Descarga y renombrado auditados | `audit_log` | 2 tests |
+
+### Lo que no está y no se disimula
+
+| Pendiente | Consecuencia hoy | `[LIM]` |
+|---|---|---|
+| **Antivirus (ClamAV)** | Ninguna foto pasa por `CUARENTENA`. El estado existe y la máquina de estados lo contempla, pero **nada lo activa** | Sí |
+| **Almacén S3 con Object Lock** | Solo hay adaptador sobre disco y otro en memoria. La **barrera 4** (WORM) es una propiedad del bucket y **no se ha probado contra ninguno** | Sí |
+| **URLs firmadas** | La descarga devuelve el binario en la respuesta en vez de un `302` de 5 minutos | Sí |
+| **Worker asíncrono** (§15.3) | La subida es directa y síncrona. Aceptable para una visita; deja de serlo con 400 fotos | Sí |
+| **Anotaciones vectoriales** | La tabla y el `CHECK` están; no hay ni editor ni rasterizado | Sí |
+| **Descarga en lote (ZIP)** | No implementada | Sí |
+| **Purga física** | `comprobar_purga()` está escrita y probada, pero ningún endpoint la invoca todavía | Sí |
+| **Offline / IndexedDB** | Depende de la PWA, que no existe todavía | Sí |
+
+### Tres decisiones que tomé al implementar
+
+**C-10 · «El usuario decide» tiene un límite que este documento no explicitaba.** §15.5 dice que ante
+un duplicado exacto *«se avisa antes de subir; el usuario decide»*, y a la vez impone
+`UNIQUE (project_id, sha256) WHERE deleted_at IS NULL`. Las dos cosas no caben: el índice hace
+**imposible** una segunda fila con el mismo fichero en el mismo proyecto. Resolución: el aviso llega
+antes de gastar datos móviles, y lo que el usuario decide es **usar la que ya está** o no seguir. No
+hay «subir de todas formas», porque solo produciría un error de base de datos más feo y más tarde. La
+API devuelve `409` **diciendo qué fotografía es la que ya existe**, que es lo accionable. El caso de
+verdad revisable —el **casi** duplicado— sí se sube siempre y solo se avisa.
+
+**C-11 · Transliteración con NFD, no NFKD.** NFKD convertiría `Nº` en `No` y el ejemplo documentado
+en la regla 1 (`Cubierta Nº1` → `CubiertaN1`) dejaría de cumplirse. Con NFD los diacríticos se
+separan de su letra —`Añadido` → `Anadido`— y los símbolos que no son letras se pierden, que en un
+nombre de fichero es justo lo que se quiere.
+
+**C-12 · `getexif()` no basta.** Devuelve solo la IFD0, y `DateTimeOriginal` —la única fecha que
+interesa, la del disparo— vive en la sub-IFD Exif. Sin leerla, **toda foto de móvil habría entrado
+sin fecha**, y el campo vacío habría parecido cumplimiento del `[REQ]` de «no inventar fechas» cuando
+en realidad era un fallo. Lo descubrió la prueba, no la lectura del código.

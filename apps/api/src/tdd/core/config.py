@@ -7,6 +7,7 @@ Todos los valores se leen del entorno. No hay ni un secreto en el código: ver
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, PostgresDsn, field_validator
@@ -33,6 +34,14 @@ class Settings(BaseSettings):
     # ── Autenticación ───────────────────────────────────────────────────────
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
+
+    # ── Almacenamiento de objetos ───────────────────────────────────────────
+    # [LIM] Solo está implementado el adaptador sobre disco. El de S3 con
+    # Object Lock —la cuarta barrera que protege los originales— no existe
+    # todavía y no se afirma que funcione.
+    storage_local_dir: Path = Path("./var/objetos")
+    max_upload_mb: int = 50
+    photo_trash_purge_days: int = 30
 
     # ── Precios ─────────────────────────────────────────────────────────────
     # P-06: no hay ninguna fuente externa. La bandera existe para que el

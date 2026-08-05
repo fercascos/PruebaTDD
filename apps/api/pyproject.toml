@@ -14,6 +14,14 @@ dependencies = [
     "argon2-cffi>=23.1",
     "pyjwt>=2.9",
     "python-multipart>=0.0.9",
+    # Fotografías: lectura de EXIF, hash perceptual y derivados.
+    "pillow>=10.4",
+    # [LIM] HEIC/HEIF es lo que produce un iPhone por defecto. Sin este
+    # complemento, Pillow no lo abre y la subida desde el carrete falla.
+    "pillow-heif>=0.18",
+    # PPTX y XLSX.
+    "python-pptx>=1.0",
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +31,9 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.6",
     "mypy>=1.11",
+    # Construye el EXIF de las imágenes de prueba. [REQ] No hay ni una
+    # fotografía real en el repositorio: todas se generan en el momento.
+    "piexif>=1.1",
 ]
 
 [build-system]

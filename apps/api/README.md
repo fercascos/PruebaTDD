@@ -10,7 +10,7 @@ abajo sin adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 222 pruebas
+make test        # 355 pruebas
 make run         # http://localhost:8000/docs
 ```
 
@@ -19,16 +19,20 @@ make run         # http://localhost:8000/docs
 | Pieza | Estado | Dónde se comprueba |
 |---|---|---|
 | **Motor de CAPEX** con la cascada de P-16 | ✅ Completo | `tests/unit/test_capex_engine.py` · 17 |
-| **Motor de fases** · estados derivados y sugeridos | ✅ Completo | `tests/unit/test_fases.py` · 32 |
-| **Máquina de estados del proyecto** con sus guardas | ✅ Completo | `tests/unit/test_maquina_de_estados.py` · 21 |
-| **Esquema con RLS**, triggers y `CHECK` | ✅ Completo | `tests/integration/test_rls_y_restricciones.py` · 19 |
-| **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 26 |
-| **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 18 |
+| **Motor de fases** · estados derivados y sugeridos | ✅ Completo | `tests/unit/test_fases.py` · 33 |
+| **Máquina de estados del proyecto** con sus guardas | ✅ Completo | `tests/unit/test_maquina_de_estados.py` · 18 |
+| **Esquema con RLS**, triggers y `CHECK` | ✅ Completo | `tests/integration/test_rls_y_restricciones.py` · 21 |
+| **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 25 |
+| **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 19 |
 | **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 18 |
 | **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
-| **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 20 |
+| **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 25 |
 | **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 14 |
 | **Retirada de la marca de agua** `[REQ]` P-43 | ✅ Completo | `tests/unit/test_marca_de_agua.py` · 10 |
+| **Nombres de fotografía** · 13 tokens y 8 reglas | ✅ Completo | `tests/unit/test_nombres_de_foto.py` · 33 |
+| **Lectura de imágenes** · EXIF, GPS, HEIC, derivados | ✅ Completo | `tests/unit/test_imagenes.py` · 24 |
+| **Reglas de evidencia** · duplicados, papelera, avisos | ✅ Completo | `tests/unit/test_evidencia.py` · 37 |
+| **Fotografías punta a punta** · los tres orígenes | ✅ Completo | `tests/integration/test_fotografias.py` · 39 |
 
 ## Los dos ejes del proyecto
 
@@ -92,8 +96,13 @@ divergirán, y una zona mal sembrada obliga a migrar datos reales meses después
 
 Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 
-- **Fotografías y documentos.** El modelo de `stored_object` y sus triggers
-  están; la carga, los derivados, EXIF, duplicados y el renombrado, no.
+- **Documentos.** Comparten modelo con las fotografías (§15.11) pero no están
+  construidos: ni tabla, ni endpoints.
+- **Antivirus y almacén S3 con Object Lock.** De las fotografías falta lo que
+  depende de infraestructura: ClamAV —ninguna foto pasa hoy por `CUARENTENA`—,
+  las URLs firmadas, el worker asíncrono y el ZIP en lote. El estado de
+  implementación del bloque, capacidad por capacidad, está en
+  [`docs/10` §15.12](../../docs/10-fotografias.md).
 - **Generación de PPTX, el resto del bloque 4.** La prueba de concepto está
   **superada** ([`docs/20`](../../docs/20-poc-pptx.md)): clonado, sustitución de
   marcadores, tabla nativa y render verificados sobre la plantilla real. Falta

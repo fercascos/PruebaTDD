@@ -684,6 +684,279 @@ CREATE TRIGGER audit_log_inmutable
     FOR EACH ROW EXECUTE FUNCTION auditoria_solo_se_anade();
 
 -- =============================================================================
+--  Evidencia fotográfica [REQ] §15
+--
+--  La invariante del bloque: «mantener siempre el archivo original». La
+--  separación que lo hace posible es que el NOMBRE VISIBLE y el OBJETO
+--  ALMACENADO son cosas distintas:
+--
+--    stored_object_id  → el binario. Inmutable, con su propio disparador.
+--    original_filename → cómo llegó. Inmutable: es trazabilidad.
+--    display_name      → lo que el usuario ve y edita. Un UPDATE de texto.
+--    file_extension    → derivada del MIME real. El usuario nunca la escribe.
+--
+--  Consecuencia: renombrar cuesta O(1), no mueve un solo byte y es imposible
+--  perder la extensión porque nadie la escribe.
+-- =============================================================================
+
+CREATE TYPE photo_status AS ENUM (
+    'SUBIENDO', 'PROCESANDO', 'LISTA', 'CUARENTENA', 'ERROR', 'PAPELERA', 'PURGADA'
+);
+
+-- [REQ] Los tres orígenes que el cliente pidió expresamente. Se guarda porque
+-- condiciona qué se puede esperar del fichero: el carrete trae HEIC y GPS, la
+-- cámara en directo trae orientación EXIF, el ordenador trae volumen.
+CREATE TYPE photo_origin AS ENUM ('ORDENADOR', 'CARRETE', 'CAMARA', 'IMPORTACION');
+
+CREATE TYPE photo_version_type AS ENUM (
+    'ORIGINAL', 'RENOMBRADA', 'ANOTADA', 'EDITADA', 'EXPORTADA_SIN_METADATOS'
+);
+
+CREATE TYPE photo_link_entity AS ENUM (
+    'ASSET', 'ZONE', 'FINDING', 'CAPEX_ITEM', 'REPORT_SECTION', 'ASSET_VISIT',
+    'DOC_REQUEST_ITEM'
+);
+
+CREATE TYPE photo_role AS ENUM ('EVIDENCIA', 'GENERAL', 'DETALLE', 'ANTES', 'DESPUES');
+
+CREATE TYPE photo_derivative_kind AS ENUM (
+    'MINIATURA_320', 'VISTA_1600', 'WEB', 'ANOTADA_RASTER'
+);
+
+CREATE TABLE photo (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organization(id),
+    project_id        UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    -- [REQ] El activo es PREFERIBLE, no obligatorio: en campo se fotografía
+    -- antes de saber a qué activo corresponde. Se avisa, no se bloquea.
+    asset_id          UUID REFERENCES asset(id) ON DELETE SET NULL,
+    zone_id           UUID REFERENCES zone(id),
+    capex_code_id     UUID REFERENCES capex_code(id),
+
+    stored_object_id  UUID NOT NULL REFERENCES stored_object(id),
+    origin            photo_origin NOT NULL DEFAULT 'ORDENADOR',
+    status            photo_status NOT NULL DEFAULT 'SUBIENDO',
+    status_reason     TEXT,
+
+    original_filename VARCHAR(260) NOT NULL,
+    display_name      VARCHAR(200) NOT NULL,
+    file_extension    VARCHAR(12)  NOT NULL,
+    mime_type         VARCHAR(120) NOT NULL,
+    sha256            CHAR(64) NOT NULL,
+    phash             CHAR(16),
+    byte_size         BIGINT NOT NULL,
+    width_px          INT,
+    height_px         INT,
+
+    -- [REQ] Si no hay EXIF, estos campos quedan VACÍOS. No se infiere la fecha
+    -- del sistema de archivos ni la ubicación del activo: un dato inventado en
+    -- una evidencia técnica es peor que un dato ausente.
+    taken_at          TIMESTAMPTZ,
+    gps_latitude      NUMERIC(9, 6),
+    gps_longitude     NUMERIC(9, 6),
+    gps_altitude_m    NUMERIC(8, 2),
+    camera_make       VARCHAR(80),
+    camera_model      VARCHAR(120),
+    orientation       SMALLINT,
+    exif_raw          JSONB,
+
+    photo_category    VARCHAR(60),
+    caption           TEXT,
+    description       TEXT,
+    tags              TEXT[] NOT NULL DEFAULT '{}',
+
+    duplicate_of_photo_id UUID REFERENCES photo(id),
+
+    include_in_report BOOLEAN NOT NULL DEFAULT FALSE,
+    report_order      INT,
+    report_section    VARCHAR(60),
+
+    uploaded_by       UUID NOT NULL REFERENCES app_user(id),
+    uploaded_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at        TIMESTAMPTZ,
+    purged_at         TIMESTAMPTZ,
+
+    CONSTRAINT photo_gps_completo
+        CHECK ((gps_latitude IS NULL) = (gps_longitude IS NULL)),
+    CONSTRAINT photo_gps_en_rango
+        CHECK (gps_latitude IS NULL
+               OR (gps_latitude BETWEEN -90 AND 90 AND gps_longitude BETWEEN -180 AND 180)),
+    -- La extensión se guarda SIN punto: el punto lo pone quien compone el
+    -- nombre de descarga. Guardarlo a veces sí y a veces no produce `foto..jpg`.
+    CONSTRAINT photo_extension_sin_punto CHECK (file_extension NOT LIKE '.%'),
+    CONSTRAINT photo_extension_no_vacia  CHECK (length(file_extension) > 0),
+    -- [REQ] §15.1 · El nombre visible no lleva extensión: la fija el servidor
+    -- desde el MIME real, y el usuario no puede cambiarla renombrando.
+    CONSTRAINT photo_nombre_sin_extension
+        CHECK (lower(display_name) NOT LIKE '%.' || lower(file_extension)),
+    CONSTRAINT photo_papelera_coherente
+        CHECK ((status IN ('PAPELERA', 'PURGADA')) = (deleted_at IS NOT NULL)),
+    CONSTRAINT photo_purga_coherente
+        CHECK ((status = 'PURGADA') = (purged_at IS NOT NULL)),
+    CONSTRAINT photo_duplicado_de_otra
+        CHECK (duplicate_of_photo_id IS DISTINCT FROM id)
+);
+
+-- [REQ] §15.5 · El mismo fichero no entra dos veces en el mismo proyecto, pero
+-- sí puede existir en dos proyectos: dos encargos sobre el mismo edificio es
+-- legítimo. Parcial por `deleted_at` para que la papelera no bloquee una
+-- resubida.
+CREATE UNIQUE INDEX photo_sha256_uniq
+    ON photo (project_id, sha256) WHERE deleted_at IS NULL;
+
+CREATE INDEX photo_activo_idx   ON photo (project_id, asset_id);
+CREATE INDEX photo_informe_idx  ON photo (project_id, include_in_report, report_order);
+CREATE INDEX photo_phash_idx    ON photo (project_id, phash) WHERE phash IS NOT NULL;
+CREATE INDEX photo_exif_idx     ON photo USING GIN (exif_raw);
+CREATE INDEX photo_etiquetas_idx ON photo USING GIN (tags);
+
+-- ── Barrera 3 aplicada a la fotografía ──────────────────────────────────────
+-- El disparador de `stored_object` ya protege el binario. Este protege la
+-- FICHA: sin él, se podría reapuntar una foto a otro objeto y el original
+-- seguiría intacto pero ya no sería el original *de esta foto*.
+CREATE OR REPLACE FUNCTION impedir_sobrescritura_de_foto() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.stored_object_id  IS DISTINCT FROM OLD.stored_object_id
+       OR NEW.sha256         IS DISTINCT FROM OLD.sha256
+       OR NEW.byte_size      IS DISTINCT FROM OLD.byte_size
+       OR NEW.original_filename IS DISTINCT FROM OLD.original_filename
+       OR NEW.file_extension IS DISTINCT FROM OLD.file_extension THEN
+        RAISE EXCEPTION
+            'El original de una fotografía no se sobrescribe: renombre display_name (foto %)',
+            OLD.id
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER photo_original_inmutable
+    BEFORE UPDATE ON photo
+    FOR EACH ROW EXECUTE FUNCTION impedir_sobrescritura_de_foto();
+
+-- [REQ] §15.9 · El borrado siempre es lógico. Solo desaparece de la tabla lo
+-- que ya se purgó con autorización, y el registro de auditoría sobrevive.
+CREATE OR REPLACE FUNCTION impedir_borrado_fisico_de_foto() RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status <> 'PURGADA' THEN
+        RAISE EXCEPTION
+            'Una fotografía no se borra físicamente: pásela a la papelera (foto %)', OLD.id
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER photo_borrado_logico
+    BEFORE DELETE ON photo
+    FOR EACH ROW EXECUTE FUNCTION impedir_borrado_fisico_de_foto();
+
+-- ── Versiones ───────────────────────────────────────────────────────────────
+CREATE TABLE photo_version (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    photo_id         UUID NOT NULL REFERENCES photo(id) ON DELETE CASCADE,
+    version_number   INT NOT NULL,
+    version_type     photo_version_type NOT NULL,
+    -- [REC] NULL cuando la versión solo cambia metadatos. Con 1.500 fotos por
+    -- proyecto y renombrados en lote, duplicar el binario por un cambio de
+    -- nombre multiplicaría el coste sin aportar nada.
+    stored_object_id UUID REFERENCES stored_object(id),
+    display_name     VARCHAR(200) NOT NULL,
+    annotations      JSONB,
+    notes            TEXT,
+    is_current       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by       UUID NOT NULL REFERENCES app_user(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (photo_id, version_number),
+    CONSTRAINT photo_version_numero_valido CHECK (version_number >= 1),
+    -- La v1 es siempre ORIGINAL y siempre lleva binario.
+    CONSTRAINT photo_version_primera_es_original
+        CHECK ((version_number = 1) = (version_type = 'ORIGINAL')),
+    CONSTRAINT photo_version_original_con_binario
+        CHECK (version_type <> 'ORIGINAL' OR stored_object_id IS NOT NULL),
+    CONSTRAINT photo_version_renombrada_sin_binario
+        CHECK (version_type <> 'RENOMBRADA' OR stored_object_id IS NULL),
+    CONSTRAINT photo_version_anotada_con_capa
+        CHECK (version_type <> 'ANOTADA' OR annotations IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX photo_version_vigente_uniq
+    ON photo_version (photo_id) WHERE is_current;
+
+-- [REQ] §15.2 · «La v1 es siempre ORIGINAL y no se puede borrar ni modificar.»
+-- Restaurar una versión anterior crea una versión nueva; no reescribe la
+-- historia. Se permite el único cambio que no reescribe nada: dejar de ser la
+-- vigente cuando aparece una versión posterior.
+CREATE OR REPLACE FUNCTION proteger_version_original() RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.version_type = 'ORIGINAL' THEN
+            RAISE EXCEPTION 'La versión original no se borra (foto %)', OLD.photo_id
+                USING ERRCODE = 'raise_exception';
+        END IF;
+        RETURN OLD;
+    END IF;
+    IF OLD.version_type = 'ORIGINAL' THEN
+        IF NEW.version_type     IS DISTINCT FROM OLD.version_type
+           OR NEW.stored_object_id IS DISTINCT FROM OLD.stored_object_id
+           OR NEW.display_name  IS DISTINCT FROM OLD.display_name
+           OR NEW.version_number IS DISTINCT FROM OLD.version_number THEN
+            RAISE EXCEPTION 'La versión original no se modifica (foto %)', OLD.photo_id
+                USING ERRCODE = 'raise_exception';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER photo_version_original_protegida
+    BEFORE UPDATE OR DELETE ON photo_version
+    FOR EACH ROW EXECUTE FUNCTION proteger_version_original();
+
+-- ── Derivados ───────────────────────────────────────────────────────────────
+-- Desechables y regenerables: si se pierden, se vuelven a construir desde el
+-- original. Por eso su `stored_object` va con `is_original = FALSE` y sí se
+-- puede borrar.
+CREATE TABLE photo_derivative (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    photo_id         UUID NOT NULL REFERENCES photo(id) ON DELETE CASCADE,
+    kind             photo_derivative_kind NOT NULL,
+    stored_object_id UUID NOT NULL REFERENCES stored_object(id),
+    width_px         INT,
+    height_px        INT,
+    byte_size        BIGINT NOT NULL,
+    -- [REQ] §15.6 · Los derivados que se insertan en el PPTX no arrastran EXIF.
+    has_metadata     BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (photo_id, kind)
+);
+
+-- ── Asociaciones múltiples ──────────────────────────────────────────────────
+-- [LIM] Polimórfica: no lleva FK real. La integridad se verifica en la
+-- aplicación. Compromiso aceptado a cambio de asociar una foto a diez tipos de
+-- entidad sin diez columnas anulables.
+CREATE TABLE photo_link (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    photo_id         UUID NOT NULL REFERENCES photo(id) ON DELETE CASCADE,
+    entity_type      photo_link_entity NOT NULL,
+    entity_id        UUID NOT NULL,
+    role             photo_role NOT NULL DEFAULT 'EVIDENCIA',
+    sort_order       INT NOT NULL DEFAULT 0,
+    created_by       UUID NOT NULL REFERENCES app_user(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (photo_id, entity_type, entity_id)
+);
+
+CREATE INDEX photo_link_entidad_idx ON photo_link (entity_type, entity_id, sort_order);
+
+-- =============================================================================
 --  Barreras 1 y 2 · Row Level Security
 --
 --  El usuario de aplicación NO es propietario de estas tablas y NO tiene
@@ -714,7 +987,8 @@ BEGIN
         'price_source', 'price_reference', 'finding', 'capex_item',
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
-        'qa_round', 'phase_event'
+        'qa_round', 'phase_event',
+        'photo', 'photo_version', 'photo_derivative', 'photo_link'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

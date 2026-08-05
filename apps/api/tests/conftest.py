@@ -23,6 +23,7 @@ from tdd.catalogs.seeding import sembrar_catalogos
 from tdd.core.config import Settings, get_settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
 from tdd.core.security import crear_token
+from tdd.evidence.storage import AlmacenEnMemoria
 from tdd.main import crear_app
 from tdd.phases.seeding import sembrar_fases
 
@@ -192,6 +193,8 @@ def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestC
     app.router.lifespan_context = _sin_ciclo_de_vida
     app.state.engine = motor_app
     app.state.session_factory = fabrica
+    # El almacén de objetos se inyecta: la suite no escribe binarios en disco.
+    app.state.object_store = AlmacenEnMemoria()
     app.dependency_overrides[get_settings] = lambda: Settings(
         app_env="test", app_secret_key=SECRETO_PRUEBAS
     )

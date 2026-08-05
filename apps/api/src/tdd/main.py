@@ -13,6 +13,8 @@ from tdd.capex.router import router as capex_router
 from tdd.catalogs.router import router as catalogs_router
 from tdd.core.config import get_settings
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
+from tdd.evidence.router import router as evidence_router
+from tdd.evidence.storage import AlmacenEnDisco
 from tdd.phases.router import router as phases_router
 from tdd.projects.router import router as projects_router
 from tdd.suggestions.router import router as suggestions_router
@@ -30,6 +32,9 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.engine = engine
     app.state.session_factory = crear_fabrica_de_sesiones(engine)
+    # [LIM] Almacén sobre disco: el adaptador S3 con Object Lock (barrera 4 de
+    # las fotografías) no está implementado ni probado. Ver evidence/storage.py.
+    app.state.object_store = AlmacenEnDisco(settings.storage_local_dir)
     try:
         yield
     finally:
@@ -72,6 +77,7 @@ def crear_app() -> FastAPI:
     app.include_router(projects_router, prefix=api)
     app.include_router(phases_router, prefix=api)
     app.include_router(capex_router, prefix=api)
+    app.include_router(evidence_router, prefix=api)
     app.include_router(suggestions_router, prefix=api)
     return app
 
