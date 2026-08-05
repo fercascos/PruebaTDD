@@ -242,7 +242,40 @@ sequenceDiagram
 | `POST` | `/capex/preview-calculation` | **Sin persistir**: entradas → desglose paso a paso. Alimenta el panel «cómo se calcula» `[REC]` |
 | `GET` | `/projects/{id}/capex/summary?group_by=` | `asset` · `capex_code` · `zone` · `risk` · `concept` · **`horizon`** · `year` · `priority` · `tenant_recoverable` `[REQ]`. Con `horizon` devuelve las cinco categorías, cada línea en una sola |
 | `GET` | `/projects/{id}/capex/scenarios` | Totales bajo / probable / alto |
-| `POST` | `/projects/{id}/capex/exports` | `{format:"xlsx"\|"csv", group_by, include_traceability}` → `202` `[REQ]` |
+| `POST` | `/projects/{id}/capex/exports` | Exportación del CAPEX. Detalle abajo → `202` `[REQ]` P-31 |
+| `GET` | `/capex/exports/{id}` | Estado del trabajo y, al terminar, URL firmada de descarga con caducidad |
+
+### Exportación del CAPEX a XLSX `[REQ]` P-31
+
+El cliente ha pedido este endpoint con un uso concreto —**adjuntar el fichero en envíos fuera de la
+plataforma**—, de modo que la hoja `CAPEX` reproduce el layout de la tabla del informe
+([`11`](./11-capex-precios.md) §16.8bis) y no un volcado plano.
+
+```json
+POST /api/v1/projects/{id}/capex/exports
+{
+  "format": "xlsx",                    // xlsx | csv
+  "scope": "PROJECT",                  // PROJECT | FILTERED | REPORT_VERSION
+  "report_version_id": null,           // obligatorio si scope = REPORT_VERSION
+  "filters": null,                     // los mismos que /capex-items, si scope = FILTERED
+  "sheets": ["CAPEX", "RESUMEN", "CAPEX_DETALLE",
+             "TRAZABILIDAD", "AGREGADOS", "CATALOGOS"],
+  "include_other_horizon": true,       // la quinta columna [PDV] P-37
+  "include_taxes": true,
+  "locale": "es-ES",                   // rige encabezados, catálogos y formato de número
+  "filename_template": "[Proyecto]_CAPEX_[Fecha]_v[N].xlsx"
+}
+→ 202 { "export_id": "…", "status": "QUEUED" }
+```
+
+| Regla | Comportamiento |
+|---|---|
+| `scope = REPORT_VERSION` | Los datos salen del **`data_snapshot` congelado**, no de las tablas vivas: el XLSX cuadra con el PPTX emitido `[REC]` |
+| `scope = FILTERED` sin `filters` | `422`. No se exporta «lo visible» a ciegas |
+| Líneas con `price_status <> VALIDADO` | **Se exportan, marcadas** en una columna propia. Ocultarlas falsearía el total |
+| Auditoría | Toda respuesta `202` genera `EXPORT_CREATED` con actor, alcance, nº de líneas e importe total `[REC]` |
+| Descarga | URL firmada con caducidad corta; la descarga en sí también se audita |
+| Asíncrono | Cola `io`. Es un trabajo de segundos, pero con seis hojas y agregados no se resuelve dentro de la petición `[LIM]` |
 
 **Cuerpo de creación de una línea** — refleja la fila que rellena el consultor:
 

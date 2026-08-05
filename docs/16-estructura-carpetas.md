@@ -204,10 +204,20 @@ apps/api/
 │   │   │   ├── tokens.py · directives.py · mapping.py
 │   │   │   ├── renderer.py         ⚠ Generación
 │   │   │   ├── repeat.py · tables.py · images.py
+│   │   │   ├── capex_layout.py     ⚠ PURO: CapexTableLayout, compartido
+│   │   │   │                          con exports/. Columnas, cabecera de dos
+│   │   │   │                          niveles, formato y subtotales, una vez
 │   │   │   ├── overflow.py         Estimación con fontTools
+│   │   │   ├── fonts.py            Carga de familias, métricas y aviso si falta
 │   │   │   ├── preview.py          LibreOffice headless
 │   │   │   ├── snapshot.py         Congelación de datos y catálogos + hash
 │   │   │   ├── versioning.py · warnings.py
+│   │   │
+│   │   ├── exports/                Exportación a XLSX y CSV
+│   │   │   ├── router.py · service.py · tasks.py
+│   │   │   ├── capex_xlsx.py       Hoja «CAPEX» desde CapexTableLayout
+│   │   │   ├── sheets.py           Resumen, detalle, trazabilidad, agregados
+│   │   │   └── filenames.py        ⚠ PURO: plantilla de nombre de fichero
 │   │   │
 │   │   ├── collaboration/
 │   │   └── audit/
@@ -398,6 +408,16 @@ LIBREOFFICE_BIN=/usr/bin/soffice
 PPTX_MAX_UNCOMPRESSED_MB=200
 PPTX_RENDER_TIMEOUT_SECONDS=180
 
+# ── Fuentes corporativas ────────────────────────────────────
+# Gotham es una tipografía COMERCIAL y LICENCIADA. Los ficheros .otf NO están
+# en el repositorio: se descargan al arrancar el worker desde un artefacto
+# privado y se instalan con fc-cache. Ver docs/operacion/instalar-fuentes.md
+CORPORATE_FONTS_BUCKET= · CORPORATE_FONTS_PREFIX=fonts/
+CORPORATE_FONTS_INSTALL_DIR=/usr/share/fonts/opentype/corporate
+# Familias exigidas. El arranque FALLA si fc-list no las encuentra todas.
+CORPORATE_FONTS_REQUIRED=Gotham Light,Gotham Book,Gotham Medium,Gotham Bold,Gotham Black,Gotham Ultra,Century Gothic
+FONT_FALLBACK_WARN=true            # si falta una familia, el aviso lo declara
+
 # ── Límites de archivo ──────────────────────────────────────
 MAX_UPLOAD_MB=50 · MAX_BATCH_UPLOAD_MB=500
 
@@ -419,6 +439,35 @@ OTEL_EXPORTER_OTLP_ENDPOINT= · SENTRY_DSN=
 DEFAULT_RETENTION_MONTHS=84 · TRASH_PURGE_DAYS=30 · EXPORT_EXPIRY_DAYS=7
 ```
 
+### `.gitignore` — el fragmento que importa `[REC]`
+
+```gitignore
+# ── Fuentes corporativas ────────────────────────────────────
+# Gotham es comercial y licenciada. Versionarla sería redistribuirla y
+# exponerla a cualquiera con acceso al repositorio. Se provisionan en el
+# contenedor desde un artefacto privado. Ver docs/operacion/instalar-fuentes.md
+assets/fonts/**/*.otf
+assets/fonts/**/*.ttf
+assets/fonts/**/*.woff*
+!assets/fonts/README.md          # explica de dónde salen y quién tiene la licencia
+
+# ── Material real de cliente ────────────────────────────────
+# Las plantillas y fotografías reales no entran en el repositorio: llevan
+# datos de activos identificables. El corpus de pruebas usa las sintéticas.
+tests/fixtures/real/
+```
+
+`[REC]` La regla de las fuentes está respaldada por una prueba de CI que falla si aparece cualquier
+tipográfica versionada ([`14`](./14-pruebas.md) §19.7). Un `.gitignore` se salta con `git add -f`; la
+prueba, no.
+
+### `docs/operacion/instalar-fuentes.md` `[REC]`
+
+Documento operativo, no de diseño. Recoge: la referencia de licencia y quién la custodia, el bucket y
+prefijo del artefacto privado, el comando de instalación, la verificación con `fc-list`, y **la lista
+de familias exigidas**. Existe porque una plantilla que se renderiza con la fuente equivocada no da
+error: da un resultado ligeramente distinto que nadie detecta hasta que lo ve un cliente.
+
 ### `Makefile`
 
 ```makefile
@@ -436,7 +485,9 @@ test:           ## Suite completa
 test-unit:      ## Unitarias (~35 s)
 test-catalogs:  ## Las 86 combinaciones zona × tipología
 test-perms:     ## Matriz de permisos y aislamiento RLS
-test-pptx:      ## Corpus T1-T20
+test-pptx:      ## Corpus T1-T20 y las cuatro plantillas reales T21-T24
+fonts-install:  ## Descarga e instala las fuentes corporativas + fc-cache
+fonts-check:    ## Verifica que fc-list encuentra TODAS las familias exigidas
 lint:           ## ruff · mypy · eslint · tsc · import-linter
 security:       ## bandit · semgrep · pip-audit · npm audit · secretos
 api-client:     ## Regenera el cliente TypeScript desde OpenAPI

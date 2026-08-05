@@ -226,7 +226,7 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 │ │ + IVA            386.925 €     │ │ Sí      412.300 €  (22 %)           │ │
 │ │ = 2.229.425 €                  │ │ No    1.298.700 €  (71 %)           │ │
 │ │ ⚠ 12 sin validar 248.000 €     │ │ N.A.    131.500 €  ( 7 %)           │ │
-│ │            [ Ver CAPEX → ]     │ └─────────────────────────────────────┘ │
+│ │ [ Ver CAPEX → ] [ ⬇ XLSX ]     │ └─────────────────────────────────────┘ │
 │ └────────────────────────────────┘                                          │
 │                                                                              │
 │ ┌── ACTIVOS ─────────────────────────────────────────────────────────────┐  │
@@ -605,7 +605,7 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ ‹ 2026-014 │ CAPEX (63 líneas)      [ + Línea ] [ ⬇ XLSX ] [ ⬇ CSV ]        │
+│ ‹ 2026-014 │ CAPEX (63 líneas)   [ + Línea ] [ ⬇ EXPORTAR A XLSX ] [ ⋯ ]   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ Agrupar por: ◉Capítulo ○Activo ○Zona ○Riesgo ○Concepto ○Horizonte ○Recuper. │
 │ Activo: Todos ▾ │ Capítulo: Todos ▾ │ ☑ Mostrar IVA  ☐ Solo sin validar     │
@@ -704,6 +704,55 @@ el inversor: *«¿cuánto de lo grave hay que pagar en los dos primeros años?»
 ocultes las fórmulas»*. Cada porcentaje es un campo editable **dentro de la propia fórmula**, y cada
 peldaño muestra la operación con sus operandos. El **total por horizonte lleva candado**: es siempre
 la suma, nunca un número tecleado.
+
+### Exportar el CAPEX a XLSX `[REQ]` P-31
+
+El cliente ha pedido el botón con un uso concreto: **adjuntar el fichero en los envíos que el equipo
+haga fuera de la plataforma**. Eso lo convierte en una acción de primer nivel, no en una opción de menú,
+y por eso ocupa sitio propio en la barra mientras `CSV` se repliega al menú `⋯`.
+
+```
+┌─────────────────────── Exportar CAPEX a XLSX ────────────────────────┐
+│                                                                       │
+│  ¿Qué se exporta?                                                     │
+│   ◉ Todo el CAPEX del proyecto            63 líneas · 1.842.500 €    │
+│   ○ Solo lo que estoy viendo              41 líneas · 1.204.300 €    │
+│     ⓘ tiene filtros aplicados: Activo «Nave A», Capítulo «HVAC»      │
+│   ○ La versión 2 del informe (emitida 28/07/2026)                    │
+│     ⓘ cuadra con el PPTX que se envió, aunque el CAPEX haya cambiado │
+│                                                                       │
+│  Hojas incluidas                                                      │
+│   ☑ CAPEX  ⓘ con el mismo formato que la tabla del informe           │
+│   ☑ Resumen   ☑ CAPEX detalle   ☑ Trazabilidad   ☑ Catálogos         │
+│   ☑ Agregados por capítulo, zona, riesgo y horizonte  ☐ Hallazgos    │
+│                                                                       │
+│  ☑ Incluir la columna «Otro tipo de petición»                        │
+│  ☑ Incluir impuestos    Idioma del fichero: Español ▾                │
+│                                                                       │
+│  ⚠ 12 líneas tienen el precio sin validar. Se exportan marcadas.      │
+│  ⓘ La exportación queda registrada en la auditoría del proyecto.      │
+│                                                                       │
+│  2026-014_CAPEX_2026-08-05_v2.xlsx                                    │
+│                          [ Cancelar ]  [ Exportar ]                   │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+Cuatro decisiones de esta pantalla, y el motivo de cada una:
+
+| Decisión | Motivo |
+|---|---|
+| El diálogo **dice cuántas líneas y cuánto importe** salen en cada opción | Exportar «lo que estoy viendo» con un filtro olvidado y mandárselo al cliente es el error caro. La cifra lo hace evidente antes de pulsar |
+| Se puede exportar **una versión emitida**, no solo los datos vivos | Evita la incidencia clásica: «el Excel no cuadra con el PowerPoint que me mandaste» |
+| Las líneas sin validar **se exportan, pero marcadas** | Ocultarlas falsearía el total. Bloquear la exportación impediría el trabajo en curso |
+| El aviso de auditoría es **visible, no letra pequeña** | El usuario debe saber que ese fichero sale de la plataforma y queda registrado |
+
+`[REC]` El mismo botón aparece en el **bloque de CAPEX de la ficha de proyecto** (pantalla 5) para quien
+solo necesita el fichero y no va a editar nada, y en el **historial de versiones** (pantalla 18), junto a
+la descarga del PPTX de cada versión emitida.
+
+`[LIM]` La exportación es **asíncrona** (`POST /projects/{id}/capex/exports` → `202`): con las hojas de
+agregados y trazabilidad, un proyecto grande tarda unos segundos. La interfaz muestra el progreso y
+avisa al terminar; no bloquea la pantalla.
 
 ---
 
@@ -917,7 +966,8 @@ sin ella sugiere que se ha buscado en todas partes.
 │ │ Datos sha256 c19e77… · 3 activos · 47 hallazgos · 63 líneas            │  │
 │ │ CAPEX 2.229 k€ · Presentado al cliente el 31/07                        │  │
 │ │ 🔒 Bloqueada: cualquier cambio posterior crea una versión nueva.        │  │
-│ │ [ ⬇ Descargar ] [ Comparar con v1 ] [ Ver auditoría ]                  │  │
+│ │ [ ⬇ PPTX ] [ ⬇ CAPEX en XLSX ] [ Comparar con v1 ] [ Ver auditoría ]   │  │
+│ │ ⓘ El XLSX sale del snapshot congelado: cuadra con este PPTX.           │  │
 │ └────────────────────────────────────────────────────────────────────────┘  │
 │ ┌── v1 · SUSTITUIDA ─────────────────────────────────────────────────────┐  │
 │ │ Emitida 22/07/2026 · PPTX 91bd03… · Datos a7f012… · CAPEX 2.104 k€     │  │

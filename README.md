@@ -12,7 +12,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 ---
 
-## Las cinco decisiones que sostienen el diseño
+## Las seis decisiones que sostienen el diseño
 
 | # | Decisión | Por qué importa |
 |---|---|---|
@@ -21,6 +21,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 | 3 | **Los catálogos son datos, no código** | 6 tipologías, 20 zonas dependientes de ellas, 121 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra, cinco horizontes. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
 | 4 | **El original nunca se toca** | Fotografías, documentos y plantillas son objetos inmutables, garantizado por cuatro barreras independientes: API, dominio, base de datos y almacenamiento WORM |
 | 5 | **El precio es un dato con procedencia** | Fuente, URL, fecha de consulta, ámbito, alcance incluido y excluido, tratamiento fiscal, y el usuario que lo validó. Ningún proceso automático valida un precio |
+| 6 | **La tabla de CAPEX se diseña una sola vez** | La tabla nativa del informe y la hoja `CAPEX` del Excel exportado salen de la **misma estructura intermedia**. Añadir una columna en un solo sitio hace fallar la suite. Sin esa pieza, en seis meses el PPTX y el Excel que viajan en el mismo correo tendrían columnas distintas |
 
 ## Arquitectura en una frase
 
@@ -82,24 +83,31 @@ Seis cuestiones que estaban abiertas y que estructuran el modelo de datos:
 | **P-05b** | El importe tecleado **lo incluye todo** | Es la base imponible final: lleva dentro indirectos, honorarios y contingencia. La aplicación **nunca** aplica la cascada por encima. Del perfil de costes, solo el impuesto afecta a todas las líneas; el resto de porcentajes son la preconfiguración de la calculadora de medición |
 
 | **P-07** | Facilitadas las **4 plantillas reales** de Full Report | Analizadas en [`docs/18`](docs/18-analisis-plantillas-reales.md). Son **una sola estructura** × 2 portadas × 2 idiomas: 67 diapositivas, 4:3, 14 sistemas, 56 marcos de foto. **Corrige cinco decisiones del bloque 4** |
+| **P-31** | La tabla de CAPEX pasa a ser **nativa, respetando el formato del Excel**, y la aplicación incorpora un **botón de exportar el CAPEX a XLSX** | Hoy son imágenes EMF pegadas desde Excel. Su estructura se ha **recuperado de los propios metarchivos** y está especificada en [`docs/11`](docs/11-capex-precios.md) §16.8bis. El generador de PPTX y el exportador de XLSX **comparten una misma pieza** para que no puedan divergir. El XLSX existe para adjuntarlo en los envíos que el equipo haga fuera de la plataforma, y por eso **queda auditado** |
 
 Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos** y el riesgo del bloque 4
 pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 
 ---
 
-## Las cuatro decisiones que faltan para avanzar
+## Lo que falta para avanzar
 
-1. **`P-31` · ¿Se aprueba que la tabla de CAPEX deje de ser una imagen pegada desde Excel y pase a ser
-   una tabla nativa?** El análisis reveló que hoy las 6 diapositivas de CAPEX son imágenes EMF. La
-   tabla nativa es editable, seleccionable y divisible, pero **cambia el aspecto**.
-2. **`P-32` · ¿Se pueden facilitar las fuentes Gotham?** Sin ellas instaladas en el servidor, ni el
-   aviso de desbordamiento ni la previsualización son fiables — y el desbordamiento es el riesgo
-   principal en un informe de 67 diapositivas donde las formas crecen con el texto.
-3. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
+**Un fichero concreto** — y no es una decisión, es un envío:
+
+> 🟡 **Falta `Gotham Ultra`.** De las cinco fuentes recibidas (Light, Book, Medium, Bold, Black), la que
+> la plantilla usa para **todos los titulares** no está. Es la mitad del uso de Gotham en el informe:
+> 86-94 apariciones por plantilla, frente a 86-130 de Gotham Light. Mientras no llegue, los titulares se
+> medirán y se renderizarán con una sustituta. **No se sustituye en silencio**: Gotham Black es la más
+> próxima en peso pero no es métricamente equivalente, y el aviso de desbordamiento lo declarará.
+
+**Y tres decisiones:**
+
+1. **`P-06` · ¿Hay licencia vigente de Precio Centro, y qué permiten sus condiciones?** Es la
    diferencia entre un CAPEX con precios reales y un formulario. **No es una decisión técnica.**
-4. **`P-16` · ¿Cuál es la cascada de costes real?** Debe coincidir con los Excel que la consultora ya
+2. **`P-16` · ¿Cuál es la cascada de costes real?** Debe coincidir con los Excel que la consultora ya
    usa. Tras P-05b su alcance está acotado a la calculadora de medición.
+3. **`P-37` · ¿Sale «Otro tipo de petición» como quinta columna del informe?** La tabla real del Excel
+   solo tiene cuatro plazos. Se propone ocultarla por defecto en el PPTX y mantenerla siempre en el XLSX.
 
 Las demás preguntas, ordenadas por impacto, están en
 [`docs/01`](docs/01-resumen-supuestos-preguntas.md) §3.
@@ -119,7 +127,16 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   en [`docs/18`](docs/18-analisis-plantillas-reales.md) procede del fichero, que es exacto y
   verificable; la validación visual es parte de la prueba de concepto.
 - `[LIM]` La detección de textos que desbordan es una **estimación** por métricas de fuente, con margen
-  de ±10-15 %. El aviso lo dice explícitamente al usuario.
+  de ±10-15 %. El aviso lo dice explícitamente al usuario. Medida ya con `Gotham Light` real, la
+  desviación de la heurística resultó del **2,8 %**; para los titulares en `Gotham Ultra` seguirá siendo
+  una estimación con sustituta **mientras no llegue el fichero**, y el aviso lo declarará.
+- `[LIM]` **La fidelidad de la tabla nativa de CAPEX no está verificada.** Su estructura —columnas,
+  cabecera de dos niveles, formato— se recuperó de los metarchivos EMF de las plantillas, que son
+  exactos, pero los anchos son una reconstrucción y no se ha visto ningún render. La comparación lado a
+  lado con la imagen original es criterio de salida de la prueba de concepto.
+- `[LIM]` **Las fuentes corporativas no están en el repositorio y no deben estarlo.** Gotham es
+  comercial y licenciada; versionarla sería redistribuirla. Se provisionan en el contenedor desde un
+  artefacto privado, con verificación en el arranque.
 - `[LIM]` **Precio Centro no está integrado, y no se afirma que vaya a funcionar.** No se realiza
   extracción automatizada del sitio: es una base de precios comercial protegida y su uso requiere
   licencia y revisión de condiciones. La vía preferente es la **importación del catálogo exportado**,

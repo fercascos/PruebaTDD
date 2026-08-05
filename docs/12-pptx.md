@@ -395,6 +395,36 @@ Reglas `[REC]`:
 - Los totales generales solo en la última; los subtotales de capítulo, al cerrar cada grupo.
 - El «(n de N)» se inserta en el título si existe el marcador; si no, se avisa.
 
+### La tabla de CAPEX es nativa, y su diseño es único `[REQ]` P-31
+
+> **Decisión del cliente:** las diapositivas de CAPEX dejan de ser una **imagen EMF pegada desde Excel**
+> —que es lo que son hoy en las cuatro plantillas reales— y pasan a ser **tabla nativa de PowerPoint
+> respetando el formato del Excel**.
+
+La estructura exacta —columnas, cabecera de dos niveles, anchos, formato de importe, celdas en blanco—
+está especificada **una sola vez**, en [`11`](./11-capex-precios.md) §16.8bis, y **no se duplica aquí**.
+
+Lo relevante para este bloque es que el generador de PPTX y el exportador a XLSX **consumen la misma
+estructura intermedia**:
+
+```
+CapexQuery
+    ↓
+CapexTableLayout          ← columnas, orden, cabecera de dos niveles,
+    ↓         ↓              formato de importe, agrupación, subtotales
+PptxTable   XlsxSheet
+ nativa      hoja «CAPEX»
+```
+
+`[REC]` Esa pieza compartida es lo que impide la divergencia silenciosa. Sin ella, en seis meses la
+tabla del informe y el Excel que se adjunta en el mismo correo tendrían columnas distintas, y nadie se
+daría cuenta hasta que lo notase un cliente.
+
+**Lo que la tabla nativa gana** frente a la imagen: es seleccionable y buscable, se parte sola entre
+diapositivas, se regenera cuando cambia una cifra sin volver a Excel, y los importes salen del mismo
+`data_snapshot` que el resto del informe. **Lo que arriesga:** el aspecto no será idéntico al píxel.
+Comparar la tabla generada con la imagen EMF original es un criterio de salida de la prueba de concepto.
+
 ---
 
 ## 17.6. Versionado, inmutabilidad y snapshot

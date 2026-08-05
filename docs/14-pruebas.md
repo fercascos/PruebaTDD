@@ -249,6 +249,37 @@ del volumen que se había supuesto, y es el dato que valida o corrige el objetiv
 | **Determinismo** | Generar dos veces desde el mismo snapshot produce el **mismo SHA-256** (fijando fecha y semillas). Es lo que permite confiar en la reproducibilidad `[REC]` |
 | **Snapshot de catálogos** | Retirar un código después de emitir un informe **no altera** su contenido `[REC]` |
 
+### Tabla nativa de CAPEX y su gemela en XLSX `[REQ]` P-31
+
+La decisión de sustituir la imagen EMF por una tabla nativa introduce un riesgo nuevo —que el aspecto se
+aleje del original— y una obligación —que la tabla del informe y la hoja `CAPEX` del Excel **no
+diverjan**. Ambas cosas se prueban explícitamente:
+
+| Caso | Verificación |
+|---|---|
+| **Estructura de la cabecera** | Dos niveles, con `ESTIMATED CAPEX` **combinado** sobre las columnas de plazo. Se comprueba sobre el XML de la tabla, no sobre el render |
+| **Columnas y orden** | Zona · Concepto · Descripción · plazos · Comentarios, exactamente en ese orden y con los encabezados del `output_locale` |
+| **Celda sin importe** | Queda **en blanco**. Una prueba busca el literal `0,00 €` en columnas de plazo y falla si aparece `[REC]` |
+| **Formato de importe** | `#.##0,00 €` en `es-ES` y el equivalente en `en-GB`, verificado carácter a carácter sobre el texto de la celda |
+| **Columna «Otro»** | Con `include_other_horizon` a falso, la tabla del PPTX tiene 8 columnas; el XLSX **siempre** tiene 9 `[PDV]` P-37 |
+| **Una sola casilla por fila** | Se recorre cada fila y se afirma que exactamente una columna de plazo lleva valor. Es P-05 comprobado en la salida |
+| **Suma cuadrada** | La suma de las columnas de plazo de la tabla coincide con el total del `data_snapshot`, al céntimo |
+| **PPTX y XLSX no divergen** | Prueba de contrato sobre `CapexTableLayout`: se genera el mismo proyecto en los dos formatos y se comparan encabezados, número de columnas, orden y valores celda a celda. **Falla si alguien añade una columna en un solo generador** `[REC]` |
+| **XLSX de una versión emitida** | Exportar `scope=REPORT_VERSION` después de modificar el CAPEX vivo produce las cifras **del snapshot**, no las actuales `[REC]` |
+| **Líneas sin validar** | Aparecen en el XLSX, marcadas, y suman en el total. La prueba verifica que no se filtran silenciosamente |
+| **Auditoría de la exportación** | Cada `202` deja un `EXPORT_CREATED` con actor, alcance, nº de líneas e importe |
+| **Comparación con el original** | `[PDV]` La tabla generada se renderiza y se compara con la **imagen EMF de la plantilla real**. Es criterio de salida de la prueba de concepto, no una prueba automatizable desde el día uno |
+
+### Fuentes corporativas
+
+| Caso | Verificación |
+|---|---|
+| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra todas las familias declaradas en la configuración. **Falla el arranque del worker si falta alguna** `[REC]` |
+| **Gotham Ultra ausente** | Mientras no se reciba el fichero, la prueba está marcada como *expected failure* documentada, no desactivada. Que quede en verde silenciando el problema sería lo peor de los dos mundos `[LIM]` |
+| **Sustitución declarada** | Si una familia falta, la estimación de desbordamiento **lo dice en el aviso** en vez de medir en silencio con una sustituta. Se prueba el texto del aviso |
+| **Métricas** | Con `Gotham Light` instalada, el ancho medio de carácter medido es 0,4971 em ± 0,001. Detecta que se haya colado una fuente distinta con el mismo nombre |
+| **No están en el repositorio** | Prueba de CI que falla si aparece cualquier `.otf` o `.ttf` versionado bajo `assets/fonts/` `[REC]` |
+
 ---
 
 ## 19.8. Pruebas de trazabilidad de precios

@@ -385,24 +385,174 @@ concreta, y se responde con dos diapositivas, no con un prototipo entero.
 
 ---
 
+## 18.7bis. Segunda vuelta: fuentes Gotham y estructura real de la tabla
+
+El cliente ha facilitado las fuentes y ha resuelto P-31. Esto permite **sustituir estimaciones por
+mediciones** y recuperar la estructura de la tabla de CAPEX desde los propios EMF.
+
+### Fuentes: 4 de 5 recibidas, **falta Gotham Ultra**
+
+| Fichero recibido | Familia | Estado |
+|---|---|:--:|
+| `GOTHAMLIGHT.OTF` | Gotham Light | ✅ **La usa la plantilla** |
+| `GOTHAMBOOK.OTF` | Gotham Book | ✅ recibida (no usada en las plantillas) |
+| `GOTHAMMEDIUM.OTF` | Gotham Medium | ✅ recibida (no usada) |
+| `GOTHAMBOLD.OTF` | Gotham Bold | ✅ recibida (no usada) |
+| `GOTHAMBLACK.OTF` | Gotham Black | ✅ recibida (no usada) |
+| — | **Gotham Ultra** | ❌ **NO recibida, y la plantilla la usa** |
+
+Las cinco son OTF válidas, 1000 upm, 770 glifos. Pero el recuento de uso en las plantillas es:
+
+| Plantilla | Gotham Light | **Gotham Ultra** |
+|---|:--:|:--:|
+| A_ES | 86 | **86** |
+| A_EN | 94 | **94** |
+| B_ES | 128 | **89** |
+| B_EN | 130 | **91** |
+
+`[PDV]` **P-32 queda parcialmente resuelta.** Gotham Ultra representa **la mitad del uso de Gotham** en
+las plantillas —es la de titulares— y no está entre las recibidas. Sin ella, los titulares se medirán y
+se renderizarán con una sustituta. **Hace falta el fichero de Gotham Ultra.** Gotham Black es la más
+próxima en peso, pero **no es métricamente equivalente** y usarla como sustituta silenciosa sería
+introducir un error sin declararlo.
+
+### Medición real del texto, ya sin heurística
+
+Con `Gotham Light` cargada en `fontTools`: **ancho medio de carácter = 0,4971 em**, **interlineado
+natural = 1,20 em**. Capacidad real de los marcos principales a 10 pt:
+
+| Marco | Geometría | **Capacidad real** | Estimación previa | Error |
+|---|---|:--:|:--:|:--:|
+| Diapositiva de sistema | 8,79 × 5,90 in | **4.405 car.** (124 × 35) | 4.284 | +2,8 % |
+| Resumen ejecutivo | 8,61 × 5,90 in | **4.312 car.** (122 × 35) | 4.216 | +2,3 % |
+| Definición de riesgo | 7,70 × 5,20 in | **3.389 car.** (109 × 31) | — | — |
+
+`[REC]` **La heurística de estimación queda validada**: se desviaba menos del 3 % de la medición con la
+fuente real. Eso da confianza en el aviso de desbordamiento **incluso para los titulares en Gotham
+Ultra**, donde habrá que seguir usando sustituta: el margen del 15 % previsto en L4 es más que
+suficiente para un error de ese orden.
+
+**Cifra para la interfaz:** el editor debe mostrar al consultor un contador de **4.400 caracteres**
+para la descripción y valoración conjuntas de una diapositiva de sistema, y avisar al 90 %.
+
+### Provisión de las fuentes: no van al repositorio `[REC]`
+
+Gotham es una tipografía **comercial y licenciada**. Incluir los `.otf` en el repositorio de código
+sería redistribuirla, lo que muy probablemente incumple su licencia y además las expone a cualquiera
+con acceso al repositorio.
+
+**Procedimiento propuesto:**
+
+| Dónde | Cómo |
+|---|---|
+| Repositorio | **No.** `.gitignore` incluye `*.otf` y `*.ttf` en `assets/fonts/` |
+| Almacenamiento | Artefacto privado (bucket de la organización, prefijo `fonts/`, cifrado) |
+| Contenedor del worker | Se descargan en el arranque y se instalan en `/usr/share/fonts/opentype/`, seguido de `fc-cache` |
+| Documentación | `docs/operacion/instalar-fuentes-corporativas.md`, con la referencia de licencia |
+| Verificación | Prueba de arranque que comprueba que `fc-list` encuentra las familias esperadas y **falla si falta alguna** |
+
+### Estructura real de la tabla de CAPEX, recuperada de los EMF
+
+Los metarchivos conservan los registros de texto, de modo que se ha podido **leer la cabecera y el
+contenido de la tabla original de Excel** sin tener el fichero:
+
+```
+ESTIMATE ASSESSMENT OF THE ACTIONS REQUIRED IN THE PROPERTY: ARCHITECTURE
+┌───────────────┬──────────┬──────────────┬──────────────────────────────────────────┬──────────┐
+│ Affected area │ Purpose  │ Description  │            ESTIMATED CAPEX               │ Comments │
+│               │          │              ├─────────┬─────────┬──────────┬─────────┤          │
+│               │          │              │Short term│Mid term│Long term │Improvem.│          │
+├───────────────┼──────────┼──────────────┼─────────┼─────────┼──────────┼─────────┼──────────┤
+│ General       │ …        │ Replacement  │12.000,00€│        │          │         │          │
+│               │          │ compressor…  │          │        │          │         │          │
+└───────────────┴──────────┴──────────────┴─────────┴─────────┴──────────┴─────────┴──────────┘
+```
+
+Y en la última diapositiva de la sección, un resumen:
+
+```
+TOTAL CONTRACT BUDGET                                              980.307,11 €
+Drafting of Projects and Technical Management (DF)               1.040.078,95 €
+```
+
+**Correspondencia con el modelo de datos** — es casi exacta, y valida las decisiones P-05 y P-05b:
+
+| Columna del Excel real | Campo del modelo | |
+|---|---|:--:|
+| Affected area | `zone_id` | ✅ |
+| Purpose | `capex_concept_id` | ✅ |
+| Description | `description` | ✅ |
+| Short term · Mid term · Long term · Improvements | pivote de `time_horizon_id` + `amount` | ✅ |
+| Comments | `comments` | ✅ |
+| Agrupación «: ARCHITECTURE» | `capex_code` nivel 1-2 | ✅ |
+
+**Tres observaciones que esto revela:**
+
+| # | Observación | Consecuencia |
+|---|---|---|
+| 1 | La tabla real tiene **4 columnas de horizonte**, no 5: no aparece «Otro» | `[PDV]` **P-37**: ¿se muestra «Otro» como quinta columna, o se omite del informe y solo existe en la aplicación? Propuesta: columna configurable en el mapeo, oculta por defecto |
+| 2 | La tabla **no lleva ni código ni riesgo**. El riesgo se explica aparte, en las diapositivas 56 y 58 | Confirma que el código es de trabajo interno y de agregación, no de presentación. El mapeo ya permite elegir columnas |
+| 3 | El resumen final añade **«Drafting of Projects and Technical Management»** como línea propia | `[REC]` Dato relevante para **P-16**: los honorarios técnicos aparecen como **partida separada al final**, no repartidos dentro de cada línea. Encaja con P-05b (el importe de línea ya lo incluye todo) y sugiere que los honorarios de proyecto y DF se tratan como una línea más |
+
+### Decisión P-31: tabla nativa respetando el formato del Excel
+
+> **P-31 · DECIDIDO.** Tabla **nativa** de PowerPoint, **respetando el formato del Excel**, y además un
+> **botón de exportar el CAPEX a XLSX** para que el equipo adjunte el fichero en los envíos que haga
+> fuera de la plataforma.
+
+**Qué implica «respetando el formato»:**
+
+| Elemento | Cómo se reproduce |
+|---|---|
+| Cabecera de dos niveles (`ESTIMATED CAPEX` sobre las 4 columnas de plazo) | Celdas combinadas en la primera fila de la tabla nativa |
+| Título de bloque (`…: ARCHITECTURE`) | Fila de título o marcador de la diapositiva, según el mapeo |
+| Anchos de columna | Se toman de la geometría medida en el EMF (9,06 in de ancho total) |
+| Tipografía y cuerpo | Century Gothic en la tabla original *(dato leído del EMF)*; se respeta salvo indicación contraria |
+| Formato de importe | `#.##0,00 €`, separador de miles con punto y decimal con coma, como en el original |
+| Celdas vacías | En blanco, no «0,00 €» — es como está hoy |
+| Partición | 18 filas por diapositiva, encabezado repetido, subtotales por capítulo |
+
+`[REC]` La reproducción se validará **en la prueba de concepto**, comparando la tabla generada con la
+imagen EMF original puesta al lado. Es una comparación que se puede hacer sin ambigüedad.
+
+**Exportación a XLSX** `[REQ]` — ya estaba en el diseño ([`11`](./11-capex-precios.md) §16.8) y ahora
+queda confirmada con un propósito concreto: **adjuntar el fichero en envíos fuera de la plataforma**.
+Consecuencias:
+
+1. El botón vive en el **editor de CAPEX** (pantalla 13) y en la **ficha de proyecto**, no escondido en
+   administración.
+2. La hoja `CAPEX` debe salir **con el mismo layout que la tabla del informe** —mismas columnas, mismo
+   orden, mismos encabezados de dos niveles— para que quien la reciba reconozca el documento.
+3. Se mantienen además las hojas `Trazabilidad` y `Catálogos`, que son las que hacen el fichero
+   defendible.
+4. `[REC]` **La exportación se audita** (`EXPORT_CREATED`): es un fichero con el CAPEX íntegro de un
+   cliente saliendo de la plataforma por un canal que la aplicación ya no controla.
+5. `[REC]` El nombre del fichero sigue una plantilla configurable, por coherencia con el renombrado de
+   fotografías: `[Proyecto]_CAPEX_[Fecha]_v[N].xlsx`.
+
+---
+
 ## 18.8. Preguntas nuevas que abre este análisis
 
 | # | Pregunta | Impacto | Propuesta |
 |---|---|---|---|
 | **P-30** | Tres capítulos del árbol (`H11` fontanería, `H13` seguridad/CCTV/BMS, `H15` otros) **no tienen sección en la plantilla**. ¿Se añaden secciones, se agrupan, o solo se generan si hay hallazgos? | Alto | Generarlas solo si hay hallazgos (`@if_empty: skip_slide`), sin tocar la plantilla |
-| **P-31** | ¿Se aprueba que la tabla de CAPEX pase de **imagen pegada de Excel** a **tabla nativa** generada por la aplicación? Cambia el aspecto | **Alto** | Sí, opción A de C-3 |
-| **P-32** | ¿Se pueden facilitar los **ficheros de las fuentes Gotham** (o su licencia) para instalarlas en el servidor? | **Alto** | Necesario para que el aviso de desbordamiento y la previsualización sean fiables |
+| ~~**P-31**~~ | ~~¿Se aprueba que la tabla de CAPEX pase de **imagen pegada de Excel** a **tabla nativa**?~~ | — | ✅ **CERRADA.** Tabla nativa respetando el formato del Excel **+ botón de exportar a XLSX**. Detalle en §18.7bis |
+| **P-32** | ¿Se pueden facilitar los **ficheros de las fuentes Gotham**? | **Alto** | 🟡 **PARCIAL.** Recibidas Light, Book, Medium, Bold y Black. **Falta Gotham Ultra**, que es la mitad del uso |
 | **P-33** | Los idiomas confirmados son **español e inglés**. ¿Habrá más? | Medio | Modelo de traducción por catálogo, `locale` abierto |
 | **P-34** | El informe agrupa **Cimentación y Estructura** en una diapositiva, y desglosa `H04` en tres. ¿Se mantiene esa agrupación o se normaliza al árbol? | Medio | Mantener la plantilla como está: la agrupación se resuelve en el mapeo |
 | **P-35** | Las diapositivas de **Mediciones AEO** (42-49) y **Disclaimer** (63-66) son contenido fijo. ¿Se marcan como intocables (`@keep`) o alguna parte se rellena? | Bajo | `@keep`, salvo indicación contraria |
-| **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, más allá de portada e índice? ¿Cuándo se usa cada uno? | Bajo | Se tratan como dos variantes de portada del mismo mapeo |
+| **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, más allá de portada e índice? ¿Cuándo se usa cada uno? | Medio | Se tratan como dos variantes de portada del mismo mapeo |
+| **P-37** | La tabla real del Excel tiene **cuatro columnas de plazo**, no cinco: no aparece «Otro tipo de petición». ¿Se muestra como quinta columna en el informe, o solo existe en la aplicación? | Medio | Columna configurable en el mapeo, **oculta por defecto** en el informe y siempre presente en el XLSX |
+| **P-38** | La tabla original está compuesta en **Century Gothic**, no en Gotham. ¿Se respeta esa tipografía en la tabla nativa o se unifica con el resto del informe? | Bajo | Respetar Century Gothic, que es lo que hay hoy |
 
 ---
 
 ## 18.9. Qué hacer a continuación
 
-1. **Responder P-31 y P-32**, que son las dos que condicionan el trabajo de F8-F9.
-2. **Instalar las fuentes Gotham** en el contenedor del worker (P-32) antes de la prueba de concepto.
+1. **Conseguir el fichero de Gotham Ultra** — es lo único que falta de P-32.
+2. **Provisionar las fuentes** en el contenedor del worker según §18.7bis (**no** en el repositorio:
+   son comerciales y licenciadas).
 3. **Prueba de concepto acotada** (semanas 2-3), con un objetivo único: clonar la diapositiva 13-14
    (Cimentación) para tres sistemas y comparar el resultado con el original en PowerPoint.
 4. **Preparar `A_ES` como plantilla piloto**: 35 marcadores y 28 directivas, ~1,5 jornadas.

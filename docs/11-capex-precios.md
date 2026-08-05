@@ -479,21 +479,106 @@ añadiría el problema de la invalidación.
 
 ## 16.8. Exportación
 
-`[REQ]` XLSX y CSV.
+`[REQ]` XLSX y CSV. Y, desde la decisión **P-31**, con un propósito explícito que cambia dónde vive el
+botón y qué aspecto tiene la hoja principal:
 
-**XLSX** (`openpyxl`), varias hojas:
+> **P-31 · DECIDIDO por el cliente.** La tabla de CAPEX del informe pasa a ser **tabla nativa de
+> PowerPoint respetando el formato del Excel**, y la aplicación incorpora un **botón de exportar el
+> CAPEX a XLSX** para que el equipo adjunte el fichero en los envíos que haga **fuera de la plataforma**.
+
+Esa última frase es la que manda sobre el diseño de la exportación: el destinatario del XLSX **no es la
+aplicación ni un analista interno, es un tercero** que recibe el fichero por correo junto al PPTX. Por
+eso la hoja `CAPEX` debe **parecerse a la tabla del informe**, no a un volcado de base de datos.
+
+### Dónde está el botón `[REQ]`
+
+| Lugar | Comportamiento |
+|---|---|
+| **Editor de CAPEX** (pantalla 13) | Botón `Exportar a XLSX` en la barra de acciones, junto a `Importar`. Exporta **lo que se está viendo**: si hay filtros aplicados, lo advierte y ofrece exportar todo |
+| **Ficha de proyecto** (pantalla 5) | Botón `Exportar CAPEX` en el bloque de CAPEX, sin pasar por el editor |
+| **Versión de informe emitida** | Exporta desde el `data_snapshot` congelado, no desde los datos vivos: el XLSX **cuadra con el PPTX que se envió**, aunque el proyecto haya seguido cambiando |
+
+`[REC]` Ese tercer caso es el que evita la incidencia clásica: «el Excel que me mandaste no cuadra con
+el PowerPoint». Se marca en la propia hoja `Resumen`, con la versión y la fecha de emisión.
+
+### Hojas del libro
 
 | Hoja | Contenido |
 |---|---|
-| `Resumen` | Totales por horizonte, escenarios, perfil de costes aplicado, fecha |
-| `CAPEX` | Una fila por línea con **todas las columnas**: código, capítulo, zona, riesgo, concepto, recuperable, horizonte, importe, impuestos, total, y la cascada completa si existe. Además, las cinco columnas pivotadas para leerla como la hoja de siempre |
+| **`CAPEX`** | **Layout idéntico al de la tabla del informe** — ver §16.8bis. Es la hoja que se abre al abrir el fichero |
+| `Resumen` | Totales por horizonte, escenarios, perfil de costes aplicado, proyecto, versión de informe si procede, fecha y hora |
+| `CAPEX detalle` | Una fila por línea con **todas las columnas**: código, capítulo, zona, riesgo, concepto, recuperable, horizonte, importe, impuestos, total, y la cascada completa si existe |
 | `Trazabilidad` | Una fila por referencia de precio: fuente, URL, fecha de consulta, alcance, quién validó y cuándo |
 | `Por capítulo` / `Por zona` / `Por riesgo` / `Por horizonte` | Tablas agregadas |
 | `Hallazgos` | Hallazgos vinculados con su descripción, riesgo y comentarios |
 | `Catálogos` | Leyenda de códigos y **definición íntegra de los cuatro grados de riesgo** `[REC]` |
 
+`[REC]` La separación entre `CAPEX` (presentable) y `CAPEX detalle` (completa) es deliberada. Antes eran
+una sola hoja y no podían serlo: la primera se envía a un tercero, la segunda es material de trabajo.
+
 `[REC]` Las hojas `Trazabilidad` y `Catálogos` son las que convierten la exportación en un documento
 defendible. Sin ellas, el XLSX es un Excel más.
+
+### Auditoría y nombre del fichero
+
+`[REC]` **Toda exportación se audita** como `EXPORT_CREATED`, con actor, fecha, proyecto, número de
+líneas, importe total y si venía de datos vivos o de un snapshot. Es un fichero con el CAPEX íntegro de
+un cliente saliendo por un canal que la aplicación ya no controla; que no quede rastro sería una laguna
+difícil de justificar en una auditoría.
+
+`[REC]` El nombre sigue una plantilla configurable, por coherencia con el renombrado de fotografías
+([`10`](./10-fotografias.md) §15.4): `[Proyecto]_CAPEX_[Fecha]_v[N].xlsx`.
+
+---
+
+## 16.8bis. La hoja `CAPEX` y la tabla nativa comparten un solo diseño
+
+`[REQ]` P-31. La estructura se ha **recuperado de los metarchivos EMF de las plantillas reales**
+([`18`](./18-analisis-plantillas-reales.md) §18.7bis), de modo que no es una propuesta: es la tabla que
+la consultora ya usa.
+
+```
+ESTIMATE ASSESSMENT OF THE ACTIONS REQUIRED IN THE PROPERTY: <CAPÍTULO>
+┌───────────────┬─────────┬─────────────┬───────────────────────────────────────┬──────────┐
+│ Affected area │ Purpose │ Description │           ESTIMATED CAPEX             │ Comments │
+│               │         │             ├──────────┬─────────┬────────┬────────┤          │
+│               │         │             │Short term│Mid term │Long t. │Improv. │          │
+└───────────────┴─────────┴─────────────┴──────────┴─────────┴────────┴────────┴──────────┘
+```
+
+| Columna | Origen en el modelo | Ancho `[SUP]` | Nota |
+|---|---|:--:|---|
+| Zona afectada | `zone.name` (i18n) | 1,15 in | |
+| Concepto | `capex_concept.name` (i18n) | 0,95 in | |
+| Descripción | `capex_item.description` | 2,60 in | La que absorbe el desbordamiento |
+| Corto plazo | `amount` si `horizon = CORTO` | 0,95 in | Vacío, **no «0,00 €»** |
+| Medio plazo | `amount` si `horizon = MEDIO` | 0,95 in | |
+| Largo plazo | `amount` si `horizon = LARGO` | 0,95 in | |
+| Mejora potencial | `amount` si `horizon = MEJORA` | 0,95 in | |
+| *(Otro tipo de petición)* | `amount` si `horizon = OTRO` | 0,95 in | `[PDV]` **P-37: oculta por defecto** en el informe, **siempre presente** en el XLSX |
+| Comentarios | `capex_item.comments` | 1,50 in | |
+
+**Reglas de composición, comunes a los dos formatos:**
+
+| Regla | Valor |
+|---|---|
+| Cabecera | **Dos niveles**, con `ESTIMATED CAPEX` combinado sobre las columnas de plazo |
+| Título de bloque | Una fila por capítulo, con el texto `…: <CAPÍTULO>` |
+| Formato de importe | `#.##0,00 €` — miles con punto, decimales con coma, según `output_locale` |
+| Celda sin importe | **En blanco**. Es como está hoy y distingue «no aplica» de «cero» |
+| Subtotales | Por capítulo, al cierre de cada bloque |
+| Resumen final | `TOTAL CONTRACT BUDGET` y, como línea propia, los honorarios técnicos `[PDV]` P-16 |
+| Tipografía | **Century Gothic** en el original `[PDV]` P-38 |
+| Partición | 18 filas por diapositiva en el PPTX, encabezado repetido. Sin límite en el XLSX |
+
+`[LIM]` **La fidelidad no está verificada visualmente.** La estructura procede de los registros de texto
+del EMF, que son exactos, pero los anchos son una reconstrucción a partir de las posiciones de dibujo y
+**no se ha visto ninguna plantilla renderizada** en el entorno de análisis. La comparación lado a lado
+—tabla generada contra la imagen EMF original— es un objetivo explícito de la prueba de concepto.
+
+**Que compartan diseño no es cosmético:** el generador de la tabla nativa del PPTX y el de la hoja
+`CAPEX` consumen **la misma estructura intermedia** (`CapexTableLayout`), de modo que una columna
+añadida aparece en los dos sitios o en ninguno. Ver [`12`](./12-pptx.md) §17.6.
 
 **Decisión consciente:** el XLSX contiene **valores, no fórmulas de Excel**. La fórmula viva está en la
 aplicación y es auditable allí; reproducirla en Excel duplicaría la lógica donde nadie la mantiene y

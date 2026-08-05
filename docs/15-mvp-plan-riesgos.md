@@ -28,7 +28,7 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 | 6 | Renombrado sin modificar originales | Plantilla configurable con 12 tokens, previsualización obligatoria con colisiones, lote, reversión, extensión inalterable, auditado | — |
 | 7 | **Catálogos** | **6 tipologías**, 20 zonas con su matriz de **86 relaciones**, **121 códigos CAPEX en árbol de 3 niveles**, 4 grados de riesgo **con su definición íntegra**, 10 conceptos, 5 horizontes, 14 sistemas técnicos. Sembrados, versionados y ampliables por organización | Editor visual del árbol |
 | 8 | Hallazgos e inventario | Línea con código, zona validada, descripción, comentarios, riesgo, concepto y recuperabilidad; atajo «hallazgo desde foto»; recomendaciones alternativas; matriz riesgo × horizonte; inventario de equipos opcional con importación XLSX | Plantillas de hallazgo por tipología |
-| 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; exportación XLSX con hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
+| 9 | CAPEX con precio manual | **Un horizonte y un importe por línea**, con pivote a cinco columnas en la rejilla y el informe; desglose por medición opcional con cascada visible y editable peldaño a peldaño, trasladable con acción explícita; perfiles de coste; escenarios; índices; **las diez vistas agregadas**; **botón de exportar el CAPEX a XLSX** `[REQ]` P-31, con la hoja `CAPEX` en el mismo formato que la tabla del informe y hojas de trazabilidad y catálogos, y CSV | Consulta automatizada de fuentes externas |
 | 10 | Registro de referencias y URLs | `PriceSourceAdapter` completo, adaptador manual con justificación obligatoria, importador de catálogo propio, comparador con `skipped_sources`, validación humana con restricción en base de datos, registro de fuentes con revisión de condiciones y control de licencia | Integración con Precio Centro ni ninguna otra fuente externa |
 | 11 | Carga de plantilla PPTX | Original inmutable con WORM, análisis completo, detección de marcadores y directivas, previsualización de estructura, avisos de no soportados, validaciones de seguridad del paquete | Editor de plantillas en la aplicación |
 | 12 | Mapeo básico de marcadores | Catálogo cerrado ampliado (incluye `{{finding.risk_definition}}` y `{{report_limitations}}`), mapeo manual de lo desconocido, guardado y clonado, reglas de repetición, partición de tablas con subtotales, reglas de fotos, validación | Mapeo visual por arrastre |
@@ -274,10 +274,12 @@ indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas c
 | Pregunta | Cómo se responde | Si la respuesta es mala |
 |---|---|---|
 | ¿El **clonado** de la diapositiva 13-14 (Cimentación) produce diapositivas indistinguibles del original? | Clonar para 3 sistemas y comparar en PowerPoint, con Gotham instalada | Se rediseña la plantilla con marcadores de posición, o se activa el plan B |
-| ¿La **tabla nativa** de CAPEX (que sustituye a la imagen EMF actual, P-31) resulta aceptable? | Generar una tabla de 62 filas con las cinco columnas de horizonte y enseñarla al cliente | Se replantea como imagen generada |
+| **¿La tabla nativa reproduce el formato del Excel?** (P-31, ya decidida) | Generar una tabla de 62 filas y **ponerla al lado de la imagen EMF original**, columna a columna: cabecera de dos niveles, anchos, formato de importe, celdas en blanco | Se replantea como imagen generada por el servidor |
+| ¿El **XLSX exportado** cuadra con la tabla del informe? | Exportar el mismo proyecto en los dos formatos y comparar celda a celda | Se corrige `CapexTableLayout`, que es la pieza compartida |
 | ¿La estimación de desbordamiento es útil (±15 %)? | Comparar con el render de LibreOffice en 20 casos | Se baja la ambición: aviso por umbral de caracteres |
 | ¿Cuánta desviación hay entre LibreOffice y PowerPoint? | Renderizar en ambos y comparar | Se ajusta la expectativa y se documenta |
-| ¿Los ~4.200 caracteres de capacidad medida por diapositiva de sistema bastan para dos subsistemas? | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
+| ¿Los **4.405 caracteres** de capacidad **medida con Gotham Light real** por diapositiva de sistema bastan para dos subsistemas? | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
+| ¿Cuánto se desvía la medición de los titulares mientras **falte Gotham Ultra**? | Medir los mismos titulares con la sustituta y con la real cuando llegue | Se declara el margen en el aviso y se espera al fichero |
 | ¿La resolución de catálogos **en inglés** produce un informe coherente? | Generar la misma sección con `A_ES` y `A_EN` | Se revisa el modelo de traducción (C-5) |
 
 **Coste: 2 semanas de una persona. Beneficio: conocer el riesgo mayor en la semana 3 en lugar de la
@@ -342,7 +344,10 @@ siendo crítico en impacto: si el informe sale descuadrado, el producto no se us
 | Mitigación | Cuándo |
 |---|---|
 | ✅ **Plantillas reales obtenidas y analizadas** (doc 18) | Hecho |
-| Instalar las fuentes Gotham en el worker (P-32) | Antes de la prueba de concepto |
+| ✅ **Cuatro de las cinco fuentes Gotham recibidas y verificadas**, con métricas reales medidas | Hecho |
+| ✅ **P-31 decidida**: tabla nativa respetando el formato del Excel, con la estructura recuperada del propio EMF | Hecho |
+| 🟡 **Conseguir `Gotham Ultra`** — es la de titulares y falta | **Antes de la prueba de concepto** |
+| Instalar las fuentes en el worker desde el artefacto privado, con verificación de arranque | Antes de la prueba de concepto |
 | Prueba de concepto dedicada de 2 semanas (§21.3) | Semanas 2-3 |
 | Contrato de plantilla + plantilla de referencia + validador | F8 |
 | Repetición **por diseño** en lugar de clonado de XML | F9 |
