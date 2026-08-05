@@ -10,7 +10,7 @@ abajo sin adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 171 pruebas
+make test        # 205 pruebas
 make run         # http://localhost:8000/docs
 ```
 
@@ -26,6 +26,8 @@ make run         # http://localhost:8000/docs
 | **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 18 |
 | **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 18 |
 | **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
+| **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 20 |
+| **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 14 |
 
 ## Los dos ejes del proyecto
 
@@ -91,9 +93,10 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 
 - **Fotografías y documentos.** El modelo de `stored_object` y sus triggers
   están; la carga, los derivados, EXIF, duplicados y el renombrado, no.
-- **Generación de PPTX.** Todo el bloque 4. Es la parte de mayor riesgo y su
-  prueba de concepto está planificada para las semanas 2-3.
-- **Exportación a XLSX.** Decidida en P-31 y especificada; sin implementar.
+- **Generación de PPTX, el resto del bloque 4.** La prueba de concepto está
+  **superada** ([`docs/20`](../../docs/20-poc-pptx.md)): clonado, sustitución de
+  marcadores, tabla nativa y render verificados sobre la plantilla real. Falta
+  el mapeo persistido, las fotografías, el versionado y los avisos.
 - **Frontend.** No hay nada de `apps/web`.
 - **Equipo del proyecto** (miembros, roles por proyecto, alcance por activo).
 - **Q&A y eventos de fase**: las tablas existen y el motor los cuenta, pero no

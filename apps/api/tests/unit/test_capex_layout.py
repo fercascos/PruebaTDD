@@ -1,0 +1,253 @@
+"""El diseño de la tabla de CAPEX y su contrato con el exportador.
+
+La prueba que más importa es `test_el_pptx_y_el_xlsx_no_pueden_divergir`: es la
+que impide que, dentro de seis meses, el PowerPoint y el Excel que viajan en el
+mismo correo tengan columnas distintas.
+"""
+
+from __future__ import annotations
+
+from decimal import Decimal
+
+import pytest
+
+from tdd.reporting import capex_layout as cl
+
+LINEAS = [
+    cl.LineaCapex(
+        "",
+        "Cubierta",
+        "Vida útil",
+        "Renovar impermeabilización",
+        "Moderado",
+        "Fin de vida útil",
+        "MEDIO",
+        Decimal("83407.50"),
+    ),
+    cl.LineaCapex(
+        "",
+        "Cubierta",
+        "Mantenimiento",
+        "Limpieza de lucernarios",
+        "Bajo",
+        "Gasto operativo",
+        "CORTO",
+        Decimal("2300.00"),
+    ),
+    cl.LineaCapex(
+        "",
+        "General",
+        "Normativa",
+        "Adecuación RIPCI",
+        "Extremo",
+        "Incumplimiento",
+        "CORTO",
+        Decimal("144780.00"),
+    ),
+    cl.LineaCapex(
+        "",
+        "General",
+        "Otro",
+        "Petición del cliente",
+        "Bajo",
+        "Fuera del alcance",
+        "OTRO",
+        Decimal("12000.00"),
+    ),
+]
+
+
+def _layout(**kw) -> cl.CapexTableLayout:
+    return cl.construir(LINEAS, capitulo="Arquitectura", **kw)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Estructura verificada sobre el render de la plantilla real
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_las_columnas_son_las_del_render_y_en_su_orden() -> None:
+    """docs/20 §20.3 C-6 · El render destapó `Nº` y `Group`, y que `Comments`
+    va ANTES de las columnas de plazo."""
+    claves = [c.key for c in _layout().columnas]
+    assert claves == [
+        "no",
+        "zona",
+        "concepto",
+        "descripcion",
+        "riesgo",
+        "comentarios",
+        "corto",
+        "medio",
+        "largo",
+        "mejoras",
+        "otro",
+    ]
+
+
+def test_la_columna_de_riesgo_existe() -> None:
+    """C-7 · Afirmé que la tabla no llevaba riesgo. El render demostró que sí:
+    es la columna `Group`, con High/Moderate/Low."""
+    riesgo = next(c for c in _layout().columnas if c.key == "riesgo")
+    assert riesgo.titulo_en == "Group"
+    fila = next(f for f in _layout().filas if f.tipo == "dato")
+    assert fila.celdas["riesgo"] in {"Moderado", "Bajo", "Extremo", "Alto"}
+
+
+def test_la_cabecera_de_plazos_se_agrupa() -> None:
+    plazos = [c for c in _layout().columnas if c.grupo == "capex"]
+    assert len(plazos) == 5
+    assert all(c.es_importe for c in plazos)
+
+
+def test_la_columna_otro_se_muestra_por_defecto() -> None:
+    """[REQ] P-37 · El Excel de trabajo la tiene y es la versión más actualizada."""
+    assert "otro" in {c.key for c in _layout().columnas}
+    assert "otro" not in {c.key for c in _layout(incluir_otro=False).columnas}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Formato de importe
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_una_celda_sin_importe_queda_en_blanco_y_no_a_cero() -> None:
+    """Es como está en la plantilla, y distingue «no aplica» de «cero»: un cero
+    explícito afirma que la actuación cuesta cero, que no es lo mismo."""
+    assert cl.formatear_importe(None) == ""
+    fila = next(f for f in _layout().filas if f.celdas.get("no") == "1.1")
+    vacias = [fila.celdas[k] for k in ("largo", "mejoras", "otro")]
+    assert vacias == ["", "", ""]
+    assert "0,00" not in "".join(vacias)
+
+
+@pytest.mark.parametrize(
+    ("valor", "locale", "esperado"),
+    [
+        (Decimal("83407.50"), "es-ES", "83.407,50 €"),
+        (Decimal("1040078.95"), "es-ES", "1.040.078,95 €"),
+        (Decimal("0"), "es-ES", "0,00 €"),
+        (Decimal("83407.50"), "en-GB", "83,407.50 €"),
+    ],
+)
+def test_formato_de_importe(valor: Decimal, locale: str, esperado: str) -> None:
+    assert cl.formatear_importe(valor, locale) == esperado
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Agrupación, subtotales y totales
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_hay_una_fila_de_seccion_por_zona_con_su_subtotal() -> None:
+    secciones = [f for f in _layout().filas if f.tipo == "seccion"]
+    assert {f.capitulo for f in secciones} == {"Cubierta", "General"}
+    cubierta = next(f for f in secciones if f.capitulo == "Cubierta")
+    assert cubierta.celdas["corto"] == "2.300,00 €"
+    assert cubierta.celdas["medio"] == "83.407,50 €"
+
+
+def test_la_numeracion_es_jerarquica_como_en_el_original() -> None:
+    numeros = [f.celdas["no"] for f in _layout().filas if f.tipo in ("seccion", "dato")]
+    assert numeros == ["1.", "1.1", "1.2", "2.", "2.1", "2.2"]
+
+
+def test_los_totales_cuadran_con_las_lineas() -> None:
+    t = _layout().totales
+    assert t["corto"] == Decimal("147080.00")
+    assert t["medio"] == Decimal("83407.50")
+    assert t["otro"] == Decimal("12000.00")
+    assert sum(t.values()) == sum(ln.importe for ln in LINEAS)
+
+
+def test_cada_linea_llena_una_sola_columna_de_plazo() -> None:
+    """P-05 comprobado en la salida, no solo en el modelo."""
+    plazos = ("corto", "medio", "largo", "mejoras", "otro")
+    for fila in (f for f in _layout().filas if f.tipo == "dato"):
+        con_valor = [k for k in plazos if fila.celdas.get(k)]
+        assert len(con_valor) == 1, f"La fila {fila.celdas['no']} llena {con_valor}"
+
+
+def test_el_titulo_cambia_con_el_idioma() -> None:
+    assert "VALORACIÓN" in _layout(locale="es-ES").titulo
+    assert "ESTIMATE ASSESSMENT" in _layout(locale="en-GB").titulo
+    assert _layout(locale="en-GB").titulo_columna(_layout().columnas[1]) == "Affected area"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Partición entre diapositivas
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_una_tabla_corta_no_se_parte() -> None:
+    assert len(cl.particionar(_layout(), filas_por_diapositiva=18)) == 1
+
+
+def test_una_tabla_larga_se_parte_y_numera() -> None:
+    muchas = LINEAS * 12
+    layout = cl.construir(muchas, capitulo="Arquitectura")
+    trozos = cl.particionar(layout, filas_por_diapositiva=10)
+    assert len(trozos) > 1
+    assert "(1/" in trozos[0].titulo
+    assert sum(len(t.filas) for t in trozos) == len(layout.filas)
+
+
+def test_una_seccion_no_se_queda_huerfana_al_final_de_una_diapositiva() -> None:
+    """[REC] Un encabezado de sección solo, al pie de una diapositiva, con sus
+    filas en la siguiente, es exactamente lo que nadie quiere ver."""
+    layout = cl.construir(LINEAS * 8, capitulo="Arquitectura")
+    for trozo in cl.particionar(layout, filas_por_diapositiva=6):
+        if len(trozo.filas) > 1:
+            assert trozo.filas[-1].tipo != "seccion", "Sección huérfana al final del trozo"
+
+
+def test_solo_el_ultimo_trozo_lleva_los_totales() -> None:
+    trozos = cl.particionar(cl.construir(LINEAS * 12, capitulo="Arq."), filas_por_diapositiva=10)
+    assert all(not t.totales for t in trozos[:-1])
+    assert trozos[-1].totales
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  El contrato entre los dos generadores  [REQ] P-31
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_pptx_y_el_xlsx_no_pueden_divergir() -> None:
+    """La prueba que sostiene P-31.
+
+    Si alguien añade una columna en un solo generador, esto falla. Sin ella, en
+    seis meses el PowerPoint y el Excel que viajan en el mismo correo tendrían
+    columnas distintas y nadie se daría cuenta hasta que lo notase un cliente.
+    """
+    from io import BytesIO
+
+    from openpyxl import load_workbook
+
+    from tdd.exports.capex_xlsx import generar_xlsx
+
+    layout = _layout()
+    ws = load_workbook(BytesIO(generar_xlsx(layout)))["CAPEX"]
+
+    # Mismo número de columnas
+    assert ws.max_column == len(layout.columnas)
+
+    # Mismos encabezados, en el mismo orden. Las de plazo van en la fila 3;
+    # las demás, combinadas en la 2.
+    for i, col in enumerate(layout.columnas, 1):
+        fila = 3 if col.grupo == "capex" else 2
+        assert ws.cell(row=fila, column=i).value == layout.titulo_columna(col), (
+            f"La columna {i} no coincide entre el informe y el Excel"
+        )
+
+    # Mismos valores, celda a celda
+    for f, fila in enumerate(layout.filas, start=4):
+        for i, col in enumerate(layout.columnas, 1):
+            esperado = fila.celdas.get(col.key, "") or None
+            assert ws.cell(row=f, column=i).value == esperado
+
+
+def test_el_ancho_total_se_mantiene_cerca_del_original() -> None:
+    """El original mide 9,06 in. Con la quinta columna de P-37 crece, pero no
+    puede desbordar la diapositiva de 10 in menos márgenes."""
+    assert _layout().ancho_total_in <= 9.5
+    assert _layout(incluir_otro=False).ancho_total_in <= 9.06

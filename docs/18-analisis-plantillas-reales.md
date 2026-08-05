@@ -28,8 +28,13 @@
 | ❌ Prueba de generación real | Pendiente de la prueba de concepto de F0 |
 
 `[LIM]` Todo lo que sigue procede de la **estructura del fichero**, que es verificable y exacta. **No
-he hecho ninguna afirmación sobre cómo se ven.** La validación visual sigue siendo parte de la prueba
-de concepto.
+he hecho ninguna afirmación sobre cómo se ven.**
+
+> ✅ **Superado.** La prueba de concepto ([`20`](./20-poc-pptx.md)) sí ha renderizado las plantillas:
+> faltaba el módulo Impress de LibreOffice, no era un problema de fondo. **Ver el render corrigió
+> cuatro afirmaciones de este documento** —las columnas de la tabla, la presencia del riesgo, la
+> tipografía del cuerpo y una marca de agua— y destapó un conflicto con P-05. Léase el doc 20 después
+> de este.
 
 ---
 

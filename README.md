@@ -7,8 +7,8 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado + código inicial del MVP en marcha.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **171 pruebas
-> en verde contra PostgreSQL real**. Qué está construido y qué no, sin adornos, en
+> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **205 pruebas
+> en verde contra PostgreSQL real** y la **prueba de concepto del bloque 4 superada**. Qué está construido y qué no, sin adornos, en
 > [`apps/api/README.md`](apps/api/README.md).
 
 ---
@@ -58,6 +58,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | [17](docs/17-requisitos-no-funcionales.md) | Objetivos no funcionales verificables | §10 |
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 | **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
+| **[20](docs/20-poc-pptx.md)** | **Prueba de concepto del bloque 4** · resultados medidos, y lo que corrigen | añadido |
 | **[apps/api](apps/api/README.md)** | **Código inicial del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 
 ### Convención de etiquetas
@@ -126,10 +127,9 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   diapositivas ni renderizado**. Se resuelve con un contrato de plantilla documentado y previsualización
   con LibreOffice, cuyo resultado **no es idéntico** al de PowerPoint. Planes alternativos valorados en
   [`docs/12`](docs/12-pptx.md) §17.9.
-- `[LIM]` **El análisis de las plantillas es estructural, no visual.** LibreOffice no arranca en el
-  entorno donde se hizo, de modo que **no se ha visto ninguna plantilla renderizada**. Todo lo afirmado
-  en [`docs/18`](docs/18-analisis-plantillas-reales.md) procede del fichero, que es exacto y
-  verificable; la validación visual es parte de la prueba de concepto.
+- ✅ **Resuelta:** el análisis de las plantillas ya **no** es solo estructural. La prueba de concepto
+  ([`docs/20`](docs/20-poc-pptx.md)) las ha renderizado y comparado; faltaba un paquete de LibreOffice,
+  no era un problema de fondo. Ver el render **corrigió cuatro afirmaciones** del doc 18.
 - `[LIM]` La detección de textos que desbordan es una **estimación** por métricas de fuente, con margen
   de ±10-15 %. El aviso lo dice explícitamente al usuario. Ya se mide con las **fuentes Gotham reales**,
   texto y titulares, sin sustitutas.
