@@ -197,13 +197,30 @@ columnas de plazo. Y el patrón es constante: **el mismo importe repetido en «L
 | **A · Son actuaciones recurrentes.** La limpieza de lucernarios hace falta ahora **y otra vez** dentro del horizonte de 10 años | P-05 se mantiene para el dato, pero una **actuación** puede generar **varias líneas**, una por plazo. El modelo ya lo permite: `Finding` 1 → N `CapexItem` |
 | **B · «Largo plazo» es una columna acumulada** a diez años, no un plazo excluyente | Cambiaría el significado de la columna en el informe. El modelo no cambia; el pivote sí |
 
-`[REC]` **Mi lectura es la A**, porque hay filas con importe **solo** en «Largo plazo» (42.720,00 € en
-la 2.3), lo que no encaja con una columna acumulada. Y porque el modelo actual la soporta sin tocar
-nada: un hallazgo con dos líneas de CAPEX, una a corto y otra a largo.
+> **P-44 · DECIDIDO por el cliente: opción A.** Son **actuaciones recurrentes**. Una actuación que
+> hace falta ahora y otra vez dentro del horizonte de diez años genera **dos líneas de CAPEX**, una
+> por plazo, y se presenta como **una sola fila de la tabla con dos columnas rellenas**.
 
-**No he cambiado nada en el modelo.** P-05 la decidió usted dos veces y lo que traigo es una
-observación sobre sus propios datos, no una enmienda. Es `P-44` y necesita su respuesta antes de
-preparar la plantilla piloto, porque determina cómo se pivota la tabla.
+### Qué ha cambiado, y qué no
+
+`[REQ]` **P-05 sigue intacta.** Una **línea** tiene un horizonte y un importe: eso no se ha tocado. Lo
+que puede tener varias líneas es la **actuación**. La distinción no es un tecnicismo: mantiene la
+garantía que P-05 buscaba —que un importe no quede repartido por descuido entre dos plazos— y a la vez
+recoge lo que sus datos hacen.
+
+| Nivel | Regla |
+|---|---|
+| **Línea** (`capex_item`) | Un horizonte, un importe. **P-05** |
+| **Actuación** (`finding`) | Puede tener varias líneas, **una por plazo**. **P-44** |
+| **Fila de la tabla** | Una por actuación, con tantas columnas rellenas como plazos tenga |
+
+**Un cambio en el esquema.** Tenía un índice único por `finding_id` que impedía justo esto —venía de
+leer «relación 1:1» en el diseño—. Se sustituye por `UNIQUE (finding_id, time_horizon_id)`, que sigue
+impidiendo lo que sí es un error: dos líneas de la misma actuación en el **mismo** plazo, que serían un
+duplicado y no una recurrencia.
+
+**Los totales suman las dos líneas**, y no es doble contabilidad: son dos desembolsos reales en dos
+momentos distintos.
 
 ---
 
@@ -232,7 +249,7 @@ técnica, es trabajo conocido: preparar las plantillas (~1,5 jornadas cada una) 
 
 | # | Pregunta | Impacto | Propuesta |
 |---|---|---|---|
-| **P-44** | ¿Una actuación puede tener importe en **dos plazos** (§20.4)? | **Alto** | Lectura A: un hallazgo genera varias líneas, una por plazo. El modelo ya lo soporta |
+| ~~**P-44**~~ | ~~¿Una actuación puede tener importe en dos plazos?~~ | — | ✅ **CERRADA: opción A.** Actuaciones recurrentes. Un hallazgo genera varias líneas, una por plazo, y se presentan en una sola fila. **P-05 sigue intacta a nivel de línea** |
 | **P-42** | La tabla muestra **tres** niveles de riesgo y el catálogo tiene **cuatro**. ¿Se agrupan Alto y Extremo al presentar? | Medio | Generar con los cuatro; agrupar es una regla del mapeo |
 | **P-43** | ¿La marca de agua **DRAFT** se retira al emitir la versión definitiva? | Bajo | Sí, con `@watermark: remove_on_issue` |
 

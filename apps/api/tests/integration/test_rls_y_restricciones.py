@@ -332,6 +332,33 @@ def test_media_medicion_no_se_admite(como, linea_capex) -> None:
         )
 
 
+def test_un_hallazgo_puede_tener_varias_lineas_en_plazos_distintos(como, linea_capex) -> None:
+    """[REQ] P-44 · Actuación recurrente: hace falta ahora y otra vez a diez años.
+
+    Antes lo impedía un índice único por `finding_id`. El cliente confirmó sobre
+    sus propios datos que la actuación puede repetirse, así que la unicidad pasó
+    a ser `(finding_id, time_horizon_id)`.
+    """
+    with como("consultor_a") as s:
+        _insertar_linea(s, linea_capex)  # CORTO
+        largo = s.execute(text("SELECT id FROM time_horizon WHERE code = 'LARGO'")).scalar_one()
+        _insertar_linea(s, linea_capex, h=largo, amount=Decimal("2300.00"))
+
+    with como("consultor_a") as s:
+        n = s.execute(
+            text("SELECT count(*) FROM capex_item WHERE finding_id = :f"),
+            {"f": linea_capex["hallazgo"]},
+        ).scalar_one()
+    assert n == 2
+
+
+def test_pero_no_dos_lineas_del_mismo_hallazgo_en_el_mismo_plazo(como, linea_capex) -> None:
+    """Eso no es una recurrencia: es un duplicado, y sigue prohibido."""
+    with pytest.raises((IntegrityError, DBAPIError)), como("consultor_a") as s:
+        _insertar_linea(s, linea_capex)
+        _insertar_linea(s, linea_capex)
+
+
 def test_no_se_admite_un_importe_negativo(como, linea_capex) -> None:
     with pytest.raises((IntegrityError, DBAPIError)), como("consultor_a") as s:
         _insertar_linea(s, linea_capex, amount=Decimal("-1"))

@@ -230,7 +230,7 @@ sequenceDiagram
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `POST` | `/projects/{id}/findings` | **Crea hallazgo y línea de CAPEX en una operación** (1:1 por defecto) `[REC]` |
+| `POST` | `/projects/{id}/findings` | **Crea hallazgo y línea de CAPEX en una operación** `[REC]`. Para una actuación **recurrente**, se añaden más líneas al mismo hallazgo, una por plazo `[REQ]` P-44 |
 | `GET` | `/projects/{id}/findings` | Filtros: `asset_id`, `zone_id`, `capex_code_id` (con subárbol), `risk_level_id[]`, `capex_concept_id[]`, `tenant_recoverable`, `status[]`, `owner_user_id`, `has_photos`, `q` |
 | `GET`/`PATCH`/`DELETE` | `/findings/{id}` | |
 | `POST` | `/findings/{id}/transitions` | Cambio de estado con guardas |

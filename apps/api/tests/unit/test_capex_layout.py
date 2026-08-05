@@ -160,12 +160,92 @@ def test_los_totales_cuadran_con_las_lineas() -> None:
     assert sum(t.values()) == sum(ln.importe for ln in LINEAS)
 
 
-def test_cada_linea_llena_una_sola_columna_de_plazo() -> None:
+PLAZOS = ("corto", "medio", "largo", "mejoras", "otro")
+
+
+def test_una_actuacion_sin_recurrencia_llena_una_sola_columna() -> None:
     """P-05 comprobado en la salida, no solo en el modelo."""
-    plazos = ("corto", "medio", "largo", "mejoras", "otro")
     for fila in (f for f in _layout().filas if f.tipo == "dato"):
-        con_valor = [k for k in plazos if fila.celdas.get(k)]
+        con_valor = [k for k in PLAZOS if fila.celdas.get(k)]
         assert len(con_valor) == 1, f"La fila {fila.celdas['no']} llena {con_valor}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  [REQ] P-44 · Actuaciones recurrentes
+# ─────────────────────────────────────────────────────────────────────────────
+
+RECURRENTE = [
+    # La misma actuación, dos líneas: hace falta ahora y otra vez en diez años.
+    cl.LineaCapex(
+        "",
+        "Cubierta",
+        "Mantenimiento",
+        "Limpieza de lucernarios",
+        "Bajo",
+        "Gasto operativo recurrente",
+        "CORTO",
+        Decimal("2300.00"),
+        finding_id="HAL-1",
+    ),
+    cl.LineaCapex(
+        "",
+        "Cubierta",
+        "Mantenimiento",
+        "Limpieza de lucernarios",
+        "Bajo",
+        "Gasto operativo recurrente",
+        "LARGO",
+        Decimal("2300.00"),
+        finding_id="HAL-1",
+    ),
+]
+
+
+def test_una_actuacion_recurrente_es_una_sola_fila_con_dos_plazos() -> None:
+    """P-44 · Es el patrón real del Excel del cliente: 5 de 19 filas lo tienen.
+
+    Dos líneas del mismo hallazgo NO son dos filas de la tabla: son una sola
+    actuación que hace falta dos veces, y así se presenta.
+    """
+    layout = cl.construir(RECURRENTE, capitulo="Arquitectura")
+    datos = [f for f in layout.filas if f.tipo == "dato"]
+
+    assert len(datos) == 1, "Las dos líneas del mismo hallazgo van en una fila"
+    fila = datos[0]
+    assert fila.celdas["corto"] == "2.300,00 €"
+    assert fila.celdas["largo"] == "2.300,00 €"
+    assert fila.celdas["medio"] == ""
+    assert fila.celdas["descripcion"] == "Limpieza de lucernarios"
+
+
+def test_los_totales_cuentan_las_dos_lineas_de_una_recurrente() -> None:
+    """No es doble contabilidad: son dos desembolsos reales en dos momentos."""
+    t = cl.construir(RECURRENTE, capitulo="Arquitectura").totales
+    assert t["corto"] == Decimal("2300.00")
+    assert t["largo"] == Decimal("2300.00")
+    assert sum(t.values()) == Decimal("4600.00")
+
+
+def test_p05_sigue_intacta_a_nivel_de_linea() -> None:
+    """La decisión del cliente no se ha tocado: cada LÍNEA tiene un horizonte y
+    un importe. Lo que puede tener varias líneas es la ACTUACIÓN."""
+    for ln in RECURRENTE:
+        assert ln.horizonte in {"CORTO", "MEDIO", "LARGO", "MEJORAS", "OTRO"}
+        assert isinstance(ln.importe, Decimal)
+
+
+def test_sin_hallazgo_cada_linea_va_por_su_cuenta() -> None:
+    """Las líneas sueltas no se funden por parecerse: solo agrupa el hallazgo."""
+    sueltas = [
+        cl.LineaCapex(
+            "", "Cubierta", "Mant.", "Misma descripción", "Bajo", "", "CORTO", Decimal("100")
+        ),
+        cl.LineaCapex(
+            "", "Cubierta", "Mant.", "Misma descripción", "Bajo", "", "LARGO", Decimal("200")
+        ),
+    ]
+    datos = [f for f in cl.construir(sueltas, capitulo="Arq.").filas if f.tipo == "dato"]
+    assert len(datos) == 2
 
 
 def test_el_titulo_cambia_con_el_idioma() -> None:

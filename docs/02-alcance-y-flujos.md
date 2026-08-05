@@ -178,7 +178,7 @@ aportándole trazabilidad.
 
 `[REC]` Bajo la interfaz, cada fila persiste como `Finding` (el diagnóstico: zona, descripción,
 riesgo, comentarios, concepto) más `CapexItem` (el dinero: código, importes, recuperabilidad), con
-relación 1:1 por defecto. Motivos: conserva las entidades exigidas en §7, permite que un hallazgo
+relación **1:N** `[REQ]` P-44. Motivos: conserva las entidades exigidas en §7, permite que un hallazgo
 genere varias partidas, permite partidas sin hallazgo (mejoras) y no obliga a doble captura.
 
 #### 4.3.2. Catálogos

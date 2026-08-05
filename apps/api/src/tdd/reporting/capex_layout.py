@@ -70,7 +70,15 @@ HORIZONTE_A_COLUMNA = {
 
 @dataclass(frozen=True, slots=True)
 class LineaCapex:
-    """Una línea, tal como sale del modelo de datos."""
+    """Una línea de CAPEX, tal como sale del modelo de datos.
+
+    `[REQ]` P-05 · **un horizonte y un importe**. Eso no ha cambiado.
+
+    `[REQ]` P-44 · Varias líneas pueden compartir `finding_id`: es una actuación
+    **recurrente**, que hace falta ahora y otra vez más adelante. En la tabla se
+    presentan como **una sola fila con varias columnas de plazo rellenas**, que
+    es como aparecen en el Excel del cliente.
+    """
 
     numero: str
     zona: str
@@ -80,6 +88,8 @@ class LineaCapex:
     comentarios: str
     horizonte: str
     importe: Decimal
+    #: Agrupa las líneas de una misma actuación. Si es `None`, la línea va sola.
+    finding_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,20 +148,35 @@ def construir(
         else f"ESTIMATE ASSESSMENT OF THE ACTIONS REQUIRED IN THE PROPERTY: {capitulo.upper()}"
     )
 
-    por_seccion: dict[str, list[LineaCapex]] = {}
+    # [REQ] P-44 · Las líneas de una misma actuación se funden en una fila. La
+    # clave de agrupación es el hallazgo; sin él, cada línea va por su cuenta.
+    actuaciones: list[list[LineaCapex]] = []
+    por_hallazgo: dict[str, list[LineaCapex]] = {}
     for ln in lineas:
-        por_seccion.setdefault(ln.zona or "GENERAL", []).append(ln)
+        if ln.finding_id is None:
+            actuaciones.append([ln])
+        elif ln.finding_id in por_hallazgo:
+            por_hallazgo[ln.finding_id].append(ln)
+        else:
+            grupo = [ln]
+            por_hallazgo[ln.finding_id] = grupo
+            actuaciones.append(grupo)
+
+    por_seccion: dict[str, list[list[LineaCapex]]] = {}
+    for grupo in actuaciones:
+        por_seccion.setdefault(grupo[0].zona or "GENERAL", []).append(grupo)
 
     filas: list[Fila] = []
     totales: dict[str, Decimal] = {c.key: Decimal(0) for c in columnas if c.es_importe}
 
     for i, (seccion, grupo) in enumerate(sorted(por_seccion.items()), 1):
         subtotal = {c.key: Decimal(0) for c in columnas if c.es_importe}
-        for ln in grupo:
-            col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
-            if col in subtotal:
-                subtotal[col] += ln.importe
-                totales[col] += ln.importe
+        for actuacion in grupo:
+            for ln in actuacion:
+                col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
+                if col in subtotal:
+                    subtotal[col] += ln.importe
+                    totales[col] += ln.importe
 
         filas.append(
             Fila(
@@ -164,20 +189,27 @@ def construir(
                 },
             )
         )
-        for j, ln in enumerate(grupo, 1):
-            col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
+        for j, actuacion in enumerate(grupo, 1):
+            # Una actuación = una fila, aunque tenga varias líneas [REQ] P-44.
+            # Los datos descriptivos los aporta la primera; los importes, todas.
+            cabeza = actuacion[0]
+            importes: dict[str, Decimal] = {}
+            for ln in actuacion:
+                col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
+                if col:
+                    importes[col] = importes.get(col, Decimal(0)) + ln.importe
             filas.append(
                 Fila(
                     tipo="dato",
                     celdas={
                         "no": f"{i}.{j}",
-                        "zona": ln.zona,
-                        "concepto": ln.concepto,
-                        "descripcion": ln.descripcion,
-                        "riesgo": ln.riesgo,
-                        "comentarios": ln.comentarios,
+                        "zona": cabeza.zona,
+                        "concepto": cabeza.concepto,
+                        "descripcion": cabeza.descripcion,
+                        "riesgo": cabeza.riesgo,
+                        "comentarios": cabeza.comentarios,
                         **{
-                            c.key: (formatear_importe(ln.importe, locale) if c.key == col else "")
+                            c.key: formatear_importe(importes.get(c.key), locale)
                             for c in columnas
                             if c.es_importe
                         },

@@ -416,7 +416,7 @@ costes distintos, y el informe debe poder mostrar la elegida.
 |---|---|---|
 | `id` · `organization_id` · `project_id` · `asset_id` | UUID | |
 | `code` | TEXT | correlativo `CX-0117` |
-| `finding_id` | UUID FK NULL | 1:1 por defecto; NULL en mejoras sin hallazgo |
+| `finding_id` | UUID FK NULL | **1:N** `[REQ]` P-44: una actuación recurrente genera una línea por plazo. `UNIQUE (finding_id, time_horizon_id)` impide el duplicado sin impedir la recurrencia. NULL en mejoras sin hallazgo |
 | `capex_code_id` | UUID FK NOT NULL | hoja del árbol `[REQ]` |
 | `zone_id` | UUID FK NULL | heredada del hallazgo |
 | `description` | TEXT NOT NULL | |
@@ -951,7 +951,7 @@ erDiagram
     ASSET_VISIT ||--o{ FINDING : detecta
     EQUIPMENT ||--o{ FINDING : origina
     FINDING ||--o{ RECOMMENDATION : propone
-    FINDING ||--o| CAPEX_ITEM : "1:1 por defecto"
+    FINDING ||--o{ CAPEX_ITEM : "1:N · una línea por plazo (P-44)"
     CAPEX_ITEM ||--o{ PRICE_REFERENCE : respalda
     PRICE_SOURCE ||--o{ PRICE_REFERENCE : origina
     COST_PROFILE ||--o{ PROJECT : "porcentajes por defecto"

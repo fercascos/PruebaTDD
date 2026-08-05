@@ -523,7 +523,18 @@ CREATE TABLE capex_item (
 );
 CREATE INDEX capex_item_project_idx ON capex_item (organization_id, project_id);
 CREATE INDEX capex_item_horizon_idx ON capex_item (project_id, time_horizon_id);
-CREATE UNIQUE INDEX capex_item_finding_uniq ON capex_item (finding_id);
+-- [REQ] P-44 · Un hallazgo puede generar VARIAS líneas, una por plazo.
+--
+-- Es el caso de las actuaciones recurrentes: la limpieza de lucernarios hace
+-- falta ahora Y otra vez dentro del horizonte de diez años, y así aparece en la
+-- tabla real del cliente. Antes había un índice único por `finding_id` que lo
+-- impedía; se sustituye por este, que sigue evitando lo que sí es un error:
+-- dos líneas del mismo hallazgo en el MISMO plazo, que serían un duplicado.
+--
+-- P-05 sigue intacta: una LÍNEA tiene un horizonte y un importe. Lo que puede
+-- tener varias líneas es la ACTUACIÓN.
+CREATE UNIQUE INDEX capex_item_hallazgo_plazo_uniq
+    ON capex_item (finding_id, time_horizon_id);
 
 -- ── Sugerencias [REQ] ───────────────────────────────────────────────────────
 
