@@ -444,3 +444,38 @@ def test_una_organizacion_ajena_no_transiciona_el_proyecto(
         json={"to": "ARCHIVADO"},
     )
     assert r.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Listado y ficha del encargo
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_listado_devuelve_los_encargos_de_la_organizacion(cliente, cab, datos_base) -> None:
+    r = cliente.get("/api/v1/projects", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    assert any(p["id"] == str(datos_base["proyecto_a"]) for p in r.json())
+
+
+def test_otra_organizacion_no_ve_ningun_encargo_ajeno(cliente, cab, datos_base) -> None:
+    """La RLS no filtra: hace que la fila no exista para esa sesión."""
+    r = cliente.get("/api/v1/projects", headers=cab("admin_b"))
+    assert r.status_code == 200
+    assert all(p["id"] != str(datos_base["proyecto_a"]) for p in r.json())
+
+
+def test_el_listado_busca_por_codigo_y_por_nombre(cliente, cab, datos_base) -> None:
+    r = cliente.get("/api/v1/projects?q=2026-014", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    assert [p["internal_code"] for p in r.json()] == ["2026-014"]
+
+
+def test_la_ficha_del_encargo_se_lee_por_su_identificador(cliente, cab, datos_base) -> None:
+    r = cliente.get(f"/api/v1/projects/{datos_base['proyecto_a']}", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    assert r.json()["name"] == "TDD Cartera Norte"
+
+
+def test_un_encargo_de_otra_organizacion_da_404(cliente, cab, datos_base) -> None:
+    r = cliente.get(f"/api/v1/projects/{datos_base['proyecto_a']}", headers=cab("admin_b"))
+    assert r.status_code == 404

@@ -133,9 +133,12 @@ def codigos(
             text(
                 "SELECT id, code, name_es, level, parent_id FROM capex_code "
                 "WHERE deprecated_at IS NULL "
-                "  AND (:level IS NULL OR level = :level) "
+                # Los `CAST` no son adorno: PostgreSQL no puede inferir el tipo
+                # de un parámetro que solo aparece en `IS NULL` y dentro de una
+                # concatenación, y falla con «could not determine data type».
+                "  AND (CAST(:level AS int) IS NULL OR level = CAST(:level AS int)) "
                 "  AND (CAST(:parent AS uuid) IS NULL OR parent_id = CAST(:parent AS uuid)) "
-                "  AND (:q IS NULL OR name_es ILIKE '%' || :q || '%' "
+                "  AND (CAST(:q AS text) IS NULL OR name_es ILIKE '%' || :q || '%' "
                 "       OR code ILIKE '%' || :q || '%') "
                 "ORDER BY code"
             ),

@@ -98,6 +98,49 @@ class Transicion(BaseModel):
     to: ProjectStatus
 
 
+@router.get("/projects", response_model=list[Proyecto])
+def listar(
+    s: SesionDep,
+    estado: str | None = None,
+    q: str | None = None,
+) -> Any:
+    """Los encargos de la organización. La RLS ya acota lo que se ve."""
+    filas = (
+        s.execute(
+            text(
+                "SELECT id, internal_code, name, CAST(status AS text) AS status, currency "
+                "FROM project WHERE deleted_at IS NULL "
+                "  AND (CAST(:estado AS text) IS NULL OR status::text = CAST(:estado AS text)) "
+                "  AND (CAST(:q AS text) IS NULL "
+                "       OR name ILIKE '%' || :q || '%' OR internal_code ILIKE '%' || :q || '%') "
+                "ORDER BY created_at DESC"
+            ),
+            {"estado": estado, "q": q},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+@router.get("/projects/{project_id}", response_model=Proyecto)
+def obtener(project_id: uuid.UUID, s: SesionDep) -> Any:
+    fila = (
+        s.execute(
+            text(
+                "SELECT id, internal_code, name, CAST(status AS text) AS status, currency "
+                "FROM project WHERE id = :i AND deleted_at IS NULL"
+            ),
+            {"i": str(project_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if fila is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Proyecto no encontrado")
+    return dict(fila)
+
+
 class DestinoPosible(BaseModel):
     to: ProjectStatus
     permitida: bool

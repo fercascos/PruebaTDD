@@ -271,3 +271,108 @@ def test_los_catalogos_del_sistema_no_son_editables_por_una_organizacion(como) -
     with pytest.raises((ProgrammingError, DBAPIError), match="row-level security"):
         with como("admin_a") as s:
             s.execute(text("UPDATE zone SET name_es = 'Manipulada' WHERE code = 'CUBIERTA'"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Filtros del árbol de códigos
+#
+#  Estos filtros no estaban probados y fallaban con un 500 en cuanto se usaban:
+#  PostgreSQL no puede inferir el tipo de un parámetro que solo aparece en
+#  `IS NULL` y dentro de una concatenación. Se descubrió al recorrer la
+#  aplicación de punta a punta, no leyendo el código.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.db
+def test_los_codigos_se_filtran_por_nivel(cliente, cab) -> None:
+    r = cliente.get("/api/v1/catalogs/capex-codes?level=3", headers=cab("consultor_a"))
+    assert r.status_code == 200, r.text
+    assert r.json(), "el nivel 3 son los elementos: no puede estar vacío"
+    assert {c["level"] for c in r.json()} == {3}
+
+
+@pytest.mark.db
+def test_los_codigos_se_filtran_por_padre(cliente, cab) -> None:
+    capitulos = cliente.get(
+        "/api/v1/catalogs/capex-codes?level=2", headers=cab("consultor_a")
+    ).json()
+    padre = capitulos[0]["id"]
+    hijos = cliente.get(
+        f"/api/v1/catalogs/capex-codes?parent_id={padre}", headers=cab("consultor_a")
+    )
+    assert hijos.status_code == 200
+    assert all(c["parent_id"] == padre for c in hijos.json())
+
+
+@pytest.mark.db
+def test_los_codigos_se_buscan_por_texto(cliente, cab) -> None:
+    r = cliente.get("/api/v1/catalogs/capex-codes?q=cubierta", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    assert all(
+        "cubierta" in c["name_es"].lower() or "cubierta" in c["code"].lower() for c in r.json()
+    )
+
+
+@pytest.mark.db
+def test_los_tres_filtros_se_combinan(cliente, cab) -> None:
+    r = cliente.get("/api/v1/catalogs/capex-codes?level=3&q=a", headers=cab("consultor_a"))
+    assert r.status_code == 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Idempotencia de la semilla
+#
+#  `UNIQUE (organization_id, code)` NO protegía las filas del sistema: en
+#  PostgreSQL dos NULL se consideran distintos en un índice único, y las filas
+#  del sistema son justo las que llevan `organization_id` NULL. `ON CONFLICT`
+#  no disparaba nunca para ellas y volver a sembrar duplicaba el catálogo
+#  entero. Se descubrió al reponer los datos de una demostración, no leyendo el
+#  código: la suite siempre partía de un esquema recién creado.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.db
+def test_sembrar_dos_veces_no_duplica_el_catalogo(motor_admin) -> None:
+    from tdd.catalogs.seeding import sembrar_catalogos
+
+    with motor_admin.begin() as conn:
+        antes = {
+            tabla: conn.execute(text(f"SELECT count(*) FROM {tabla}")).scalar_one()  # noqa: S608
+            for tabla in ("asset_typology", "zone", "capex_code", "risk_level", "time_horizon")
+        }
+
+    with motor_admin.begin() as conn:
+        sembrar_catalogos(conn)
+
+    with motor_admin.begin() as conn:
+        despues = {
+            tabla: conn.execute(text(f"SELECT count(*) FROM {tabla}")).scalar_one()  # noqa: S608
+            for tabla in antes
+        }
+    assert despues == antes
+
+
+@pytest.mark.db
+def test_no_puede_haber_dos_filas_del_sistema_con_el_mismo_codigo(motor_admin) -> None:
+    """La restricción que faltaba, comprobada intentando saltársela."""
+    with motor_admin.begin() as conn, pytest.raises(Exception, match="duplicate key|unique"):
+        conn.execute(
+            text(
+                "INSERT INTO time_horizon (organization_id, code, name_es, sort_order) "
+                "SELECT NULL, code, name_es, sort_order FROM time_horizon LIMIT 1"
+            )
+        )
+
+
+@pytest.mark.db
+def test_una_organizacion_si_puede_tener_su_propio_codigo_igual(motor_admin, datos_base) -> None:
+    """Lo que la restricción NO debe impedir: que una organización defina su
+    propia versión de un código del sistema. Son filas distintas."""
+    with motor_admin.begin() as conn:
+        conn.execute(
+            text(
+                "INSERT INTO capex_concept (organization_id, code, name_es, is_system) "
+                "VALUES (:o, 'MANTENIMIENTO', 'Mantenimiento (versión propia)', FALSE)"
+            ),
+            {"o": str(datos_base["org_a"])},
+        )

@@ -1,8 +1,9 @@
 # Backend · API de due diligence técnica
 
-Código inicial del MVP (entregable 24). **Es un punto de partida, no el MVP
-completo**: lo que hay está implementado y probado; lo que falta está listado
-abajo sin adornos.
+Backend del MVP (entregable 24). Los **cuatro bloques funcionales están
+construidos** y se han recorrido de punta a punta contra la API en marcha. Lo
+que hay está implementado y probado; lo que falta está listado abajo sin
+adornos.
 
 ## Arrancar en local
 
@@ -10,7 +11,7 @@ abajo sin adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 355 pruebas
+make test        # 600 pruebas
 make run         # http://localhost:8000/docs
 ```
 
@@ -22,9 +23,9 @@ make run         # http://localhost:8000/docs
 | **Motor de fases** · estados derivados y sugeridos | ✅ Completo | `tests/unit/test_fases.py` · 33 |
 | **Máquina de estados del proyecto** con sus guardas | ✅ Completo | `tests/unit/test_maquina_de_estados.py` · 18 |
 | **Esquema con RLS**, triggers y `CHECK` | ✅ Completo | `tests/integration/test_rls_y_restricciones.py` · 21 |
-| **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 25 |
+| **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 32 |
 | **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 19 |
-| **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 18 |
+| **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 23 |
 | **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
 | **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 25 |
 | **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 14 |
@@ -33,6 +34,13 @@ make run         # http://localhost:8000/docs
 | **Lectura de imágenes** · EXIF, GPS, HEIC, derivados | ✅ Completo | `tests/unit/test_imagenes.py` · 24 |
 | **Reglas de evidencia** · duplicados, papelera, avisos | ✅ Completo | `tests/unit/test_evidencia.py` · 37 |
 | **Fotografías punta a punta** · los tres orígenes | ✅ Completo | `tests/integration/test_fotografias.py` · 39 |
+| **Fotografías avanzado** · versiones, ZIP y purga | ✅ Completo | `tests/integration/test_fotografias_avanzado.py` · 21 |
+| **Autenticación** · login, rotación y bloqueo | ✅ Completo | `test_identidad.py` · 20 + `test_autenticacion.py` · 23 |
+| **Activos y equipo del proyecto** | ✅ Completo | `tests/integration/test_activos_y_equipo.py` · 27 |
+| **Hallazgos y CAPEX** · P-44 por ambos lados | ✅ Completo | `test_hallazgos.py` · 12 + `test_hallazgos_y_capex.py` · 23 |
+| **Trabajo de las fases** · checklist, VDR, visitas, Q&A | ✅ Completo | `tests/integration/test_trabajo_de_fases.py` · 30 |
+| **Documentos** (§15.11) | ✅ Completo | `tests/integration/test_documentos.py` · 28 |
+| **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |
 
 ## Los dos ejes del proyecto
 
@@ -96,26 +104,23 @@ divergirán, y una zona mal sembrada obliga a migrar datos reales meses después
 
 Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 
-- **Documentos.** Comparten modelo con las fotografías (§15.11) pero no están
-  construidos: ni tabla, ni endpoints.
-- **Antivirus y almacén S3 con Object Lock.** De las fotografías falta lo que
-  depende de infraestructura: ClamAV —ninguna foto pasa hoy por `CUARENTENA`—,
-  las URLs firmadas, el worker asíncrono y el ZIP en lote. El estado de
-  implementación del bloque, capacidad por capacidad, está en
-  [`docs/10` §15.12](../../docs/10-fotografias.md).
-- **Generación de PPTX, el resto del bloque 4.** La prueba de concepto está
-  **superada** ([`docs/20`](../../docs/20-poc-pptx.md)): clonado, sustitución de
-  marcadores, tabla nativa y render verificados sobre la plantilla real. Falta
-  el mapeo persistido, las fotografías, el versionado y los avisos.
-- **Frontend.** No hay nada de `apps/web`.
-- **Equipo del proyecto** (miembros, roles por proyecto, alcance por activo).
-- **Q&A y eventos de fase**: las tablas existen y el motor los cuenta, pero no
-  hay endpoints para gestionarlos.
+- **Todo lo que depende de infraestructura externa.** El antivirus (ClamAV) no
+  está integrado: **ninguna foto pasa hoy por `CUARENTENA`**, el estado existe
+  y la máquina de estados lo contempla, pero nada lo activa. El almacén S3 con
+  Object Lock tampoco: solo hay adaptador sobre disco y otro en memoria, así
+  que la **barrera 4** (WORM) no se ha probado contra ningún bucket. Faltan
+  también las URLs firmadas y el worker asíncrono; el ZIP en lote se construye
+  hoy en la propia petición, que §15.7 pide mover al worker.
+- **Recuperación de contraseña por correo.** Hay login, refresco con rotación,
+  cierre de sesión y cambio de contraseña; falta el flujo de «he olvidado mi
+  contraseña», que necesita SMTP.
 - **Alembic.** El esquema se aplica desde `schema.sql`. La migración inicial se
   genera cuando el modelo deje de moverse: versionar migraciones de un esquema
   que cambia cada día produce un historial inútil.
-- **Autenticación completa.** Hay hash Argon2id, emisión y validación de tokens;
-  faltan los endpoints de login, refresh y recuperación.
+- **Inventario de equipos, comparador de precios y administración de usuarios**
+  desde la API.
+- **Frontend:** lo construido y lo que falta, en
+  [`apps/web/README.md`](../web/README.md).
 
 ## Decisiones que se notan al leer el código
 

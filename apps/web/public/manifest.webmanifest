@@ -1,0 +1,10 @@
+{
+  "name": "Due diligence técnica",
+  "short_name": "TDD",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Gestión de due diligence técnica de activos inmobiliarios",
+  "icons": []
+}

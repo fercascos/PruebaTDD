@@ -53,6 +53,14 @@ CREATE TABLE app_user (
 
 -- ── Catálogos del sistema ───────────────────────────────────────────────────
 -- organization_id NULL = fila del sistema, no editable por nadie.
+--
+-- `UNIQUE NULLS NOT DISTINCT` no es un detalle. En PostgreSQL, por defecto,
+-- dos NULL se consideran **distintos** en un índice único: con un
+-- `UNIQUE (organization_id, code)` a secas, las filas del sistema —que son
+-- justo las que llevan `organization_id` NULL— no estarían protegidas por
+-- nada, y `ON CONFLICT (organization_id, code) DO NOTHING` no dispararía
+-- jamás para ellas. Volver a ejecutar la semilla duplicaría el catálogo
+-- entero, y el árbol de códigos quedaría con dos padres del mismo código.
 
 CREATE TABLE asset_typology (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -61,7 +69,7 @@ CREATE TABLE asset_typology (
     name_es         VARCHAR(120) NOT NULL,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order      INT NOT NULL DEFAULT 0,
-    UNIQUE (organization_id, code)
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
 
 CREATE TABLE zone (
@@ -71,7 +79,7 @@ CREATE TABLE zone (
     name_es         VARCHAR(120) NOT NULL,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order      INT NOT NULL DEFAULT 0,
-    UNIQUE (organization_id, code)
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
 
 -- La matriz de §5.2: 86 relaciones. Es lo que hace que el selector de zona
@@ -92,7 +100,7 @@ CREATE TABLE capex_code (
     path            LTREE,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     deprecated_at   TIMESTAMPTZ,
-    UNIQUE (organization_id, code),
+    UNIQUE NULLS NOT DISTINCT (organization_id, code),
     -- Un nodo de nivel 1 no tiene padre; los demás, sí. Sin esto, un árbol
     -- puede quedarse con capítulos huérfanos que no aparecen en el selector.
     CONSTRAINT capex_code_parent_coherente
@@ -111,7 +119,7 @@ CREATE TABLE risk_level (
     -- se muestra al clasificar y se vuelca al informe como leyenda.
     definition_es   TEXT NOT NULL,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (organization_id, code)
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
 
 CREATE TABLE capex_concept (
@@ -120,7 +128,7 @@ CREATE TABLE capex_concept (
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (organization_id, code)
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
 
 CREATE TABLE time_horizon (
@@ -133,7 +141,7 @@ CREATE TABLE time_horizon (
     is_execution_term BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order        INT NOT NULL DEFAULT 0,
     is_system         BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (organization_id, code),
+    UNIQUE NULLS NOT DISTINCT (organization_id, code),
     CONSTRAINT horizonte_rango_coherente
         CHECK (year_from IS NULL OR year_to IS NULL OR year_from <= year_to)
 );
@@ -360,7 +368,7 @@ CREATE TABLE doc_request_category (
     name_es         VARCHAR(120) NOT NULL,
     display_order   SMALLINT NOT NULL DEFAULT 0,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (organization_id, code)
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
 
 CREATE TYPE doc_request_status AS ENUM (
@@ -536,7 +544,7 @@ CREATE TABLE price_source (
     license_reference   VARCHAR(160),
     license_expires_at  DATE,
     disabled_reason     TEXT,
-    UNIQUE (organization_id, code),
+    UNIQUE NULLS NOT DISTINCT (organization_id, code),
     -- [REQ] Una fuente externa NO puede habilitarse sin revisión documentada de
     -- sus condiciones de uso. En la base de datos, para que no dependa de que
     -- una pantalla recuerde comprobarlo.

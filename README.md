@@ -5,12 +5,14 @@ proyectos de **due diligence técnica (TDD) de activos inmobiliarios**: gestión
 fases, repositorio fotográfico, elaboración del CAPEX con trazabilidad, y generación de informes
 PowerPoint desde la plantilla PPTX de cada proyecto.
 
-> **Estado actual: diseño cerrado + código inicial del MVP en marcha.**
+> **Estado actual: diseño cerrado y MVP construido.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24** ha arrancado: `apps/api/` contiene los cimientos del backend con **355 pruebas
-> en verde contra PostgreSQL real**, la **prueba de concepto del bloque 4 superada** y el **bloque 2
-> (fotografías) construido**, con subida desde ordenador, carrete del móvil y cámara en directo. Qué
-> está construido y qué no, sin adornos, en [`apps/api/README.md`](apps/api/README.md).
+> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **600 pruebas en verde
+> contra PostgreSQL real** y `apps/web/` con la interfaz React. La aplicación se ha recorrido de
+> punta a punta con el servidor en marcha: iniciar sesión, dar de alta un activo, **hacer una foto
+> desde la cámara**, registrar el hallazgo con su CAPEX, subir la plantilla, mapearla, generar el
+> informe y emitirlo. Qué está construido y qué no, sin adornos, en
+> [`apps/api/README.md`](apps/api/README.md) y [`apps/web/README.md`](apps/web/README.md).
 
 ---
 
@@ -60,7 +62,8 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 | **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
 | **[20](docs/20-poc-pptx.md)** | **Prueba de concepto del bloque 4** · resultados medidos, y lo que corrigen | añadido |
-| **[apps/api](apps/api/README.md)** | **Código inicial del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
+| **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
+| **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |
 
 ### Convención de etiquetas
 
