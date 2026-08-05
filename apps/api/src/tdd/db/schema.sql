@@ -1190,6 +1190,147 @@ CREATE TRIGGER document_original_inmutable
     FOR EACH ROW EXECUTE FUNCTION impedir_sobrescritura_de_documento();
 
 -- =============================================================================
+--  Bloque 4 · Informes PPTX [REQ] §17
+--
+--  La garantía que estructura todo el bloque: **un informe emitido debe seguir
+--  siendo reproducible años después**. Eso exige dos cosas que no son
+--  evidentes:
+--
+--   1. La generación lee de un SNAPSHOT, no de la base de datos viva. Un
+--      cambio concurrente no puede producir un informe incoherente, y dentro
+--      de dos años el informe se puede reconstruir aunque el proyecto haya
+--      seguido cambiando.
+--   2. El snapshot incluye LOS CATÁLOGOS USADOS. Sin ello, retirar un código
+--      CAPEX dos años después dejaría huecos en un informe ya entregado. Es la
+--      diferencia entre archivar un PDF y poder reconstruir el informe.
+-- =============================================================================
+
+CREATE TABLE report_template (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    name             VARCHAR(160) NOT NULL,
+    language         CHAR(2) NOT NULL DEFAULT 'es',
+    -- La plantilla es material confidencial del cliente y vive en el almacén
+    -- como cualquier otro original: inmutable y con su hash.
+    stored_object_id UUID NOT NULL REFERENCES stored_object(id),
+    sha256           CHAR(64) NOT NULL,
+    slide_count      SMALLINT,
+    -- Resultado del análisis: marcadores encontrados, fuentes del tema, avisos.
+    analysis         JSONB,
+    analyzed_at      TIMESTAMPTZ,
+    is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by       UUID NOT NULL REFERENCES app_user(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (organization_id, name, language)
+);
+
+-- El mapeo: qué dato del proyecto alimenta cada marcador de la plantilla.
+CREATE TABLE template_mapping (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    template_id      UUID NOT NULL REFERENCES report_template(id) ON DELETE CASCADE,
+    name             VARCHAR(160) NOT NULL,
+    -- {marcador: expresión}. Se valida antes de guardar: un marcador que
+    -- apunta a un campo inexistente es un aviso BLOQUEANTE en la generación,
+    -- y descubrirlo al generar es tarde.
+    bindings         JSONB NOT NULL DEFAULT '{}'::jsonb,
+    photo_rules      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_default       BOOLEAN NOT NULL DEFAULT FALSE,
+    version          SMALLINT NOT NULL DEFAULT 1,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (template_id, name)
+);
+
+CREATE TYPE report_status AS ENUM (
+    'GENERANDO', 'GENERADO', 'EN_REVISION', 'APROBADO', 'EMITIDO', 'ERROR'
+);
+
+CREATE TABLE report_version (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organization(id),
+    project_id        UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    version_number    SMALLINT NOT NULL,
+    status            report_status NOT NULL DEFAULT 'GENERANDO',
+
+    template_id       UUID NOT NULL REFERENCES report_template(id),
+    template_sha256   CHAR(64) NOT NULL,
+    mapping_id        UUID REFERENCES template_mapping(id),
+
+    -- [REQ] §9 · «Las partidas del informe deben corresponder a una versión
+    -- concreta de los datos.» El snapshot ES esa versión.
+    data_snapshot        JSONB NOT NULL,
+    data_snapshot_sha256 CHAR(64) NOT NULL,
+
+    stored_object_id  UUID REFERENCES stored_object(id),
+    pptx_sha256       CHAR(64),
+    xlsx_object_id    UUID REFERENCES stored_object(id),
+
+    warnings          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    supersedes_version_id UUID REFERENCES report_version(id),
+
+    -- [REQ] §9 · «Un informe emitido debe quedar bloqueado.»
+    is_locked         BOOLEAN NOT NULL DEFAULT FALSE,
+    generated_by      UUID NOT NULL REFERENCES app_user(id),
+    generated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    approved_by       UUID REFERENCES app_user(id),
+    approved_at       TIMESTAMPTZ,
+    issued_by         UUID REFERENCES app_user(id),
+    issued_at         TIMESTAMPTZ,
+
+    UNIQUE (project_id, version_number),
+    -- Bloqueado y emitido van siempre juntos: cualquiera de los dos sin el
+    -- otro sería un estado que nadie sabría interpretar.
+    CONSTRAINT report_emitido_bloqueado
+        CHECK ((status = 'EMITIDO') = is_locked),
+    CONSTRAINT report_emitido_con_firma
+        CHECK (status <> 'EMITIDO' OR (issued_by IS NOT NULL AND issued_at IS NOT NULL)),
+    CONSTRAINT report_aprobado_con_firma
+        CHECK (status NOT IN ('APROBADO', 'EMITIDO')
+               OR (approved_by IS NOT NULL AND approved_at IS NOT NULL)),
+    -- Un informe generado sin fichero no es un informe.
+    CONSTRAINT report_generado_con_fichero
+        CHECK (status IN ('GENERANDO', 'ERROR')
+               OR (stored_object_id IS NOT NULL AND pptx_sha256 IS NOT NULL))
+);
+
+CREATE INDEX report_version_proyecto_idx
+    ON report_version (project_id, version_number DESC);
+
+-- [REQ] Un informe EMITIDO es inmutable. No es una convención de código: si
+-- alguien escribe un UPDATE nuevo dentro de seis meses, esto sigue en pie.
+CREATE OR REPLACE FUNCTION impedir_cambio_de_informe_emitido() RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.is_locked THEN
+        RAISE EXCEPTION
+            'El informe v% está emitido y es inmutable: genere una versión nueva',
+            OLD.version_number
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER report_version_emitido_inmutable
+    BEFORE UPDATE ON report_version
+    FOR EACH ROW EXECUTE FUNCTION impedir_cambio_de_informe_emitido();
+
+CREATE OR REPLACE FUNCTION impedir_borrado_de_informe_emitido() RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.is_locked THEN
+        RAISE EXCEPTION 'Un informe emitido no se borra (v%)', OLD.version_number
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER report_version_emitido_no_borrable
+    BEFORE DELETE ON report_version
+    FOR EACH ROW EXECUTE FUNCTION impedir_borrado_de_informe_emitido();
+
+-- =============================================================================
 --  Sesiones de refresco
 --
 --  Del token de refresco se guarda **solo su SHA-256**, nunca el token. Una
@@ -1301,7 +1442,8 @@ BEGIN
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
         'qa_round', 'phase_event',
         'photo', 'photo_version', 'photo_derivative', 'photo_link',
-        'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document'
+        'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
+        'report_template', 'template_mapping', 'report_version'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

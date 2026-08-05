@@ -72,9 +72,11 @@ def clave_de_documento(
 
 
 def es_original(clave: str) -> bool:
-    """Un documento es tan original como una fotografía: no hay versión
-    «derivada» de un PDF que se pueda regenerar, así que también es inmutable."""
-    return "/originals/" in clave or "/documents/" in clave
+    """Un documento y una plantilla son tan originales como una fotografía: no
+    hay versión «derivada» de un PDF o de un PPTX del cliente que se pueda
+    regenerar, así que también son inmutables. Los informes generados, en
+    cambio, sí son derivados: se pueden volver a producir desde el snapshot."""
+    return any(marca in clave for marca in ("/originals/", "/documents/", "/templates/"))
 
 
 class AlmacenDeObjetos(Protocol):

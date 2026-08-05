@@ -22,6 +22,7 @@ from tdd.identity.router import router as identity_router
 from tdd.phases.operations import router as phase_ops_router
 from tdd.phases.router import router as phases_router
 from tdd.projects.router import router as projects_router
+from tdd.reporting.router import router as reporting_router
 from tdd.suggestions.router import router as suggestions_router
 
 
@@ -88,6 +89,7 @@ def crear_app() -> FastAPI:
     app.include_router(capex_router, prefix=api)
     app.include_router(evidence_router, prefix=api)
     app.include_router(documents_router, prefix=api)
+    app.include_router(reporting_router, prefix=api)
     app.include_router(suggestions_router, prefix=api)
     return app
 
