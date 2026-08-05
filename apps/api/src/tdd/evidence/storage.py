@@ -64,8 +64,17 @@ def clave_de_derivado(
     return f"{organization_id}/{project_id}/derivatives/{photo_id}/{nombre}"
 
 
+def clave_de_documento(
+    organization_id: uuid.UUID, project_id: uuid.UUID, document_id: uuid.UUID, extension: str
+) -> str:
+    ext = extension.lstrip(".").lower() or "bin"
+    return f"{organization_id}/{project_id}/documents/{document_id}.{ext}"
+
+
 def es_original(clave: str) -> bool:
-    return "/originals/" in clave
+    """Un documento es tan original como una fotografía: no hay versión
+    «derivada» de un PDF que se pueda regenerar, así que también es inmutable."""
+    return "/originals/" in clave or "/documents/" in clave
 
 
 class AlmacenDeObjetos(Protocol):

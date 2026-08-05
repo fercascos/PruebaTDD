@@ -448,6 +448,37 @@ CREATE TABLE qa_round (
     UNIQUE (project_phase_id, round_number)
 );
 
+-- Las preguntas de la ronda. Van en su propia tabla y no en un JSONB de
+-- `qa_round` porque cada una tiene su estado, su responsable y su respuesta, y
+-- porque la limitación del informe se declara por pregunta sin responder, no
+-- por ronda.
+CREATE TYPE qa_question_status AS ENUM ('ABIERTA', 'RESPONDIDA', 'SIN_RESPUESTA', 'RETIRADA');
+
+CREATE TABLE qa_question (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    qa_round_id     UUID NOT NULL REFERENCES qa_round(id) ON DELETE CASCADE,
+    asset_id        UUID REFERENCES asset(id) ON DELETE SET NULL,
+    number          SMALLINT NOT NULL,
+    question        TEXT NOT NULL,
+    answer          TEXT,
+    status          qa_question_status NOT NULL DEFAULT 'ABIERTA',
+    answered_at     TIMESTAMPTZ,
+    -- [REC] Igual que en el checklist documental: alimenta el apartado de
+    -- limitaciones del informe sin que nadie tenga que reconstruirlo de memoria.
+    affects_report_limitations BOOLEAN
+        GENERATED ALWAYS AS (status = 'SIN_RESPUESTA') STORED,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    UNIQUE (qa_round_id, number),
+    -- Marcar «respondida» sin respuesta dejaría la ronda cerrada en falso.
+    CONSTRAINT respondida_exige_respuesta
+        CHECK (status <> 'RESPONDIDA'
+               OR (answer IS NOT NULL AND length(trim(answer)) > 0))
+);
+
+CREATE INDEX qa_question_ronda_idx ON qa_question (qa_round_id, number);
+
 CREATE TABLE phase_event (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id  UUID NOT NULL REFERENCES organization(id),
@@ -1075,6 +1106,90 @@ ALTER TABLE asset
     FOREIGN KEY (main_photo_id) REFERENCES photo(id) ON DELETE SET NULL;
 
 -- =============================================================================
+--  Documentos [REQ] §15.11
+--
+--  Comparten con las fotografías todo lo que importa —original inmutable, MIME
+--  real, hash, borrado lógico, descarga auditada— y se diferencian en cuatro
+--  cosas: no llevan derivados de imagen, tienen nivel de confidencialidad,
+--  tienen versionado explícito y se clasifican solos desde la línea del
+--  checklist a la que se adjuntan.
+-- =============================================================================
+
+CREATE TYPE doc_type AS ENUM (
+    'LICENCIA_URBANISTICA', 'PROYECTO', 'CONTRATO_MANTENIMIENTO', 'LEGALIZACION',
+    'CERTIFICADO', 'GARANTIA', 'PLANO', 'QA', 'INFORME_PREVIO', 'FICHA_TECNICA', 'OTRO'
+);
+
+CREATE TYPE doc_confidentiality AS ENUM ('INTERNO', 'CONFIDENCIAL', 'RESTRINGIDO');
+
+CREATE TYPE doc_status AS ENUM ('PROCESANDO', 'LISTO', 'CUARENTENA', 'ERROR', 'PAPELERA');
+
+CREATE TABLE document (
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id       UUID NOT NULL REFERENCES organization(id),
+    project_id            UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    asset_id              UUID REFERENCES asset(id) ON DELETE SET NULL,
+    doc_request_item_id   UUID REFERENCES doc_request_item(id) ON DELETE SET NULL,
+    qa_round_id           UUID REFERENCES qa_round(id) ON DELETE SET NULL,
+
+    stored_object_id      UUID NOT NULL REFERENCES stored_object(id),
+    original_filename     VARCHAR(260) NOT NULL,
+    display_name          VARCHAR(200) NOT NULL,
+    file_extension        VARCHAR(12) NOT NULL,
+    mime_type             VARCHAR(120) NOT NULL,
+    sha256                CHAR(64) NOT NULL,
+    byte_size             BIGINT NOT NULL,
+
+    doc_type              doc_type NOT NULL DEFAULT 'OTRO',
+    confidentiality       doc_confidentiality NOT NULL DEFAULT 'INTERNO',
+    status                doc_status NOT NULL DEFAULT 'LISTO',
+    -- [REC] Versionado explícito: las rondas de Q&A y la documentación recibida
+    -- se sustituyen con frecuencia, y hay que saber cuál era la vigente EN LA
+    -- FECHA DEL INFORME. Sin esto, un informe firmado sobre la versión 2 de un
+    -- plano parecería basarse en la 5.
+    version_number        SMALLINT NOT NULL DEFAULT 1,
+    supersedes_document_id UUID REFERENCES document(id),
+
+    notes                 TEXT,
+    uploaded_by           UUID NOT NULL REFERENCES app_user(id),
+    uploaded_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at            TIMESTAMPTZ,
+
+    CONSTRAINT document_version_valida CHECK (version_number >= 1),
+    CONSTRAINT document_no_se_sustituye_a_si_mismo
+        CHECK (supersedes_document_id IS DISTINCT FROM id),
+    CONSTRAINT document_extension_sin_punto CHECK (file_extension NOT LIKE '.%'),
+    CONSTRAINT document_papelera_coherente
+        CHECK ((status = 'PAPELERA') = (deleted_at IS NOT NULL))
+);
+
+-- El mismo fichero no entra dos veces en el mismo proyecto.
+CREATE UNIQUE INDEX document_sha256_uniq
+    ON document (project_id, sha256) WHERE deleted_at IS NULL;
+CREATE INDEX document_tipo_idx ON document (project_id, doc_type);
+CREATE INDEX document_solicitud_idx ON document (doc_request_item_id);
+CREATE INDEX document_qa_idx ON document (qa_round_id, version_number);
+
+-- Misma barrera que en las fotografías: la ficha no puede reapuntarse a otro
+-- binario. El original de `stored_object` ya está protegido por su disparador.
+CREATE OR REPLACE FUNCTION impedir_sobrescritura_de_documento() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.stored_object_id IS DISTINCT FROM OLD.stored_object_id
+       OR NEW.sha256 IS DISTINCT FROM OLD.sha256
+       OR NEW.original_filename IS DISTINCT FROM OLD.original_filename
+       OR NEW.file_extension IS DISTINCT FROM OLD.file_extension THEN
+        RAISE EXCEPTION 'El original de un documento no se sobrescribe (documento %)', OLD.id
+            USING ERRCODE = 'raise_exception';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER document_original_inmutable
+    BEFORE UPDATE ON document
+    FOR EACH ROW EXECUTE FUNCTION impedir_sobrescritura_de_documento();
+
+-- =============================================================================
 --  Sesiones de refresco
 --
 --  Del token de refresco se guarda **solo su SHA-256**, nunca el token. Una
@@ -1186,7 +1301,7 @@ BEGIN
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
         'qa_round', 'phase_event',
         'photo', 'photo_version', 'photo_derivative', 'photo_link',
-        'user_session', 'project_member', 'asset_assignment'
+        'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

@@ -30,9 +30,11 @@ lo activa todavía. No se afirma lo contrario.
 
 from __future__ import annotations
 
+import io
 import json
 import uuid
-from datetime import datetime
+import zipfile
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import (
@@ -53,17 +55,19 @@ from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import images, storage
-from tdd.evidence.naming import PLANTILLA_POR_DEFECTO, sanear
+from tdd.evidence.naming import PLANTILLA_POR_DEFECTO, resolver_colisiones, sanear
 from tdd.evidence.service import (
     ContextoDeFoto,
     EstadoDeFoto,
     FotoConocida,
     FotoParaInforme,
+    PurgaNoPermitida,
     TipoDeDuplicado,
     TransicionDeFotoNoPermitida,
     agrupar_duplicados,
     avisos_previos_al_informe,
     buscar_duplicado,
+    comprobar_purga,
     comprobar_transicion,
     planificar_renombrado,
 )
@@ -86,6 +90,10 @@ MAX_BYTES = 50 * 1024 * 1024
 MAX_LOTE = 50
 
 DERIVADOS_AL_SUBIR = ("MINIATURA_320", "VISTA_1600")
+
+#: `[LIM]` Tope de la descarga directa en ZIP. Por encima hace falta el worker
+#: de §15.7, que no está construido.
+MAX_ZIP_BYTES = 400 * 1024 * 1024
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -831,3 +839,406 @@ def avisos_de_informe(project_id: uuid.UUID, s: SesionDep) -> Any:
         }
         for a in avisos
     ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Versiones §15.2
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class Version(BaseModel):
+    id: uuid.UUID
+    version_number: int
+    version_type: str
+    display_name: str
+    #: `NULL` cuando la versión solo cambia metadatos: renombrar **no duplica
+    #: el binario**.
+    stored_object_id: uuid.UUID | None
+    annotations: dict[str, Any] | None
+    is_current: bool
+    created_at: datetime
+
+
+@router.get("/photos/{photo_id}/versions", response_model=list[Version])
+def listar_versiones(photo_id: uuid.UUID, s: SesionDep) -> Any:
+    _obtener(s, photo_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT id, version_number, CAST(version_type AS text) AS version_type, "
+                "display_name, stored_object_id, annotations, is_current, created_at "
+                "FROM photo_version WHERE photo_id = :f ORDER BY version_number"
+            ),
+            {"f": str(photo_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class Anotaciones(BaseModel):
+    """`[REC]` §15.2 · Capa **vectorial**, no píxeles quemados.
+
+    Editables, reversibles, ocupan bytes en lugar de megabytes, y el original
+    sigue limpio. Se rasteriza solo cuando hace falta —informe o exportación—
+    y ese JPEG es un derivado desechable.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    annotations: dict[str, Any]
+    notes: str | None = None
+
+
+@router.post(
+    "/photos/{photo_id}/versions/annotate",
+    status_code=status.HTTP_201_CREATED,
+    response_model=list[Version],
+)
+def anotar(photo_id: uuid.UUID, cuerpo: Anotaciones, s: SesionDep, usuario: UsuarioDep) -> Any:
+    """Añade una versión anotada. **El original no se toca.**"""
+    _obtener(s, photo_id)
+    if "shapes" not in cuerpo.annotations:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "La capa de anotaciones debe traer al menos la lista «shapes»",
+        )
+    s.execute(
+        text("UPDATE photo_version SET is_current = FALSE WHERE photo_id = :f AND is_current"),
+        {"f": str(photo_id)},
+    )
+    s.execute(
+        text(
+            "INSERT INTO photo_version (organization_id, photo_id, version_number, version_type, "
+            "stored_object_id, display_name, annotations, notes, is_current, created_by) "
+            "SELECT :o, :f, COALESCE(MAX(pv.version_number), 0) + 1, 'ANOTADA', NULL, "
+            "  (SELECT display_name FROM photo WHERE id = :f), CAST(:a AS jsonb), :n, TRUE, :u "
+            "FROM photo_version pv WHERE pv.photo_id = :f"
+        ),
+        {
+            "o": str(usuario.organization_id),
+            "f": str(photo_id),
+            "a": _json(cuerpo.annotations),
+            "n": cuerpo.notes,
+            "u": str(usuario.id),
+        },
+    )
+    _auditar(s, usuario, "PHOTO_ANNOTATED", photo_id, {"formas": len(cuerpo.annotations["shapes"])})
+    return listar_versiones(photo_id, s)
+
+
+@router.post("/photo-versions/{version_id}/restore", response_model=list[Version])
+def restaurar_version(version_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any:
+    """`[REQ]` §15.2 · Restaurar **crea una versión nueva**; no reescribe la
+    historia.
+
+    Que el estado anterior desaparezca del historial sería exactamente lo que
+    una evidencia técnica no puede permitirse.
+    """
+    origen = (
+        s.execute(
+            text(
+                "SELECT photo_id, CAST(version_type AS text) AS version_type, display_name, "
+                "annotations, stored_object_id FROM photo_version WHERE id = :i"
+            ),
+            {"i": str(version_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if origen is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Versión no encontrada")
+
+    photo_id = origen["photo_id"]
+    s.execute(
+        text("UPDATE photo_version SET is_current = FALSE WHERE photo_id = :f AND is_current"),
+        {"f": str(photo_id)},
+    )
+    # La versión nueva es RESTAURADA salvo que reponga el estado original, en
+    # cuyo caso es un simple renombrado al nombre de llegada.
+    tipo = "ANOTADA" if origen["annotations"] else "RENOMBRADA"
+    s.execute(
+        text(
+            "INSERT INTO photo_version (organization_id, photo_id, version_number, version_type, "
+            "stored_object_id, display_name, annotations, notes, is_current, created_by) "
+            "SELECT :o, :f, COALESCE(MAX(version_number), 0) + 1, CAST(:t AS photo_version_type), "
+            "  NULL, :n, CAST(:a AS jsonb), :nota, TRUE, :u "
+            "FROM photo_version WHERE photo_id = :f"
+        ),
+        {
+            "o": str(usuario.organization_id),
+            "f": str(photo_id),
+            "t": tipo,
+            "n": origen["display_name"],
+            "a": _json(origen["annotations"]) if origen["annotations"] else None,
+            "nota": f"Restaurada desde la versión {version_id}",
+            "u": str(usuario.id),
+        },
+    )
+    s.execute(
+        text("UPDATE photo SET display_name = :n, updated_at = now() WHERE id = :i"),
+        {"n": origen["display_name"], "i": str(photo_id)},
+    )
+    _auditar(s, usuario, "PHOTO_VERSION_RESTORED", photo_id, {"desde": str(version_id)})
+    return listar_versiones(photo_id, s)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Clasificación en lote
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ActualizacionEnLote(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    photo_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    asset_id: uuid.UUID | None = None
+    zone_id: uuid.UUID | None = None
+    photo_category: str | None = Field(default=None, max_length=60)
+    include_in_report: bool | None = None
+    report_section: str | None = Field(default=None, max_length=60)
+    #: Se **añaden** a las existentes. Sustituirlas borraría en silencio el
+    #: trabajo de clasificación de otra persona.
+    add_tags: list[str] = Field(default_factory=list)
+
+
+@router.post("/photos/bulk-update", response_model=list[Foto])
+def actualizar_en_lote(cuerpo: ActualizacionEnLote, s: SesionDep) -> Any:
+    """Clasificación y etiquetas en lote.
+
+    Es la operación que hace usable una visita de 400 fotos: seleccionar las de
+    la cubierta y asignarlas de una vez, en lugar de abrir cuatrocientas fichas.
+    """
+    cambios = cuerpo.model_dump(exclude_unset=True, exclude={"photo_ids", "add_tags"})
+    ids = "{" + ",".join(str(i) for i in cuerpo.photo_ids) + "}"
+
+    if cambios:
+        asignaciones = ", ".join(f"{c} = :{c}" for c in cambios)
+        s.execute(
+            text(  # noqa: S608
+                f"UPDATE photo SET {asignaciones}, updated_at = now() "
+                "WHERE id = ANY(CAST(:ids AS uuid[])) AND deleted_at IS NULL"
+            ),
+            {**cambios, "ids": ids},
+        )
+    if cuerpo.add_tags:
+        s.execute(
+            text(
+                "UPDATE photo SET "
+                "  tags = ARRAY(SELECT DISTINCT unnest(tags || CAST(:t AS text[]))), "
+                "  updated_at = now() "
+                "WHERE id = ANY(CAST(:ids AS uuid[])) AND deleted_at IS NULL"
+            ),
+            {"t": "{" + ",".join(f'"{t}"' for t in cuerpo.add_tags) + "}", "ids": ids},
+        )
+
+    filas = s.execute(
+        text(f"SELECT {_COLUMNAS} FROM photo WHERE id = ANY(CAST(:ids AS uuid[]))"),  # noqa: S608
+        {"ids": ids},
+    ).all()
+    return [_fila_a_foto(f) for f in filas]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Descarga en lote §15.7
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class DescargaEnLote(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    photo_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    #: `[REQ]` §15.6 · Activado por defecto: la exportación para el cliente no
+    #: lleva GPS ni número de serie del dispositivo.
+    strip_metadata: bool = True
+    #: Usar el nombre visible en vez del de llegada. Es lo que hace navegable
+    #: un ZIP de 400 fotos.
+    use_display_names: bool = True
+
+
+@router.post("/projects/{project_id}/photos/download-batch")
+def descargar_en_lote(
+    project_id: uuid.UUID,
+    cuerpo: DescargaEnLote,
+    s: SesionDep,
+    usuario: UsuarioDep,
+    almacen: AlmacenDep,
+) -> Any:
+    """`[REQ]` ZIP con las fotos seleccionadas.
+
+    `[LIM]` Se construye **en la propia petición**. §15.7 pide hacerlo en el
+    worker con enlace caducable, y con 400 fotos esto tardará y ocupará memoria.
+    El límite de 500 y el tope de tamaño evitan lo peor, pero mover esto al
+    worker sigue pendiente y no se afirma lo contrario.
+    """
+    _proyecto_existe(s, project_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT p.id, p.display_name, p.original_filename, p.file_extension, "
+                "o.storage_key FROM photo p JOIN stored_object o ON o.id = p.stored_object_id "
+                "WHERE p.project_id = :proy AND p.id = ANY(CAST(:ids AS uuid[])) "
+                "  AND p.deleted_at IS NULL AND p.status = 'LISTA' ORDER BY p.report_order, "
+                "  p.uploaded_at"
+            ),
+            {
+                "proy": str(project_id),
+                "ids": "{" + ",".join(str(i) for i in cuerpo.photo_ids) + "}",
+            },
+        )
+        .mappings()
+        .all()
+    )
+    if not filas:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, "Ninguna de las fotografías indicadas está disponible"
+        )
+
+    nombres = [
+        f"{f['display_name']}.{f['file_extension']}"
+        if cuerpo.use_display_names
+        else f["original_filename"]
+        for f in filas
+    ]
+    # Dentro de un ZIP dos ficheros pueden llamarse igual, y al descomprimir uno
+    # pisa al otro sin avisar. El sufijo alfabético lo evita.
+    nombres = resolver_colisiones(nombres)
+
+    memoria = io.BytesIO()
+    total = 0
+    with zipfile.ZipFile(memoria, "w", zipfile.ZIP_DEFLATED) as z:
+        for fila, nombre in zip(filas, nombres, strict=True):
+            datos = almacen.leer(fila["storage_key"])
+            if cuerpo.strip_metadata:
+                # [REQ] §15.6 · Se elimina GPS, número de serie y propietario.
+                # Se hace regenerando la imagen: `exif=None` al guardar no basta,
+                # porque `save` arrastra el bloque original si existe.
+                try:
+                    datos = images.generar_derivado(
+                        datos, lado_maximo=4096, calidad=92, sin_metadatos=True
+                    )
+                except Exception:  # noqa: BLE001 — si no se puede limpiar, no se incluye
+                    continue
+            total += len(datos)
+            if total > MAX_ZIP_BYTES:
+                raise HTTPException(
+                    status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    "La selección supera el tamaño máximo de descarga directa. "
+                    "Reduzca el número de fotografías.",
+                )
+            z.writestr(nombre, datos)
+
+    _auditar(
+        s,
+        usuario,
+        "PHOTO_BATCH_DOWNLOADED",
+        filas[0]["id"],
+        {"fotos": len(filas), "sin_metadatos": cuerpo.strip_metadata},
+    )
+    return Response(
+        content=memoria.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="fotografias.zip"'},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Purga §15.9
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class Purga(BaseModel):
+    """La purga es física e irreversible, así que la autorización es explícita."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    confirmar: bool = False
+    motivo: str = Field(min_length=10, max_length=500)
+
+
+@router.post("/photos/{photo_id}/purge", status_code=status.HTTP_204_NO_CONTENT)
+def purgar(
+    photo_id: uuid.UUID, cuerpo: Purga, s: SesionDep, usuario: UsuarioDep, almacen: AlmacenDep
+) -> None:
+    """`[REQ]` §15.9 · Borra el binario y **conserva el registro de auditoría**.
+
+    Lo que queda: identificador, hash, quién la subió, quién la purgó y con qué
+    autorización. Sin contenido. Un registro que también desapareciera dejaría
+    la purga sin rastro, que es justo lo contrario de lo que se busca.
+    """
+    if not cuerpo.confirmar:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "La purga es irreversible y exige confirmación explícita",
+        )
+    if usuario.org_role not in ("ADMIN", "DIRECTOR_PROYECTO"):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Solo un administrador o director puede autorizar una purga"
+        )
+
+    fila = (
+        s.execute(
+            text(
+                "SELECT p.status::text AS status, p.deleted_at, p.sha256, p.uploaded_by, "
+                "o.storage_key, "
+                "EXISTS (SELECT 1 FROM photo_link pl WHERE pl.photo_id = p.id "
+                "        AND pl.entity_type = 'REPORT_SECTION') AS en_informe "
+                "FROM photo p JOIN stored_object o ON o.id = p.stored_object_id WHERE p.id = :i"
+            ),
+            {"i": str(photo_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if fila is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Fotografía no encontrada")
+
+    try:
+        comprobar_purga(
+            estado=EstadoDeFoto(fila["status"]),
+            borrada_el=fila["deleted_at"],
+            ahora=datetime.now(UTC),
+            referenciada_por_informe_emitido=fila["en_informe"],
+        )
+    except PurgaNoPermitida as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, str(exc), headers={"X-Motivo": exc.codigo}
+        ) from exc
+
+    # El registro de auditoría va ANTES de borrar: si el borrado falla a medias,
+    # queda constancia del intento en lugar de un hueco silencioso.
+    _auditar(
+        s,
+        usuario,
+        "PHOTO_PURGED",
+        photo_id,
+        {
+            "sha256": fila["sha256"],
+            "subida_por": str(fila["uploaded_by"]),
+            "purgada_por": str(usuario.id),
+            "motivo": cuerpo.motivo,
+        },
+    )
+    # Los derivados sí se borran del almacén: son regenerables y ya no lo serán.
+    for clave in (
+        s.execute(
+            text(
+                "SELECT o.storage_key FROM photo_derivative d "
+                "JOIN stored_object o ON o.id = d.stored_object_id WHERE d.photo_id = :i"
+            ),
+            {"i": str(photo_id)},
+        )
+        .scalars()
+        .all()
+    ):
+        almacen.borrar(clave)
+
+    s.execute(
+        text(
+            "UPDATE photo SET status = 'PURGADA', purged_at = now(), exif_raw = NULL, "
+            "gps_latitude = NULL, gps_longitude = NULL, caption = NULL, updated_at = now() "
+            "WHERE id = :i"
+        ),
+        {"i": str(photo_id)},
+    )
