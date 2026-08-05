@@ -9,12 +9,15 @@ from typing import Any
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from tdd.assets.router import router as assets_router
 from tdd.capex.router import router as capex_router
 from tdd.catalogs.router import router as catalogs_router
 from tdd.core.config import get_settings
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
 from tdd.evidence.router import router as evidence_router
 from tdd.evidence.storage import AlmacenEnDisco
+from tdd.findings.router import router as findings_router
+from tdd.identity.router import router as identity_router
 from tdd.phases.router import router as phases_router
 from tdd.projects.router import router as projects_router
 from tdd.suggestions.router import router as suggestions_router
@@ -73,9 +76,12 @@ def crear_app() -> FastAPI:
         return {"status": "ok"}
 
     api = "/api/v1"
+    app.include_router(identity_router, prefix=api)
     app.include_router(catalogs_router, prefix=api)
     app.include_router(projects_router, prefix=api)
     app.include_router(phases_router, prefix=api)
+    app.include_router(assets_router, prefix=api)
+    app.include_router(findings_router, prefix=api)
     app.include_router(capex_router, prefix=api)
     app.include_router(evidence_router, prefix=api)
     app.include_router(suggestions_router, prefix=api)

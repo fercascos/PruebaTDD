@@ -8,7 +8,9 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "sqlalchemy>=2.0.30",
     "alembic>=1.13",
-    "pydantic>=2.9",
+    # `email` arrastra `email-validator`, que es lo que valida `EmailStr` en el
+    # inicio de sesión. Sin él, la aplicación no arranca.
+    "pydantic[email]>=2.9",
     "pydantic-settings>=2.4",
     "psycopg[binary]>=3.2",
     "argon2-cffi>=23.1",

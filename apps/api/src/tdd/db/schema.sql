@@ -40,6 +40,12 @@ CREATE TABLE app_user (
     -- ADMIN, que además gestiona usuarios, catálogos y organización.
     can_manage_suggestions BOOLEAN NOT NULL DEFAULT FALSE,
     is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Bloqueo por intentos fallidos. El contador vive aquí y no en memoria
+    -- para que reiniciar el proceso no regale intentos a quien esté probando.
+    failed_login_attempts SMALLINT NOT NULL DEFAULT 0,
+    locked_until     TIMESTAMPTZ,
+    last_login_at    TIMESTAMPTZ,
+    password_changed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (organization_id, email)
@@ -185,7 +191,22 @@ CREATE TABLE asset (
     project_id        UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     typology_id       UUID NOT NULL REFERENCES asset_typology(id),
     name              VARCHAR(200) NOT NULL,
+    asset_code        VARCHAR(60),
+    main_use          VARCHAR(120),
+    address_line      VARCHAR(240),
     city              VARCHAR(120),
+    province          VARCHAR(120),
+    postal_code       VARCHAR(20),
+    country_code      CHAR(2) NOT NULL DEFAULT 'ES',
+    latitude          NUMERIC(9, 6),
+    longitude         NUMERIC(9, 6),
+    -- [REC] De dónde salen las coordenadas. Sin esto, nadie sabe si las tecleó
+    -- una persona o las adivinó un geocodificador, y el aviso de «foto lejos
+    -- del activo» acusaría al consultor por un error del mapa.
+    geocode_source    VARCHAR(40),
+    geocoded_at       TIMESTAMPTZ,
+    description       TEXT,
+    notes             TEXT,
     -- [REQ] P-02 · La UNIÓN de los campos de §3.1.3 y §3.3.1 en una sola ficha.
     -- Se muestran según tipología y NO se borran al reclasificar.
     plot_area_sqm       NUMERIC(14, 2),
@@ -199,7 +220,87 @@ CREATE TABLE asset (
     year_built          SMALLINT,
     year_last_refurb    SMALLINT,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at        TIMESTAMPTZ
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at        TIMESTAMPTZ,
+    -- La clave foránea se añade más abajo: `photo` todavía no existe aquí, y
+    -- reordenar el esquema por una columna opcional no compensa.
+    main_photo_id     UUID,
+
+    CONSTRAINT asset_coordenadas_completas
+        CHECK ((latitude IS NULL) = (longitude IS NULL)),
+    CONSTRAINT asset_coordenadas_en_rango
+        CHECK (latitude IS NULL
+               OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180)),
+    -- La reforma no puede ser anterior a la construcción. Es el error de
+    -- tecleo más habitual de la ficha y falsea la vida útil que se estima
+    -- después.
+    CONSTRAINT asset_reforma_posterior
+        CHECK (year_last_refurb IS NULL OR year_built IS NULL OR year_last_refurb >= year_built),
+    CONSTRAINT asset_anos_verosimiles
+        CHECK (year_built IS NULL OR year_built BETWEEN 1500 AND 2100),
+    -- [REC] El almacén no puede ser mayor que el edificio entero.
+    CONSTRAINT asset_almacen_cabe
+        CHECK (warehouse_area_sqm IS NULL OR total_built_sqm IS NULL
+               OR warehouse_area_sqm <= total_built_sqm),
+    CONSTRAINT asset_superficies_no_negativas
+        CHECK (COALESCE(plot_area_sqm, 0) >= 0 AND COALESCE(total_built_sqm, 0) >= 0
+               AND COALESCE(lettable_area_sqm, 0) >= 0)
+);
+
+CREATE UNIQUE INDEX asset_codigo_uniq
+    ON asset (project_id, asset_code) WHERE asset_code IS NOT NULL AND deleted_at IS NULL;
+CREATE INDEX asset_proyecto_idx ON asset (project_id) WHERE deleted_at IS NULL;
+
+-- ── Equipo del proyecto ─────────────────────────────────────────────────────
+--
+-- [REQ] §7 · El permiso efectivo de una persona es el MÁXIMO entre su rol de
+-- organización y su rol en el proyecto. Un LECTOR de la organización puede ser
+-- director de un proyecto concreto; no al revés.
+
+CREATE TYPE project_role AS ENUM (
+    'DIRECTOR', 'CONSULTOR', 'TECNICO_ESPECIALISTA', 'REVISOR', 'LECTOR'
+);
+
+CREATE TABLE project_member (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    project_id      UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    user_id         UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    role_code       project_role NOT NULL DEFAULT 'CONSULTOR',
+    is_project_lead BOOLEAN NOT NULL DEFAULT FALSE,
+    assigned_by     UUID REFERENCES app_user(id),
+    assigned_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+    removed_at      TIMESTAMPTZ,
+
+    -- Quien dirige el proyecto no puede figurar como LECTOR: sería un permiso
+    -- que se contradice a sí mismo.
+    CONSTRAINT project_member_director_coherente
+        CHECK (NOT is_project_lead OR role_code = 'DIRECTOR')
+);
+
+CREATE UNIQUE INDEX project_member_uniq
+    ON project_member (project_id, user_id) WHERE removed_at IS NULL;
+-- Un solo responsable por proyecto. Con dos, «el director decide» deja de ser
+-- una regla y pasa a ser una discusión.
+CREATE UNIQUE INDEX project_member_un_solo_director
+    ON project_member (project_id) WHERE is_project_lead AND removed_at IS NULL;
+CREATE INDEX project_member_usuario_idx ON project_member (user_id) WHERE removed_at IS NULL;
+
+-- [REQ] Una persona en varios activos y un activo con varios técnicos por
+-- especialidad. Con una columna en `asset` no cabría ninguna de las dos cosas.
+CREATE TABLE asset_assignment (
+    id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id   UUID NOT NULL REFERENCES organization(id),
+    asset_id          UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    project_member_id UUID NOT NULL REFERENCES project_member(id) ON DELETE CASCADE,
+    specialty         VARCHAR(60),
+    assigned_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    assigned_by       UUID REFERENCES app_user(id),
+
+    -- `NULLS NOT DISTINCT` es imprescindible: sin él, «sin especialidad» es
+    -- NULL, dos NULL se consideran distintos y la misma persona podría
+    -- asignarse al mismo activo tantas veces como quisiera.
+    UNIQUE NULLS NOT DISTINCT (asset_id, project_member_id, specialty)
 );
 
 -- ── Fases del proceso [REQ] §3.1.5 ──────────────────────────────────────────
@@ -445,6 +546,11 @@ CREATE TYPE tenant_recoverable AS ENUM ('SI', 'NO', 'NA');
 CREATE TYPE price_status AS ENUM ('SIN_PRECIO', 'PENDIENTE_VALIDACION', 'VALIDADO');
 CREATE TYPE amount_source AS ENUM ('MANUAL', 'MEDICION');
 
+-- El ciclo de vida de un hallazgo. `DESCARTADO` existe para que lo que se
+-- decide no incluir deje rastro: sin él, la única forma de quitar un hallazgo
+-- del informe sería borrarlo, y nadie sabría después que se llegó a valorar.
+CREATE TYPE finding_status AS ENUM ('BORRADOR', 'EN_REVISION', 'VALIDADO', 'DESCARTADO');
+
 CREATE TABLE finding (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id    UUID NOT NULL REFERENCES organization(id),
@@ -457,7 +563,13 @@ CREATE TABLE finding (
     title              VARCHAR(240) NOT NULL,
     description        TEXT NOT NULL DEFAULT '',
     comments           TEXT,
+    -- La actuación propuesta. Va en el hallazgo y no en la línea de CAPEX
+    -- porque una actuación recurrente (P-44) tiene varias líneas y una sola
+    -- recomendación: repetirla en cada línea garantizaría que divergieran.
+    recommendation     TEXT,
     tenant_recoverable tenant_recoverable NOT NULL DEFAULT 'NA',
+    status             finding_status NOT NULL DEFAULT 'BORRADOR',
+    owner_user_id      UUID REFERENCES app_user(id),
     created_by         UUID NOT NULL REFERENCES app_user(id),
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -956,6 +1068,91 @@ CREATE TABLE photo_link (
 
 CREATE INDEX photo_link_entidad_idx ON photo_link (entity_type, entity_id, sort_order);
 
+-- La foto principal del activo, ahora que `photo` existe. `SET NULL` y no
+-- `CASCADE`: mandar una foto a la papelera no puede borrar el activo.
+ALTER TABLE asset
+    ADD CONSTRAINT asset_foto_principal_fk
+    FOREIGN KEY (main_photo_id) REFERENCES photo(id) ON DELETE SET NULL;
+
+-- =============================================================================
+--  Sesiones de refresco
+--
+--  Del token de refresco se guarda **solo su SHA-256**, nunca el token. Una
+--  filtración de esta tabla no permite iniciar sesión como nadie, que es
+--  exactamente lo que un token guardado en claro sí permitiría.
+-- =============================================================================
+
+CREATE TABLE user_session (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id    UUID NOT NULL REFERENCES organization(id),
+    user_id            UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    refresh_token_hash CHAR(64) NOT NULL UNIQUE,
+    -- Todas las sesiones nacidas del mismo inicio comparten familia. Si se
+    -- reutiliza un token ya rotado, se revoca la familia entera: es la señal
+    -- de que alguien copió el token, y no hay forma de saber quién de los dos
+    -- es el legítimo.
+    family_id          UUID NOT NULL,
+    issued_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at         TIMESTAMPTZ NOT NULL,
+    revoked_at         TIMESTAMPTZ,
+    revoked_reason     VARCHAR(40),
+    replaced_by_id     UUID REFERENCES user_session(id),
+    user_agent         VARCHAR(300),
+    ip_address         INET,
+
+    CONSTRAINT user_session_caduca_despues CHECK (expires_at > issued_at)
+);
+
+CREATE INDEX user_session_usuario_idx ON user_session (user_id, issued_at DESC);
+CREATE INDEX user_session_familia_idx ON user_session (family_id) WHERE revoked_at IS NULL;
+
+-- ── El problema del huevo y la gallina del inicio de sesión ─────────────────
+--
+-- La RLS decide qué filas se ven a partir de `app.current_org_id`. Al iniciar
+-- sesión **todavía no se sabe la organización**: se averigua leyendo el
+-- usuario, que es justo lo que la RLS impide. Sin resolverlo, el login sería
+-- imposible... o habría que dar `BYPASSRLS` al usuario de aplicación, que
+-- convertiría toda la seguridad del esquema en decoración.
+--
+-- Se resuelven **solo las dos búsquedas** que tienen ese problema, con
+-- funciones `SECURITY DEFINER` de alcance mínimo. Todo lo demás —incluidos los
+-- contadores de intentos y la creación de la sesión— ocurre después, ya con
+-- contexto, bajo las políticas normales.
+--
+-- `SET search_path` es obligatorio en una función `SECURITY DEFINER`: sin él,
+-- quien pueda crear objetos en otro esquema podría secuestrar la resolución de
+-- nombres y ejecutar su código con los privilegios del propietario.
+
+CREATE OR REPLACE FUNCTION login_buscar_usuario(p_email TEXT)
+RETURNS TABLE (
+    id UUID, organization_id UUID, password_hash TEXT, org_role org_role,
+    can_manage_suggestions BOOLEAN, is_active BOOLEAN,
+    failed_login_attempts SMALLINT, locked_until TIMESTAMPTZ
+)
+LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+    SELECT u.id, u.organization_id, u.password_hash, u.org_role,
+           u.can_manage_suggestions, u.is_active,
+           u.failed_login_attempts, u.locked_until
+    FROM app_user u
+    JOIN organization o ON o.id = u.organization_id
+    WHERE lower(u.email) = lower(p_email) AND o.is_active;
+$$;
+
+CREATE OR REPLACE FUNCTION login_buscar_sesion(p_hash TEXT)
+RETURNS TABLE (
+    id UUID, user_id UUID, organization_id UUID, family_id UUID,
+    expires_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ,
+    org_role org_role, can_manage_suggestions BOOLEAN, is_active BOOLEAN
+)
+LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+    SELECT s.id, s.user_id, s.organization_id, s.family_id,
+           s.expires_at, s.revoked_at,
+           u.org_role, u.can_manage_suggestions, u.is_active
+    FROM user_session s
+    JOIN app_user u ON u.id = s.user_id
+    WHERE s.refresh_token_hash = p_hash;
+$$;
+
 -- =============================================================================
 --  Barreras 1 y 2 · Row Level Security
 --
@@ -988,7 +1185,8 @@ BEGIN
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
         'qa_round', 'phase_event',
-        'photo', 'photo_version', 'photo_derivative', 'photo_link'
+        'photo', 'photo_version', 'photo_derivative', 'photo_link',
+        'user_session', 'project_member', 'asset_assignment'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
