@@ -10,7 +10,7 @@ abajo sin adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 205 pruebas
+make test        # 222 pruebas
 make run         # http://localhost:8000/docs
 ```
 
@@ -28,6 +28,7 @@ make run         # http://localhost:8000/docs
 | **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
 | **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 20 |
 | **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 14 |
+| **Retirada de la marca de agua** `[REQ]` P-43 | ✅ Completo | `tests/unit/test_marca_de_agua.py` · 10 |
 
 ## Los dos ejes del proyecto
 

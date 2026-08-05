@@ -27,6 +27,7 @@ from tdd.reporting.clone import clonar_diapositiva, sustituir_marcadores  # noqa
 from tdd.reporting.fonts import comprobar_familias  # noqa: E402
 from tdd.reporting.overflow import capacidad_del_marco, evaluar  # noqa: E402
 from tdd.reporting.pptx_table import insertar_tabla  # noqa: E402
+from tdd.reporting.watermark import retirar_marcas_de_agua  # noqa: E402
 
 SISTEMAS = [
     ("Cimentación", "Se aprecian fisuras de retracción en la solera de la zona de aparcamiento, "
@@ -111,7 +112,7 @@ def main() -> int:
         print(f"   · clonada para «{nombre}» · marcadores sin resolver: {len(sin_resolver)}")
 
     # ── 4 · Tabla nativa de CAPEX ───────────────────────────────────────────
-    print("\n4. TABLA NATIVA DE CAPEX (P-31)")
+    print("\n4. TABLA NATIVA DE CAPEX (P-31) Y MARCA DE AGUA (P-43)")
     layout = cl.construir(LINEAS, capitulo="Arquitectura", locale="es-ES")
     print(f"   Columnas: {len(layout.columnas)} · ancho total {layout.ancho_total_in} in")
     print(f"   Filas:    {len(layout.filas)} (secciones + datos + total)")
@@ -124,6 +125,11 @@ def main() -> int:
         insertar_tabla(slide, trozo)
     print(f"   Diapositivas de tabla generadas: "
           f"{len(cl.particionar(layout, filas_por_diapositiva=18))}")
+
+    # [REQ] P-43 · La marca de agua no aparece en las versiones generadas.
+    marcas = retirar_marcas_de_agua(prs)
+    for m in marcas:
+        print(f"   · marca de agua retirada del {m.donde}: «{m.texto}»")
 
     prs.save(str(salida))
     ms = (time.monotonic() - t0) * 1000

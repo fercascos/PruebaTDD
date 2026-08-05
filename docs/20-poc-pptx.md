@@ -141,10 +141,9 @@ plazo**, no después. Ya está corregido en `capex_layout.py`.
 Afirmé que «la tabla no lleva ni código ni riesgo». **Es falso.** La columna `Group` contiene
 `High` / `Moderate` / `Low`: **es el grado de riesgo**, con su propio fondo oro para destacarla.
 
-`[PDV]` **P-42 · La tabla usa tres niveles y el catálogo tiene cuatro.** El catálogo de §5.4 define
-`01 Bajo`, `02 Moderado`, `03 Alto` y `04 Extremo`, con sus definiciones íntegras. La tabla real solo
-muestra tres. ¿Se agrupan Alto y Extremo al presentar, o el Excel simplemente no ha usado Extremo en
-este ejemplo? Se genera con los cuatro hasta que se aclare.
+> **P-42 · DECIDIDO por el cliente:** *«en el ejemplo no se incluyó y sí que tiene que estar.»* Los
+> **cuatro** grados van a la tabla. `Extremo` simplemente no aparecía en esa muestra; **no se agrupa
+> nada al presentar**. El generador ya lo hacía así, y ahora hay una prueba que lo fija.
 
 ### C-8 · El cuerpo de las diapositivas de sistema es **Century Gothic**, no Gotham
 
@@ -160,8 +159,20 @@ informe**, no solo a la tabla de CAPEX. Conviene saberlo antes de preparar la pl
 ### C-9 · Hay una marca de agua «DRAFT»
 
 Diagonal, gris, sobre todas las diapositivas. El análisis estructural no la distinguió de otra
-autoforma. `[PDV]` **P-43:** ¿debe retirarse al emitir la versión definitiva? Lo natural es que sí, y
-sería una directiva `@watermark: remove_on_issue` en el contrato de plantilla.
+autoforma. > **P-43 · DECIDIDO por el cliente:** *«la marca de agua de DRAFT no deberá aparecer en las versiones
+> futuras, retírala.»* Implementado en `reporting/watermark.py`.
+
+**Dónde estaba, y por qué importa:** una sola autoforma en el **patrón de diapositivas**, rotada 315°.
+No estaba en las diapositivas —de ahí que un análisis por diapositiva no la viera— y **retirarla del
+patrón la quita de las 67 a la vez**. Verificado sobre la plantilla real: se retira, el render sale
+limpio y **el original queda intacto** (mismo SHA-256).
+
+`[REC]` La detección exige que el texto de la forma sea **exactamente** una palabra de marca de agua
+*y* que esté rotada o sea muy ancha. Sin esa segunda condición, una diapositiva que hablase *sobre* el
+borrador en su cuerpo perdería ese texto. Hay una prueba para ese caso.
+
+`[REC]` Lo retirado **se devuelve para registrarlo**: que un informe emitido haya perdido una forma del
+patrón no debería ser invisible en la auditoría.
 
 ---
 
@@ -247,11 +258,13 @@ técnica, es trabajo conocido: preparar las plantillas (~1,5 jornadas cada una) 
 
 ## 20.6. Preguntas nuevas
 
+**Todas cerradas.** El bloque 4 no tiene ninguna cuestión pendiente que dependa del cliente.
+
 | # | Pregunta | Impacto | Propuesta |
 |---|---|---|---|
 | ~~**P-44**~~ | ~~¿Una actuación puede tener importe en dos plazos?~~ | — | ✅ **CERRADA: opción A.** Actuaciones recurrentes. Un hallazgo genera varias líneas, una por plazo, y se presentan en una sola fila. **P-05 sigue intacta a nivel de línea** |
-| **P-42** | La tabla muestra **tres** niveles de riesgo y el catálogo tiene **cuatro**. ¿Se agrupan Alto y Extremo al presentar? | Medio | Generar con los cuatro; agrupar es una regla del mapeo |
-| **P-43** | ¿La marca de agua **DRAFT** se retira al emitir la versión definitiva? | Bajo | Sí, con `@watermark: remove_on_issue` |
+| ~~**P-42**~~ | ~~¿Se agrupan Alto y Extremo al presentar?~~ | — | ✅ **CERRADA: no.** Los cuatro grados van a la tabla; el ejemplo no usó Extremo |
+| ~~**P-43**~~ | ~~¿La marca de agua DRAFT se retira?~~ | — | ✅ **CERRADA: sí, retirada.** Implementada y verificada sobre la plantilla real |
 
 ---
 

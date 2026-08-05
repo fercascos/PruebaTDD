@@ -331,3 +331,20 @@ def test_el_ancho_total_se_mantiene_cerca_del_original() -> None:
     puede desbordar la diapositiva de 10 in menos márgenes."""
     assert _layout().ancho_total_in <= 9.5
     assert _layout(incluir_otro=False).ancho_total_in <= 9.06
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  [REQ] P-42 · Los cuatro grados de riesgo
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_los_cuatro_grados_de_riesgo_llegan_a_la_tabla() -> None:
+    """P-42 · El ejemplo del cliente solo mostraba tres (`High`/`Moderate`/`Low`),
+    pero confirmó que **Extremo tiene que estar**: simplemente no se usó en esa
+    muestra. No se agrupa nada al presentar."""
+    lineas = [
+        cl.LineaCapex("", "General", "Normativa", f"Actuación {g}", g, "", "CORTO", Decimal("1000"))
+        for g in ("Bajo", "Moderado", "Alto", "Extremo")
+    ]
+    filas = [f for f in cl.construir(lineas, capitulo="Arq.").filas if f.tipo == "dato"]
+    assert {f.celdas["riesgo"] for f in filas} == {"Bajo", "Moderado", "Alto", "Extremo"}
