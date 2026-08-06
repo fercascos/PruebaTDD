@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 729 pruebas
+make test        # 771 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -58,6 +58,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Migraciones** · el esquema versionado | ✅ Completo | `tests/integration/test_migraciones.py` · 8 |
 | **Mapa de fotografías** `[REQ]` §15.9 | ✅ Completo | `tests/integration/test_mapa.py` · 10 |
 | **Matriz de riesgo × horizonte** `[REQ]` §12 | ✅ Completo | `test_riesgos.py` · 15 + `test_matriz_de_riesgos.py` · 14 |
+| **Comparador de precios** `[REQ]` §14 | ✅ Completo | `test_precios.py` · 23 + `test_precios_y_fuentes.py` · 19 |
 | **Directorio** · clientes y personas | ✅ Completo | `tests/integration/test_directorio.py` · 16 |
 | **Exportación del CAPEX a XLSX** `[REQ]` P-31 | ✅ Completo | `tests/integration/test_exportacion_capex.py` · 8 |
 | **Errores de usuario** · 409 y 422 donde había 500 | ✅ Completo | `tests/integration/test_errores_de_usuario.py` · 6 |
@@ -118,6 +119,36 @@ que lo protege sería decorativa.
 
 `[LIM]` El `downgrade` del esquema inicial **se niega**. Deshacerlo es borrar la
 base entera: automatizarlo convertiría un error de tecleo en una pérdida total.
+
+## El comparador de precios no consulta nada
+
+`[REQ]` §14. Y es la parte que más se nota en el código, porque las reglas las
+fijó el cliente por escrito:
+
+* **«No inventes APIs ni fuentes de precios.»** No hay ni un cliente HTTP de
+  precios en el proyecto. Una prueba lee el fichero del servicio y **falla si
+  aparece `requests`, `httpx`, `urllib` o `socket`**: es lo único que garantiza
+  que nadie añada una llamada de aquí a seis meses sin enterarse. Otra revisa el
+  OpenAPI en busca de rutas que sugieran consulta remota.
+* **«Nunca selecciones automáticamente un precio como definitivo.»** No existe
+  ninguna función que elija. Lo que hay rechaza validar sin las condiciones
+  puestas, y la base de datos lo respalda: su `CHECK` exige revisor, fecha y
+  nota de al menos diez caracteres para que una fila llegue a `VALIDADO`.
+* **P-06 · No hay ninguna fuente externa habilitada.** Una fuente nace siempre
+  deshabilitada, y habilitarla exige declarar que se han revisado sus
+  condiciones de uso; queda con nombre y fecha. También lo impide un `CHECK`,
+  así que ni saltándose la API se consigue.
+
+Lo que se enseña **no es una lista de resultados**: es la lista de lo que hay
+más **las fuentes que no se han consultado, con su motivo**. Una lista sin esa
+columna sugiere que se ha buscado en todas partes. Y las referencias salen por
+fecha, no por importe: ordenarlas por precio insinuaría preferencia por el más
+barato, que es justo lo que no se puede insinuar.
+
+`[LIM]` **No hay catálogo de índices.** La actualización por índice es una
+calculadora en la que el usuario introduce los dos valores; publicar una cifra
+del INE que nadie ha verificado sería exactamente inventar una fuente de
+precios. Devuelve la fórmula con sus operandos y no aplica nada.
 
 ## Los dos ejes del proyecto
 
@@ -191,7 +222,7 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 - **Recuperación de contraseña por correo.** Hay login, refresco con rotación,
   cierre de sesión y cambio de contraseña; falta el flujo de «he olvidado mi
   contraseña», que necesita SMTP.
-- **Inventario de equipos y comparador de precios** desde la API.
+- **Inventario de equipos** desde la API.
 - **Frontend:** lo construido y lo que falta, en
   [`apps/web/README.md`](../web/README.md).
 

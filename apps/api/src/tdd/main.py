@@ -23,6 +23,7 @@ from tdd.identity.directorio import router as directorio_router
 from tdd.identity.router import router as identity_router
 from tdd.phases.operations import router as phase_ops_router
 from tdd.phases.router import router as phases_router
+from tdd.pricing.router import router as pricing_router
 from tdd.projects.router import router as projects_router
 from tdd.reporting.router import router as reporting_router
 from tdd.reporting.snapshot import ProyectoInexistente
@@ -115,6 +116,7 @@ def crear_app() -> FastAPI:
     app.include_router(assets_router, prefix=api)
     app.include_router(findings_router, prefix=api)
     app.include_router(capex_router, prefix=api)
+    app.include_router(pricing_router, prefix=api)
     app.include_router(evidence_router, prefix=api)
     app.include_router(documents_router, prefix=api)
     app.include_router(reporting_router, prefix=api)

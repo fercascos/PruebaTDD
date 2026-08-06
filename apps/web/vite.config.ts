@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -28,6 +28,12 @@ function serviceWorker(): Plugin {
         ...Object.keys(bundle)
           .filter((f) => f.endsWith('.js') || f.endsWith('.css'))
           .map((f) => `/${f}`),
+        // Los iconos viven en `public/` y Vite los copia tal cual, así que no
+        // aparecen en `bundle`: hay que leerlos del disco. Se precachean porque
+        // el navegador los pide al instalar la aplicación, y una PWA que se
+        // instala sin cobertura y sale sin icono en la pantalla de inicio
+        // parece rota.
+        ...readdirSync(resolve(aqui, 'public/iconos')).map((f) => `/iconos/${f}`),
       ]
       const fuente = readFileSync(resolve(aqui, 'src/sw.ts'), 'utf-8')
       const { code } = transformSync(fuente, {

@@ -219,9 +219,8 @@ descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
 - **Sincronización en segundo plano.** Lo pendiente se guarda y la aplicación
   abre sin red, pero nada se sube con el móvil en el bolsillo: hace falta
   abrirla. Ver «Sin red» más arriba.
-- **Iconos del manifiesto.** Sin ellos el navegador no ofrece «instalar» en
-  todas las plataformas.
-- **Comparador de precios.**
+- **Comparador de precios en la interfaz.** La API está completa y probada
+  (ver `apps/api/README.md`); la pantalla de §14 no está construida.
 - **Recuperación de contraseña.** El alta de una persona fija una contraseña
   inicial que hay que comunicar por otro canal: la invitación por correo exige
   SMTP y no está montado. Se dice en pantalla; no se disimula.

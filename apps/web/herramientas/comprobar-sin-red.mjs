@@ -67,6 +67,39 @@ if (texto.trim().length === 0) {
   fallos.push('Sin red la aplicación no pinta nada: el armazón no sirve')
 }
 
+console.log('· El manifiesto es instalable')
+const manifiesto = await pagina.evaluate(async () => {
+  const r = await fetch('/manifest.webmanifest')
+  return r.ok ? await r.json() : null
+})
+if (!manifiesto) {
+  fallos.push('No se ha podido leer el manifiesto')
+} else {
+  const tamanos = (manifiesto.icons ?? []).map((i) => i.sizes)
+  const enmascarables = (manifiesto.icons ?? []).filter((i) =>
+    (i.purpose ?? '').includes('maskable'),
+  )
+  console.log('   iconos:', tamanos.join(', '), '· maskable:', enmascarables.length)
+  // Los dos tamaños que exigen Chrome y Android para ofrecer «instalar».
+  for (const requerido of ['192x192', '512x512']) {
+    if (!tamanos.includes(requerido)) {
+      fallos.push(`El manifiesto no declara un icono de ${requerido}: no será instalable`)
+    }
+  }
+  if (enmascarables.length === 0) {
+    fallos.push('Sin icono «maskable», Android recorta el dibujo en el círculo')
+  }
+  // Y los ficheros existen de verdad: un manifiesto que apunta a un 404 se
+  // acepta igual y el icono sale en blanco.
+  for (const icono of manifiesto.icons ?? []) {
+    const estado = await pagina.evaluate(
+      async (src) => (await fetch(src)).status,
+      icono.src,
+    )
+    if (estado !== 200) fallos.push(`El icono ${icono.src} devuelve ${estado}`)
+  }
+}
+
 console.log('· La API NO se sirve desde caché')
 // Se pide con red y luego sin ella: si el worker la hubiera cacheado, la
 // segunda respondería 200 con un dato viejo, que es peor que un error visible.

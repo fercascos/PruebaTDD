@@ -792,7 +792,7 @@ avisa al terminar; no bloquea la pantalla.
 │ ACTUALIZACIÓN POR ÍNDICE (opcional)                                          │
 │ Índice ┌─────────────────────┐ De ┌───────┐ A ┌───────┐ Factor geo ┌──────┐ │
 │        │ Costes construcción▾│    │2025-11│   │2026-07│            │ 1,05 │ │
-│ Cálculo propuesto: 48.500,00 × (118,4 / 112,7) × 1,05 = 53.494,52 €          │
+│ Cálculo propuesto: 48.500,00 × (118,4 / 112,7) × 1,05 = 53.500,62 €          │
 │ ⓘ No se aplicará hasta que lo confirme. Al aplicarlo, el precio volverá a    │
 │   quedar pendiente de validación.        [ Ver detalle ]  [ Aplicar ]        │
 ├──────────────────────────────────────────────────────────────────────────────┤
