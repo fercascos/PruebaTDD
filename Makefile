@@ -48,8 +48,7 @@ db-init:  ## Crea las bases y aplica el esquema (DESTRUCTIVO: las recrea)
 	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q \
 	  -c "DROP DATABASE IF EXISTS $(DB);" -c "CREATE DATABASE $(DB);" \
 	  -c "DROP DATABASE IF EXISTS $(TEST_DB);" -c "CREATE DATABASE $(TEST_DB);"
-	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
-	  -f apps/api/src/tdd/db/schema.sql
+	@$(MAKE) --no-print-directory db-migrate
 	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
 	  -c "DROP ROLE IF EXISTS $(APP_ROLE);" \
 	  -c "CREATE ROLE $(APP_ROLE) LOGIN PASSWORD '$(APP_PASS)';" \
@@ -59,6 +58,25 @@ db-init:  ## Crea las bases y aplica el esquema (DESTRUCTIVO: las recrea)
 	@$(MAKE) --no-print-directory db-seed
 	@echo "Base $(DB) lista. El rol $(APP_ROLE) NO tiene BYPASSRLS: es lo que hace que la RLS sirva."
 	@echo "Siguiente paso: make db-admin ORG='...' EMAIL='...' NOMBRE='...'"
+
+db-migrate:  ## Aplica las migraciones pendientes (alembic upgrade head)
+	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \
+	  python3 -m alembic upgrade head
+
+db-revision:  ## Crea una migración vacía: make db-revision M="lo que cambia"
+	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \
+	  python3 -m alembic revision -m "$(M)"
+	@echo
+	@echo "Recuerde: actualice también apps/api/src/tdd/db/schema.sql."
+	@echo "Es la verdad del esquema, y test_migraciones.py falla si divergen."
+
+db-sql:  ## Imprime el SQL de las migraciones pendientes sin ejecutarlo
+	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \
+	  python3 -m alembic upgrade head --sql
+
+db-version:  ## Qué versión del esquema tiene la base
+	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \
+	  python3 -m alembic current
 
 db-seed:  ## Siembra catálogos y fases en la base de desarrollo (idempotente)
 	@cd apps/api && PYTHONPATH=src DATABASE_URL="$(ADMIN_DATABASE_URL)" python3 -m tdd.db.sembrar
@@ -105,5 +123,5 @@ run:  ## Arranca la API en local (como tdd_app: con la RLS en vigor)
 
 ci: catalogs-check no-fonts lint test  ## Lo que debe pasar antes de un push
 
-.PHONY: help install db-up db-init db-seed db-admin catalogs catalogs-check test test-unit test-rls \
+.PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
         test-catalogs lint fmt no-fonts run ci

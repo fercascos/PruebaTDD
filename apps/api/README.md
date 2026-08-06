@@ -10,8 +10,8 @@ adornos.
 ```bash
 make install     # dependencias
 make db-up       # PostgreSQL 16
-make db-init     # crea las bases, aplica el esquema, siembra catálogos y fases
-make test        # 682 pruebas
+make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
+make test        # 690 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -55,6 +55,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 23 |
 | **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 27 |
 | **Primera cuenta** · arranque sin API | ✅ Completo | `tests/integration/test_arranque.py` · 7 |
+| **Migraciones** · el esquema versionado | ✅ Completo | `tests/integration/test_migraciones.py` · 8 |
 | **Directorio** · clientes y personas | ✅ Completo | `tests/integration/test_directorio.py` · 16 |
 | **Exportación del CAPEX a XLSX** `[REQ]` P-31 | ✅ Completo | `tests/integration/test_exportacion_capex.py` · 8 |
 | **Errores de usuario** · 409 y 422 donde había 500 | ✅ Completo | `tests/integration/test_errores_de_usuario.py` · 6 |
@@ -73,6 +74,48 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Trabajo de las fases** · checklist, VDR, visitas, Q&A | ✅ Completo | `tests/integration/test_trabajo_de_fases.py` · 30 |
 | **Documentos** (§15.11) | ✅ Completo | `tests/integration/test_documentos.py` · 28 |
 | **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |
+
+## El esquema se versiona con Alembic
+
+```bash
+make db-migrate                        # alembic upgrade head
+make db-version                        # qué versión tiene la base
+make db-sql                            # el SQL pendiente, SIN ejecutarlo
+make db-revision M="añade la columna X"  # una migración nueva, vacía
+```
+
+Tres decisiones que se notan:
+
+**La migración inicial ejecuta `schema.sql` tal cual**, no lo reescribe en
+llamadas de Alembic. El esquema tiene 6 políticas RLS explícitas más las que
+crean dos bucles `DO $$`, 9 triggers, 14 funciones, 4 columnas generadas y 57
+`CHECK`, y **Alembic no sabe expresar la mayor parte**: acabarían todas en
+`op.execute()` con el mismo SQL. Un esquema «migrado» al que le faltaran las
+políticas arrancaría sin un solo error y dejaría los datos de cada organización
+visibles para las demás.
+
+**`schema.sql` sigue siendo la verdad, y hay una prueba que lo impone.**
+`test_migraciones.py` crea dos bases —una migrando, otra con `schema.sql`— y
+compara tablas, columnas, políticas, `FORCE ROW LEVEL SECURITY`, triggers,
+restricciones, índices, funciones y enumerados. Si alguien escribe una
+migración y no actualiza `schema.sql`, la suite lo dice y señala en qué aspecto.
+Se comprobó añadiendo una migración que cambia una columna a espaldas del
+fichero: la prueba falla, como debe.
+
+**No hay `--autogenerate` ni `target_metadata`.** No existe capa de modelos
+declarativos de la que generar, y un autogenerado que ignora en silencio
+políticas y triggers produciría migraciones que parecen correctas y dejan la
+base sin protección. Las migraciones se escriben a mano, en SQL.
+
+`[REQ]` La conexión sale del entorno (`DATABASE_MIGRATION_URL`), **nunca del
+`alembic.ini`**: una cadena con contraseña en un fichero versionado es una
+credencial en el repositorio. Hay una prueba que lee el `.ini` y falla si
+aparece una. Y se migra con la conexión de **administración**, no con
+`tdd_app`: si el usuario de la aplicación pudiera alterar el esquema, la RLS
+que lo protege sería decorativa.
+
+`[LIM]` El `downgrade` del esquema inicial **se niega**. Deshacerlo es borrar la
+base entera: automatizarlo convertiría un error de tecleo en una pérdida total.
 
 ## Los dos ejes del proyecto
 
@@ -146,9 +189,6 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 - **Recuperación de contraseña por correo.** Hay login, refresco con rotación,
   cierre de sesión y cambio de contraseña; falta el flujo de «he olvidado mi
   contraseña», que necesita SMTP.
-- **Alembic.** El esquema se aplica desde `schema.sql`. La migración inicial se
-  genera cuando el modelo deje de moverse: versionar migraciones de un esquema
-  que cambia cada día produce un historial inútil.
 - **Inventario de equipos y comparador de precios** desde la API.
 - **Frontend:** lo construido y lo que falta, en
   [`apps/web/README.md`](../web/README.md).
