@@ -22,6 +22,7 @@ export function Marco({ children }: { children: ReactNode }) {
           <NavLink to="/proyectos">Proyectos</NavLink>
           <NavLink to="/plantillas">Plantillas</NavLink>
           <NavLink to="/sugerencias">Sugerencias</NavLink>
+          <NavLink to="/personas">Personas</NavLink>
         </nav>
         <div className="sesion">
           {perfil && (

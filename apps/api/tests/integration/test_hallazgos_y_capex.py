@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import uuid
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -329,6 +330,142 @@ def test_la_medicion_recalcula_su_base(
         json={"measurement_quantity": "300.00"},
     )
     assert r.json()["capex_lines"][0]["computed_base"] == "6600.0000"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  `[REQ]` P-05b · El traslado de la medición es una acción EXPLÍCITA
+#
+#  La cascada nunca sustituye sola un importe tecleado: quien lo escribió puede
+#  tener un presupuesto real delante, y la fórmula no sabe nada de eso.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _con_medicion(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, Any],
+    activo: str,
+    **extra: Any,
+) -> Any:
+    return crear(
+        cliente,
+        cab,
+        proyecto,
+        catalogo,
+        activo,
+        capex_lines=[
+            {
+                "time_horizon_code": "CORTO",
+                "amount": "9999.00",
+                "measurement_unit": "m2",
+                "measurement_quantity": "250.00",
+                "measurement_unit_price": "22.00",
+                **extra,
+            }
+        ],
+    ).json()
+
+
+def test_trasladar_la_medicion_sin_confirmar_se_rechaza(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    """Sin la confirmación no hay traslado. Es lo que impide que un cliente de
+    la API lo dispare por descuido y pise un importe que alguien negoció."""
+    hallazgo = _con_medicion(cliente, cab, proyecto, catalogo, activo)
+    linea = hallazgo["capex_lines"][0]
+
+    r = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/carry-measurement",
+        headers=cab("consultor_a"),
+        json={"confirmar": False},
+    )
+    assert r.status_code == 422
+    assert "confirmaci" in r.json()["detail"].lower()
+
+    # Y el importe sigue siendo el tecleado, no la base calculada.
+    sigue = cliente.get(f"{RUTA}/findings/{hallazgo['id']}", headers=cab("consultor_a")).json()
+    assert Decimal(sigue["capex_lines"][0]["amount"]) == Decimal("9999.00")
+
+
+def test_trasladar_la_medicion_confirmada_sustituye_el_importe(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    hallazgo = _con_medicion(cliente, cab, proyecto, catalogo, activo)
+    linea = hallazgo["capex_lines"][0]
+
+    r = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/carry-measurement",
+        headers=cab("consultor_a"),
+        json={"confirmar": True},
+    )
+    assert r.status_code == 200, r.text
+    nueva = next(x for x in r.json()["capex_lines"] if x["id"] == linea["id"])
+    assert Decimal(nueva["amount"]) == Decimal("5500.00")
+    # Queda dicho de dónde salió el número: no es lo mismo un importe tecleado
+    # que uno que viene de una medición.
+    assert nueva["amount_source"] == "MEDICION"
+
+
+def test_el_traslado_devuelve_el_hallazgo_con_los_totales_al_dia(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    """`[REQ]` Cualquier cambio sobre una línea devuelve **el hallazgo**.
+
+    Devolvía solo la línea, y era una incoherencia con la regla que el propio
+    módulo declara: la interfaz habría tenido que rehacer la suma por su cuenta
+    justo después de que el servidor cambiara un importe, y ese cálculo
+    duplicado es donde aparecen los descuadres entre lo que se ve y lo que se
+    entrega.
+    """
+    hallazgo = _con_medicion(cliente, cab, proyecto, catalogo, activo)
+    linea = hallazgo["capex_lines"][0]
+    assert Decimal(hallazgo["total_amount"]) == Decimal("9999.00")
+
+    devuelto = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/carry-measurement",
+        headers=cab("consultor_a"),
+        json={"confirmar": True},
+    ).json()
+
+    assert "capex_lines" in devuelto, "debe devolver el hallazgo, no la línea suelta"
+    assert Decimal(devuelto["total_amount"]) == Decimal("5500.00")
+
+
+def test_sin_desglose_no_hay_nada_que_trasladar(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    """Un 409 que lo explica, no un traslado silencioso de `NULL` a cero: poner
+    a cero un importe por error es una afirmación de que la actuación no cuesta
+    nada."""
+    hallazgo = crear(
+        cliente,
+        cab,
+        proyecto,
+        catalogo,
+        activo,
+        capex_lines=[{"time_horizon_code": "CORTO", "amount": "1200.00"}],
+    ).json()
+
+    r = cliente.post(
+        f"{RUTA}/capex-items/{hallazgo['capex_lines'][0]['id']}/carry-measurement",
+        headers=cab("consultor_a"),
+        json={"confirmar": True},
+    )
+    assert r.status_code == 409
+    assert "medición" in r.json()["detail"]
+
+
+def test_otra_organizacion_no_traslada_una_medicion_ajena(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    hallazgo = _con_medicion(cliente, cab, proyecto, catalogo, activo)
+    r = cliente.post(
+        f"{RUTA}/capex-items/{hallazgo['capex_lines'][0]['id']}/carry-measurement",
+        headers=cab("admin_b"),
+        json={"confirmar": True},
+    )
+    assert r.status_code == 404
 
 
 def test_borrar_una_linea_devuelve_el_hallazgo_sin_ella(

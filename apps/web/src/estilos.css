@@ -661,3 +661,124 @@ textarea {
 .acciones-sugerencia input {
   flex: 1 1 240px;
 }
+
+/* ── Ficha de hallazgo ──────────────────────────────────────────────────── */
+.ficha-hallazgo {
+  display: grid;
+  gap: 1.2rem;
+}
+.ficha-hallazgo > .cabecera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.ficha-hallazgo > .cabecera h2 {
+  margin: 0;
+  flex: 1;
+}
+.ficha-hallazgo section {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+.ficha-hallazgo section > h3 {
+  margin: 0;
+}
+
+/* La definición íntegra del grado de riesgo. Se lee, no se decora: es el
+   criterio con el que dos consultores distintos tienen que coincidir. */
+.definicion-riesgo {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--acento);
+  background: var(--fondo);
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+}
+
+.linea-capex {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.linea-capex.nueva {
+  border-style: dashed;
+}
+.linea-capex .totales {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+}
+.linea-capex input[readonly] {
+  background: var(--fondo);
+  color: var(--tinta-suave);
+}
+
+/* Cada destino con su motivo debajo, no un botón mudo deshabilitado. */
+.destino {
+  display: inline-grid;
+  gap: 0.2rem;
+  max-width: 22rem;
+}
+.destino .ayuda {
+  margin: 0;
+}
+
+/* ── Calculadora de la cascada (P-16) ───────────────────────────────────── */
+.calculadora {
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+  padding: 0.8rem;
+  background: var(--fondo);
+  display: grid;
+  gap: 0.6rem;
+}
+.calculadora > .cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.calculadora > .cabecera h4 {
+  margin: 0;
+}
+.tabla.cascada tfoot tr:nth-last-child(-n + 2) td {
+  color: var(--tinta-suave);
+}
+
+/* ── Botón que parece un enlace ─────────────────────────────────────────── */
+/* Es un `button` y no un `<a>` a propósito: no navega a ninguna dirección,
+   abre un panel. Un enlace sin destino rompe el clic con el botón central y
+   el «abrir en pestaña nueva» del navegador. */
+button.enlace {
+  all: unset;
+  cursor: pointer;
+  color: var(--acento);
+  text-decoration: underline;
+  font: inherit;
+}
+button.enlace:hover {
+  text-decoration: none;
+}
+
+/* Acción destructiva con forma de secundaria: llama la atención sin gritar. */
+button.secundario.peligro {
+  background: var(--papel);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* ── Personas ───────────────────────────────────────────────────────────── */
+tr.inactiva td {
+  opacity: 0.55;
+}
+.estado.e-descartado,
+.estado.e-rechazada {
+  background: #f1f5f9;
+  color: var(--tinta-suave);
+}

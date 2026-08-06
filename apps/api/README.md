@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, aplica el esquema, siembra catálogos y fases
-make test        # 651 pruebas
+make test        # 656 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -68,7 +68,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Fotografías avanzado** · versiones, ZIP y purga | ✅ Completo | `tests/integration/test_fotografias_avanzado.py` · 21 |
 | **Autenticación** · login, rotación y bloqueo | ✅ Completo | `test_identidad.py` · 20 + `test_autenticacion.py` · 23 |
 | **Activos y equipo del proyecto** | ✅ Completo | `tests/integration/test_activos_y_equipo.py` · 27 |
-| **Hallazgos y CAPEX** · P-44 por ambos lados | ✅ Completo | `test_hallazgos.py` · 12 + `test_hallazgos_y_capex.py` · 23 |
+| **Hallazgos y CAPEX** · P-44 y el traslado explícito de P-05b | ✅ Completo | `test_hallazgos.py` · 12 + `test_hallazgos_y_capex.py` · 28 |
 | **Trabajo de las fases** · checklist, VDR, visitas, Q&A | ✅ Completo | `tests/integration/test_trabajo_de_fases.py` · 30 |
 | **Documentos** (§15.11) | ✅ Completo | `tests/integration/test_documentos.py` · 28 |
 | **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |

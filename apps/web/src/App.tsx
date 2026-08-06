@@ -8,6 +8,7 @@ import { FichaDeProyecto } from './paginas/FichaDeProyecto'
 import { Plantillas } from './paginas/Plantillas'
 import { NuevoProyecto } from './paginas/NuevoProyecto'
 import { Sugerencias } from './paginas/Sugerencias'
+import { Personas } from './paginas/Personas'
 
 export function App() {
   const [autenticado, setAutenticado] = useState(haySesion())
@@ -45,6 +46,7 @@ export function App() {
                   <Route path="/proyectos/:id/*" element={<FichaDeProyecto />} />
                   <Route path="/plantillas" element={<Plantillas />} />
                   <Route path="/sugerencias" element={<Sugerencias />} />
+                  <Route path="/personas" element={<Personas />} />
                   <Route path="*" element={<Navigate to="/proyectos" replace />} />
                 </Routes>
               </Marco>

@@ -169,9 +169,16 @@ export async function enviar<T>(ruta: string, body: unknown, method = 'POST'): P
   return r.status === 204 ? (undefined as T) : ((await r.json()) as T)
 }
 
-export async function borrar(ruta: string): Promise<void> {
+/**
+ * `DELETE`. Devuelve el cuerpo si lo hay: varios endpoints responden con la
+ * entidad padre y sus totales ya recalculados —borrar una línea de CAPEX
+ * devuelve el hallazgo—, y descartarlo obligaría a la interfaz a rehacer la
+ * suma por su cuenta, que es donde aparecen los descuadres.
+ */
+export async function borrar<T = void>(ruta: string): Promise<T> {
   const r = await peticion(ruta, { method: 'DELETE' })
   await lanzarSiFalla(r)
+  return r.status === 204 ? (undefined as T) : ((await r.json()) as T)
 }
 
 export async function subirFichero<T>(

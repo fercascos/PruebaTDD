@@ -30,6 +30,8 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Ficha de fotografía** | Clasificar por activo y zona, pie, orden en el informe, procedencia |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
+| **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
+| **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Informes** | Avisos previos, generación, descarga PPTX/XLSX y ciclo hasta emitir |
 | **Plantillas** | Subida, análisis y mapeo de marcadores |
 | **Sugerencias** | Proponer cambios; la bandeja solo la ve quien atiende el buzón |
@@ -63,6 +65,15 @@ Comparten la misma promesa. Sin eso, dos peticiones rotarían el token, la
 segunda presentaría uno ya rotado y el servidor revocaría la familia entera
 dando el token por robado: el usuario se vería expulsado sin motivo aparente.
 
+**La fórmula del CAPEX está a la vista, no escondida** (`CalculadoraDeCapex.tsx`).
+`[REQ]` P-16 pedía no ocultar las fórmulas. El endpoint que calcula la cascada
+existía y estaba probado desde el principio, pero ninguna pantalla lo llamaba:
+el requisito estaba construido y era invisible. Cada peldaño sale con **su base
+y su porcentaje**, no solo con el resultado, para poder comprobar delante del
+cliente que GG y BI van sobre el PEM y los honorarios sobre el PEC. Aplicar el
+resultado a un importe es un clic aparte: `[REQ]` P-05b, la cascada nunca pisa
+sola un número que alguien tecleó mirando un presupuesto real.
+
 **Las imágenes se traen con `fetch`, no con `src`** (`src/fotos/Imagen.tsx`).
 Un `<img src="/api/v1/photos/…/download">` no funciona aquí: el token vive en
 memoria y el navegador no le pone ninguna cabecera a la petición que dispara un
@@ -83,10 +94,11 @@ que nada se pierde en silencio— sin montar un servidor ni un navegador.
   aplicación **no funciona sin red**, y §15.8 lo pide para la fase offline.
 - **Editor de anotaciones** sobre la fotografía. El backend guarda la capa
   vectorial; no hay lienzo para dibujarla.
-- **Mapa de fotografías por GPS**, matriz de riesgos, comparador de precios y
-  administración de usuarios. El alta de personas existe en la API; no hay
-  pantalla.
-- **Edición de hallazgos y de líneas de CAPEX ya creadas.** Se crean desde la
-  interfaz; corregir un importe sigue siendo un `PATCH` por API.
+- **Mapa de fotografías por GPS**, matriz de riesgos y comparador de precios.
+- **Recuperación de contraseña.** El alta de una persona fija una contraseña
+  inicial que hay que comunicar por otro canal: la invitación por correo exige
+  SMTP y no está montado. Se dice en pantalla; no se disimula.
+- **Edición del activo asignado a un hallazgo.** Se cambian el texto, el riesgo
+  y las líneas; mover una actuación a otro activo sigue siendo un `PATCH`.
 - **Pruebas de componente.** Solo la lógica pura está probada; las pantallas se
   han verificado a mano contra la API real.

@@ -244,11 +244,19 @@ class TrasladarMedicion(BaseModel):
     )
 
 
-@router.post("/capex-items/{item_id}/carry-measurement", response_model=LineaCapex)
+@router.post("/capex-items/{item_id}/carry-measurement")
 def trasladar_medicion(
     item_id: uuid.UUID, cuerpo: TrasladarMedicion, s: SesionDep, usuario: UsuarioDep
 ) -> Any:
-    """Traslada `computed_base` al importe de la línea. **Acción explícita.**"""
+    """Traslada `computed_base` al importe de la línea. **Acción explícita.**
+
+    `[REQ]` Devuelve **el hallazgo con los totales recalculados**, igual que
+    cualquier otro cambio sobre una línea. Devolvía solo la línea, y era una
+    incoherencia con su propia regla: la interfaz habría tenido que rehacer la
+    suma por su cuenta justo después de que el servidor cambiara un importe, y
+    ese cálculo duplicado es donde aparecen los descuadres entre lo que se ve en
+    pantalla y lo que se entrega.
+    """
     if not cuerpo.confirmar:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -290,12 +298,11 @@ def trasladar_medicion(
             "despues": f'{{"amount": "{fila["computed_base"]}", "amount_source": "MEDICION"}}',
         },
     )
-    nueva = (
-        s.execute(
-            text(f"{_SELECT} WHERE ci.id = :i"),
-            {"i": item_id},  # noqa: S608
-        )
-        .mappings()
-        .one()
-    )
-    return dict(nueva)
+    # Se importa aquí y no arriba para no crear un ciclo entre los dos módulos:
+    # `findings` ya conoce el CAPEX, y el CAPEX solo necesita esta lectura.
+    from tdd.findings.router import leer_hallazgo
+
+    finding_id = s.execute(
+        text("SELECT finding_id FROM capex_item WHERE id = :i"), {"i": item_id}
+    ).scalar_one()
+    return leer_hallazgo(s, finding_id)

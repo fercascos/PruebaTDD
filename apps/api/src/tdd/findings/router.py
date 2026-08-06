@@ -171,6 +171,16 @@ def _proyecto_existe(s: Session, project_id: uuid.UUID) -> None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Proyecto no encontrado")
 
 
+def leer_hallazgo(s: Session, finding_id: uuid.UUID) -> dict[str, Any]:
+    """El hallazgo con sus líneas y **los totales ya calculados**.
+
+    Público —sin guion bajo— porque lo usa también el traslado de medición del
+    módulo de CAPEX: cualquier cambio sobre una línea devuelve el hallazgo
+    entero, y esa lectura tiene que ser la misma en los dos sitios.
+    """
+    return _leer(s, finding_id)
+
+
 def _leer(s: Session, finding_id: uuid.UUID) -> dict[str, Any]:
     fila = (
         s.execute(

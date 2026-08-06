@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { descargar, obtener } from '../api/cliente'
 import type { Hallazgo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
+import { FichaDeHallazgo } from './FichaDeHallazgo'
 import { NuevoHallazgo } from './NuevoHallazgo'
 
 const PLAZOS = ['CORTO', 'MEDIO', 'LARGO', 'MEJORAS', 'OTRO'] as const
@@ -25,6 +26,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   const [hallazgos, setHallazgos] = useState<Hallazgo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
+  const [abierto, setAbierto] = useState<Hallazgo | null>(null)
   const [exportando, setExportando] = useState(false)
   // Aparte del error de carga: que falle la exportación no debe dejar la
   // pestaña en blanco y hacer perder de vista la tabla.
@@ -39,6 +41,19 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   useEffect(recargar, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
+
+  if (abierto) {
+    return (
+      <FichaDeHallazgo
+        hallazgo={abierto}
+        alGuardar={recargar}
+        alCerrar={() => {
+          setAbierto(null)
+          recargar()
+        }}
+      />
+    )
+  }
 
   if (creando) {
     return (
@@ -148,7 +163,11 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
             return (
               <tr key={h.id}>
                 <td>
-                  <strong>{h.title}</strong>
+                  {/* Abre la ficha: corregir un importe mal tecleado es lo más
+                      cotidiano que hay, y hasta ahora exigía un PATCH por API. */}
+                  <button type="button" className="enlace" onClick={() => setAbierto(h)}>
+                    {h.title}
+                  </button>
                   {h.capex_lines.length > 1 && (
                     <em className="ayuda"> · actuación recurrente</em>
                   )}
