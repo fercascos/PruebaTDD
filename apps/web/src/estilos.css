@@ -402,12 +402,31 @@ select {
   display: block;
   width: 100%;
 }
-.miniatura img {
+.miniatura img,
+.miniatura .imagen-cargando,
+.miniatura .imagen-fallida {
   width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   border-radius: 4px;
   background: var(--borde);
+}
+
+/* Los dos estados de <Imagen>. El hueco reserva el mismo sitio que la foto:
+   sin eso la rejilla salta cada vez que termina de cargar una miniatura. */
+.imagen-cargando,
+.imagen-fallida {
+  display: grid;
+  place-items: center;
+  background: var(--borde);
+  border-radius: 4px;
+  min-height: 3rem;
+}
+.imagen-fallida {
+  font-size: 0.78rem;
+  color: var(--tinta-suave);
+  padding: 0.5rem;
+  text-align: center;
 }
 .rejilla .nombre {
   margin: 0.35rem 0 0;
@@ -517,4 +536,128 @@ select {
   width: min(380px, 100%);
   display: grid;
   gap: 0.9rem;
+}
+
+/* ── Formularios ─────────────────────────────────────────────────────────── */
+
+.rejilla-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+textarea {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--papel);
+  color: var(--tinta);
+  resize: vertical;
+}
+
+/* La definición íntegra del grado de riesgo, para que «Alto» no sea una
+   palabra sin criterio detrás. */
+.definicion {
+  border-left: 3px solid var(--acento);
+  padding-left: 0.7rem;
+  font-style: italic;
+}
+
+.lista-fases {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.35rem;
+}
+.lista-fases .candado {
+  margin-left: 0.4rem;
+}
+
+/* ── Detalle de fotografía ───────────────────────────────────────────────── */
+
+.detalle-foto {
+  display: grid;
+  grid-template-columns: minmax(240px, 40%) 1fr;
+  gap: 1.2rem;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .detalle-foto {
+    grid-template-columns: 1fr;
+  }
+}
+.detalle-foto .vista img,
+.detalle-foto .vista .imagen-cargando,
+.detalle-foto .vista .imagen-fallida {
+  width: 100%;
+  border-radius: var(--radio);
+  background: var(--borde);
+}
+.detalle-foto .vista .imagen-cargando {
+  aspect-ratio: 4 / 3;
+}
+.detalle-foto .datos {
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* Procedencia: no editable, porque no se inventa. */
+.procedencia {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.8rem;
+  margin: 0;
+  font-size: 0.82rem;
+  background: var(--fondo);
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radio);
+}
+.procedencia dt {
+  color: var(--tinta-suave);
+}
+.procedencia dd {
+  margin: 0;
+}
+.procedencia em {
+  color: var(--tinta-suave);
+}
+
+/* ── Sugerencias ─────────────────────────────────────────────────────────── */
+
+.sugerencias {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+.sugerencias li {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.7rem 0.9rem;
+}
+.sugerencias .titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.sugerencias .detalle {
+  margin: 0.35rem 0 0;
+  color: var(--tinta-suave);
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+.acciones-sugerencia {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+  align-items: center;
+}
+.acciones-sugerencia input {
+  flex: 1 1 240px;
 }

@@ -160,8 +160,12 @@ def test_el_codigo_de_activo_no_se_repite_en_el_proyecto(
     codigo = f"REP-{uuid.uuid4().hex[:6]}"
     tip = next(iter(tipologias.values()))
     assert crear_activo(cliente, cab, proyecto, tip, asset_code=codigo).status_code == 201
-    with pytest.raises(Exception, match="asset_codigo_uniq"):
-        crear_activo(cliente, cab, proyecto, tip, asset_code=codigo)
+
+    # 409 con el campo, no la excepción cruda: repetir el código del cliente es
+    # un error de quien rellena la ficha, y antes salía un 500 que no lo decía.
+    repetido = crear_activo(cliente, cab, proyecto, tip, asset_code=codigo)
+    assert repetido.status_code == 409, repetido.text
+    assert "código del cliente" in repetido.json()["detail"]
 
 
 def test_el_activo_se_borra_de_forma_logica(

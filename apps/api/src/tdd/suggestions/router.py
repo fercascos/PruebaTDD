@@ -234,8 +234,17 @@ def cambiar_estado(
             },
         )
         .mappings()
-        .one()
+        .first()
     )
+    if fila is None:
+        # La RLS no devolvió ninguna fila al escribir. Con la comprobación de
+        # permisos ya pasada esto no debería ocurrir, pero si un día las dos
+        # capas vuelven a discrepar conviene que salga un 403 legible y no un
+        # 500 sin explicación, que es lo que pasaba antes.
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Su perfil no puede resolver propuestas de otros usuarios",
+        )
 
     s.execute(
         text(

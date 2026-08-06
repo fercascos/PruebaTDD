@@ -6,7 +6,32 @@ PGDATA  ?= /var/lib/postgresql/16/tdd
 PGPORT  ?= 55432
 PGSOCK  ?= /tmp
 DB      ?= tdd
-TEST_DATABASE_URL ?= postgresql+psycopg://postgres@/$(DB)?host=$(PGSOCK)&port=$(PGPORT)
+# [REQ] La suite corre sobre una base APARTE. Su `conftest` hace un
+# `DROP SCHEMA public CASCADE` en cada arranque: apuntándola a `tdd` bastaba con
+# ejecutar `make test` una vez para perder los datos de desarrollo, el
+# administrador incluido, y volver a una aplicación en la que no se puede
+# entrar. Se descubrió justo así.
+TEST_DB ?= tdd_test
+APP_ROLE ?= tdd_app
+# [REQ] Solo para la base local de desarrollo. No es un secreto de producción:
+# fuera de local la contraseña viene del entorno y no está en ningún fichero.
+APP_PASS ?= prueba-local-sin-valor-real
+
+# Conexión de ADMINISTRACIÓN a la base de DESARROLLO: crea el esquema y siembra.
+# Es superusuario, así que la RLS **no se le aplica**; por eso no la usa nunca
+# la aplicación.
+ADMIN_DATABASE_URL ?= postgresql+psycopg://postgres@/$(DB)?host=$(PGSOCK)&port=$(PGPORT)
+# La de la SUITE. Otra base: ver el comentario de TEST_DB.
+TEST_DATABASE_URL ?= postgresql+psycopg://postgres@/$(TEST_DB)?host=$(PGSOCK)&port=$(PGPORT)
+# Conexión de la APLICACIÓN. `tdd_app` no es propietario ni tiene BYPASSRLS:
+# arrancar la API con la de administración dejaría la RLS sin efecto y todo
+# parecería funcionar, que es la peor forma de que falle.
+#
+# Va por TCP y no por el socket de Unix a propósito: `DATABASE_URL` la valida
+# `PostgresDsn`, y la forma `@/base?host=...` que usan las órdenes de psql no
+# lleva anfitrión, así que Pydantic la rechaza al arrancar.
+PGHOST_TCP ?= localhost
+APP_DATABASE_URL ?= postgresql+psycopg://$(APP_ROLE):$(APP_PASS)@$(PGHOST_TCP):$(PGPORT)/$(DB)
 
 help:  ## Muestra esta ayuda
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -19,15 +44,28 @@ db-up:  ## Arranca PostgreSQL local
 	@su postgres -c "PATH=$(PG_BIN):\$$PATH pg_ctl -D $(PGDATA) -o '-p $(PGPORT) -k $(PGSOCK)' -l $(PGDATA)/../log start" || true
 	@sleep 2 && psql -h $(PGSOCK) -p $(PGPORT) -U postgres -tAc 'select version()'
 
-db-init:  ## Crea la base y aplica el esquema (DESTRUCTIVO: la recrea)
+db-init:  ## Crea las bases y aplica el esquema (DESTRUCTIVO: las recrea)
 	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q \
-	  -c "DROP DATABASE IF EXISTS $(DB);" -c "CREATE DATABASE $(DB);"
+	  -c "DROP DATABASE IF EXISTS $(DB);" -c "CREATE DATABASE $(DB);" \
+	  -c "DROP DATABASE IF EXISTS $(TEST_DB);" -c "CREATE DATABASE $(TEST_DB);"
 	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
 	  -f apps/api/src/tdd/db/schema.sql
-	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) \
-	  -c "DROP ROLE IF EXISTS tdd_app;" \
-	  -c "CREATE ROLE tdd_app LOGIN PASSWORD 'prueba-local-sin-valor-real';"
-	@echo "Base $(DB) lista. El rol tdd_app NO tiene BYPASSRLS: es lo que hace que la RLS sirva."
+	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
+	  -c "DROP ROLE IF EXISTS $(APP_ROLE);" \
+	  -c "CREATE ROLE $(APP_ROLE) LOGIN PASSWORD '$(APP_PASS)';" \
+	  -c "GRANT USAGE ON SCHEMA public TO $(APP_ROLE);" \
+	  -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO $(APP_ROLE);" \
+	  -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO $(APP_ROLE);"
+	@$(MAKE) --no-print-directory db-seed
+	@echo "Base $(DB) lista. El rol $(APP_ROLE) NO tiene BYPASSRLS: es lo que hace que la RLS sirva."
+	@echo "Siguiente paso: make db-admin ORG='...' EMAIL='...' NOMBRE='...'"
+
+db-seed:  ## Siembra catálogos y fases en la base de desarrollo (idempotente)
+	@cd apps/api && PYTHONPATH=src DATABASE_URL="$(ADMIN_DATABASE_URL)" python3 -m tdd.db.sembrar
+
+db-admin:  ## Crea la primera organización y su administrador (pide la clave)
+	@cd apps/api && PYTHONPATH=src DATABASE_URL="$(ADMIN_DATABASE_URL)" python3 -m tdd.db.arranque \
+	  --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"
 
 catalogs:  ## Regenera los CSV de catálogos desde docs/05
 	python3 tools/generar_catalogos.py
@@ -61,11 +99,11 @@ no-fonts:  ## Falla si hay tipografías versionadas (Gotham es licenciada)
 	  git ls-files | grep -iE '\.(otf|ttf|woff2?)$$'; exit 1; \
 	else echo "Sin tipografías versionadas."; fi
 
-run:  ## Arranca la API en local
-	cd apps/api && DATABASE_URL="$(TEST_DATABASE_URL)" \
+run:  ## Arranca la API en local (como tdd_app: con la RLS en vigor)
+	cd apps/api && PYTHONPATH=src DATABASE_URL="$(APP_DATABASE_URL)" \
 	  python3 -m uvicorn tdd.main:app --reload --port 8000
 
 ci: catalogs-check no-fonts lint test  ## Lo que debe pasar antes de un push
 
-.PHONY: help install db-up db-init catalogs catalogs-check test test-unit test-rls \
+.PHONY: help install db-up db-init db-seed db-admin catalogs catalogs-check test test-unit test-rls \
         test-catalogs lint fmt no-fonts run ci

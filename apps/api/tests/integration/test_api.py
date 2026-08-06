@@ -341,3 +341,99 @@ def test_abrir_una_sugerencia_con_contexto_de_proyecto_queda_auditado(
             {"i": creada["id"], "p": datos_base["proyecto_a"]},
         ).scalar_one()
     assert n == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Permiso efectivo sobre el buzón de sugerencias
+#
+#  La API decía «ADMIN o la marca» y la RLS solo miraba la marca. Un ADMIN sin
+#  ella pasaba la comprobación y la base de datos le bloqueaba la escritura: el
+#  resultado era un 500. La suite no lo veía porque su único ADMIN llevaba la
+#  marca puesta. Se descubrió recorriendo la aplicación con el servidor en
+#  marcha, no leyendo el código.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_un_admin_sin_la_marca_tambien_ve_la_bandeja(cliente, cab) -> None:
+    r = cliente.get("/api/v1/suggestions", headers=cab("admin_sin_marca_a"))
+    assert r.status_code == 200
+
+
+def test_un_admin_sin_la_marca_tambien_resuelve(cliente, cab) -> None:
+    """P-41 hizo el permiso separable para que alguien pueda atender el buzón
+    **sin** ser administrador, no para que un administrador se quede fuera."""
+    propuesta = cliente.post(
+        "/api/v1/suggestions",
+        headers=cab("consultor_a"),
+        json={"type": "PRECIO", "title": "Precio desfasado", "body": "El de catálogo es de 2023."},
+    ).json()
+
+    r = cliente.post(
+        f"/api/v1/suggestions/{propuesta['id']}/transitions",
+        headers=cab("admin_sin_marca_a"),
+        json={"to": "EN_REVISION"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "EN_REVISION"
+
+
+def test_un_admin_sin_la_marca_ve_las_propuestas_ajenas(cliente, cab) -> None:
+    """La lectura también dependía de la marca: sin ella, un ADMIN solo veía
+    las suyas y la bandeja parecía vacía."""
+    propuesta = cliente.post(
+        "/api/v1/suggestions",
+        headers=cab("consultor2_a"),
+        json={
+            "type": "CATALOGO",
+            "title": "Falta un código de partida",
+            "body": "Propongo añadir uno para impermeabilización de cubierta.",
+        },
+    ).json()
+
+    bandeja = cliente.get("/api/v1/suggestions", headers=cab("admin_sin_marca_a")).json()
+    assert propuesta["id"] in [s["id"] for s in bandeja]
+
+
+def test_el_permiso_efectivo_se_calcula_en_un_solo_sitio() -> None:
+    """Función pura: es el valor que se pasa a la RLS **y** el que comprueba la
+    API. Cuando estaban en dos sitios, discreparon."""
+    import uuid as _uuid
+
+    from tdd.core.deps import UsuarioActual
+
+    def usuario(rol: str, marca: bool) -> UsuarioActual:
+        return UsuarioActual(
+            id=_uuid.uuid4(),
+            organization_id=_uuid.uuid4(),
+            org_role=rol,
+            can_manage_suggestions=marca,
+        )
+
+    assert usuario("ADMIN", False).gestiona_sugerencias is True
+    assert usuario("ADMIN", True).gestiona_sugerencias is True
+    assert usuario("CONSULTOR", True).gestiona_sugerencias is True
+    assert usuario("CONSULTOR", False).gestiona_sugerencias is False
+    assert usuario("LECTOR", False).gestiona_sugerencias is False
+
+
+def test_el_perfil_publica_el_permiso_ya_calculado(cliente, cab) -> None:
+    """`[REQ]` La interfaz no debe volver a deducir «ADMIN o la marca».
+
+    La regla ya vivió repartida entre la API y la RLS y acabaron discrepando.
+    Que el cliente la dedujera por su cuenta sería el tercer sitio donde puede
+    desviarse, así que el servidor la publica calculada.
+    """
+    for usuario, esperado in (
+        ("admin_a", True),
+        ("admin_sin_marca_a", True),
+        ("consultor_a", False),
+        ("lector_a", False),
+    ):
+        perfil = cliente.get("/api/v1/auth/me", headers=cab(usuario)).json()
+        assert perfil["gestiona_sugerencias"] is esperado, usuario
+
+    # La marca de la ficha sigue publicándose aparte: son cosas distintas y la
+    # pantalla de administración necesita ver cuál está puesta.
+    sin_marca = cliente.get("/api/v1/auth/me", headers=cab("admin_sin_marca_a")).json()
+    assert sin_marca["can_manage_suggestions"] is False
+    assert sin_marca["gestiona_sugerencias"] is True

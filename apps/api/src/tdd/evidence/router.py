@@ -35,6 +35,7 @@ import json
 import uuid
 import zipfile
 from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Annotated, Any
 
 from fastapi import (
@@ -189,10 +190,38 @@ class GrupoDeDuplicados(BaseModel):
     photo_ids: list[uuid.UUID]
 
 
+class EntidadEnlazable(StrEnum):
+    """`[REQ]` A qué se puede enlazar una fotografía.
+
+    Es un enumerado y no una cadena libre porque la columna es un `ENUM` de
+    PostgreSQL: con un `str` suelto, escribir `finding` en minúsculas producía
+    un **500** en vez de un `422` diciendo qué valores valen. Aquí los valores
+    salen en el OpenAPI y el error los enumera solo.
+    """
+
+    ASSET = "ASSET"
+    ZONE = "ZONE"
+    FINDING = "FINDING"
+    CAPEX_ITEM = "CAPEX_ITEM"
+    REPORT_SECTION = "REPORT_SECTION"
+    ASSET_VISIT = "ASSET_VISIT"
+    DOC_REQUEST_ITEM = "DOC_REQUEST_ITEM"
+
+
+class PapelDeLaFoto(StrEnum):
+    EVIDENCIA = "EVIDENCIA"
+    GENERAL = "GENERAL"
+    DETALLE = "DETALLE"
+    ANTES = "ANTES"
+    DESPUES = "DESPUES"
+
+
 class Enlace(BaseModel):
-    entity_type: str
+    model_config = ConfigDict(extra="forbid")
+
+    entity_type: EntidadEnlazable
     entity_id: uuid.UUID
-    role: str = "EVIDENCIA"
+    role: PapelDeLaFoto = PapelDeLaFoto.EVIDENCIA
     sort_order: int = 0
 
 
@@ -767,18 +796,37 @@ def enlazar(photo_id: uuid.UUID, cuerpo: Enlace, s: SesionDep, usuario: UsuarioD
         {
             "o": str(usuario.organization_id),
             "f": str(photo_id),
-            "t": cuerpo.entity_type,
+            "t": cuerpo.entity_type.value,
             "e": str(cuerpo.entity_id),
-            "r": cuerpo.role,
+            "r": cuerpo.role.value,
             "s": cuerpo.sort_order,
             "u": str(usuario.id),
         },
     )
-    return {"photo_id": photo_id, **cuerpo.model_dump()}
+    return {"photo_id": photo_id, **cuerpo.model_dump(mode="json")}
+
+
+class Variante(StrEnum):
+    """Qué versión del archivo se pide.
+
+    Los derivados se generaban al subir la foto pero **no los servía nadie**: la
+    rejilla de miniaturas pedía el original de cada una, y una visita de 400
+    fotos son 400 archivos de 4 MB para pintar recuadros de 320 píxeles.
+    """
+
+    ORIGINAL = "ORIGINAL"
+    MINIATURA = "MINIATURA_320"
+    VISTA = "VISTA_1600"
 
 
 @router.get("/photos/{photo_id}/download")
-def descargar(photo_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep, almacen: AlmacenDep) -> Any:
+def descargar(
+    photo_id: uuid.UUID,
+    s: SesionDep,
+    usuario: UsuarioDep,
+    almacen: AlmacenDep,
+    variante: Variante = Variante.ORIGINAL,
+) -> Any:
     """`[REQ]` Toda descarga genera `audit_log`.
 
     `[LIM]` Devuelve el binario en la respuesta. En producción debe ser un
@@ -786,21 +834,50 @@ def descargar(photo_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep, almacen: A
     que no está implementado.
     """
     fila = _obtener(s, photo_id)
-    clave = s.execute(
-        text(
-            "SELECT o.storage_key FROM stored_object o "
-            "JOIN photo p ON p.stored_object_id = o.id WHERE p.id = :i"
-        ),
-        {"i": str(photo_id)},
-    ).scalar_one()
+    clave: str | None = None
+    if variante is not Variante.ORIGINAL:
+        clave = s.execute(
+            text(
+                "SELECT o.storage_key FROM photo_derivative d "
+                "JOIN stored_object o ON o.id = d.stored_object_id "
+                "WHERE d.photo_id = :i AND d.kind = CAST(:k AS photo_derivative_kind)"
+            ),
+            {"i": str(photo_id), "k": variante.value},
+        ).scalar_one_or_none()
+        # Si el derivado no está —una foto subida antes de que existieran, o un
+        # formato del que no se pudo generar—, se sirve el original. Devolver un
+        # 404 dejaría el hueco vacío en la rejilla, que parece un fallo de la
+        # foto y no de una miniatura que falta.
+    if clave is None:
+        clave = s.execute(
+            text(
+                "SELECT o.storage_key FROM stored_object o "
+                "JOIN photo p ON p.stored_object_id = o.id WHERE p.id = :i"
+            ),
+            {"i": str(photo_id)},
+        ).scalar_one()
+        variante = Variante.ORIGINAL
+
     datos = almacen.leer(clave)
-    _auditar(s, usuario, "PHOTO_DOWNLOADED", photo_id, {"bytes": len(datos)})
+    # Solo el original cuenta como «descarga» en la auditoría: anotar cada
+    # miniatura llenaría el registro de ruido y taparía las descargas de verdad.
+    if variante is Variante.ORIGINAL:
+        _auditar(s, usuario, "PHOTO_DOWNLOADED", photo_id, {"bytes": len(datos)})
+
+    nombre = f"{fila.display_name}.{fila.file_extension}"
     return Response(
         content=datos,
-        media_type=fila.mime_type,
+        # Los derivados son siempre JPEG: se generan así, aunque el original sea
+        # HEIC o PNG. Devolver el MIME del original haría que el navegador no
+        # pintara un HEIC que en realidad ya venía convertido.
+        media_type=fila.mime_type if variante is Variante.ORIGINAL else "image/jpeg",
         headers={
+            # `inline` en los derivados: se piden para mirarlos en pantalla, y
+            # con `attachment` el navegador ofrecería guardar cada miniatura.
             "Content-Disposition": (
-                f'attachment; filename="{fila.display_name}.{fila.file_extension}"'
+                f'attachment; filename="{nombre}"'
+                if variante is Variante.ORIGINAL
+                else f'inline; filename="{nombre}"'
             )
         },
     )

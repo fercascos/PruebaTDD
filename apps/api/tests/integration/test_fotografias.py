@@ -760,3 +760,102 @@ def test_el_listado_filtra_por_activo_y_por_gps(
     ).json()
     assert len(con) == 1
     assert len(sin) == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Variantes: la rejilla no puede pedir el original de cada foto
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_la_miniatura_pesa_mucho_menos_que_el_original(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """Los derivados se generaban al subir la foto pero **no los servía nadie**:
+    la rejilla pedía el original de cada una. Una visita de 400 fotos son 400
+    archivos de varios MB para pintar recuadros de 320 píxeles."""
+    datos = foto_unica()
+    foto = subir(cliente, cab, proyecto, datos).json()
+
+    original = cliente.get(f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"))
+    miniatura = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=MINIATURA_320", headers=cab("consultor_a")
+    )
+
+    assert miniatura.status_code == 200
+    assert len(miniatura.content) < len(original.content)
+    assert miniatura.content != datos, "no es el original con otro nombre"
+
+
+def test_la_miniatura_se_muestra_en_linea_y_no_se_ofrece_guardar(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """Con `attachment`, el navegador ofrecería guardar cada miniatura de la
+    rejilla en vez de pintarla."""
+    foto = subir(cliente, cab, proyecto, foto_unica()).json()
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=VISTA_1600", headers=cab("consultor_a")
+    )
+    assert r.headers["content-disposition"].startswith("inline")
+    assert r.headers["content-type"] == "image/jpeg"
+
+
+def test_pedir_una_miniatura_no_ensucia_la_auditoria_de_descargas(
+    cliente: TestClient, cab: Any, proyecto: str, motor_admin: Any
+) -> None:
+    """`[REQ]` §10.7 regla 3 sigue en pie para el original. Anotar cada
+    miniatura llenaría el registro de ruido y taparía las descargas de verdad:
+    abrir la pestaña de fotos generaría cuatrocientas entradas."""
+    foto = subir(cliente, cab, proyecto, foto_unica()).json()
+    cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=MINIATURA_320", headers=cab("consultor_a")
+    )
+
+    with motor_admin.begin() as conn:
+        descargas = conn.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE entity_id = :i AND action = 'PHOTO_DOWNLOADED'"
+            ),
+            {"i": foto["id"]},
+        ).scalar_one()
+    assert descargas == 0
+
+    cliente.get(f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"))
+    with motor_admin.begin() as conn:
+        descargas = conn.execute(
+            text(
+                "SELECT count(*) FROM audit_log "
+                "WHERE entity_id = :i AND action = 'PHOTO_DOWNLOADED'"
+            ),
+            {"i": foto["id"]},
+        ).scalar_one()
+    assert descargas == 1
+
+
+def test_una_variante_inventada_se_rechaza_diciendo_cuales_hay(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    foto = subir(cliente, cab, proyecto, foto_unica()).json()
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=GIGANTE", headers=cab("consultor_a")
+    )
+    assert r.status_code == 422
+    assert "MINIATURA_320" in r.text
+
+
+def test_sin_derivado_se_sirve_el_original_en_vez_de_un_hueco(
+    cliente: TestClient, cab: Any, proyecto: str, motor_admin: Any
+) -> None:
+    """Una foto subida antes de que existieran los derivados, o un formato del
+    que no se pudo generar. Un 404 dejaría el hueco vacío en la rejilla, que
+    parece un fallo de la foto y no de una miniatura que falta."""
+    datos = foto_unica()
+    foto = subir(cliente, cab, proyecto, datos).json()
+    with motor_admin.begin() as conn:
+        conn.execute(text("DELETE FROM photo_derivative WHERE photo_id = :i"), {"i": foto["id"]})
+
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=MINIATURA_320", headers=cab("consultor_a")
+    )
+    assert r.status_code == 200
+    assert r.content == datos

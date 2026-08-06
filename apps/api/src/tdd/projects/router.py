@@ -11,7 +11,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 
 from tdd.core.deps import SesionDep, UsuarioDep
@@ -35,6 +35,12 @@ class FaseAplicable(BaseModel):
 
 
 class CrearProyecto(BaseModel):
+    """`extra="forbid"`, igual que la ficha de activo: un campo mal escrito se
+    rechaza en vez de perderse. Un `fecha_entrega` que la API ignora en silencio
+    crea un encargo sin fecha que nadie detecta hasta que se pasa."""
+
+    model_config = ConfigDict(extra="forbid")
+
     client_id: uuid.UUID
     internal_code: str = Field(min_length=1, max_length=40)
     name: str = Field(min_length=1, max_length=200)

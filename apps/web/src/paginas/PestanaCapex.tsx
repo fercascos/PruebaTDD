@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { obtener } from '../api/cliente'
+import { descargar, obtener } from '../api/cliente'
 import type { Hallazgo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
+import { NuevoHallazgo } from './NuevoHallazgo'
 
 const PLAZOS = ['CORTO', 'MEDIO', 'LARGO', 'MEJORAS', 'OTRO'] as const
 
@@ -23,6 +24,11 @@ const euros = new Intl.NumberFormat('es-ES', {
 export function PestanaCapex({ projectId }: { projectId: string }) {
   const [hallazgos, setHallazgos] = useState<Hallazgo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [creando, setCreando] = useState(false)
+  const [exportando, setExportando] = useState(false)
+  // Aparte del error de carga: que falle la exportación no debe dejar la
+  // pestaña en blanco y hacer perder de vista la tabla.
+  const [errorExport, setErrorExport] = useState<string | null>(null)
 
   const recargar = useCallback(() => {
     obtener<Hallazgo[]>(`/projects/${projectId}/findings`)
@@ -33,13 +39,67 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   useEffect(recargar, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
+
+  if (creando) {
+    return (
+      <NuevoHallazgo
+        projectId={projectId}
+        alGuardar={() => {
+          setCreando(false)
+          recargar()
+        }}
+        alCancelar={() => setCreando(false)}
+      />
+    )
+  }
+
+  /**
+   * `[REQ]` P-31 · Exportar el CAPEX a XLSX para adjuntarlo en el envío que el
+   * equipo hace fuera de la plataforma. Sale la misma tabla que el informe:
+   * comparten `CapexTableLayout`, así que no pueden divergir.
+   */
+  async function exportar() {
+    setExportando(true)
+    setErrorExport(null)
+    try {
+      await descargar(`/projects/${projectId}/capex/export.xlsx`, 'CAPEX.xlsx')
+    } catch (e) {
+      setErrorExport((e as Error).message)
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  const alta = (
+    <div className="filtro">
+      <button type="button" onClick={() => setCreando(true)}>
+        Registrar hallazgo
+      </button>
+      <button
+        type="button"
+        className="secundario"
+        onClick={exportar}
+        disabled={exportando || !hallazgos?.length}
+        title="Descarga la misma tabla que lleva el informe, en Excel"
+      >
+        {exportando ? 'Preparando…' : 'Exportar a XLSX'}
+      </button>
+    </div>
+  )
+
+  const avisoExport = errorExport ? <Mensaje tipo="error">{errorExport}</Mensaje> : null
+
   if (!hallazgos) return <p className="cargando">Cargando hallazgos…</p>
   if (hallazgos.length === 0) {
     return (
-      <Vacio>
-        Todavía no hay hallazgos. En campo se crean desde la propia fotografía, que hereda el activo
-        y la zona.
-      </Vacio>
+      <>
+        {alta}
+        {avisoExport}
+        <Vacio>
+          Todavía no hay hallazgos. En campo también se crean desde la propia fotografía, que hereda
+          el activo y la zona.
+        </Vacio>
+      </>
     )
   }
 
@@ -59,6 +119,8 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
 
   return (
     <>
+      {alta}
+      {avisoExport}
       {sinValidar.length > 0 && (
         <Mensaje tipo="aviso">
           {sinValidar.length} líneas con precio sin validar, por{' '}

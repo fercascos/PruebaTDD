@@ -10,10 +10,37 @@ adornos.
 ```bash
 make install     # dependencias
 make db-up       # PostgreSQL 16
-make db-init     # crea la base, aplica el esquema y el rol de aplicación
-make test        # 600 pruebas
+make db-init     # crea las bases, aplica el esquema, siembra catálogos y fases
+make test        # 651 pruebas
+```
+
+Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
+administrador ya autenticado: es el problema del huevo y la gallina. La primera
+se crea desde fuera de la API, con acceso a la base de datos:
+
+```bash
+TDD_BOOTSTRAP_PASSWORD='…' make db-admin \
+  ORG="Consultora Ejemplo" EMAIL="admin@ejemplo.example" NOMBRE="Nombre Apellido"
+
 make run         # http://localhost:8000/docs
 ```
+
+La contraseña **no se pasa por argumento**: se lee de `TDD_BOOTSTRAP_PASSWORD` o
+se pide por consola. Un argumento acaba en el historial del intérprete y en la
+lista de procesos, donde lo lee cualquiera. Si no hay ninguna de las dos, la
+orden se niega a seguir en vez de inventarse una por omisión, que es como nacen
+los despliegues con `admin/admin`.
+
+Dos detalles del `Makefile` que no son cosméticos:
+
+* **`make run` arranca como `tdd_app`**, no como el superusuario que crea el
+  esquema. PostgreSQL no aplica la RLS a un superusuario: arrancar la API con la
+  conexión de administración dejaría las políticas sin efecto y **todo parecería
+  funcionar igual**, que es la peor forma de que falle.
+* **La suite corre sobre otra base** (`tdd_test`). Su `conftest` hace un
+  `DROP SCHEMA public CASCADE` en cada arranque: compartiendo base, bastaba un
+  `make test` para perder los datos de desarrollo —el administrador incluido— y
+  volver a una aplicación en la que no se puede entrar.
 
 ## Qué hay construido y verificado
 
@@ -26,7 +53,11 @@ make run         # http://localhost:8000/docs
 | **Semilla de catálogos** desde el documento de diseño | ✅ Completo | `tests/integration/test_catalogos.py` · 32 |
 | **Ciclo de vida de sugerencias** | ✅ Completo | `tests/unit/test_sugerencias.py` · 19 |
 | **Fases y proyectos** punta a punta | ✅ Completo | `tests/integration/test_fases_y_proyectos.py` · 23 |
-| **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 22 |
+| **API**: catálogos, proyectos, fases, CAPEX y sugerencias | ✅ Parcial | `tests/integration/test_api.py` · 27 |
+| **Primera cuenta** · arranque sin API | ✅ Completo | `tests/integration/test_arranque.py` · 7 |
+| **Directorio** · clientes y personas | ✅ Completo | `tests/integration/test_directorio.py` · 16 |
+| **Exportación del CAPEX a XLSX** `[REQ]` P-31 | ✅ Completo | `tests/integration/test_exportacion_capex.py` · 8 |
+| **Errores de usuario** · 409 y 422 donde había 500 | ✅ Completo | `tests/integration/test_errores_de_usuario.py` · 6 |
 | **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 25 |
 | **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 14 |
 | **Retirada de la marca de agua** `[REQ]` P-43 | ✅ Completo | `tests/unit/test_marca_de_agua.py` · 10 |

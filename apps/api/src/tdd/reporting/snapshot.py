@@ -57,14 +57,47 @@ def _filas(s: Session, sql: str, params: dict[str, Any]) -> list[dict[str, Any]]
     ]
 
 
+class ProyectoInexistente(LookupError):  # noqa: N818 — el dominio está en español
+    """No hay proyecto con ese identificador **visible para quien pregunta**.
+
+    Es una subclase propia y no un `LookupError` a secas porque la aplicación la
+    traduce a un `404`: con la clase genérica habría que distinguirla de un
+    `KeyError` cualquiera, que sí es un fallo de programación y debe seguir
+    siendo un `500`.
+    """
+
+
 def huella(snapshot: dict[str, Any]) -> str:
     """SHA-256 de la forma canónica. Dos snapshots iguales dan el mismo hash."""
     canonico = json.dumps(snapshot, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
 
 
-def construir(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
-    """Congela el proyecto entero: datos, hallazgos, fotos y **catálogos**."""
+#: `[REQ]` Estados de hallazgo que salen en un informe. Un borrador no debe
+#: aparecer en un documento que se entrega al cliente.
+ESTADOS_PUBLICABLES = ("EN_REVISION", "VALIDADO")
+
+#: Todos los estados vivos. Lo usa la **exportación de trabajo** a XLSX: el
+#: equipo comparte el CAPEX mientras todavía lo está construyendo, y un fichero
+#: que se deja fuera las líneas en borrador da un total que no cuadra con la
+#: pantalla desde la que se pulsó el botón.
+#: `DESCARTADO` queda fuera: descartar una actuación es decir que no se hace, y
+#: sumarla al total del fichero que se envía la resucitaría por la puerta de atrás.
+ESTADOS_DE_TRABAJO = ("BORRADOR", "EN_REVISION", "VALIDADO")
+
+
+def construir(
+    s: Session,
+    project_id: uuid.UUID,
+    *,
+    estados: tuple[str, ...] = ESTADOS_PUBLICABLES,
+) -> dict[str, Any]:
+    """Congela el proyecto entero: datos, hallazgos, fotos y **catálogos**.
+
+    `estados` decide qué hallazgos entran. Por omisión, solo los publicables:
+    cambiarlo es una decisión explícita de quien llama, y hoy solo la toma la
+    exportación de trabajo a XLSX.
+    """
     proyecto = (
         s.execute(
             text(
@@ -78,7 +111,10 @@ def construir(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
         .first()
     )
     if proyecto is None:
-        raise LookupError("Proyecto no encontrado")
+        # No existe, o la RLS no deja verlo porque es de otra organización: para
+        # quien pregunta son lo mismo, y decirle cuál de las dos ya sería contar
+        # algo. `main` lo traduce a un 404; antes salía un 500.
+        raise ProyectoInexistente("Proyecto no encontrado")
 
     activos = _filas(
         s,
@@ -91,8 +127,7 @@ def construir(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
         {"p": str(project_id)},
     )
 
-    # [REQ] Solo lo que sale en el informe: un borrador no debe aparecer en un
-    # documento que se entrega.
+    # El filtro de estados llega por parámetro: ver `ESTADOS_PUBLICABLES`.
     hallazgos = _filas(
         s,
         "SELECT f.id, f.asset_id, f.title, f.description, f.comments, f.recommendation, "
@@ -108,9 +143,9 @@ def construir(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
         "LEFT JOIN risk_level rl ON rl.id = f.risk_level_id "
         "LEFT JOIN capex_concept con ON con.id = f.capex_concept_id "
         "WHERE f.project_id = :p AND f.deleted_at IS NULL "
-        "  AND f.status IN ('EN_REVISION', 'VALIDADO') "
+        "  AND CAST(f.status AS text) = ANY(:estados) "
         "ORDER BY cc.code, f.created_at",
-        {"p": str(project_id)},
+        {"p": str(project_id), "estados": list(estados)},
     )
 
     lineas = _filas(
@@ -123,9 +158,9 @@ def construir(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
         "JOIN time_horizon th ON th.id = ci.time_horizon_id "
         "JOIN finding f ON f.id = ci.finding_id "
         "WHERE ci.project_id = :p AND f.deleted_at IS NULL "
-        "  AND f.status IN ('EN_REVISION', 'VALIDADO') "
+        "  AND CAST(f.status AS text) = ANY(:estados) "
         "ORDER BY th.sort_order",
-        {"p": str(project_id)},
+        {"p": str(project_id), "estados": list(estados)},
     )
 
     fotos = _filas(

@@ -191,6 +191,20 @@ export async function subirFichero<T>(
   return (await r.json()) as T
 }
 
+/**
+ * El binario de una ruta protegida, con la credencial y el reintento de
+ * refresco que lleva cualquier otra petición.
+ *
+ * Existe porque un `<img src>` no puede llevar cabecera `Authorization`: el
+ * token vive en memoria, no en una cookie, así que las imágenes hay que
+ * traerlas con `fetch` y pintarlas desde un `blob:`. Lo usa `<Imagen>`.
+ */
+export async function peticionAutenticada(ruta: string, signal?: AbortSignal): Promise<Blob> {
+  const r = await peticion(ruta, { signal })
+  await lanzarSiFalla(r)
+  return await r.blob()
+}
+
 export async function descargar(ruta: string, nombre: string): Promise<void> {
   const r = await peticion(ruta)
   await lanzarSiFalla(r)

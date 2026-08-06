@@ -7,12 +7,21 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado y MVP construido.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **600 pruebas en verde
+> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **651 pruebas en verde
 > contra PostgreSQL real** y `apps/web/` con la interfaz React. La aplicación se ha recorrido de
-> punta a punta con el servidor en marcha: iniciar sesión, dar de alta un activo, **hacer una foto
-> desde la cámara**, registrar el hallazgo con su CAPEX, subir la plantilla, mapearla, generar el
-> informe y emitirlo. Qué está construido y qué no, sin adornos, en
+> punta a punta con el servidor en marcha: crear la primera cuenta, iniciar sesión, dar de alta el
+> encargo con sus fases y un activo, **hacer una foto desde la cámara**, clasificarla, registrar el
+> hallazgo con su CAPEX, exportarlo a Excel, subir la plantilla, mapearla, generar el informe y
+> emitirlo. Qué está construido y qué no, sin adornos, en
 > [`apps/api/README.md`](apps/api/README.md) y [`apps/web/README.md`](apps/web/README.md).
+>
+> Ese recorrido no es decorativo: **seis defectos reales salieron de ahí** y de ningún otro sitio.
+> Un `500` al repetir el código de un encargo en vez de decir que estaba cogido; el botón de
+> exportar el CAPEX a XLSX sin ninguna ruta que lo sirviera; las miniaturas pidiendo el original de
+> cada foto y devolviendo `401` porque un `<img src>` no lleva credencial; el permiso del buzón de
+> sugerencias calculado de tres formas distintas; un desplegable ofreciendo tipos que la API
+> rechaza; y `make test` borrando la base de desarrollo. Cada uno se arregló con la prueba que lo
+> habría cazado antes.
 
 ---
 

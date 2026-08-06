@@ -38,8 +38,13 @@ def test_una_organizacion_no_ve_los_proyectos_de_otra(como, datos_base) -> None:
         )
 
     with como("admin_b") as s:
-        # Ni en el listado, ni pidiéndolo por su identificador exacto.
-        assert s.execute(text("SELECT count(*) FROM project")).scalar_one() == 0
+        # Ni en el listado, ni pidiéndolo por su identificador exacto. Se mira
+        # si ESE proyecto aparece, no si la lista está vacía: otras pruebas dan
+        # de alta encargos en la organización B y un recuento a cero ataría
+        # esta comprobación al orden de ejecución, que es justo lo que el
+        # comentario de arriba dice que hay que evitar.
+        visibles = {str(f[0]) for f in s.execute(text("SELECT id FROM project")).fetchall()}
+        assert str(datos_base["proyecto_a"]) not in visibles
         fila = s.execute(
             text("SELECT id FROM project WHERE id = :i"), {"i": datos_base["proyecto_a"]}
         ).first()

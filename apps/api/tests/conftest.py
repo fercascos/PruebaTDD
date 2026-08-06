@@ -96,6 +96,10 @@ def datos_base(motor_admin: Engine) -> dict[str, uuid.UUID]:
 
         usuarios = [
             ("admin_a", "org_a", "admin@alfa.example", "ADMIN", True),
+            # [REQ] Un ADMIN SIN la marca explícita. Existe porque su ausencia
+            # ocultó un fallo real: la API le dejaba pasar y la RLS le
+            # bloqueaba la escritura, y salía un 500 en vez de un permiso.
+            ("admin_sin_marca_a", "org_a", "admin2@alfa.example", "ADMIN", False),
             ("consultor_a", "org_a", "consultor@alfa.example", "CONSULTOR", False),
             ("consultor2_a", "org_a", "otro@alfa.example", "CONSULTOR", False),
             ("lector_a", "org_a", "lector@alfa.example", "LECTOR", False),
@@ -135,12 +139,15 @@ def como(fabrica: sessionmaker[Session], datos_base: dict[str, uuid.UUID]):
     """
     org_de = {
         "admin_a": "org_a",
+        "admin_sin_marca_a": "org_a",
         "consultor_a": "org_a",
         "consultor2_a": "org_a",
         "lector_a": "org_a",
         "admin_b": "org_b",
     }
-    gestiona = {"admin_a", "admin_b"}
+    # El permiso EFECTIVO: un ADMIN atiende el buzón aunque no lleve la marca.
+    # Es lo mismo que calcula `UsuarioActual.gestiona_sugerencias`.
+    gestiona = {"admin_a", "admin_b", "admin_sin_marca_a"}
 
     @contextmanager
     def _abrir(usuario: str) -> Iterator[Session]:
@@ -174,6 +181,7 @@ SECRETO_PRUEBAS = "secreto-solo-para-la-suite-de-pruebas-0123456789"  # noqa: S1
 #: Rol y permiso de gestión de sugerencias por usuario de prueba.
 PERFILES = {
     "admin_a": ("org_a", "ADMIN", True),
+    "admin_sin_marca_a": ("org_a", "ADMIN", False),
     "admin_b": ("org_b", "ADMIN", True),
     "consultor_a": ("org_a", "CONSULTOR", False),
     "consultor2_a": ("org_a", "CONSULTOR", False),

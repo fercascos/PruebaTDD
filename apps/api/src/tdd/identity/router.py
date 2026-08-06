@@ -86,7 +86,16 @@ class Perfil(BaseModel):
     email: str
     full_name: str
     org_role: str
+    #: La marca explícita de la ficha. **No es el permiso efectivo.**
     can_manage_suggestions: bool
+    #: `[REQ]` El permiso **efectivo** sobre el buzón, ya calculado.
+    #:
+    #: Lo publica el servidor para que la interfaz no lo vuelva a deducir. La
+    #: regla «ADMIN o la marca» ya vivió repartida entre la API y la RLS y
+    #: acabaron discrepando: un administrador sin la marca pasaba la
+    #: comprobación y la base de datos le bloqueaba la escritura. Que el cliente
+    #: la dedujera por su cuenta sería el tercer sitio donde puede desviarse.
+    gestiona_sugerencias: bool
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -408,7 +417,7 @@ def quien_soy(s: SesionDep, usuario: UsuarioDep) -> Any:
     )
     if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
-    return dict(fila)
+    return {**dict(fila), "gestiona_sugerencias": usuario.gestiona_sugerencias}
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)

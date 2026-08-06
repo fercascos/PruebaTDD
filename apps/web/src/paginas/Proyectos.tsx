@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { obtener } from '../api/cliente'
 import type { Proyecto } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
@@ -7,6 +7,16 @@ import { Mensaje, Vacio } from '../ui/Marco'
 export function Proyectos() {
   const [proyectos, setProyectos] = useState<Proyecto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const navegar = useNavigate()
+
+  const cabecera = (
+    <header className="ficha">
+      <h1>Proyectos</h1>
+      <button type="button" onClick={() => navegar('/proyectos/nuevo')}>
+        Nuevo encargo
+      </button>
+    </header>
+  )
 
   useEffect(() => {
     obtener<Proyecto[]>('/projects')
@@ -17,12 +27,17 @@ export function Proyectos() {
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
   if (!proyectos) return <p className="cargando">Cargando proyectos…</p>
   if (proyectos.length === 0) {
-    return <Vacio>Todavía no hay ningún encargo dado de alta en esta organización.</Vacio>
+    return (
+      <>
+        {cabecera}
+        <Vacio>Todavía no hay ningún encargo dado de alta en esta organización.</Vacio>
+      </>
+    )
   }
 
   return (
     <>
-      <h1>Proyectos</h1>
+      {cabecera}
       <table className="tabla">
         <thead>
           <tr>

@@ -40,3 +40,14 @@ dist/
 # ── Sistema ──────────────────────────────────────────────────────────────────
 .DS_Store
 *.log
+
+# ── Almacén de objetos local ─────────────────────────────────────────────────
+# `AlmacenEnDisco` escribe aquí las fotografías, documentos y plantillas
+# subidas en desarrollo. Son binarios de trabajo, y en cuanto alguien pruebe
+# con material real serían fotografías de activos identificables en el
+# repositorio. Ver STORAGE_LOCAL_DIR en .env.example.
+apps/api/var/
+var/objetos/
+
+# ── Caché de compilación de TypeScript ───────────────────────────────────────
+*.tsbuildinfo

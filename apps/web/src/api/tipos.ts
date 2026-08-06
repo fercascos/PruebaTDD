@@ -8,7 +8,10 @@ export type Perfil = {
   email: string
   full_name: string
   org_role: string
+  /** La marca de la ficha. Para decidir en la interfaz use `gestiona_sugerencias`. */
   can_manage_suggestions: boolean
+  /** El permiso efectivo sobre el buzón, tal como lo calcula el servidor. */
+  gestiona_sugerencias: boolean
 }
 
 export type Proyecto = {

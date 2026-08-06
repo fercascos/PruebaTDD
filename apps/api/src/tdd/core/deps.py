@@ -24,7 +24,24 @@ class UsuarioActual:
     id: uuid.UUID
     organization_id: uuid.UUID
     org_role: str
+    #: La marca explícita de la ficha del usuario. **No es el permiso efectivo**:
+    #: para eso está `gestiona_sugerencias`.
     can_manage_suggestions: bool
+
+    @property
+    def gestiona_sugerencias(self) -> bool:
+        """`[REQ]` El permiso **efectivo** sobre el buzón de sugerencias.
+
+        Un ADMIN lo atiende por definición: P-41 hizo el permiso separable para
+        que alguien pueda atenderlo **sin** ser administrador, no para que un
+        administrador se quede fuera.
+
+        Vive aquí y no repartido por los endpoints porque **este mismo valor es
+        el que se pasa a la RLS**. Cuando estaban en dos sitios, la API dejaba
+        pasar a un ADMIN sin la marca y la base de datos le bloqueaba la
+        escritura: el resultado era un 500 en vez de un permiso claro.
+        """
+        return self.org_role == "ADMIN" or self.can_manage_suggestions
 
 
 def obtener_usuario(
@@ -66,7 +83,10 @@ def obtener_sesion(
             ContextoRLS(
                 organization_id=usuario.organization_id,
                 user_id=usuario.id,
-                can_manage_suggestions=usuario.can_manage_suggestions,
+                # El permiso EFECTIVO, no la marca de la ficha: es lo que
+                # leen las políticas RLS, y tiene que decir lo mismo que la
+                # comprobación de la API o se producen 500 en vez de 403.
+                can_manage_suggestions=usuario.gestiona_sugerencias,
             ),
         )
         yield session
@@ -86,7 +106,7 @@ def exigir_gestion_de_sugerencias(
     La RLS ya lo impide a nivel de fila; esto devuelve un `403` claro en vez de
     una lista vacía, que resultaría desconcertante.
     """
-    if not (usuario.org_role == "ADMIN" or usuario.can_manage_suggestions):
+    if not usuario.gestiona_sugerencias:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             "Solo un administrador puede ver las propuestas de otros usuarios",

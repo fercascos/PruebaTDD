@@ -16,7 +16,7 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
@@ -177,6 +177,62 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
         .all()
     )
     return [dict(f) for f in filas]
+
+
+@router.get(
+    "/projects/{project_id}/capex/export.xlsx",
+    tags=["CAPEX"],
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}},
+            "description": "Libro con la hoja CAPEX.",
+        }
+    },
+)
+def exportar_xlsx(project_id: uuid.UUID, s: SesionDep) -> Response:
+    """`[REQ]` P-31 · El botón de **exportar el CAPEX a XLSX**.
+
+    Lo pidió el cliente para poder adjuntar el fichero en el envío que el equipo
+    hace fuera de la plataforma. El generador existía y estaba probado, pero no
+    había ninguna ruta que lo sirviera: el botón no habría tenido a dónde
+    llamar. Se detectó recorriendo la aplicación en marcha.
+
+    `[REQ]` Consume **el mismo `CapexTableLayout`** que la tabla nativa del
+    PPTX. Es lo que garantiza que el Excel que el equipo adjunta a un correo y
+    el PowerPoint que va en ese mismo correo no tengan columnas distintas.
+
+    `[LIM]` Exporta el estado **actual** del proyecto, no una versión emitida.
+    Para el CAPEX congelado de un informe ya publicado está la descarga de esa
+    versión, que lee de su snapshot. El nombre del fichero lo dice.
+    """
+    from tdd.exports.capex_xlsx import generar_xlsx
+    from tdd.reporting import snapshot as snap
+    from tdd.reporting.capex_layout import construir
+    from tdd.reporting.generator import lineas_de_capex
+
+    # Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
+    # mientras todavía lo construye, y un fichero que se deja fuera las líneas
+    # en borrador da un total que no cuadra con la pantalla desde la que se
+    # pulsó el botón. Lo descartado sigue fuera.
+    datos = snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
+    proyecto = datos["project"]
+    lineas = lineas_de_capex(datos)
+    if not lineas:
+        # 409 y no un libro vacío: un Excel con la cabecera y ninguna fila se
+        # adjunta a un correo sin que nadie note que no lleva nada dentro.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "El encargo todavía no tiene ninguna línea de CAPEX que exportar",
+        )
+
+    layout = construir(lineas, capitulo=str(proyecto.get("name") or ""), locale="es-ES")
+    nombre = f"CAPEX_{proyecto.get('internal_code') or project_id}_actual.xlsx"
+    return Response(
+        content=generar_xlsx(layout),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
 
 
 class TrasladarMedicion(BaseModel):

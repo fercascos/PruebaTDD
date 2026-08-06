@@ -6,6 +6,8 @@ import { Entrar } from './paginas/Entrar'
 import { Proyectos } from './paginas/Proyectos'
 import { FichaDeProyecto } from './paginas/FichaDeProyecto'
 import { Plantillas } from './paginas/Plantillas'
+import { NuevoProyecto } from './paginas/NuevoProyecto'
+import { Sugerencias } from './paginas/Sugerencias'
 
 export function App() {
   const [autenticado, setAutenticado] = useState(haySesion())
@@ -39,8 +41,10 @@ export function App() {
               <Marco>
                 <Routes>
                   <Route path="/proyectos" element={<Proyectos />} />
+                  <Route path="/proyectos/nuevo" element={<NuevoProyecto />} />
                   <Route path="/proyectos/:id/*" element={<FichaDeProyecto />} />
                   <Route path="/plantillas" element={<Plantillas />} />
+                  <Route path="/sugerencias" element={<Sugerencias />} />
                   <Route path="*" element={<Navigate to="/proyectos" replace />} />
                 </Routes>
               </Marco>
