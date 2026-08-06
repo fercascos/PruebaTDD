@@ -747,6 +747,87 @@ def duplicados(project_id: uuid.UUID, s: SesionDep) -> Any:
     return [{"photo_ids": g} for g in grupos]
 
 
+class PuntoDelMapa(BaseModel):
+    """Una fotografía situada. Lo mínimo para pintarla y saber cuál es."""
+
+    id: uuid.UUID
+    latitude: float
+    longitude: float
+    display_name: str
+    caption: str | None
+    taken_at: datetime | None
+    asset_id: uuid.UUID | None
+    asset_name: str | None
+    zone_name: str | None
+
+
+class Mapa(BaseModel):
+    puntos: list[PuntoDelMapa]
+    #: `[REQ]` §15.6 · Cuántas fotografías **no** tienen coordenadas.
+    #:
+    #: Sin este número, un mapa con cuatro chinchetas parece decir «se hicieron
+    #: cuatro fotos», cuando lo que dice es «cuatro traían GPS». La diferencia
+    #: importa: en un sótano no hay señal, y muchos móviles llegan con la
+    #: localización desactivada. La fecha y las coordenadas no se infieren
+    #: nunca, así que lo honesto es decir cuántas faltan.
+    sin_coordenadas: int
+    #: Encuadre para que el mapa abra sobre las fotos y no sobre el Atlántico.
+    #: `None` cuando no hay ninguna situada.
+    encuadre: dict[str, float] | None = None
+
+
+@router.get("/projects/{project_id}/photos/map", response_model=Mapa)
+def mapa(project_id: uuid.UUID, s: SesionDep, asset_id: uuid.UUID | None = None) -> Any:
+    """`[REQ]` §15.9 · Las fotografías situadas sobre el terreno.
+
+    Endpoint propio y no un filtro sobre el listado: para pintar cuatrocientas
+    chinchetas hacen falta seis campos, no los treinta de la ficha, y el
+    recuento de las que **no** tienen coordenadas se calcula aquí de una vez en
+    lugar de hacer que el cliente lo deduzca.
+    """
+    _proyecto_existe(s, project_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT p.id, p.gps_latitude AS latitude, p.gps_longitude AS longitude, "
+                "p.display_name, p.caption, p.taken_at, p.asset_id, "
+                "a.name AS asset_name, z.name_es AS zone_name "
+                "FROM photo p "
+                "LEFT JOIN asset a ON a.id = p.asset_id "
+                "LEFT JOIN zone z ON z.id = p.zone_id "
+                "WHERE p.project_id = :p AND p.deleted_at IS NULL "
+                "  AND p.gps_latitude IS NOT NULL AND p.gps_longitude IS NOT NULL "
+                "  AND (CAST(:a AS uuid) IS NULL OR p.asset_id = CAST(:a AS uuid)) "
+                "ORDER BY p.taken_at NULLS LAST, p.uploaded_at"
+            ),
+            {"p": str(project_id), "a": str(asset_id) if asset_id else None},
+        )
+        .mappings()
+        .all()
+    )
+    sin_coordenadas = s.execute(
+        text(
+            "SELECT count(*) FROM photo WHERE project_id = :p AND deleted_at IS NULL "
+            "  AND (gps_latitude IS NULL OR gps_longitude IS NULL) "
+            "  AND (CAST(:a AS uuid) IS NULL OR asset_id = CAST(:a AS uuid))"
+        ),
+        {"p": str(project_id), "a": str(asset_id) if asset_id else None},
+    ).scalar_one()
+
+    puntos = [dict(f) for f in filas]
+    encuadre = None
+    if puntos:
+        lats = [float(p["latitude"]) for p in puntos]
+        lons = [float(p["longitude"]) for p in puntos]
+        encuadre = {
+            "sur": min(lats),
+            "norte": max(lats),
+            "oeste": min(lons),
+            "este": max(lons),
+        }
+    return {"puntos": puntos, "sin_coordenadas": sin_coordenadas, "encuadre": encuadre}
+
+
 @router.delete("/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def a_la_papelera(photo_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> None:
     """`[REQ]` El borrado es **siempre lógico**. El original sigue ahí."""

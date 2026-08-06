@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { obtener } from '../api/cliente'
 import type { Proyecto } from '../api/tipos'
@@ -8,6 +8,19 @@ import { PestanaActivos } from './PestanaActivos'
 import { PestanaFotos } from './PestanaFotos'
 import { PestanaCapex } from './PestanaCapex'
 import { PestanaInformes } from './PestanaInformes'
+
+/**
+ * El mapa se carga aparte, solo al abrir su pestaña.
+ *
+ * Leaflet pesa ~150 KB y esta es una aplicación que se usa en obra, con datos
+ * móviles y a veces con una barra de cobertura. Meterlo en el paquete inicial
+ * haría más lenta la entrada a todo el mundo por una pantalla que muchos no
+ * van a abrir. El trozo aparte sigue precacheándose para funcionar sin red: el
+ * plugin del service worker recorre todos los `.js` del empaquetado.
+ */
+const PestanaMapa = lazy(() =>
+  import('./PestanaMapa').then((m) => ({ default: m.PestanaMapa })),
+)
 
 export function FichaDeProyecto() {
   const { id = '' } = useParams()
@@ -40,6 +53,7 @@ export function FichaDeProyecto() {
         </NavLink>
         <NavLink to={`/proyectos/${id}/activos`}>Activos</NavLink>
         <NavLink to={`/proyectos/${id}/fotos`}>Fotografías</NavLink>
+        <NavLink to={`/proyectos/${id}/mapa`}>Mapa</NavLink>
         <NavLink to={`/proyectos/${id}/capex`}>Hallazgos y CAPEX</NavLink>
         <NavLink to={`/proyectos/${id}/informes`}>Informes</NavLink>
       </nav>
@@ -48,6 +62,14 @@ export function FichaDeProyecto() {
         <Route index element={<PestanaFases projectId={id} />} />
         <Route path="activos" element={<PestanaActivos projectId={id} />} />
         <Route path="fotos" element={<PestanaFotos projectId={id} />} />
+        <Route
+          path="mapa"
+          element={
+            <Suspense fallback={<p className="cargando">Cargando el mapa…</p>}>
+              <PestanaMapa projectId={id} />
+            </Suspense>
+          }
+        />
         <Route path="capex" element={<PestanaCapex projectId={id} />} />
         <Route path="informes" element={<PestanaInformes projectId={id} />} />
       </Routes>

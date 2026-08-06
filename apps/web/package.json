@@ -10,12 +10,14 @@
     "test": "vitest run",
     "test:sin-red": "node herramientas/comprobar-sin-red.mjs",
     "test:anotador": "node herramientas/comprobar-anotador.mjs",
+    "test:mapa": "node herramientas/comprobar-mapa.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json"
   },
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.28.0",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -26,6 +28,7 @@
     "vitest": "^2.1.8",
     "jsdom": "^25.0.1",
     "fake-indexeddb": "^6.2.5",
-    "playwright": "^1.62.1"
+    "playwright": "^1.62.1",
+    "@types/leaflet": "^1.9.20"
   }
 }

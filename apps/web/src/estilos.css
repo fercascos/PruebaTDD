@@ -852,3 +852,39 @@ tr.inactiva td {
      dibujar, que es exactamente lo contrario de lo que se pretende. */
   touch-action: none;
 }
+
+/* ── Mapa de fotografías (§15.9) ────────────────────────────────────────── */
+/* Leaflet exige una altura explícita en el contenedor: sin ella el mapa mide
+   cero píxeles y no se ve nada, sin ningún error que lo explique. */
+.mapa {
+  height: min(65vh, 34rem);
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+}
+.mapa.vacio {
+  /* Sin puntos sigue montado —quitarlo rompe el mapa al volver— pero no
+     ocupa media pantalla en blanco. */
+  height: 0;
+  border: 0;
+}
+.chincheta .punto {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--acento);
+  border: 2px solid var(--papel);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 45%);
+}
+.chincheta .punto.resaltado {
+  background: var(--error);
+  transform: scale(1.35);
+}
+/* La cartografía de fondo puede ser clara u oscura; el texto de la escala y la
+   atribución tienen que leerse encima de cualquiera de las dos. */
+.leaflet-control-scale-line,
+.leaflet-control-attribution {
+  background: rgb(255 255 255 / 85%) !important;
+  color: var(--tinta) !important;
+}

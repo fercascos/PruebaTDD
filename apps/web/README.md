@@ -32,6 +32,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Ficha de activo** | Alta y edición; los campos de nave se conservan al reclasificar |
 | **Fotografías** | **Los tres orígenes**, cola de subida, selección y renombrado en lote |
 | **Ficha de fotografía** | Clasificar por activo y zona, pie, orden en el informe, procedencia |
+| **Mapa** | Las fotografías situadas sobre el terreno, con el recuento de las que no lo están |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
@@ -114,6 +115,41 @@ código entre Canvas y Pillow—, pero **comparten el formato**, y eso es lo que
 garantiza que dibujen en el mismo sitio. Se comprueba arrastrando el ratón de
 verdad: `npm run test:anotador`.
 
+## El mapa y las teselas
+
+`[REQ]` §15.9. Sirve para lo que un listado no puede: ver de un vistazo si la
+visita cubrió todo el activo o se quedó en la fachada, y detectar la foto que se
+coló de otro edificio.
+
+**La biblioteca es libre; las teselas no.** Leaflet es BSD-2, sin condiciones.
+El servidor al que todo el mundo apunta por costumbre, `tile.openstreetmap.org`,
+**no es un CDN de uso libre**: su [Tile Usage Policy][osm] lo limita a uso
+ligero y no comercial y pide expresamente que el uso intensivo se autoaloje o
+vaya a un proveedor de pago. Una consultora usándolo a diario estaría fuera de
+esas condiciones.
+
+Por eso **no hay ninguna URL escrita en el código**. Sin `VITE_MAP_TILE_URL` la
+aplicación no contacta con nadie y el mapa funciona igual: las posiciones y las
+distancias son correctas y hay escala, solo falta la cartografía de fondo.
+Poner un proveedor es una decisión de quien despliega, que es quien puede
+aceptar sus términos. Ver `.env.example`.
+
+`[LIM]` **El mapa nunca es la visita completa.** Muchas fotografías llegan sin
+coordenadas —en un sótano no hay señal, y muchos móviles van con la
+localización apagada—, así que el recuento de las que faltan está siempre a la
+vista. Sin ese número, cuatro chinchetas se leen como «se hicieron cuatro
+fotos». No se infiere ninguna posición: si no vino en el EXIF, no está.
+
+Leaflet pesa ~150 KB, así que la pestaña se carga aparte y solo al abrirla: en
+obra, con datos móviles, no se puede hacer más lenta la entrada de todo el mundo
+por una pantalla que muchos no van a abrir. El trozo se precachea igual, así que
+el mapa también funciona sin red.
+
+Se comprueba abriéndolo: `npm run test:mapa` cuenta las chinchetas, verifica que
+el encuadre las deja todas dentro y que no sale ni una petición fuera.
+
+[osm]: https://operations.osmfoundation.org/policies/tiles/
+
 ## Sin red
 
 `[REQ]` §15.8. Dos piezas independientes, y conviene no confundirlas:
@@ -155,7 +191,7 @@ descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
   abrirla. Ver «Sin red» más arriba.
 - **Iconos del manifiesto.** Sin ellos el navegador no ofrece «instalar» en
   todas las plataformas.
-- **Mapa de fotografías por GPS**, matriz de riesgos y comparador de precios.
+- **Matriz de riesgos y comparador de precios.**
 - **Recuperación de contraseña.** El alta de una persona fija una contraseña
   inicial que hay que comunicar por otro canal: la invitación por correo exige
   SMTP y no está montado. Se dice en pantalla; no se disimula.
