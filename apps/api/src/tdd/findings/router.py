@@ -100,6 +100,12 @@ class LineaLeida(BaseModel):
     amount_source: str
     price_status: str
     computed_base: Decimal | None
+    #: `[REQ]` §14 · Contra qué se validó el precio. Un importe validado sin
+    #: procedencia visible obliga a abrir la auditoría para responder «¿de dónde
+    #: sale esto?», que es la pregunta que llega seis meses después.
+    selected_price_reference_id: uuid.UUID | None = None
+    price_reference_label: str | None = None
+    price_validation_note: str | None = None
 
 
 class Hallazgo(BaseModel):
@@ -154,8 +160,14 @@ _CAMPOS = """
 _LINEAS = """
     SELECT ci.id, th.code AS time_horizon_code, ci.amount, ci.tax_pct, ci.tax_amount,
            ci.total_cost, CAST(ci.amount_source AS text) AS amount_source,
-           CAST(ci.price_status AS text) AS price_status, ci.computed_base
-    FROM capex_item ci JOIN time_horizon th ON th.id = ci.time_horizon_id
+           CAST(ci.price_status AS text) AS price_status, ci.computed_base,
+           ci.selected_price_reference_id, ci.price_validation_note,
+           CASE WHEN pr.id IS NULL THEN NULL
+                ELSE ps.name || ' · ' || pr.description END AS price_reference_label
+    FROM capex_item ci
+    JOIN time_horizon th ON th.id = ci.time_horizon_id
+    LEFT JOIN price_reference pr ON pr.id = ci.selected_price_reference_id
+    LEFT JOIN price_source ps ON ps.id = pr.price_source_id
     WHERE ci.finding_id = :f ORDER BY th.sort_order
 """
 

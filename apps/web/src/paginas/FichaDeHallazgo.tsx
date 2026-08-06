@@ -3,7 +3,9 @@ import { borrar, enviar, obtener } from '../api/cliente'
 import type { Destino, ElementoCatalogo, Hallazgo, LineaCapex } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje } from '../ui/Marco'
+import { sinCerosSobrantes } from '../ui/numeros'
 import { Calculadora } from './CalculadoraDeCapex'
+import { ComparadorDePrecios } from './ComparadorDePrecios'
 
 const PLAZOS = [
   { code: 'CORTO', nombre: 'Corto plazo' },
@@ -178,6 +180,7 @@ export function FichaDeHallazgo({
           <Linea
             key={linea.id}
             linea={linea}
+            descripcion={hallazgo.title}
             alCambiar={refrescar}
             alFallar={setError}
           />
@@ -221,27 +224,36 @@ export function FichaDeHallazgo({
   )
 }
 
+const PRECIO: Record<string, string> = {
+  SIN_PRECIO: 'Sin precio',
+  PENDIENTE_VALIDACION: 'Pendiente de validación',
+  VALIDADO: 'Validado',
+}
+
 /** Una línea: importe, impuesto, medición y el traslado explícito. */
 function Linea({
   linea,
+  descripcion,
   alCambiar,
   alFallar,
 }: {
   linea: LineaCapex
+  descripcion: string
   alCambiar: (h: Hallazgo) => void
   alFallar: (m: string | null) => void
 }) {
-  const [importe, setImporte] = useState(linea.amount)
-  const [impuesto, setImpuesto] = useState(linea.tax_pct)
+  const [importe, setImporte] = useState(sinCerosSobrantes(linea.amount))
+  const [impuesto, setImpuesto] = useState(sinCerosSobrantes(linea.tax_pct))
   const [ocupado, setOcupado] = useState(false)
+  const [comparando, setComparando] = useState(false)
 
   // Cuando el servidor cambia el importe por su cuenta —«trasladar la base
   // calculada» lo hace— el campo tiene que seguirlo. Sin esto el total de
   // arriba se actualizaba y el recuadro seguía enseñando el número viejo, que
   // es la peor combinación posible: dos cifras distintas a la vez en pantalla.
   useEffect(() => {
-    setImporte(linea.amount)
-    setImpuesto(linea.tax_pct)
+    setImporte(sinCerosSobrantes(linea.amount))
+    setImpuesto(sinCerosSobrantes(linea.tax_pct))
   }, [linea.amount, linea.tax_pct])
 
   async function guardar() {
@@ -283,7 +295,10 @@ function Linea({
         <Campo etiqueta="Plazo">
           <input value={linea.time_horizon_code} readOnly />
         </Campo>
-        <Campo etiqueta="Importe (€)" ayuda={`Origen: ${linea.price_status}`}>
+        <Campo
+          etiqueta="Importe (€)"
+          ayuda={`Precio: ${PRECIO[linea.price_status] ?? linea.price_status}`}
+        >
           <input
             type="number"
             step="0.01"
@@ -311,6 +326,25 @@ function Linea({
           </>
         )}
       </p>
+
+      {/* `[REQ]` §14 · La procedencia se lee aquí, sin abrir la auditoría. Un
+          importe validado del que no se ve contra qué se validó vale lo mismo
+          que uno sin validar el día que el cliente pregunta de dónde sale. */}
+      <p className={`procedencia p-${linea.price_status.toLowerCase()}`}>
+        {linea.price_reference_label ? (
+          <>
+            <strong>{PRECIO[linea.price_status] ?? linea.price_status}</strong> contra{' '}
+            {linea.price_reference_label}
+            {linea.price_validation_note && <> — «{linea.price_validation_note}»</>}
+          </>
+        ) : (
+          <>
+            <strong>Sin procedencia registrada.</strong> El importe se ha tecleado; no está
+            respaldado por ninguna referencia.
+          </>
+        )}
+      </p>
+
       <div className="acciones">
         <button type="button" onClick={() => void guardar()} disabled={ocupado}>
           Guardar línea
@@ -337,6 +371,14 @@ function Linea({
         )}
         <button
           type="button"
+          className="secundario"
+          onClick={() => setComparando(true)}
+          disabled={ocupado}
+        >
+          Ver referencias y validar el precio
+        </button>
+        <button
+          type="button"
           className="secundario peligro"
           onClick={() => void operar(() => borrar<Hallazgo>(`/capex-items/${linea.id}`))}
           disabled={ocupado}
@@ -345,6 +387,22 @@ function Linea({
         </button>
       </div>
       <Calculadora alAplicar={(base) => setImporte(base)} />
+
+      {/* Se abre en línea, como la calculadora, y no en una capa por encima:
+          un modal sobre una tabla de doce columnas obliga a decidir con el
+          contexto tapado, y aquí lo que se compara es justo el contexto. */}
+      {comparando && (
+        <ComparadorDePrecios
+          itemId={linea.id}
+          descripcion={descripcion}
+          importeActual={linea.amount}
+          alValidar={(h) => {
+            setComparando(false)
+            alCambiar(h)
+          }}
+          alCerrar={() => setComparando(false)}
+        />
+      )}
     </div>
   )
 }

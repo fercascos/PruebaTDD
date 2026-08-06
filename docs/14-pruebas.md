@@ -372,6 +372,33 @@ Playwright, en Chromium y WebKit (por Safari e iOS), con datos ficticios.
 `[REC]` Se limita deliberadamente el número de pruebas end to end: son las más caras de mantener y las
 más frágiles. Cubren **flujos**, no casos; los casos van en las capas inferiores, rápidas y estables.
 
+### 19.10.1. Comprobaciones en navegador ya escritas
+
+Lo construido hasta ahora no está cubierto por la tabla anterior —que es el plan— sino por estas
+comprobaciones, que sí existen y se ejecutan. Cada una nació de un defecto real que **una suite de
+más de setecientas pruebas no vio**, porque solo aparece cuando la aplicación se abre de verdad:
+
+| Orden | Qué comprueba | El defecto que lo motivó |
+|---|---|---|
+| `npm run test:sin-red` | La aplicación arranca sin cobertura y la cola de subida sobrevive | El armazón precacheado no casaba por `Vary: Origin`: la aplicación abría en blanco |
+| `npm run test:anotador` | Las anotaciones se dibujan, se guardan en coordenadas relativas y llegan al PPTX | Un grosor de 0 se convertía en el valor por defecto |
+| `npm run test:mapa` | El mapa se monta y no contacta con ningún proveedor de teselas por defecto | El contenedor tenía altura 0 y Leaflet no daba ningún error |
+| `npm run test:riesgos` | Los totales de la matriz cuadran con el CAPEX y el grado se lee **sin color** | — |
+| `npm run test:comparador` | Nada se elige solo, se enumera lo no consultado y **no sale ni una petición a terceros** | Los importes se leían como «52000.0000»; los paneles heredaban la barra oscura de la aplicación |
+
+Necesitan la API y la aplicación construida en marcha:
+
+```bash
+make run &                       # API en :8000
+npm run build && npx vite preview --port 4173 &
+CHROMIUM_PATH=/ruta/a/chromium npm run test:comparador
+```
+
+`[REC]` La comprobación del comparador registra **todas** las peticiones que salen de la página y
+falla si alguna va a un host que no sea el de la aplicación o el de la API. Es la única forma de
+sostener «no inventes APIs ni fuentes de precios» de verdad: buscar `fetch` en el código no ve una
+imagen remota, una tipografía web ni un `iframe`.
+
 ---
 
 ## 19.11. Datos de prueba

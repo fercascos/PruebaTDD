@@ -1015,3 +1015,154 @@ tr.inactiva td {
     text-align: left;
   }
 }
+
+/* ── Comparador de referencias de precio (§14) ───────────────────────────── */
+
+/* Se abre dentro de la línea de CAPEX, no en una capa por encima: lo que se
+   compara es el contexto, y un modal lo taparía justo al decidir. */
+.comparador {
+  border: 1px solid var(--acento);
+  border-radius: var(--radio);
+  padding: 0.9rem;
+  background: var(--papel);
+  display: grid;
+  gap: 0.8rem;
+}
+/* No se llama «cabecera»: esa clase es la barra oscura de la aplicación, y
+   heredarla dejaba el enlace de «Cerrar» en azul sobre casi negro. */
+.comparador > .titular {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.comparador > .titular h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.comparador h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+.comparador .filtro {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.comparador .filtro label {
+  flex: 1 1 16rem;
+}
+.comparador .filtro .ayuda {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* Doce columnas no caben en un móvil. Se desplaza la tabla, no la página: el
+   `body` con barra horizontal deja el resto de la pantalla inservible. */
+.desbordable {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tabla.referencias {
+  min-width: 62rem;
+  font-size: 0.85rem;
+}
+.tabla.referencias tr.elegida {
+  background: color-mix(in srgb, var(--acento) 8%, transparent);
+}
+.tabla.referencias .alcance {
+  max-width: 14rem;
+  color: var(--tinta-suave);
+}
+
+/* [REQ] §14 · Lo que NO se ha consultado. Sin este bloque, tres referencias
+   sueltas parecen decir «esto es lo que hay en el mercado» cuando dicen «esto
+   es lo que alguien introdujo». Va marcado, no escondido al pie. */
+.comparador .no-consultadas {
+  border: 1px solid var(--aviso);
+  border-left-width: 4px;
+  border-radius: var(--radio);
+  padding: 0.7rem 0.9rem;
+  background: color-mix(in srgb, var(--aviso) 6%, transparent);
+}
+.comparador .no-consultadas ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+.comparador .no-consultadas .ayuda {
+  margin: 0.5rem 0 0;
+}
+
+.comparador .por-indice,
+.comparador .nueva-referencia {
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+  padding: 0.8rem;
+  background: var(--fondo);
+  display: grid;
+  gap: 0.6rem;
+}
+.comparador .por-indice > .titular {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.comparador .por-indice > .titular h3 {
+  margin: 0;
+}
+.comparador .por-indice .formula {
+  margin: 0;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--tinta);
+}
+
+.comparador .aplicar {
+  border-top: 1px solid var(--borde);
+  padding-top: 0.8rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+/* Un botón que parece un enlace, para lo que abre y cierra sin guardar nada. */
+button.enlace {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--acento);
+  text-decoration: underline;
+  justify-self: start;
+}
+
+/* La procedencia del precio, leída desde la propia línea. */
+.linea-capex .procedencia {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--tinta-suave);
+}
+.linea-capex .procedencia.p-sin_precio {
+  color: var(--aviso);
+}
+.linea-capex .procedencia.p-validado {
+  color: var(--ok);
+}
+
+/* Texto solo para lectores de pantalla: la etiqueta del radio de cada fila
+   dice de qué fuente es, que en una tabla de doce columnas no se deduce del
+   contexto al navegar con teclado. */
+.oculto-visual {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

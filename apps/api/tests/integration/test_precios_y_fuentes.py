@@ -294,6 +294,56 @@ def test_validar_con_la_referencia_tal_cual(
     assert Decimal(validada["amount"]) == Decimal("48500.00")
 
 
+def test_la_linea_validada_dice_contra_que_se_valido(
+    cliente: TestClient, cab: Any, fuente_manual: dict[str, Any], linea: dict[str, Any]
+) -> None:
+    """`[REQ]` §14 · La procedencia se lee en la propia línea.
+
+    Un importe marcado «VALIDADO» del que no se ve contra qué se validó obliga a
+    abrir la auditoría para responder «¿de dónde sale esto?», que es justo la
+    pregunta que llega meses después delante del cliente.
+    """
+    ref = referencia(cliente, cab, fuente_manual)
+    r = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/validate-price",
+        headers=cab("consultor_a"),
+        json={"amount": "48500.00", "price_reference_id": ref["id"]},
+    )
+    validada = next(x for x in r.json()["capex_lines"] if x["id"] == linea["id"])
+    assert validada["selected_price_reference_id"] == ref["id"]
+    assert validada["price_reference_label"] is not None
+    assert fuente_manual["name"] in validada["price_reference_label"]
+    assert validada["price_validation_note"]
+
+
+def test_una_linea_sin_validar_no_finge_procedencia(linea: dict[str, Any]) -> None:
+    assert linea["selected_price_reference_id"] is None
+    assert linea["price_reference_label"] is None
+
+
+def test_escribir_de_mas_en_un_campo_opcional_no_rompe_la_validacion(
+    cliente: TestClient, cab: Any, fuente_manual: dict[str, Any], linea: dict[str, Any]
+) -> None:
+    """La nota es opcional cuando el importe coincide con la referencia, pero la
+    base exige diez caracteres a cualquier precio validado.
+
+    Un «ok» tecleado en un campo que la pantalla marca como opcional producía
+    una nota de dos letras que el `CHECK` rechazaba: el usuario recibía un 500
+    por haber escrito de más. Ahora se conserva lo escrito y se le añade la
+    procedencia.
+    """
+    ref = referencia(cliente, cab, fuente_manual)
+    r = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/validate-price",
+        headers=cab("consultor_a"),
+        json={"amount": "48500.00", "price_reference_id": ref["id"], "justificacion": "ok"},
+    )
+    assert r.status_code == 200, r.text
+    validada = next(x for x in r.json()["capex_lines"] if x["id"] == linea["id"])
+    assert validada["price_validation_note"].startswith("ok")
+    assert fuente_manual["name"] in validada["price_validation_note"]
+
+
 def test_un_importe_distinto_sin_explicacion_se_rechaza(
     cliente: TestClient, cab: Any, fuente_manual: dict[str, Any], linea: dict[str, Any]
 ) -> None:

@@ -268,7 +268,17 @@ def comprobar_validacion(
             )
         return texto
 
-    return texto or f"Coincide con la referencia de {referencia.source_name}."
+    coincide = f"Coincide con la referencia de {referencia.source_name}."
+    if not texto:
+        return coincide
+    if len(texto) < MINIMO_JUSTIFICACION:
+        # La nota es opcional cuando el importe es el de la referencia, pero la
+        # base de datos exige diez caracteres a cualquier precio validado
+        # (`validado_exige_persona_y_nota`). Un «ok» tecleado de más no puede
+        # tumbar la validación con un error de integridad, y tampoco se tira lo
+        # que alguien escribió: se conserva y se le añade la procedencia.
+        return f"{texto} — {coincide}"
+    return texto
 
 
 def a_decimal(valor: object, campo: str) -> Decimal:

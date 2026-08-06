@@ -12,6 +12,7 @@
     "test:anotador": "node herramientas/comprobar-anotador.mjs",
     "test:mapa": "node herramientas/comprobar-mapa.mjs",
     "test:riesgos": "node herramientas/comprobar-riesgos.mjs",
+    "test:comparador": "node herramientas/comprobar-comparador.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json"
   },
   "dependencies": {

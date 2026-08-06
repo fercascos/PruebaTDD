@@ -89,6 +89,10 @@ export type LineaCapex = {
   total_cost: string
   price_status: string
   computed_base: string | null
+  /** `[REQ]` §14 · La referencia contra la que se validó, si se validó. */
+  selected_price_reference_id: string | null
+  price_reference_label: string | null
+  price_validation_note: string | null
 }
 
 export type Hallazgo = {

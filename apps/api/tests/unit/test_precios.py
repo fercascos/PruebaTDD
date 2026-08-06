@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 
 from tdd.pricing.service import (
+    MINIMO_JUSTIFICACION,
     Fuente,
     Referencia,
     TipoDeFuente,
@@ -193,6 +194,22 @@ def test_un_importe_distinto_con_explicacion_pasa() -> None:
         justificacion="Oferta en firme del proveedor, incluye puesta en marcha.",
     )
     assert nota.startswith("Oferta en firme")
+
+
+def test_una_nota_corta_con_el_importe_de_la_referencia_no_rompe_la_base() -> None:
+    """La nota es opcional cuando el importe coincide, pero la base exige diez
+    caracteres a cualquier precio validado (`validado_exige_persona_y_nota`).
+
+    Escribir «ok» de más devolvía una nota de dos letras que la base rechazaba:
+    el usuario veía un 500 por haber escrito de más en un campo opcional. Ahora
+    se conserva lo escrito y se le añade la procedencia.
+    """
+    nota = comprobar_validacion(
+        importe=Decimal("48500.00"), referencia=referencia(), justificacion="ok"
+    )
+    assert nota.startswith("ok")
+    assert "Catálogo interno" in nota
+    assert len(nota.strip()) >= MINIMO_JUSTIFICACION
 
 
 def test_un_precio_sin_procedencia_no_se_valida_por_mucho_que_se_explique() -> None:
