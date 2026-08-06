@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErrorDeApi, subirFichero } from '../api/cliente'
 import type { Foto } from '../api/tipos'
+import { comoCola, guardar, guardarVarias, olvidar, pendientesDe } from './almacen'
 import {
   type ElementoDeCola,
   type Origen,
@@ -27,6 +28,12 @@ import {
  * galería. Sin él, «hacer una foto» exigiría salir de la aplicación, disparar
  * y volver a entrar a buscarla, que es exactamente lo que nadie hace en una
  * visita con casco puesto.
+ *
+ * `[REQ]` §15.8 · **La cola se guarda en IndexedDB.** Antes vivía en memoria:
+ * cerrar la pestaña, quedarse sin batería o que el móvil descartara la página
+ * al abrir la cámara —cosa que hace— perdía todo lo que faltaba por subir. En
+ * una visita sin cobertura eso significa volver a subir al edificio. Ahora al
+ * volver a entrar la cola sigue ahí, con sus fotos dentro.
  */
 export function Subida({
   projectId,
@@ -42,11 +49,29 @@ export function Subida({
   const [elementos, setElementos] = useState<ElementoDeCola[]>([])
   const [enCurso, setEnCurso] = useState(false)
   const [descartados, setDescartados] = useState<string[]>([])
+  const [recuperadas, setRecuperadas] = useState(0)
   const entradas = {
     ORDENADOR: useRef<HTMLInputElement>(null),
     CARRETE: useRef<HTMLInputElement>(null),
     CAMARA: useRef<HTMLInputElement>(null),
   }
+
+  // Al abrir la pestaña se recupera lo que quedó a medias. No se sube solo: la
+  // decisión de gastar datos es del usuario, que puede estar con el móvil en
+  // itinerancia. Se le dice cuántas hay y él pulsa.
+  useEffect(() => {
+    let vigente = true
+    pendientesDe(projectId)
+      .then((guardadas) => {
+        if (!vigente || guardadas.length === 0) return
+        setElementos(comoCola(guardadas))
+        setRecuperadas(guardadas.length)
+      })
+      .catch(() => undefined)
+    return () => {
+      vigente = false
+    }
+  }, [projectId])
 
   const subirUno = useCallback(
     async (elemento: ElementoDeCola) => {
@@ -83,26 +108,47 @@ export function Subida({
     setDescartados(todos.filter((a) => !esImagenAdmitida(a)).map((a) => a.name))
 
     const nuevos = crearElementos(validos, origen)
+    // Se guardan ANTES de intentar subirlas. Si se guardaran después, un corte
+    // durante la primera subida perdería justo las fotos que este mecanismo
+    // existe para no perder.
+    await guardarVarias(projectId, nuevos)
     setElementos((previos) => [...previos, ...nuevos])
+    await lanzar(nuevos)
+  }
+
+  /**
+   * Procesa una tanda y **mantiene la cola persistida al día**.
+   *
+   * Lo que llega al servidor se olvida —subido o rechazado por duplicado, que
+   * también significa que está—; lo fallido se queda guardado, que es
+   * exactamente lo que hay que poder reintentar mañana.
+   */
+  async function lanzar(tanda: ElementoDeCola[]) {
     setEnCurso(true)
-    await procesar(nuevos, subirUno, {
-      alCambiar: () => setElementos((previos) => [...previos]),
+    await procesar(tanda, subirUno, {
+      alCambiar: (actuales) => {
+        setElementos((previos) => [...previos])
+        for (const e of actuales) {
+          const promesa =
+            e.estado === 'HECHO' || e.estado === 'DUPLICADO'
+              ? olvidar(e.id)
+              : guardar(projectId, e)
+          // El almacén no puede tumbar la subida: si IndexedDB falla —cuota
+          // llena, modo privado—, las fotos siguen yendo al servidor, que es lo
+          // que de verdad importa.
+          void promesa.catch(() => undefined)
+        }
+      },
     })
     setEnCurso(false)
+    setRecuperadas(0)
     alTerminar()
   }
 
   async function reintentar() {
     const reencolados = reencolarFallidas(elementos)
     setElementos(reencolados)
-    setEnCurso(true)
-    await procesar(
-      reencolados.filter((e) => e.estado === 'PENDIENTE'),
-      subirUno,
-      { alCambiar: () => setElementos((previos) => [...previos]) },
-    )
-    setEnCurso(false)
-    alTerminar()
+    await lanzar(reencolados.filter((e) => e.estado === 'PENDIENTE'))
   }
 
   const resumen = resumir(elementos)
@@ -148,6 +194,22 @@ export function Subida({
         hidden
         onChange={(e) => void anadir(e.target.files, 'CAMARA')}
       />
+
+      {recuperadas > 0 && !enCurso && (
+        <div className="mensaje aviso recuperadas">
+          <p>
+            Quedaron <strong>{recuperadas}</strong> fotografías sin subir de una sesión anterior.
+            Siguen guardadas en este dispositivo.
+          </p>
+          <button
+            type="button"
+            onClick={() => void reintentar()}
+            title="No se suben solas: la decisión de gastar datos es suya"
+          >
+            Subirlas ahora
+          </button>
+        </div>
+      )}
 
       {descartados.length > 0 && (
         <p className="mensaje aviso">

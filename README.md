@@ -15,6 +15,11 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 > emitirlo. Qué está construido y qué no, sin adornos, en
 > [`apps/api/README.md`](apps/api/README.md) y [`apps/web/README.md`](apps/web/README.md).
 >
+> Y una vez construido, se ha abierto **sin conexión en un navegador de verdad**: el armazón carga,
+> la cola de fotos sigue en el dispositivo y la API no se sirve desde caché. Eso también destapó un
+> fallo —`Vary: Origin` impedía encontrar el JavaScript precacheado, y la aplicación abría en blanco
+> sin red— que con cobertura no se ve.
+>
 > Ese recorrido no es decorativo: **seis defectos reales salieron de ahí** y de ningún otro sitio.
 > Un `500` al repetir el código de un encargo en vez de decir que estaba cogido; el botón de
 > exportar el CAPEX a XLSX sin ninguna ruta que lo sirviera; las miniaturas pidiendo el original de

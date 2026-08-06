@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cerrarSesion, obtener } from '../api/cliente'
 import type { Perfil } from '../api/tipos'
+import { useHayRed } from './red'
 
 export function Marco({ children }: { children: ReactNode }) {
   const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const hayRed = useHayRed()
   const navegar = useNavigate()
 
   useEffect(() => {
@@ -39,6 +41,12 @@ export function Marco({ children }: { children: ReactNode }) {
           </button>
         </div>
       </header>
+      {!hayRed && (
+        <p className="sin-red" role="status">
+          <strong>Sin conexión.</strong> Puede seguir haciendo fotografías: se guardan en el
+          dispositivo y se suben cuando vuelva la cobertura. Lo demás necesita red y va a fallar.
+        </p>
+      )}
       <main>{children}</main>
     </div>
   )

@@ -782,3 +782,16 @@ tr.inactiva td {
   background: #f1f5f9;
   color: var(--tinta-suave);
 }
+
+/* ── Aviso de que no hay red ────────────────────────────────────────────── */
+/* Explica por qué acaba de fallar algo. No bloquea nada: si el usuario quiere
+   intentarlo, que lo intente —`navigator.onLine` dice «hay red» estando
+   conectado a un wifi sin salida, y bloquear con ese dato sería peor. */
+.sin-red {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  background: #fef3c7;
+  color: var(--aviso);
+  font-size: 0.85rem;
+  border-bottom: 1px solid #fcd34d;
+}

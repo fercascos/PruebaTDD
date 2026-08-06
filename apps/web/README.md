@@ -9,8 +9,12 @@ abajo sin adornos.
 ```bash
 npm install
 npm run dev        # http://localhost:5173, con proxy a la API en :8000
-npm test           # 20 pruebas de la cola de subida
-npm run build      # comprobación de tipos + empaquetado
+npm test           # 34 pruebas: cola de subida, cola persistida y estado de red
+npm run build      # tipos (aplicación y service worker) + empaquetado
+
+# ¿Abre sin red? Necesita el empaquetado servido y un Chromium:
+npm run build && npx vite preview --port 4173 &
+npm run test:sin-red
 ```
 
 El proxy de `vite.config.ts` manda `/api` al backend, así que en desarrollo no
@@ -87,11 +91,47 @@ Por eso sus 20 pruebas comprueban de verdad lo que importa —que la
 concurrencia no se dispara, que un fallo de red se reintenta y un duplicado no,
 que nada se pierde en silencio— sin montar un servidor ni un navegador.
 
+## Sin red
+
+`[REQ]` §15.8. Dos piezas independientes, y conviene no confundirlas:
+
+**La cola se guarda en IndexedDB** (`src/fotos/almacen.ts`). Antes vivía en
+memoria: cerrar la pestaña, quedarse sin batería o que el móvil descartara la
+página al abrir la cámara —cosa que hace— perdía todo lo pendiente. En una
+visita sin cobertura eso significa volver a subir al edificio. Se guarda el
+binario entero como `ArrayBuffer`, no el `File`: guardar el `File` depende de
+que el navegador sepa serializarlo, y ahí Safari ha tenido fallos con blobs en
+IndexedDB durante años. En la aplicación que más va a usarse desde un iPhone,
+esa apuesta no compensa. Al volver, lo que quedó `SUBIENDO` vuelve a
+`PENDIENTE`: esa foto no llegó al servidor, y dejarla en «subiendo» para
+siempre la mete en un limbo del que nadie la saca.
+
+**El armazón se precachea con un service worker** (`src/sw.ts`), para que la
+aplicación abra en el sótano donde no hay señal. La API **nunca** se cachea: un
+CAPEX servido desde caché es un número viejo presentado como actual, y eso en
+un informe que se entrega es peor que un error visible.
+
+`[LIM]` Es persistencia, **no sincronización en segundo plano**. La Background
+Sync API no está usada: las fotos se suben cuando alguien abre la aplicación, y
+ni siquiera solas —se avisa de cuántas quedaron y el usuario decide, que puede
+estar en itinerancia—. Tampoco se piden `persist()` ni se vigila la cuota:
+IndexedDB es *best-effort* y el navegador puede vaciarlo si falta espacio.
+
+Comprobarlo exige un navegador de verdad (`npm run test:sin-red`), y no es
+teatro: **encontró un fallo que ninguna otra comprobación veía.** El servidor
+responde con `Vary: Origin`; las entradas del armazón se guardan sin esa
+cabecera y el `<script crossorigin>` que genera Vite sí la manda, así que la
+búsqueda en la caché no encontraba nunca el JavaScript. Con red no se nota —se
+descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
+`ignoreVary`.
+
 ## Lo que NO está construido
 
-- **Modo offline real.** No hay IndexedDB ni service worker: la cola de subida
-  vive en memoria y se pierde al recargar. El manifiesto está, pero la
-  aplicación **no funciona sin red**, y §15.8 lo pide para la fase offline.
+- **Sincronización en segundo plano.** Lo pendiente se guarda y la aplicación
+  abre sin red, pero nada se sube con el móvil en el bolsillo: hace falta
+  abrirla. Ver «Sin red» más arriba.
+- **Iconos del manifiesto.** Sin ellos el navegador no ofrece «instalar» en
+  todas las plataformas.
 - **Editor de anotaciones** sobre la fotografía. El backend guarda la capa
   vectorial; no hay lienzo para dibujarla.
 - **Mapa de fotografías por GPS**, matriz de riesgos y comparador de precios.
