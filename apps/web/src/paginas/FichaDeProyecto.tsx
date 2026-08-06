@@ -8,6 +8,7 @@ import { PestanaActivos } from './PestanaActivos'
 import { PestanaFotos } from './PestanaFotos'
 import { PestanaCapex } from './PestanaCapex'
 import { PestanaInformes } from './PestanaInformes'
+import { PestanaRiesgos } from './PestanaRiesgos'
 
 /**
  * El mapa se carga aparte, solo al abrir su pestaña.
@@ -55,6 +56,7 @@ export function FichaDeProyecto() {
         <NavLink to={`/proyectos/${id}/fotos`}>Fotografías</NavLink>
         <NavLink to={`/proyectos/${id}/mapa`}>Mapa</NavLink>
         <NavLink to={`/proyectos/${id}/capex`}>Hallazgos y CAPEX</NavLink>
+        <NavLink to={`/proyectos/${id}/riesgos`}>Riesgos</NavLink>
         <NavLink to={`/proyectos/${id}/informes`}>Informes</NavLink>
       </nav>
 
@@ -71,6 +73,7 @@ export function FichaDeProyecto() {
           }
         />
         <Route path="capex" element={<PestanaCapex projectId={id} />} />
+        <Route path="riesgos" element={<PestanaRiesgos projectId={id} />} />
         <Route path="informes" element={<PestanaInformes projectId={id} />} />
       </Routes>
     </>

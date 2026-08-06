@@ -33,6 +33,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Fotografías** | **Los tres orígenes**, cola de subida, selección y renombrado en lote |
 | **Ficha de fotografía** | Clasificar por activo y zona, pie, orden en el informe, procedencia |
 | **Mapa** | Las fotografías situadas sobre el terreno, con el recuento de las que no lo están |
+| **Riesgos** | Distribución por grado, matriz riesgo × horizonte y desglose por capítulo |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
@@ -115,6 +116,35 @@ código entre Canvas y Pillow—, pero **comparten el formato**, y eso es lo que
 garantiza que dibujen en el mismo sitio. Se comprueba arrastrando el ratón de
 verdad: `npm run test:anotador`.
 
+## La matriz de riesgos
+
+`[REQ]` §12. **Riesgo × horizonte temporal**, no la clásica probabilidad ×
+consecuencia: la especificación define el riesgo como un grado único de cuatro
+niveles ya interpretado, no como dos ejes. Cruzarlo con el plazo responde la
+pregunta que se hace el inversor: *«¿cuánto de lo grave hay que pagar en los dos
+primeros años?»*.
+
+**El grado nunca se identifica solo por color.** Cada fila lleva su código
+(`01`…`04`) y su nombre escritos, y las barras su cifra al lado. Uno de cada
+doce hombres es daltónico, y esta pantalla se imprime en blanco y negro para
+reuniones. El color acompaña; no informa por sí solo. `npm run test:riesgos` lo
+comprueba leyendo el texto de la tabla.
+
+Tres cosas que parecen detalles y no lo son, y por eso tienen prueba propia:
+
+* **Una actuación recurrente (P-44) cuenta como un hallazgo** aunque tenga
+  líneas en tres plazos. Contar líneas inflaría el recuento justo en las
+  actuaciones más caras, que son las que se miran.
+* **Un hallazgo sin importe sigue contando.** En campo se anota lo que se ve
+  antes de saber cuánto cuesta.
+* **Los hallazgos sin grado salen en su propia fila.** Esconderlos haría que el
+  total de la matriz no cuadrara con el CAPEX y nadie sabría por qué faltan cien
+  mil euros.
+
+Ese cuadre es lo que sostiene la pantalla, y se comprueba de las dos maneras:
+en la suite, contra el resumen de CAPEX del propio proyecto; y en el navegador,
+leyendo la fila de totales.
+
 ## El mapa y las teselas
 
 `[REQ]` §15.9. Sirve para lo que un listado no puede: ver de un vistazo si la
@@ -191,7 +221,7 @@ descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
   abrirla. Ver «Sin red» más arriba.
 - **Iconos del manifiesto.** Sin ellos el navegador no ofrece «instalar» en
   todas las plataformas.
-- **Matriz de riesgos y comparador de precios.**
+- **Comparador de precios.**
 - **Recuperación de contraseña.** El alta de una persona fija una contraseña
   inicial que hay que comunicar por otro canal: la invitación por correo exige
   SMTP y no está montado. Se dice en pantalla; no se disimula.

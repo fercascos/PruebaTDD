@@ -481,6 +481,92 @@ def borrar(finding_id: uuid.UUID, s: SesionDep) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+@router.get("/projects/{project_id}/risk-matrix")
+def matriz_de_riesgos(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    asset_id: uuid.UUID | None = None,
+    chapter_code: str | None = None,
+) -> Any:
+    """`[REQ]` §12 · Riesgo × horizonte temporal.
+
+    No la clásica probabilidad × consecuencia: la especificación revisada define
+    el riesgo como un grado único de cuatro niveles **ya interpretado**, no como
+    dos ejes. Cruzarlo con el plazo responde la pregunta que se hace el
+    inversor: «¿cuánto de lo grave hay que pagar en los dos primeros años?».
+
+    La consulta trae **una fila por línea de CAPEX**, y un `LEFT JOIN` para que
+    un hallazgo sin importe llegue igual: en campo se anota lo que se ve antes
+    de saber cuánto cuesta, y si no contara, la matriz diría que no hay nada que
+    mirar en esa zona. La agregación —incluido no contar dos veces una actuación
+    recurrente (P-44)— vive en `riesgos.py`, que es lógica pura y se prueba sin
+    base de datos.
+    """
+    from tdd.findings import riesgos
+
+    _proyecto_existe(s, project_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT f.id::text AS finding_id, "
+                "  rl.code AS risk_code, rl.name_es AS risk_name, rl.score AS risk_score, "
+                "  cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                "  th.code AS horizonte, COALESCE(ci.amount, 0) AS importe "
+                "FROM finding f "
+                "LEFT JOIN risk_level rl ON rl.id = f.risk_level_id "
+                "JOIN capex_code cc ON cc.id = f.capex_code_id "
+                # El capítulo es el nivel 2 del árbol. Un código de nivel 2 es su
+                # propio capítulo; uno de nivel 3 cuelga de él.
+                "LEFT JOIN capex_code cap ON cap.id = "
+                "  CASE WHEN cc.level = 2 THEN cc.id ELSE cc.parent_id END "
+                "LEFT JOIN capex_item ci ON ci.finding_id = f.id "
+                "LEFT JOIN time_horizon th ON th.id = ci.time_horizon_id "
+                "WHERE f.project_id = :p AND f.deleted_at IS NULL "
+                "  AND CAST(f.status AS text) = ANY(:estados) "
+                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
+                "  AND (CAST(:c AS text) IS NULL OR cap.code = CAST(:c AS text))"
+            ),
+            {
+                "p": str(project_id),
+                "a": str(asset_id) if asset_id else None,
+                "c": chapter_code,
+                # Lo descartado queda fuera: decir que no se hace y seguir
+                # sumándolo al riesgo del encargo sería contradictorio.
+                "estados": ["BORRADOR", "EN_REVISION", "VALIDADO"],
+            },
+        )
+        .mappings()
+        .all()
+    )
+
+    catalogo = [
+        (f.code, f.name_es, f.score)
+        for f in s.execute(text("SELECT code, name_es, score FROM risk_level ORDER BY score")).all()
+    ]
+    horizontes = [
+        f[0] for f in s.execute(text("SELECT code FROM time_horizon ORDER BY sort_order")).all()
+    ]
+
+    matriz = riesgos.construir(
+        [
+            riesgos.FilaDeHallazgo(
+                finding_id=f["finding_id"],
+                risk_code=f["risk_code"],
+                risk_name=f["risk_name"],
+                risk_score=f["risk_score"],
+                chapter_code=f["chapter_code"],
+                chapter_name=f["chapter_name"],
+                horizonte=f["horizonte"],
+                importe=Decimal(str(f["importe"])),
+            )
+            for f in filas
+        ],
+        grados_del_catalogo=catalogo,
+        horizontes=horizontes,
+    )
+    return matriz.como_json(horizontes)
+
+
 @router.get("/findings/{finding_id}/transitions")
 def transiciones(finding_id: uuid.UUID, s: SesionDep) -> Any:
     """Cada destino con sus impedimentos, para deshabilitar el botón **con su

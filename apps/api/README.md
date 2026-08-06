@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 700 pruebas
+make test        # 729 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -57,6 +57,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Primera cuenta** · arranque sin API | ✅ Completo | `tests/integration/test_arranque.py` · 7 |
 | **Migraciones** · el esquema versionado | ✅ Completo | `tests/integration/test_migraciones.py` · 8 |
 | **Mapa de fotografías** `[REQ]` §15.9 | ✅ Completo | `tests/integration/test_mapa.py` · 10 |
+| **Matriz de riesgo × horizonte** `[REQ]` §12 | ✅ Completo | `test_riesgos.py` · 15 + `test_matriz_de_riesgos.py` · 14 |
 | **Directorio** · clientes y personas | ✅ Completo | `tests/integration/test_directorio.py` · 16 |
 | **Exportación del CAPEX a XLSX** `[REQ]` P-31 | ✅ Completo | `tests/integration/test_exportacion_capex.py` · 8 |
 | **Errores de usuario** · 409 y 422 donde había 500 | ✅ Completo | `tests/integration/test_errores_de_usuario.py` · 6 |

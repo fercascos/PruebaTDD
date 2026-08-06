@@ -888,3 +888,130 @@ tr.inactiva td {
   background: rgb(255 255 255 / 85%) !important;
   color: var(--tinta) !important;
 }
+
+/* ── Matriz de riesgos (§12) ────────────────────────────────────────────── */
+/* [REQ] El grado NUNCA se identifica solo por color: cada fila lleva su código
+   y su nombre escritos. Estos colores acompañan la lectura; no la sustituyen.
+   Uno de cada doce hombres es daltónico, y una pantalla impresa en blanco y
+   negro para una reunión tiene que seguir diciendo lo mismo. */
+.grado-04 { --tono: #b91c1c; }
+.grado-03 { --tono: #ea580c; }
+.grado-02 { --tono: #ca8a04; }
+.grado-01 { --tono: #15803d; }
+.grado-sin_grado { --tono: #94a3b8; }
+
+.bloque {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.bloque > h3 {
+  margin: 0 0 0.7rem;
+}
+
+.barras {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.barras li {
+  display: grid;
+  grid-template-columns: 11rem 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.barras .etiqueta {
+  border-left: 4px solid var(--tono, var(--borde));
+  padding-left: 0.5rem;
+}
+.barras .barra {
+  background: var(--fondo);
+  border-radius: 3px;
+  height: 0.9rem;
+  overflow: hidden;
+}
+.barras .relleno {
+  display: block;
+  height: 100%;
+  background: var(--tono, var(--acento));
+  /* Mínimo visible: una barra de un píxel se confunde con «nada», y hay
+     diferencia entre no tener importe y tener uno pequeño. */
+  min-width: 2px;
+}
+.barras .cifra {
+  color: var(--tinta-suave);
+  white-space: nowrap;
+}
+.barras .cifra.importe {
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+  min-width: 7rem;
+  text-align: right;
+}
+
+/* La marca de color va ADEMÁS del código, nunca en su lugar. */
+.marca-grado {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  background: var(--tono, var(--borde));
+  margin-right: 0.4rem;
+}
+.tabla.matriz th[scope='row'] {
+  text-align: left;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.tabla.matriz td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Una tabla ancha en un móvil se desborda: se desplaza ella, no la página. */
+.desbordable {
+  overflow-x: auto;
+}
+
+.capitulos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+.capitulos li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+.capitulos .grados {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+.pastilla {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--papel);
+  background: var(--tono, var(--tinta-suave));
+}
+
+@media (max-width: 760px) {
+  .barras li,
+  .capitulos li {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+  .barras .cifra.importe {
+    text-align: left;
+  }
+}

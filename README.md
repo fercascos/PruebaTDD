@@ -7,7 +7,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado y MVP construido.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **700 pruebas en verde
+> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **729 pruebas en verde
 > contra PostgreSQL real** y `apps/web/` con la interfaz React. La aplicación se ha recorrido de
 > punta a punta con el servidor en marcha: crear la primera cuenta, iniciar sesión, dar de alta el
 > encargo con sus fases y un activo, **hacer una foto desde la cámara**, clasificarla, registrar el

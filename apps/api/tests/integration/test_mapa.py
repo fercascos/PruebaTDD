@@ -130,9 +130,7 @@ def test_el_hemisferio_sur_y_occidental_conserva_el_signo(
     assert punto["longitude"] < 0, "la longitud oeste debe ser negativa"
 
 
-def test_el_encuadre_cubre_todas_las_fotos(
-    cliente: TestClient, cab: Any, proyecto: str
-) -> None:
+def test_el_encuadre_cubre_todas_las_fotos(cliente: TestClient, cab: Any, proyecto: str) -> None:
     """Sin encuadre, el mapa abre centrado en el Atlántico y hay que buscar las
     chinchetas a mano."""
     subir(cliente, cab, proyecto, RETIRO)
@@ -182,9 +180,7 @@ def test_se_puede_filtrar_por_activo(
     assert solo_una["puntos"][0]["asset_name"] == "Edificio Norte"
 
 
-def test_una_foto_en_la_papelera_no_aparece(
-    cliente: TestClient, cab: Any, proyecto: str
-) -> None:
+def test_una_foto_en_la_papelera_no_aparece(cliente: TestClient, cab: Any, proyecto: str) -> None:
     """Lo borrado no está: un mapa que enseña fotos de la papelera haría dudar
     de todo lo demás."""
     foto = subir(cliente, cab, proyecto, RETIRO)
