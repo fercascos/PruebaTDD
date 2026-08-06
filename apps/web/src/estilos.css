@@ -1166,3 +1166,80 @@ button.enlace {
   white-space: nowrap;
   border: 0;
 }
+
+/* ── Inventario de equipo (§7 / P-15) ────────────────────────────────────── */
+
+.inventario {
+  display: grid;
+  gap: 1rem;
+}
+.inventario > .filtro {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+.inventario > .filtro label {
+  min-width: 10rem;
+}
+.inventario > .filtro button {
+  margin-left: auto;
+}
+
+.tabla.inventario {
+  min-width: 68rem;
+  font-size: 0.85rem;
+}
+/* El equipo con la vida agotada se marca con un filete lateral, NO solo con
+   color de fondo: la cifra sigue escrita en su columna y la tabla se imprime
+   en blanco y negro para las reuniones. */
+.tabla.inventario tr.vencido td:first-child {
+  border-left: 3px solid var(--aviso);
+}
+.tabla.inventario .vida strong {
+  white-space: nowrap;
+}
+.tabla.inventario .ayuda {
+  font-size: 0.78rem;
+}
+.tabla.inventario td.acciones {
+  display: flex;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+.ficha-equipo {
+  display: grid;
+  gap: 1.2rem;
+}
+.ficha-equipo > .titular {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.ficha-equipo > .titular h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.ficha-equipo section {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+.ficha-equipo section > h3 {
+  margin: 0;
+}
+
+/* [REQ] P-15 · La vida residual se calcula mientras se teclea. Se enseña aquí,
+   sin recuadro editable, para que nadie busque dónde introducirla. */
+.vida-calculada {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--acento);
+  background: var(--fondo);
+  font-size: 0.88rem;
+}

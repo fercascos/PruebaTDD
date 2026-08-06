@@ -385,6 +385,7 @@ más de setecientas pruebas no vio**, porque solo aparece cuando la aplicación 
 | `npm run test:mapa` | El mapa se monta y no contacta con ningún proveedor de teselas por defecto | El contenedor tenía altura 0 y Leaflet no daba ningún error |
 | `npm run test:riesgos` | Los totales de la matriz cuadran con el CAPEX y el grado se lee **sin color** | — |
 | `npm run test:comparador` | Nada se elige solo, se enumera lo no consultado y **no sale ni una petición a terceros** | Los importes se leían como «52000.0000»; los paneles heredaban la barra oscura de la aplicación |
+| `npm run test:inventario` | **No existe ningún campo donde teclear la vida residual** (P-15) y lo vencido se lee sin depender del color | `??` no cae con cadena vacía: el formulario se quedaba sin activo mientras el desplegable enseñaba el primero, y el botón de guardar seguía deshabilitado sin decir por qué |
 
 Necesitan la API y la aplicación construida en marcha:
 

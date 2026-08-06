@@ -51,10 +51,8 @@ db-init:  ## Crea las bases y aplica el esquema (DESTRUCTIVO: las recrea)
 	@$(MAKE) --no-print-directory db-migrate
 	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
 	  -c "DROP ROLE IF EXISTS $(APP_ROLE);" \
-	  -c "CREATE ROLE $(APP_ROLE) LOGIN PASSWORD '$(APP_PASS)';" \
-	  -c "GRANT USAGE ON SCHEMA public TO $(APP_ROLE);" \
-	  -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO $(APP_ROLE);" \
-	  -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO $(APP_ROLE);"
+	  -c "CREATE ROLE $(APP_ROLE) LOGIN PASSWORD '$(APP_PASS)';"
+	@$(MAKE) --no-print-directory db-grant
 	@$(MAKE) --no-print-directory db-seed
 	@echo "Base $(DB) lista. El rol $(APP_ROLE) NO tiene BYPASSRLS: es lo que hace que la RLS sirva."
 	@echo "Siguiente paso: make db-admin ORG='...' EMAIL='...' NOMBRE='...'"
@@ -62,6 +60,18 @@ db-init:  ## Crea las bases y aplica el esquema (DESTRUCTIVO: las recrea)
 db-migrate:  ## Aplica las migraciones pendientes (alembic upgrade head)
 	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \
 	  python3 -m alembic upgrade head
+	@$(MAKE) --no-print-directory db-grant
+
+# Una migración que crea una tabla la crea como `postgres`, y `tdd_app` —que no
+# es propietario— se queda sin permisos sobre ella: la tabla existe, la RLS está
+# puesta y la aplicación recibe «permission denied» en cuanto la toca. Por eso
+# los permisos se vuelven a dar después de CADA migración, no solo al crear la
+# base. Es idempotente y no cuesta nada.
+db-grant:  ## Da al rol de aplicación permisos sobre lo que exista ahora
+	@psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(DB) -v ON_ERROR_STOP=1 \
+	  -c "GRANT USAGE ON SCHEMA public TO $(APP_ROLE);" \
+	  -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO $(APP_ROLE);" \
+	  -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO $(APP_ROLE);"
 
 db-revision:  ## Crea una migración vacía: make db-revision M="lo que cambia"
 	@cd apps/api && PYTHONPATH=src DATABASE_MIGRATION_URL="$(ADMIN_DATABASE_URL)" \

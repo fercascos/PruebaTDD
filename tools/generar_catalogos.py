@@ -250,6 +250,39 @@ def horizontes(doc: str) -> list[dict[str, str]]:
     return filas
 
 
+def sistemas_tecnicos(doc: str) -> list[dict[str, str]]:
+    """Los 14 sistemas técnicos de §3.2, con el capítulo de coste al que mapean.
+
+    `[REQ]` §5.8 · No se funden con los capítulos y por una razón concreta que
+    está escrita en el documento: «Protección contra incendios» es **una**
+    categoría fotográfica y **dos** capítulos de coste. El mapeo se guarda como
+    texto tal cual («H06 + H10»), no como clave ajena, porque no siempre apunta
+    a un solo capítulo y forzarlo perdería justamente esa información.
+    """
+    cuerpo = _seccion(doc, "5.8.")
+    filas = []
+    for linea in cuerpo.splitlines():
+        if not linea.startswith("|") or "---" in linea:
+            continue
+        c = _celdas(linea)
+        if len(c) < 2 or c[0].startswith("Categoría"):
+            continue
+        filas.append(
+            {
+                "code": _slug(c[0]),
+                "name_es": c[0],
+                "capex_chapter": c[1],
+                # El orden es el de §3.2, que sigue el recorrido de una visita:
+                # envolvente, luego interior, luego instalaciones. Alfabético
+                # dejaría «Accesibilidad» delante de «Cubierta».
+                "sort_order": str((len(filas) + 1) * 10),
+            }
+        )
+    if len(filas) != 14:
+        raise SystemExit(f"Se esperaban 14 sistemas técnicos, se han extraído {len(filas)}")
+    return filas
+
+
 def _escribir(nombre: str, campos: list[str], filas: list[dict[str, str]], comprobar: bool) -> bool:
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=campos, lineterminator="\n")
@@ -282,6 +315,7 @@ def main() -> int:
     ries = riesgos(doc)
     conc = conceptos(doc)
     hor = horizontes(doc)
+    sis = sistemas_tecnicos(doc)
 
     ok = all(
         [
@@ -304,6 +338,12 @@ def main() -> int:
                 "horizontes.csv",
                 ["code", "name_es", "year_from", "year_to", "is_execution_term"],
                 hor,
+                args.check,
+            ),
+            _escribir(
+                "sistemas_tecnicos.csv",
+                ["code", "name_es", "capex_chapter", "sort_order"],
+                sis,
                 args.check,
             ),
         ]

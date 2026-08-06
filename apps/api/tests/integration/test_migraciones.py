@@ -236,13 +236,26 @@ def test_la_base_migrada_lleva_los_triggers_y_las_funciones(base_efimera: str) -
 
 def test_una_base_recien_migrada_esta_en_la_ultima_version(base_efimera: str) -> None:
     """`alembic_version` es lo que permite saber qué tiene delante una
-    instalación. Sin esa fila, la siguiente migración no sabe desde dónde va."""
+    instalación. Sin esa fila, la siguiente migración no sabe desde dónde va.
+
+    La versión esperada **se calcula**, no se escribe: comparar contra un `0001`
+    literal obligaba a tocar esta prueba con cada migración nueva, y una prueba
+    que hay que retocar cada vez acaba retocándose sin mirar qué comprobaba.
+    """
     aplicar_migraciones(_url_a(base_efimera))
     motor = create_engine(_url_a(base_efimera), future=True)
     with motor.connect() as conn:
         versiones = [f[0] for f in conn.execute(text("SELECT version_num FROM alembic_version"))]
     motor.dispose()
-    assert versiones == ["0001"]
+    assert versiones == [_cabeza()]
+
+
+def _cabeza() -> str:
+    """La revisión `head` según los propios ficheros de migración."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    return ScriptDirectory.from_config(Config(str(RAIZ_API / "alembic.ini"))).get_current_head()
 
 
 def test_volver_a_migrar_no_hace_nada(base_efimera: str) -> None:

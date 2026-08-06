@@ -30,13 +30,15 @@ class ResumenSemilla:
     risk_levels: int
     concepts: int
     horizons: int
+    technical_systems: int
 
     def __str__(self) -> str:
         return (
             f"{self.typologies} tipologías · {self.zones} zonas · "
             f"{self.zone_typology} relaciones zona×tipología · "
             f"{self.capex_codes} códigos CAPEX · {self.risk_levels} riesgos · "
-            f"{self.concepts} conceptos · {self.horizons} horizontes"
+            f"{self.concepts} conceptos · {self.horizons} horizontes · "
+            f"{self.technical_systems} sistemas técnicos"
         )
 
 
@@ -153,6 +155,20 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
             },
         )
 
+    # Los 14 sistemas técnicos de §3.2. `capex_chapter` se guarda tal cual —hay
+    # uno que vale «H06 + H10»— porque el mapeo no siempre es a un solo capítulo.
+    sistemas = _leer("sistemas_tecnicos.csv", base)
+    for fila in sistemas:
+        conn.execute(
+            text(
+                "INSERT INTO technical_system (organization_id, code, name_es, capex_chapter, "
+                "sort_order, is_system) "
+                "VALUES (NULL, :code, :name_es, :capex_chapter, :sort_order, TRUE) "
+                "ON CONFLICT (organization_id, code) DO NOTHING"
+            ),
+            fila,
+        )
+
     return ResumenSemilla(
         typologies=n_tip,
         zones=n_zon,
@@ -161,4 +177,5 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
         risk_levels=len(riesgos),
         concepts=len(conceptos),
         horizons=len(horizontes),
+        technical_systems=len(sistemas),
     )

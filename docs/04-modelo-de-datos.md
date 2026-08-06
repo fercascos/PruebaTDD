@@ -495,16 +495,43 @@ ambas coinciden al céntimo. `[REC]`
 
 #### `equipment` — inventario opcional `[REQ]` §7 / P-15
 `id` · `organization_id` · `project_id` · `asset_id` · `technical_system_id` · `zone_id` NULL ·
-`location_node_id` NULL · `tag` · `equipment_type` · `manufacturer` · `model` · `serial_number` ·
-`install_year` · `expected_life_years` · `remaining_life_years` GENERATED ·
+`tag` · `equipment_type` · `manufacturer` · `model` · `serial_number` ·
+`install_year` · `expected_life_years` · `end_of_life_year` GENERATED ·
 `condition` ENUM · `obsolescence` ENUM · `criticality` ENUM · `quantity` · `unit` ·
-`has_documentation` · `notes` · `search_vector` · auditoría · soft delete.
+`has_documentation` · `notes` · `search_vector` GENERATED · auditoría · soft delete.
 
-**Índices:** `(project_id, asset_id)`, `UNIQUE(asset_id, tag) WHERE tag IS NOT NULL AND deleted_at IS NULL`.
+**Índices:** `(project_id, asset_id)`, `(asset_id, technical_system_id)`, GIN sobre `search_vector`,
+`UNIQUE(asset_id, tag) WHERE tag IS NOT NULL AND deleted_at IS NULL`.
 
 `[REC]` La especificación revisada ya no detalla los campos del inventario, pero §7 mantiene la
 entidad. Se conserva como **ficha opcional** enlazable desde el hallazgo: quien la quiera, la usa;
 quien no, no la ve. La vida residual se calcula, no se teclea (P-15).
+
+> **`[LIM]` `remaining_life_years` no puede ser una columna generada, y por eso no existe.**
+>
+> PostgreSQL exige que la expresión de una columna `GENERATED` sea `IMMUTABLE`, y la vida residual
+> depende del año en curso. Una columna así valdría el día que se escribe y **mentiría a partir del
+> 1 de enero siguiente**: un inventario cargado en 2026 seguiría diciendo «le quedan 4 años» en 2029.
+>
+> Lo que sí es inmutable es `end_of_life_year = install_year + expected_life_years`, y de ahí sale la
+> vida residual restando el año actual **en la lectura** (`tdd/equipment/service.py`). El dato
+> guardado no caduca y el calculado siempre está al día. P-15 se cumple igual —la vida residual se
+> calcula, no se teclea— y además la API la rechaza como campo de entrada en vez de ignorarla.
+>
+> El plazo de reposición tampoco se decide en el módulo: se sitúa sobre los rangos de `time_horizon`
+> (1-2 / 3-5 / 6-10 años, §3.3.4). Unos umbrales propios habrían producido dos verdades sobre el
+> mismo edificio, la del inventario y la del CAPEX.
+
+`[PDV]` `location_node_id` queda fuera: `location_node` no está construido. Cuando exista, el enlace
+se añade como columna anulable sin tocar nada de lo demás.
+
+#### `technical_system` — los 14 sistemas de §3.2 `[REQ]`
+`id` · `organization_id` NULL · `code` · `name_es` · `capex_chapter` · `sort_order` · `is_system`.
+
+`capex_chapter` es **texto y no clave ajena** por lo que dice §5.8: «Protección contra incendios» es
+una sola categoría fotográfica y **dos** capítulos de coste (`H06 + H10`). Una clave habría obligado
+a elegir uno de los dos y habría perdido justo el dato que motiva mantener los dos catálogos
+separados.
 
 ---
 

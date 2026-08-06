@@ -225,6 +225,10 @@ Línea de hallazgo con código, zona validada, riesgo, concepto y recuperabilida
 asociación de fotos; flujo de validación por revisor; matriz riesgo × horizonte; inventario de equipos
 opcional con importación XLSX. Pantallas 10, 11, 12.
 
+> **Estado del inventario de equipo (P-15):** construido —tabla, catálogo de los 14 sistemas
+> técnicos, API y pantalla, con la vida residual calculada en la lectura—. **La importación XLSX
+> sigue pendiente:** las fichas se dan de alta a mano. `[PDV]`
+
 **Hito:** registrar 30 hallazgos con evidencia desde el móvil, con código y zona correctos.
 
 #### F7 · Motor de CAPEX y precios — 2,5 semanas

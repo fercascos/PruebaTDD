@@ -15,6 +15,7 @@ from tdd.catalogs.router import router as catalogs_router
 from tdd.core.config import get_settings
 from tdd.core.conflictos import registrar as registrar_conflictos
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
+from tdd.equipment.router import router as equipment_router
 from tdd.evidence.documents import router as documents_router
 from tdd.evidence.router import router as evidence_router
 from tdd.evidence.storage import AlmacenEnDisco
@@ -114,6 +115,7 @@ def crear_app() -> FastAPI:
     app.include_router(phases_router, prefix=api)
     app.include_router(phase_ops_router, prefix=api)
     app.include_router(assets_router, prefix=api)
+    app.include_router(equipment_router, prefix=api)
     app.include_router(findings_router, prefix=api)
     app.include_router(capex_router, prefix=api)
     app.include_router(pricing_router, prefix=api)

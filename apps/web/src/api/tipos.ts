@@ -159,3 +159,43 @@ export type VersionDeInforme = {
   is_locked: boolean
   supersedes_version_id: string | null
 }
+
+export type SistemaTecnico = {
+  id: string
+  code: string
+  name_es: string
+  /** `[REQ]` §5.8 · Texto, no clave: «Protección contra incendios» → «H06 + H10». */
+  capex_chapter: string | null
+}
+
+export type Equipo = {
+  id: string
+  project_id: string
+  asset_id: string
+  technical_system_id: string | null
+  technical_system_name: string | null
+  zone_id: string | null
+  zone_name: string | null
+  tag: string | null
+  equipment_type: string
+  manufacturer: string | null
+  model: string | null
+  serial_number: string | null
+  install_year: number | null
+  expected_life_years: number | null
+  condition: string | null
+  obsolescence: string | null
+  criticality: string | null
+  quantity: string
+  unit: string
+  has_documentation: boolean
+  notes: string | null
+  /** `[REQ]` P-15 · Todo lo de abajo lo CALCULA el servidor al leer. No se guarda
+   *  ni se teclea: una vida residual almacenada mentiría a partir del 1 de enero. */
+  end_of_life_year: number | null
+  remaining_life_years: number | null
+  vencido: boolean
+  horizonte_code: string | null
+  horizonte_name: string | null
+  vida_resumen: string
+}

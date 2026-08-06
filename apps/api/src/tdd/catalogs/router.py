@@ -45,6 +45,12 @@ class CodigoCapex(ElementoCatalogo):
     parent_id: uuid.UUID | None
 
 
+class SistemaTecnico(ElementoCatalogo):
+    #: `[REQ]` §5.8 · Texto, no clave ajena: «Protección contra incendios» mapea
+    #: a «H06 + H10», dos capítulos. Forzar una clave obligaría a elegir uno.
+    capex_chapter: str | None
+
+
 @router.get("/asset-typologies", response_model=list[ElementoCatalogo])
 def tipologias(s: SesionDep) -> Any:
     filas = (
@@ -103,6 +109,27 @@ def horizontes(s: SesionDep) -> Any:
             text(
                 "SELECT id, code, name_es, year_from, year_to, is_execution_term "
                 "FROM time_horizon ORDER BY sort_order"
+            )
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+@router.get("/technical-systems", response_model=list[SistemaTecnico])
+def sistemas_tecnicos(s: SesionDep) -> Any:
+    """`[REQ]` §3.2 · Los 14 sistemas técnicos.
+
+    Es el eje transversal del inventario de equipo y de la clasificación de
+    fotografías. Sale en el orden de §3.2, que es el de una visita —envolvente,
+    interior, instalaciones— y no alfabético.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT id, code, name_es, capex_chapter FROM technical_system "
+                "ORDER BY sort_order, name_es"
             )
         )
         .mappings()

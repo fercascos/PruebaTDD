@@ -68,7 +68,8 @@ Un grupo propio, porque en esta aplicación los catálogos son estructura, no co
 | `GET` | `/catalogs/capex-codes?level=&parent_id=&q=` | Árbol de códigos. Con `q`, búsqueda por texto sobre todo el árbol |
 | `GET` | `/catalogs/capex-codes/tree` | Árbol completo en una llamada, para precargar el selector en cliente |
 | `GET` | `/catalogs/risk-levels` | **Incluye la definición íntegra de cada grado** `[REQ]` |
-| `GET` | `/catalogs/capex-concepts` · `/time-horizons` · `/technical-systems` · `/specialties` · `/doc-request-categories` | `time-horizons` devuelve los cinco valores con su rango de años |
+| `GET` | `/catalogs/capex-concepts` · `/time-horizons` · `/specialties` · `/doc-request-categories` | `time-horizons` devuelve los cinco valores con su rango de años |
+| `GET` | `/catalogs/technical-systems` | Los 14 sistemas de §3.2, en el orden de una visita. `capex_chapter` es **texto**: «Protección contra incendios» mapea a `H06 + H10`, dos capítulos (§5.8) |
 | `POST`/`PATCH` | `/catalogs/{tipo}` | Solo `ADMIN`. Las filas del sistema no son editables |
 | `POST` | `/catalogs/capex-codes/{id}/deprecate` | Retira un código sin borrarlo: deja de ofrecerse, sigue resolviéndose en informes antiguos |
 | `GET` | `/catalogs/version` | Huella del catálogo, para que el cliente sepa si debe refrescar su caché `[REC]` |
@@ -183,6 +184,23 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 | `PUT` | `/assets/{id}/main-photo` | |
 | `GET`/`POST` | `/assets/{id}/locations` | Árbol zona/planta/espacio |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
+
+### Inventario de equipo `[REQ]` §7 / P-15
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
+| `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al encargo: si no, `404` |
+| `GET`/`PATCH`/`DELETE` | `/equipment/{id}` | `DELETE` es lógico: la ficha se escribió en una visita a la que no se vuelve |
+
+Cada respuesta incluye, **calculados en la lectura y nunca almacenados** (P-15):
+`end_of_life_year`, `remaining_life_years` (puede ser negativo), `vencido`, `horizonte_code`,
+`horizonte_name` y `vida_resumen`, una frase lista para mostrar. `remaining_life_years` **se rechaza
+como campo de entrada** (`extra="forbid"`) en vez de ignorarse: un campo aceptado y descartado
+produce fichas que parecen completas y no lo están. Ver la `[LIM]` de
+[`04-modelo-de-datos`](./04-modelo-de-datos.md) sobre por qué no puede ser una columna generada.
+
+El plazo de reposición sale de los rangos de `time_horizon`, no de umbrales propios del módulo.
 | `PATCH`/`DELETE` | `/project-members/{id}` | `DELETE` marca `removed_at` |
 | `GET` | `/projects/{id}/coverage` | Matriz especialidad × activo, para ver qué queda sin cubrir `[REC]` |
 

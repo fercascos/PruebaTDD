@@ -1,10 +1,24 @@
-"""Esquema inicial: aplica `schema.sql` completo.
+"""Esquema inicial: aplica la foto congelada del esquema en la revisión 0001.
 
 Revisión: 0001
 Anterior: ninguna
 
-Esta migración **no reescribe el esquema en llamadas de Alembic**: ejecuta
-`schema.sql` tal cual. Es deliberado.
+Esta migración **no reescribe el esquema en llamadas de Alembic**: ejecuta un
+fichero SQL tal cual. Es deliberado.
+
+**El fichero es `versions/sql/0001_esquema_inicial.sql`, no `db/schema.sql`.**
+La distinción es el corazón de cómo funcionan las migraciones aquí y costó la
+primera migración incremental descubrirla:
+
+* `db/schema.sql` describe el esquema **de ahora**, el de `head`. Se actualiza
+  con cada cambio y es lo que se lee para saber cómo es la base hoy.
+* Este fichero describe el esquema **tal como era en la revisión 0001**, y no
+  se toca nunca más.
+
+Si 0001 leyera `db/schema.sql`, cada tabla nueva se crearía dos veces al migrar
+desde cero —una en 0001, con el esquema ya actualizado, y otra en la migración
+que la introduce— y `alembic upgrade head` reventaría con «relation already
+exists» sobre una base vacía. Que es justo lo que pasó.
 
 `schema.sql` es la única verdad del esquema, y contiene 6 políticas RLS
 explícitas más las que crean dos bucles `DO $$`, 9 triggers, 14 funciones,
@@ -40,8 +54,9 @@ down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-#: `schema.sql` vive dos niveles por encima: `db/migrations/versions/` → `db/`.
-ESQUEMA = Path(__file__).resolve().parents[2] / "schema.sql"
+#: La foto congelada vive al lado, en `versions/sql/`. **No es `db/schema.sql`**:
+#: ver el encabezado del módulo.
+ESQUEMA = Path(__file__).resolve().parent / "sql" / "0001_esquema_inicial.sql"
 
 
 def upgrade() -> None:

@@ -146,25 +146,6 @@ CREATE TABLE time_horizon (
         CHECK (year_from IS NULL OR year_to IS NULL OR year_from <= year_to)
 );
 
--- [REQ] §3.2 · Los 14 sistemas técnicos. Son el eje transversal: clasifican la
--- fotografía en campo y agrupan el inventario de equipo.
---
--- No se funden con los capítulos de coste, y la razón está en §5.8 del
--- documento: «Protección contra incendios» es UNA categoría fotográfica y DOS
--- capítulos (pasiva y activa). Por eso `capex_chapter` es texto —«H06 + H10»—
--- y no una clave ajena: forzarla obligaría a elegir uno de los dos y perdería
--- justo el dato que motiva la distinción.
-CREATE TABLE technical_system (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id UUID REFERENCES organization(id),
-    code            VARCHAR(40) NOT NULL,
-    name_es         VARCHAR(120) NOT NULL,
-    capex_chapter   VARCHAR(40),
-    sort_order      INT NOT NULL DEFAULT 0,
-    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE NULLS NOT DISTINCT (organization_id, code)
-);
-
 -- Traducciones de catálogo. [REQ] El informe se emite en el idioma de la
 -- plantilla, y las definiciones de riesgo están traducidas palabra por palabra
 -- en las plantillas reales: por eso viven en tabla, no en una columna única.
@@ -705,98 +686,6 @@ CREATE INDEX capex_item_horizon_idx ON capex_item (project_id, time_horizon_id);
 -- tener varias líneas es la ACTUACIÓN.
 CREATE UNIQUE INDEX capex_item_hallazgo_plazo_uniq
     ON capex_item (finding_id, time_horizon_id);
-
--- ── Inventario de equipo [REQ] §7 / P-15 ────────────────────────────────────
---
--- Ficha OPCIONAL (decisión P-15): quien la quiera, la usa; quien no, no la ve.
--- Ningún hallazgo, línea de CAPEX ni informe la exige. Está aquí porque en una
--- visita a un edificio con instalaciones se apunta el fabricante, el modelo y
--- el año de la enfriadora en una libreta, y esa libreta acaba siendo la única
--- fuente para justificar por qué se propone sustituirla.
-
-CREATE TYPE equipment_condition AS ENUM (
-    'BUENO', 'ACEPTABLE', 'DEFICIENTE', 'MUY_DEFICIENTE', 'FUERA_DE_SERVICIO'
-);
--- Obsolescencia y estado NO son lo mismo, y confundirlos es un error caro: una
--- caldera de 1998 en perfecto estado de conservación sigue siendo obsoleta
--- —no hay repuestos y no cumple el reglamento vigente— y hay que sustituirla.
-CREATE TYPE equipment_obsolescence AS ENUM (
-    'ACTUAL', 'PROXIMO_A_OBSOLETO', 'OBSOLETO', 'SIN_REPUESTOS'
-);
-CREATE TYPE equipment_criticality AS ENUM ('ALTA', 'MEDIA', 'BAJA');
-
-CREATE TABLE equipment (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id     UUID NOT NULL REFERENCES organization(id),
-    project_id          UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    asset_id            UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
-    technical_system_id UUID REFERENCES technical_system(id),
-    zone_id             UUID REFERENCES zone(id),
-
-    -- Etiqueta de campo: «CL-01», «AS-Norte». Es como el equipo aparece
-    -- rotulado en la sala, y por eso es única dentro del activo.
-    tag                 VARCHAR(40),
-    equipment_type      VARCHAR(120) NOT NULL CHECK (length(trim(equipment_type)) > 0),
-    manufacturer        VARCHAR(120),
-    model               VARCHAR(120),
-    serial_number       VARCHAR(120),
-
-    install_year        SMALLINT CHECK (install_year IS NULL OR install_year BETWEEN 1800 AND 2200),
-    expected_life_years SMALLINT CHECK (expected_life_years IS NULL OR expected_life_years > 0),
-
-    -- [LIM] La especificación pide `remaining_life_years` como columna
-    -- GENERATED. No es implementable: PostgreSQL exige que la expresión de una
-    -- columna generada sea IMMUTABLE, y la vida residual depende del año en
-    -- curso, que cambia. Una columna así valdría el día que se escribe y
-    -- mentiría a partir del 1 de enero siguiente.
-    --
-    -- Lo que SÍ es inmutable es el año en que el equipo agota su vida útil, y
-    -- de ahí sale la vida residual restando el año actual en la lectura. El
-    -- dato guardado no caduca y el calculado siempre está al día. P-15 se
-    -- respeta igual: la vida residual se calcula, no se teclea.
-    end_of_life_year    SMALLINT GENERATED ALWAYS AS (install_year + expected_life_years) STORED,
-
-    condition           equipment_condition,
-    obsolescence        equipment_obsolescence,
-    criticality         equipment_criticality,
-
-    quantity            NUMERIC(12, 2) NOT NULL DEFAULT 1 CHECK (quantity > 0),
-    unit                VARCHAR(20) NOT NULL DEFAULT 'ud',
-    has_documentation   BOOLEAN NOT NULL DEFAULT FALSE,
-    notes               TEXT,
-
-    -- Búsqueda por texto sobre lo que de verdad se busca: «la enfriadora
-    -- Carrier», «el ascensor con el número de serie que empieza por 4J». La
-    -- forma de dos argumentos de `to_tsvector` es IMMUTABLE, así que aquí sí
-    -- se puede generar la columna.
-    search_vector       TSVECTOR GENERATED ALWAYS AS (
-        to_tsvector('spanish'::regconfig,
-            coalesce(tag, '') || ' ' || equipment_type || ' ' ||
-            coalesce(manufacturer, '') || ' ' || coalesce(model, '') || ' ' ||
-            coalesce(serial_number, '') || ' ' || coalesce(notes, ''))
-    ) STORED,
-
-    created_by          UUID NOT NULL REFERENCES app_user(id),
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    deleted_at          TIMESTAMPTZ,
-
-    -- El año de instalación y la vida esperada van juntos o no van: con solo
-    -- uno de los dos no hay vida residual que calcular, y guardar la mitad del
-    -- dato produce fichas que parecen completas y no lo están.
-    CONSTRAINT vida_util_completa_o_ausente CHECK (
-        (install_year IS NULL AND expected_life_years IS NULL)
-        OR (install_year IS NOT NULL AND expected_life_years IS NOT NULL)
-    )
-);
-CREATE INDEX equipment_activo_idx ON equipment (project_id, asset_id);
-CREATE INDEX equipment_sistema_idx ON equipment (asset_id, technical_system_id);
-CREATE INDEX equipment_busqueda_idx ON equipment USING GIN (search_vector);
--- La etiqueta identifica al equipo DENTRO del activo: dos edificios pueden
--- tener los dos su «CL-01». Se ignora lo borrado para que reutilizar una
--- etiqueta liberada no choque con una ficha que ya no existe.
-CREATE UNIQUE INDEX equipment_etiqueta_uniq
-    ON equipment (asset_id, tag) WHERE tag IS NOT NULL AND deleted_at IS NULL;
 
 -- ── Sugerencias [REQ] ───────────────────────────────────────────────────────
 
@@ -1556,7 +1445,7 @@ DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'app_user', 'client', 'project', 'asset', 'cost_profile',
-        'price_source', 'price_reference', 'finding', 'capex_item', 'equipment',
+        'price_source', 'price_reference', 'finding', 'capex_item',
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
         'qa_round', 'phase_event',
@@ -1581,7 +1470,7 @@ DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'asset_typology', 'zone', 'capex_code', 'risk_level',
-        'capex_concept', 'time_horizon', 'doc_request_category', 'technical_system'
+        'capex_concept', 'time_horizon', 'doc_request_category'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

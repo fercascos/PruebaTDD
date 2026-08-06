@@ -7,6 +7,7 @@ import { PestanaFases } from './PestanaFases'
 import { PestanaActivos } from './PestanaActivos'
 import { PestanaFotos } from './PestanaFotos'
 import { PestanaCapex } from './PestanaCapex'
+import { PestanaEquipo } from './PestanaEquipo'
 import { PestanaInformes } from './PestanaInformes'
 import { PestanaRiesgos } from './PestanaRiesgos'
 
@@ -55,6 +56,7 @@ export function FichaDeProyecto() {
         <NavLink to={`/proyectos/${id}/activos`}>Activos</NavLink>
         <NavLink to={`/proyectos/${id}/fotos`}>Fotografías</NavLink>
         <NavLink to={`/proyectos/${id}/mapa`}>Mapa</NavLink>
+        <NavLink to={`/proyectos/${id}/equipo`}>Inventario</NavLink>
         <NavLink to={`/proyectos/${id}/capex`}>Hallazgos y CAPEX</NavLink>
         <NavLink to={`/proyectos/${id}/riesgos`}>Riesgos</NavLink>
         <NavLink to={`/proyectos/${id}/informes`}>Informes</NavLink>
@@ -72,6 +74,7 @@ export function FichaDeProyecto() {
             </Suspense>
           }
         />
+        <Route path="equipo" element={<PestanaEquipo projectId={id} />} />
         <Route path="capex" element={<PestanaCapex projectId={id} />} />
         <Route path="riesgos" element={<PestanaRiesgos projectId={id} />} />
         <Route path="informes" element={<PestanaInformes projectId={id} />} />
