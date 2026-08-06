@@ -386,6 +386,7 @@ más de setecientas pruebas no vio**, porque solo aparece cuando la aplicación 
 | `npm run test:riesgos` | Los totales de la matriz cuadran con el CAPEX y el grado se lee **sin color** | — |
 | `npm run test:comparador` | Nada se elige solo, se enumera lo no consultado y **no sale ni una petición a terceros** | Los importes se leían como «52000.0000»; los paneles heredaban la barra oscura de la aplicación |
 | `npm run test:inventario` | **No existe ningún campo donde teclear la vida residual** (P-15) y lo vencido se lee sin depender del color | `??` no cae con cadena vacía: el formulario se quedaba sin activo mientras el desplegable enseñaba el primero, y el botón de guardar seguía deshabilitado sin decir por qué |
+| `npm run test:importacion` | **Previsualizar no escribe nada** —se cuenta el inventario contra la API antes y después—, cada fila dice qué le pasa con su número de Excel, y reimportar la misma hoja no pisa una corrección hecha a mano | El selector de fichero nativo rotulaba su botón en inglés en una aplicación enteramente en español |
 
 Necesitan la API y la aplicación construida en marcha:
 

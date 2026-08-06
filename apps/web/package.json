@@ -14,6 +14,7 @@
     "test:riesgos": "node herramientas/comprobar-riesgos.mjs",
     "test:comparador": "node herramientas/comprobar-comparador.mjs",
     "test:inventario": "node herramientas/comprobar-inventario.mjs",
+    "test:importacion": "node herramientas/comprobar-importacion.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json"
   },
   "dependencies": {

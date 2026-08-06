@@ -199,3 +199,35 @@ export type Equipo = {
   horizonte_name: string | null
   vida_resumen: string
 }
+
+export type FilaImportada = {
+  /** Número de fila tal como se ve en Excel: decir «fila 3» y que sea la 3. */
+  fila: number
+  estado: 'NUEVA' | 'YA_EXISTE' | 'DUPLICADA_EN_FICHERO' | 'ERROR'
+  errores: string[]
+  avisos: string[]
+  crudo: Record<string, string>
+  existente_id: string | null
+}
+
+export type Previsualizacion = {
+  resumen: string
+  hoja: string
+  /** `[LIM]` Solo se lee la primera hoja del libro. */
+  total_hojas: number
+  columnas_ignoradas: string[]
+  columnas_ausentes: string[]
+  filas: FilaImportada[]
+  nuevas: number
+  ya_existen: number
+  con_error: number
+  aviso: string
+}
+
+export type ResultadoImportacion = {
+  creados: number
+  actualizados: number
+  omitidos: number
+  resumen: string
+  previsualizacion: Previsualizacion
+}

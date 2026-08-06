@@ -192,6 +192,9 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 | `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
 | `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al encargo: si no, `404` |
 | `GET`/`PATCH`/`DELETE` | `/equipment/{id}` | `DELETE` es lógico: la ficha se escribió en una visita a la que no se vuelve |
+| `GET` | `/projects/{id}/equipment/import/plantilla.xlsx` | Libro vacío **con los activos del encargo y los 14 sistemas dentro**, en una hoja aparte |
+| `POST` | `/projects/{id}/equipment/import/preview` | Sube la hoja y devuelve fila a fila qué va a pasar. **No escribe nada** |
+| `POST` | `/projects/{id}/equipment/import` | Aplica. Exige `confirmar=true` y **reanaliza la hoja** en vez de fiarse de lo previsualizado |
 
 Cada respuesta incluye, **calculados en la lectura y nunca almacenados** (P-15):
 `end_of_life_year`, `remaining_life_years` (puede ser negativo), `vencido`, `horizonte_code`,
@@ -201,6 +204,15 @@ produce fichas que parecen completas y no lo están. Ver la `[LIM]` de
 [`04-modelo-de-datos`](./04-modelo-de-datos.md) sobre por qué no puede ser una columna generada.
 
 El plazo de reposición sale de los rangos de `time_horizon`, no de umbrales propios del módulo.
+
+**La importación no sobrescribe nada por su cuenta.** Una fila cuya etiqueta ya existe en ese activo
+sale como `YA_EXISTE` y se omite; actualizarla exige `actualizar_existentes=true`, que es una casilla
+que alguien marca. Un activo que no está en el encargo es un **error de fila**, no una invitación a
+crearlo, y un sistema técnico que no casa con el catálogo **no se aproxima al más parecido**: el
+equipo entra sin clasificar y el aviso lo cuenta. Las columnas que no se reconocen se enumeran en la
+respuesta en vez de ignorarse: una cabecera mal escrita perdería el dato sin que nadie se enterase.
+
+`[LIM]` Solo se lee la primera hoja del libro; la respuesta dice cuántas tenía.
 | `PATCH`/`DELETE` | `/project-members/{id}` | `DELETE` marca `removed_at` |
 | `GET` | `/projects/{id}/coverage` | Matriz especialidad × activo, para ver qué queda sin cubrir `[REC]` |
 

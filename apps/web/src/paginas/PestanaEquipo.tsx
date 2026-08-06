@@ -3,6 +3,7 @@ import { borrar, enviar, obtener } from '../api/cliente'
 import type { Activo, Equipo, SistemaTecnico } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje, Vacio } from '../ui/Marco'
+import { ImportarInventario } from './ImportarInventario'
 
 const CONDICION = [
   { code: 'BUENO', nombre: 'Bueno' },
@@ -56,6 +57,7 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
   const [busqueda, setBusqueda] = useState('')
   const [soloVencidos, setSoloVencidos] = useState(false)
   const [creando, setCreando] = useState(false)
+  const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<Equipo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,6 +91,19 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
     } catch (e) {
       setError((e as Error).message)
     }
+  }
+
+  if (importando) {
+    return (
+      <ImportarInventario
+        projectId={projectId}
+        alTerminar={recargar}
+        alCerrar={() => {
+          setImportando(false)
+          recargar()
+        }}
+      />
+    )
   }
 
   if (editando || creando) {
@@ -150,6 +165,14 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
           />
           Solo los que han agotado su vida útil
         </label>
+        <button
+          type="button"
+          className="secundario"
+          onClick={() => setImportando(true)}
+          disabled={activos.length === 0}
+        >
+          Importar desde Excel
+        </button>
         <button type="button" onClick={() => setCreando(true)} disabled={activos.length === 0}>
           Añadir equipo
         </button>

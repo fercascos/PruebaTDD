@@ -1243,3 +1243,76 @@ button.enlace {
   background: var(--fondo);
   font-size: 0.88rem;
 }
+
+/* ── Importación del inventario desde XLSX ───────────────────────────────── */
+
+.importar {
+  display: grid;
+  gap: 1.2rem;
+}
+.importar > .titular {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.importar > .titular h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.importar section {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+  justify-items: start;
+}
+.importar section > h3 {
+  margin: 0;
+}
+.importar .recuento {
+  margin: 0;
+}
+.selector-de-fichero {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.selector-de-fichero label {
+  color: var(--tinta-suave);
+  font-size: 0.9rem;
+}
+.importar .desbordable,
+.importar .mensaje,
+.importar .acciones {
+  justify-self: stretch;
+}
+
+.tabla.previa-importacion {
+  min-width: 60rem;
+  font-size: 0.82rem;
+}
+/* El estado va escrito en su columna; el filete lateral solo lo refuerza. La
+   misma regla que en la matriz de riesgos: esto se revisa a veces impreso. */
+.tabla.previa-importacion tr.e-error td:first-child,
+.tabla.previa-importacion tr.e-duplicada_en_fichero td:first-child {
+  border-left: 3px solid var(--error);
+}
+.tabla.previa-importacion tr.e-ya_existe td:first-child {
+  border-left: 3px solid var(--aviso);
+}
+.tabla.previa-importacion tr.e-nueva td:first-child {
+  border-left: 3px solid var(--ok);
+}
+.tabla.previa-importacion .observaciones {
+  max-width: 22rem;
+}
+.tabla.previa-importacion .observaciones .error {
+  color: var(--error);
+}
+.tabla.previa-importacion .observaciones .aviso {
+  color: var(--aviso);
+}

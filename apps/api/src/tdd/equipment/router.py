@@ -18,15 +18,15 @@ from __future__ import annotations
 import uuid
 from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioDep
-from tdd.equipment import service
+from tdd.equipment import importacion, service
 
 router = APIRouter(tags=["Inventario de equipo"])
 
@@ -349,3 +349,319 @@ def borrar(equipment_id: uuid.UUID, s: SesionDep) -> None:
     ).first()
     if hay is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Equipo no encontrado")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Importación desde XLSX `[REQ]` §7 · docs/15 lo daba por pendiente
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# El inventario de una nave con instalaciones llega en una hoja que alguien
+# rellenó durante la visita, no fila a fila en un formulario. Tres endpoints:
+# la plantilla que se descarga, la previsualización —que **no escribe nada**— y
+# la aplicación, que es una llamada aparte y explícita.
+
+#: Un XLSX de inventario es texto: cinco mil filas no llegan a esto. El límite
+#: existe para que un fichero equivocado —un vídeo renombrado -- no se cargue
+#: entero en memoria antes de que nadie mire qué es.
+MAX_BYTES_XLSX = 10 * 1024 * 1024
+
+
+class FilaImportada(BaseModel):
+    fila: int
+    estado: str
+    errores: list[str]
+    avisos: list[str]
+    crudo: dict[str, str]
+    existente_id: uuid.UUID | None = None
+
+
+class Previsualizacion(BaseModel):
+    resumen: str
+    hoja: str
+    #: `[LIM]` Solo se lee la primera hoja del libro.
+    total_hojas: int
+    columnas_ignoradas: list[str]
+    columnas_ausentes: list[str]
+    filas: list[FilaImportada]
+    nuevas: int
+    ya_existen: int
+    con_error: int
+    aviso: str = (
+        "Nada se ha guardado todavía. Al aplicar, los equipos que ya existen no "
+        "se tocan salvo que lo pida expresamente."
+    )
+
+
+def _catalogos(s: Session, project_id: uuid.UUID) -> tuple[Any, Any, Any]:
+    activos = [
+        importacion.Activo(id=str(f["id"]), name=f["name"], asset_code=f["asset_code"])
+        for f in s.execute(
+            text(
+                "SELECT id, name, asset_code FROM asset "
+                "WHERE project_id = :p AND deleted_at IS NULL ORDER BY name"
+            ),
+            {"p": str(project_id)},
+        )
+        .mappings()
+        .all()
+    ]
+    sistemas = [
+        importacion.Sistema(id=str(f["id"]), code=f["code"], name_es=f["name_es"])
+        for f in s.execute(
+            text("SELECT id, code, name_es FROM technical_system ORDER BY sort_order")
+        )
+        .mappings()
+        .all()
+    ]
+    # Las etiquetas ya ocupadas, para poder decir «esta ya existe» ANTES de
+    # intentar el INSERT y chocar contra el índice único.
+    existentes = {
+        (str(f["asset_id"]), importacion.clave(f["tag"])): str(f["id"])
+        for f in s.execute(
+            text(
+                "SELECT id, asset_id, tag FROM equipment "
+                "WHERE project_id = :p AND tag IS NOT NULL AND deleted_at IS NULL"
+            ),
+            {"p": str(project_id)},
+        )
+        .mappings()
+        .all()
+    }
+    return activos, sistemas, existentes
+
+
+def _analizar_subida(contenido: bytes, s: Session, project_id: uuid.UUID) -> Any:
+    from tdd.exports import equipo_xlsx
+
+    if len(contenido) > MAX_BYTES_XLSX:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"El fichero supera el máximo de {MAX_BYTES_XLSX // (1024 * 1024)} MB",
+        )
+    try:
+        hoja = equipo_xlsx.leer(contenido)
+    except equipo_xlsx.LibroIlegible as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+
+    activos, sistemas, existentes = _catalogos(s, project_id)
+    analisis = importacion.analizar(
+        hoja.cabeceras,
+        hoja.filas,
+        activos=activos,
+        sistemas=sistemas,
+        etiquetas_existentes=existentes,
+    )
+    return hoja, analisis
+
+
+def _a_respuesta(hoja: Any, analisis: Any) -> dict[str, Any]:
+    return {
+        "resumen": analisis.resumen(),
+        "hoja": hoja.nombre,
+        "total_hojas": hoja.total_hojas,
+        "columnas_ignoradas": analisis.columnas_ignoradas,
+        "columnas_ausentes": analisis.columnas_ausentes,
+        "filas": [
+            {
+                "fila": f.fila,
+                "estado": str(f.estado),
+                "errores": f.errores,
+                "avisos": f.avisos,
+                "crudo": f.crudo,
+                "existente_id": f.existente_id,
+            }
+            for f in analisis.filas
+        ],
+        "nuevas": len(analisis.nuevas),
+        "ya_existen": len(analisis.ya_existen),
+        "con_error": len(analisis.con_error),
+    }
+
+
+@router.get(
+    "/projects/{project_id}/equipment/import/plantilla.xlsx",
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {}},
+            "description": "Libro vacío con las columnas y los valores admitidos.",
+        }
+    },
+)
+def plantilla_de_importacion(project_id: uuid.UUID, s: SesionDep) -> Response:
+    """La hoja que se descarga para rellenar.
+
+    Lleva dentro **los activos de este encargo y los 14 sistemas técnicos**. Sin
+    eso, quien la rellena escribe el nombre del edificio de memoria y la mitad
+    de las filas fallan al importar por una tilde.
+    """
+    from tdd.exports import equipo_xlsx
+
+    activos, sistemas, _ = _catalogos(s, project_id)
+    binario = equipo_xlsx.plantilla(
+        [a.name for a in activos], [f"{x.name_es}  ({x.code})" for x in sistemas]
+    )
+    return Response(
+        content=binario,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="inventario-plantilla.xlsx"'},
+    )
+
+
+@router.post("/projects/{project_id}/equipment/import/preview", response_model=Previsualizacion)
+def previsualizar_importacion(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    archivo: Annotated[UploadFile, File(alias="file")],
+) -> Any:
+    """`[REQ]` Lee la hoja y dice qué va a pasar. **No escribe nada.**
+
+    Es una llamada aparte a propósito. Una importación que mete trescientas
+    filas y luego informa de que doce dieron error obliga a limpiar a mano lo
+    que ya entró, y en una tabla con borrado lógico eso es peor todavía.
+    """
+    hoja, analisis = _analizar_subida(archivo.file.read(), s, project_id)
+    return _a_respuesta(hoja, analisis)
+
+
+class Resultado(BaseModel):
+    creados: int
+    actualizados: int
+    omitidos: int
+    resumen: str
+    previsualizacion: Previsualizacion
+
+
+@router.post("/projects/{project_id}/equipment/import", response_model=Resultado)
+def importar(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    usuario: UsuarioDep,
+    archivo: Annotated[UploadFile, File(alias="file")],
+    confirmar: Annotated[bool, Form()] = False,
+    actualizar_existentes: Annotated[bool, Form()] = False,
+) -> Any:
+    """Aplica la importación. Exige `confirmar` y vuelve a analizar la hoja.
+
+    **Se reanaliza en vez de fiarse de lo previsualizado.** Entre la
+    previsualización y la aplicación pueden pasar minutos y otra persona puede
+    haber dado de alta el mismo equipo; aceptar un plan calculado antes sería
+    escribir sobre un estado que ya no existe.
+
+    `[REQ]` **Nada se sobrescribe solo.** Las filas cuya etiqueta ya está en ese
+    activo se omiten salvo que `actualizar_existentes` venga en verdadero, que
+    es una casilla que alguien tiene que marcar. La ficha que hay en la base la
+    escribió alguien en una visita a la que no se vuelve.
+    """
+    if not confirmar:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Revise la previsualización y confirme la importación.",
+        )
+    hoja, analisis = _analizar_subida(archivo.file.read(), s, project_id)
+
+    creados = 0
+    for fila in analisis.nuevas:
+        v = fila.valores
+        s.execute(
+            text(
+                "INSERT INTO equipment (organization_id, project_id, asset_id, "
+                "technical_system_id, tag, equipment_type, manufacturer, model, serial_number, "
+                "install_year, expected_life_years, condition, obsolescence, criticality, "
+                "quantity, unit, has_documentation, notes, created_by) "
+                "VALUES (:o, :p, :a, :ts, :tag, :et, :man, :mod, :sn, :iy, :el, "
+                "  CAST(:cond AS equipment_condition), CAST(:obs AS equipment_obsolescence), "
+                "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :cb)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "p": str(project_id),
+                "a": v["asset_id"],
+                "ts": v["technical_system_id"],
+                "tag": v["tag"],
+                "et": v["equipment_type"],
+                "man": v["manufacturer"],
+                "mod": v["model"],
+                "sn": v["serial_number"],
+                "iy": v["install_year"],
+                "el": v["expected_life_years"],
+                "cond": v["condition"],
+                "obs": v["obsolescence"],
+                "crit": v["criticality"],
+                "qty": v["quantity"],
+                "u": v["unit"],
+                "hd": v["has_documentation"],
+                "n": v["notes"],
+                "cb": str(usuario.id),
+            },
+        )
+        creados += 1
+
+    actualizados = 0
+    if actualizar_existentes:
+        for fila in analisis.ya_existen:
+            v = fila.valores
+            s.execute(
+                text(
+                    "UPDATE equipment SET technical_system_id = :ts, equipment_type = :et, "
+                    "manufacturer = :man, model = :mod, serial_number = :sn, install_year = :iy, "
+                    "expected_life_years = :el, "
+                    "condition = CAST(:cond AS equipment_condition), "
+                    "obsolescence = CAST(:obs AS equipment_obsolescence), "
+                    "criticality = CAST(:crit AS equipment_criticality), "
+                    "quantity = :qty, unit = :u, has_documentation = :hd, notes = :n, "
+                    "updated_at = now() WHERE id = :i AND deleted_at IS NULL"
+                ),
+                {
+                    "ts": v["technical_system_id"],
+                    "et": v["equipment_type"],
+                    "man": v["manufacturer"],
+                    "mod": v["model"],
+                    "sn": v["serial_number"],
+                    "iy": v["install_year"],
+                    "el": v["expected_life_years"],
+                    "cond": v["condition"],
+                    "obs": v["obsolescence"],
+                    "crit": v["criticality"],
+                    "qty": v["quantity"],
+                    "u": v["unit"],
+                    "hd": v["has_documentation"],
+                    "n": v["notes"],
+                    "i": fila.existente_id,
+                },
+            )
+            actualizados += 1
+
+    omitidos = len(analisis.con_error) + (0 if actualizar_existentes else len(analisis.ya_existen))
+
+    # Queda en la auditoría: una importación mueve muchas filas de golpe y es
+    # justo lo que alguien querrá reconstruir dentro de seis meses.
+    s.execute(
+        text(
+            "INSERT INTO audit_log (organization_id, actor_user_id, action, entity_type, "
+            "entity_id, after_data, severity) VALUES (:o, :u, 'EQUIPMENT_IMPORTED', 'project', "
+            ":i, CAST(:d AS jsonb), 'AVISO')"
+        ),
+        {
+            "o": str(usuario.organization_id),
+            "u": str(usuario.id),
+            "i": str(project_id),
+            "d": (
+                f'{{"creados": {creados}, "actualizados": {actualizados}, '
+                f'"omitidos": {omitidos}, "hoja": "{hoja.nombre}"}}'
+            ),
+        },
+    )
+
+    partes = [f"{creados} equipos creados"]
+    if actualizados:
+        partes.append(f"{actualizados} actualizados")
+    if omitidos:
+        partes.append(f"{omitidos} omitidos")
+    return {
+        "creados": creados,
+        "actualizados": actualizados,
+        "omitidos": omitidos,
+        "resumen": " · ".join(partes),
+        "previsualizacion": _a_respuesta(hoja, analisis),
+    }
