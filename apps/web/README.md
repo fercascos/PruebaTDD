@@ -9,7 +9,7 @@ abajo sin adornos.
 ```bash
 npm install
 npm run dev        # http://localhost:5173, con proxy a la API en :8000
-npm test           # 34 pruebas: cola de subida, cola persistida y estado de red
+npm test           # 47 pruebas: cola, cola persistida, formas y estado de red
 npm run build      # tipos (aplicación y service worker) + empaquetado
 
 # ¿Abre sin red? Necesita el empaquetado servido y un Chromium:
@@ -32,6 +32,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Ficha de activo** | Alta y edición; los campos de nave se conservan al reclasificar |
 | **Fotografías** | **Los tres orígenes**, cola de subida, selección y renombrado en lote |
 | **Ficha de fotografía** | Clasificar por activo y zona, pie, orden en el informe, procedencia |
+| **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
@@ -91,6 +92,28 @@ Por eso sus 20 pruebas comprueban de verdad lo que importa —que la
 concurrencia no se dispara, que un fallo de red se reintenta y un duplicado no,
 que nada se pierde en silencio— sin montar un servidor ni un navegador.
 
+## Anotar una fotografía
+
+`[REQ]` §15.2. Señalar la fisura con una flecha es lo que hace útil una foto
+técnica. El backend guardaba la capa desde el principio —versionada, auditada,
+reversible, con el original intacto— pero **no había dónde dibujarla y el
+informe tampoco la pintaba**: anotar producía un JSON que no llegaba a ninguna
+parte.
+
+Las coordenadas se guardan en **fracción del lado (0..1)**, no en píxeles. El
+lienzo mide lo que quepa en la pantalla del móvil, la foto tiene 4000 px y el
+PPTX se mide en pulgadas: con píxeles, la flecha apuntaría a un sitio distinto
+en cada uno de los tres. Es el fallo clásico de las anotaciones y aquí es
+imposible por construcción — el servidor rechaza cualquier coordenada fuera de
+rango en vez de recortarla, porque una flecha recortada en silencio señala un
+sitio que nadie eligió.
+
+El lienzo (`src/fotos/Anotador.tsx`) y el rasterizado del servidor
+(`tdd/evidence/anotaciones.py`) pintan por separado —no hay forma de compartir
+código entre Canvas y Pillow—, pero **comparten el formato**, y eso es lo que
+garantiza que dibujen en el mismo sitio. Se comprueba arrastrando el ratón de
+verdad: `npm run test:anotador`.
+
 ## Sin red
 
 `[REQ]` §15.8. Dos piezas independientes, y conviene no confundirlas:
@@ -132,8 +155,6 @@ descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
   abrirla. Ver «Sin red» más arriba.
 - **Iconos del manifiesto.** Sin ellos el navegador no ofrece «instalar» en
   todas las plataformas.
-- **Editor de anotaciones** sobre la fotografía. El backend guarda la capa
-  vectorial; no hay lienzo para dibujarla.
 - **Mapa de fotografías por GPS**, matriz de riesgos y comparador de precios.
 - **Recuperación de contraseña.** El alta de una persona fija una contraseña
   inicial que hay que comunicar por otro canal: la invitación por correo exige

@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:sin-red": "node herramientas/comprobar-sin-red.mjs",
+    "test:anotador": "node herramientas/comprobar-anotador.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json"
   },
   "dependencies": {

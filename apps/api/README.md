@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, aplica el esquema, siembra catálogos y fases
-make test        # 656 pruebas
+make test        # 682 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -65,7 +65,8 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Lectura de imágenes** · EXIF, GPS, HEIC, derivados | ✅ Completo | `tests/unit/test_imagenes.py` · 24 |
 | **Reglas de evidencia** · duplicados, papelera, avisos | ✅ Completo | `tests/unit/test_evidencia.py` · 37 |
 | **Fotografías punta a punta** · los tres orígenes | ✅ Completo | `tests/integration/test_fotografias.py` · 39 |
-| **Fotografías avanzado** · versiones, ZIP y purga | ✅ Completo | `tests/integration/test_fotografias_avanzado.py` · 21 |
+| **Fotografías avanzado** · versiones, ZIP y purga | ✅ Completo | `tests/integration/test_fotografias_avanzado.py` · 23 |
+| **Anotaciones** `[REQ]` §15.2 · capa vectorial y rasterizado | ✅ Completo | `tests/unit/test_anotaciones.py` · 23 |
 | **Autenticación** · login, rotación y bloqueo | ✅ Completo | `test_identidad.py` · 20 + `test_autenticacion.py` · 23 |
 | **Activos y equipo del proyecto** | ✅ Completo | `tests/integration/test_activos_y_equipo.py` · 27 |
 | **Hallazgos y CAPEX** · P-44 y el traslado explícito de P-05b | ✅ Completo | `test_hallazgos.py` · 12 + `test_hallazgos_y_capex.py` · 28 |
@@ -148,8 +149,7 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
 - **Alembic.** El esquema se aplica desde `schema.sql`. La migración inicial se
   genera cuando el modelo deje de moverse: versionar migraciones de un esquema
   que cambia cada día produce un historial inútil.
-- **Inventario de equipos, comparador de precios y administración de usuarios**
-  desde la API.
+- **Inventario de equipos y comparador de precios** desde la API.
 - **Frontend:** lo construido y lo que falta, en
   [`apps/web/README.md`](../web/README.md).
 

@@ -393,6 +393,82 @@ def test_las_fotos_seleccionadas_entran_en_el_informe(
     assert "Cubierta invertida" in pies
 
 
+def test_las_anotaciones_llegan_quemadas_al_informe(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+) -> None:
+    """`[REQ]` §15.2 · Señalar la fisura con una flecha es lo que hace útil una
+    foto técnica.
+
+    La capa se guardaba desde el principio —versionada, auditada, reversible—
+    pero **el generador insertaba la foto sin ella**: anotar producía un JSON
+    que no llegaba a ninguna parte.
+
+    Se comprueba generando dos veces la **misma** foto, antes y después de
+    anotarla, y mirando si el binario que acaba dentro del PPTX cambia. Contar
+    píxeles de un color no vale: la imagen de prueba es un degradado y la
+    plantilla trae sus propios logotipos, así que siempre hay «rojo» en alguna
+    parte y la comprobación pasaría sin arreglar nada. Se verificó desactivando
+    el rasterizado a propósito: así la prueba falla, como debe.
+    """
+    foto = cliente.post(
+        f"{RUTA}/projects/{proyecto}/photos",
+        headers=cab("consultor_a"),
+        files={"file": ("a.jpg", io.BytesIO(imagen(color=(90, 140, 190))), "image/jpeg")},
+        data={"asset_id": con_hallazgo["asset"]["id"]},
+    ).json()
+    cliente.patch(
+        f"{RUTA}/photos/{foto['id']}",
+        headers=cab("consultor_a"),
+        json={"include_in_report": True, "report_order": 1},
+    )
+
+    def imagenes_del_informe() -> set[bytes]:
+        version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+        datos = cliente.get(
+            f"{RUTA}/reports/{version['id']}/download", headers=cab("admin_a")
+        ).content
+        prs = Presentation(io.BytesIO(datos))
+        return {
+            f.image.blob
+            for slide in prs.slides
+            for f in slide.shapes
+            if f.shape_type == 13  # noqa: PLR2004 — PICTURE
+        }
+
+    sin_anotar = imagenes_del_informe()
+    assert sin_anotar, "la fotografía se ha insertado"
+
+    r = cliente.post(
+        f"{RUTA}/photos/{foto['id']}/versions/annotate",
+        headers=cab("consultor_a"),
+        json={
+            "annotations": {
+                "shapes": [
+                    {
+                        "tipo": "FLECHA",
+                        "x1": 0.1,
+                        "y1": 0.1,
+                        "x2": 0.8,
+                        "y2": 0.8,
+                        "color": "#DC2626",
+                        "grosor": 8,
+                    }
+                ]
+            }
+        },
+    )
+    assert r.status_code == 201, r.text
+
+    con_anotar = imagenes_del_informe()
+    nuevas = con_anotar - sin_anotar
+    assert nuevas, "el PPTX lleva exactamente la misma imagen: la anotación no se ha pintado"
+
+
 def test_una_foto_en_cuarentena_impide_generar(
     cliente: TestClient,
     cab: Any,

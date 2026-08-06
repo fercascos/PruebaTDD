@@ -974,13 +974,22 @@ class Anotaciones(BaseModel):
     response_model=list[Version],
 )
 def anotar(photo_id: uuid.UUID, cuerpo: Anotaciones, s: SesionDep, usuario: UsuarioDep) -> Any:
-    """Añade una versión anotada. **El original no se toca.**"""
+    """Añade una versión anotada. **El original no se toca.**
+
+    `[REQ]` §15.2 · La capa se valida forma a forma. Antes bastaba con que el
+    JSON trajera una clave `shapes` y dentro podía ir cualquier cosa: quien
+    rasteriza después solo tiene malas opciones ante un dato imposible —adivinar,
+    reventar, o dibujar algo que nadie pidió—, y el sitio donde se descubriría
+    sería el informe ya entregado.
+    """
+    from tdd.evidence.anotaciones import AnotacionInvalida
+    from tdd.evidence.anotaciones import leer as leer_capa
+
     _obtener(s, photo_id)
-    if "shapes" not in cuerpo.annotations:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "La capa de anotaciones debe traer al menos la lista «shapes»",
-        )
+    try:
+        capa = leer_capa(cuerpo.annotations)
+    except AnotacionInvalida as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     s.execute(
         text("UPDATE photo_version SET is_current = FALSE WHERE photo_id = :f AND is_current"),
         {"f": str(photo_id)},
@@ -996,12 +1005,14 @@ def anotar(photo_id: uuid.UUID, cuerpo: Anotaciones, s: SesionDep, usuario: Usua
         {
             "o": str(usuario.organization_id),
             "f": str(photo_id),
-            "a": _json(cuerpo.annotations),
+            # Se guarda lo NORMALIZADO, no lo que llegó: así lo que se lee al
+            # editar es exactamente lo que se va a pintar en el informe.
+            "a": _json(capa.como_json()),
             "n": cuerpo.notes,
             "u": str(usuario.id),
         },
     )
-    _auditar(s, usuario, "PHOTO_ANNOTATED", photo_id, {"formas": len(cuerpo.annotations["shapes"])})
+    _auditar(s, usuario, "PHOTO_ANNOTATED", photo_id, {"formas": len(capa.formas)})
     return listar_versiones(photo_id, s)
 
 

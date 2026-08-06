@@ -16,6 +16,7 @@ sustituye. Lo garantiza un disparador, no una comprobación en este fichero.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import uuid
 from decimal import Decimal
@@ -28,7 +29,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
-from tdd.evidence import images
+from tdd.evidence import anotaciones, images
 from tdd.evidence.router import AlmacenDep
 from tdd.reporting import generator
 from tdd.reporting import snapshot as snap
@@ -583,6 +584,20 @@ def generar(
                 )
             except Exception:  # noqa: BLE001 — una foto ilegible no tumba el informe
                 continue
+
+            # `[REQ]` §15.2 · Las anotaciones se **queman aquí**, sobre el
+            # derivado desechable. Es el único momento en que dejan de ser
+            # vectores: el original sigue limpio y la capa se puede volver a
+            # editar. Antes se guardaban y no las pintaba nadie, así que anotar
+            # una foto producía un JSON que no llegaba al informe.
+            capa_bruta = foto.get("annotations")
+            if capa_bruta:
+                # La capa se valida al guardarla. Si aun así llega algo raro —un
+                # snapshot anterior a que existiera esa validación—, se inserta
+                # la foto limpia: mejor sin flechas que sin foto.
+                with contextlib.suppress(anotaciones.AnotacionInvalida):
+                    datos = anotaciones.rasterizar(datos, anotaciones.leer(capa_bruta))
+
             fotos.append(
                 generator.FotoParaInsertar(
                     photo_id=str(foto["id"]), datos=datos, caption=str(foto.get("caption") or "")

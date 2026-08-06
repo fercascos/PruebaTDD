@@ -82,10 +82,16 @@ def test_anotar_crea_una_version_sin_duplicar_el_binario(
         headers=cab("consultor_a"),
         json={
             "annotations": {
-                "canvas": {"width": 640, "height": 480},
                 "shapes": [
-                    {"type": "rect", "x": 100, "y": 80, "w": 200, "h": 120, "stroke": "#E53935"}
-                ],
+                    {
+                        "tipo": "RECTANGULO",
+                        "x1": 0.15,
+                        "y1": 0.17,
+                        "x2": 0.47,
+                        "y2": 0.42,
+                        "color": "#E53935",
+                    }
+                ]
             },
             "notes": "Corrosión activa en el soporte",
         },
@@ -96,6 +102,57 @@ def test_anotar_crea_una_version_sin_duplicar_el_binario(
     assert anotada["stored_object_id"] is None, "no se duplica el binario"
     assert anotada["is_current"] is True
     assert len(anotada["annotations"]["shapes"]) == 1
+
+
+def test_una_capa_en_pixeles_se_rechaza_diciendo_por_que(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """`[REQ]` §15.2 · Las coordenadas van en fracción del lado, no en píxeles.
+
+    Es el fallo clásico de las anotaciones: guardadas en píxeles del original,
+    la flecha apunta al cielo en cuanto algo se redimensiona, y aquí todo se
+    redimensiona —miniatura, vista y PPTX—. Antes se aceptaba cualquier cosa
+    dentro de `shapes` y el problema aparecía en el informe ya entregado.
+    """
+    foto = subir(cliente, cab, proyecto)
+    r = cliente.post(
+        f"{RUTA}/photos/{foto['id']}/versions/annotate",
+        headers=cab("consultor_a"),
+        json={"annotations": {"shapes": [{"tipo": "RECTANGULO", "x1": 100, "y1": 80}]}},
+    )
+    assert r.status_code == 422
+    assert "píxeles" in r.json()["detail"]
+
+
+def test_la_capa_se_guarda_normalizada(cliente: TestClient, cab: Any, proyecto: str) -> None:
+    """Lo que se lee al volver a editar es exactamente lo que se va a pintar en
+    el informe. Guardar lo que llegó tal cual dejaría a la interfaz y al
+    generador leyendo cosas distintas."""
+    foto = subir(cliente, cab, proyecto)
+    r = cliente.post(
+        f"{RUTA}/photos/{foto['id']}/versions/annotate",
+        headers=cab("consultor_a"),
+        json={
+            "annotations": {
+                "shapes": [
+                    {
+                        "tipo": "flecha",
+                        "x1": 0.1,
+                        "y1": 0.1,
+                        "x2": 0.6,
+                        "y2": 0.6,
+                        "color": "#e53935",
+                    }
+                ]
+            }
+        },
+    )
+    forma = r.json()[-1]["annotations"]["shapes"][0]
+    assert forma["tipo"] == "FLECHA"
+    assert forma["color"] == "#E53935"
+    # El grosor por defecto queda explícito: quien lee la capa no tiene que
+    # saberse el valor que asume el servidor.
+    assert forma["grosor"] == 3.0
 
 
 def test_una_capa_sin_formas_se_rechaza(cliente: TestClient, cab: Any, proyecto: str) -> None:

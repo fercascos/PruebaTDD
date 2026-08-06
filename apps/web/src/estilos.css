@@ -795,3 +795,60 @@ tr.inactiva td {
   font-size: 0.85rem;
   border-bottom: 1px solid #fcd34d;
 }
+
+/* ── Lienzo de anotaciones (§15.2) ──────────────────────────────────────── */
+.anotador {
+  display: grid;
+  gap: 0.8rem;
+}
+.anotador .barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+}
+.anotador .colores {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+}
+.anotador .muestra {
+  all: unset;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid var(--borde);
+}
+.anotador .muestra.elegida {
+  border-color: var(--tinta);
+  transform: scale(1.15);
+}
+.anotador .grosor {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+.anotador .texto-anotacion {
+  max-width: 14rem;
+}
+.anotador .lienzo {
+  display: grid;
+  place-items: center;
+  background: var(--borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+}
+.anotador canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  cursor: crosshair;
+  /* Sin esto, arrastrar el dedo en el móvil hace scroll de la página en vez de
+     dibujar, que es exactamente lo contrario de lo que se pretende. */
+  touch-action: none;
+}

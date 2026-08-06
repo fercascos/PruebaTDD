@@ -163,12 +163,19 @@ def construir(
         {"p": str(project_id), "estados": list(estados)},
     )
 
+    # `[REQ]` §15.2 + §17.6 · La capa de anotaciones **vigente** viaja en el
+    # snapshot. Si se leyera de la base al generar, volver a producir un informe
+    # de hace seis meses recogería las anotaciones de hoy, y eso contradice lo
+    # que significa congelar: el documento tiene que poder reconstruirse igual.
     fotos = _filas(
         s,
-        "SELECT id, asset_id, zone_id, display_name, file_extension, caption, report_order, "
-        "report_section, CAST(status AS text) AS status, taken_at "
-        "FROM photo WHERE project_id = :p AND deleted_at IS NULL AND include_in_report "
-        "ORDER BY COALESCE(report_order, 2147483647), uploaded_at",
+        "SELECT p.id, p.asset_id, p.zone_id, p.display_name, p.file_extension, p.caption, "
+        "p.report_order, p.report_section, CAST(p.status AS text) AS status, p.taken_at, "
+        "(SELECT pv.annotations FROM photo_version pv "
+        "  WHERE pv.photo_id = p.id AND pv.is_current AND pv.annotations IS NOT NULL "
+        "  ORDER BY pv.version_number DESC LIMIT 1) AS annotations "
+        "FROM photo p WHERE p.project_id = :p AND p.deleted_at IS NULL AND p.include_in_report "
+        "ORDER BY COALESCE(p.report_order, 2147483647), p.uploaded_at",
         {"p": str(project_id)},
     )
 

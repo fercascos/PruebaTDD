@@ -3,6 +3,7 @@ import { enviar, obtener } from '../api/cliente'
 import type { Activo, ElementoCatalogo, Foto } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje } from '../ui/Marco'
+import { Anotador } from './Anotador'
 import { Imagen } from './Imagen'
 
 /**
@@ -38,6 +39,7 @@ export function DetalleDeFoto({
   const [orden, setOrden] = useState(foto.report_order?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
+  const [anotando, setAnotando] = useState(false)
 
   useEffect(() => {
     obtener<Activo[]>(`/projects/${projectId}/assets`)
@@ -83,6 +85,19 @@ export function DetalleDeFoto({
     } finally {
       setGuardando(false)
     }
+  }
+
+  if (anotando) {
+    return (
+      <Anotador
+        photoId={foto.id}
+        alGuardar={() => {
+          setAnotando(false)
+          alGuardar()
+        }}
+        alCerrar={() => setAnotando(false)}
+      />
+    )
   }
 
   return (
@@ -197,6 +212,9 @@ export function DetalleDeFoto({
         <div className="acciones">
           <button type="button" onClick={() => void guardar()} disabled={guardando}>
             {guardando ? 'Guardando…' : 'Guardar'}
+          </button>
+          <button type="button" className="secundario" onClick={() => setAnotando(true)}>
+            Anotar
           </button>
           <button
             type="button"
