@@ -68,7 +68,7 @@ Unión de las seis listas, deduplicada. 20 zonas:
 
 | `code` | Nombre | Aparece en |
 |---|---|---|
-| `CUADROS_TECNICOS` | Cuadros técnicos | Todas |
+| `CUARTOS_TECNICOS` | Cuartos técnicos | Todas |
 | `APARCAMIENTO` | Aparcamiento | Todas |
 | `OFICINAS` | Oficinas | Todas |
 | `ASEOS` | Aseos | Todas |
@@ -87,7 +87,7 @@ Unión de las seis listas, deduplicada. 20 zonas:
 | `GIMNASIO` | Gimnasio | Hotel, Sanitario |
 | `PISCINA` | Piscina | Hotel, Sanitario |
 | `ZONA_COMERCIAL` | Zona comercial | Comercial |
-| `SALAS_USO_SANITARIO` | Salas de uso sanitario | Sanitario |
+| `SALAS_USO_SANITARIO` | Salas uso sanitario | Sanitario |
 
 > `[REC]` **Detalle menor con consecuencias:** la especificación escribe «Restaurante» en Hotel y
 > Sanitario, y «Restaurantes» en Comercial. Se unifica en una sola zona `RESTAURANTE`. Dos filas
@@ -100,7 +100,7 @@ Tabla puente `zone_typology`. `●` = disponible.
 
 | Zona | Industrial | Oficinas | Hotel | Comercial | Sanitario | Otros `[SUP]` |
 |---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Cuadros técnicos | ● | ● | ● | ● | ● | ● |
+| Cuartos técnicos | ● | ● | ● | ● | ● | ● |
 | Aparcamiento | ● | ● | ● | ● | ● | ● |
 | Oficinas | ● | ● | ● | ● | ● | ● |
 | Aseos | ● | ● | ● | ● | ● | ● |
@@ -119,7 +119,7 @@ Tabla puente `zone_typology`. `●` = disponible.
 | Gimnasio | | | ● | | ● | ● |
 | Piscina | | | ● | | ● | ● |
 | Zona comercial | | | | ● | | ● |
-| Salas de uso sanitario | | | | | ● | ● |
+| Salas uso sanitario | | | | | ● | ● |
 | **Total por tipología** | **11** | **10** | **16** | **13** | **16** | **20** |
 
 **86 relaciones** en total: 66 definidas literalmente en §3.3.2 (11 + 10 + 16 + 13 + 16) más 20 del
@@ -171,14 +171,17 @@ flowchart LR
 | `code` | Nombre | Estado |
 |---|---|---|
 | `HC` | Hard Costs | ✅ Desarrollada (15 capítulos) |
-| `MA` | Medioambiental | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
-| `ESG` | ESG & Energía | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
-| `SC` | Soft Costs | ⚠️ **Sin desglose** — P-03 decidido: capítulo «General» |
+| `MA` | Medioambiental | ✅ Desarrollada (13 elementos) |
+| `ESG` | ESG & Energía | ✅ Desarrollada (11 elementos) |
+| `SC` | Soft Costs | ✅ Desarrollada (3 capítulos) |
 
-> **P-03 · DECIDIDO.** Las tres categorías sin desglose se siembran con un único capítulo `General` y
-> un elemento `General`, para que sean utilizables desde el primer día. Cuando se reciba su desglose se
-> añade **sin migración de datos**: las líneas ya codificadas como `MA.General` siguen siendo válidas, y
-> el consultor puede reclasificarlas si quiere afinar.
+> **P-03 · CERRADO.** Se recibió la plantilla CAPEX DDT vigente, que **sí trae el desglose** de las
+> tres categorías que faltaban. Se incorpora tal cual viene, y esta sección deja de ser provisional.
+>
+> `[REQ]` **Sin migración de datos, como se prometió.** `MA.General` y `ESG.General` siguen siendo
+> capítulos válidos y conservan su elemento `General`: lo que se hace es **añadir** elementos a su
+> lado. Ninguna línea de CAPEX ya codificada cambia de código ni se queda huérfana. `SC.General`
+> también se conserva por la misma razón, junto a los tres capítulos nuevos `S01`, `S02` y `S03`.
 
 ### Nivel 2 y 3 · Hard Costs, completo
 
@@ -190,22 +193,60 @@ flowchart LR
 | **H04. Interiores** | Particiones interiores y revestimientos interiores · Carpintería y cerrajería · Suelos y techos · General |
 | **H05. Zonas exteriores** | Exteriores · General |
 | **H06. Protección pasiva contra incendios** | Sectorización · Zonas de riesgo especial · Espacios ocultos y pasos de instalaciones · Resistencia al fuego de la estructura · Reacción al fuego de los elementos constructivos · Propagación exterior horizontal · Propagación exterior vertical · Propagación exterior por cubierta · Evacuación de ocupantes · General |
-| **H07. Accesibilidad** | Accesibilidad desde el exterior · Accesibilidad entre plantas · Accesibilidad en las plantas · Dotación de plazas de aparcamiento accesibles · Dotación de servicios higiénicos accesibles · Mobiliario fijo · Evacuación de personas con discapacidad · Señalética SIA · Instalaciones · General |
-| **H08. HVAC** | Producción de climatización · Producción de calor · Distribución · Grupos de presión · Elementos terminales · Humectación · Ventilación de aire primario · Extracción · Ventilación natural de humos · General |
+| **H07. Accesibilidad** | Accesibilidad desde el exterior · Accesibilidad entre las plantas · Accesibilidad en las plantas · Dotación de plazas de aparcamiento accesibles · Dotación de servicios higiénicos accesibles · Mobiliario fijo · Evacuación de personas con discapacidad · Señalética SIA · Instalaciones · General |
+| **H08. HVAC** | Producción de climatización · Producción de calor · Distribución · Grupos de presión · Elementos terminales · Humectación · Ventilación aire primario · Extracción · Ventilación natural de humos · General |
 | **H09. Electricidad** | Acometida-Centro de transformación · CGBT · BTV · Centralización de contadores · Cuadros secundarios de distribución · Batería de condensadores · Grupo electrógeno · Cableado · UPS · Alumbrado · Alumbrado de emergencia · Pararrayos · Red de tierras · Placas fotovoltaicas · General |
-| **H10. Protección activa contra incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · BIEs · Extintores portátiles · Extinción automática por gas · Detección de CO2 · Extracción de CO2 y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General |
+| **H10. Protección activa contra incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · BIEs · Extintores portátiles · Extinción automática por gas · Detección de CO · Extracción de CO y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General |
 | **H11. Fontanería y saneamiento** | Acometida · Grupo de presión · Aljibes · Aseos · Producción de ACS · Saneamiento · Contribución mínima de renovables · General |
 | **H12. Transporte vertical y puertas mecánicas** | Ascensor · Acceso al parking · Góndola · Escaleras mecánicas · Puerta de acceso principal · General |
 | **H13. Seguridad, CCTV y BMS** | Control de accesos · Instalación CCTV · Central de seguridad · Sistemas de megafonía · BMS · General |
 | **H14. Telecomunicaciones, voz y datos** | WIFI · PPV · Voz y datos · Interfono · General |
 | **H15. Otros** | General |
 
-**Totales de la semilla:** **4 categorías · 18 capítulos** (15 de Hard Costs + 3 provisionales) ·
-**103 elementos** (100 de Hard Costs + 3 «General» provisionales). **125 nodos** en total.
+### Nivel 2 y 3 · Medioambiental, ESG y Soft Costs
+
+De la plantilla CAPEX DDT vigente. Cierra P-03.
+
+| Capítulo | Elementos |
+|---|---|
+| **MA. General** | General · Situación legal · Gestión de residuos urbanos · Gestión de residuos peligrosos · Emisiones de gases · Consumo de agua · Sistemas de drenaje · Ruido · Contaminación del suelo · Almacenamiento de sustancias peligrosas · Sustancias reductoras de la capa de ozono (ODS) · Presencia potencial de PCBs · Certificado de sostenibilidad |
+| **ESG. General** | General · Análisis CRREM · Análisis de Riesgos Climáticos · Certificación BREEAM · Certificación LEED · Certificación WELL · Certificación WIRESCORED · Certificado de Eficiencia Energética · Auditoría Net Zero · Auditoría Energética · Cumplimiento Nuevo Reglamento EPBD |
+| **SC. General** | General |
+| **SC. S01 · Proyectos, Diseño y DO** | General |
+| **SC. S02 · Trabajos Complementarios** | General |
+| **SC. S03 · Licencias y Tasas** | General |
+
+`[REC]` **Los capítulos de soft costs no llevan desglose de elementos, y es fiel a la plantilla.**
+En la hoja `CapEx` las filas de soft costs escriben su concepto —«Redacción de Proyectos y Dirección
+Facultativa (DF)», «Honorarios ECLU»— **en la columna de descripción**, no en un desplegable de
+elementos: la validación en cascada solo cubre la columna de categoría. Inventar aquí una lista de
+elementos habría producido códigos que la plantilla no sabe colocar.
+
+`[REC]` **`General` va el primero en MA y ESG, y no por orden alfabético.** Es el elemento que ya
+existía y el que tienen asignado las líneas sembradas antes de recibir el desglose: dejarlo en su
+posición mantiene estable su código `MA.General.01`, y ninguna línea de CAPEX existente cambia de
+código. Poner `Situación legal` delante habría renumerado todo el capítulo.
+
+`[REC]` **`Certificación WIRESCORED` está mal escrito, y se copia igual.** El producto es
+*WiredScore*, y la plantilla inglesa lo escribe bien («WIREDSCORE Certification»); la española tiene
+la errata. Se siembra el literal español tal cual porque es el que ofrece su desplegable: escribir el
+nombre correcto produciría una celda con un valor que no está en su propia lista, y las tablas
+dinámicas lo dejarían fuera. Corregirlo exige corregir antes la plantilla del cliente.
+
+`[LIM]` La plantilla declara además dos tipos de coste, **Operativos** (Consumos Obra, Limpieza) e
+**Imprevistos** (General), que **no se siembran**: la hoja `CapEx` no tiene ningún bloque de filas
+para ellos —solo hay 20 bloques: 15 de Hard Costs, Medioambiental, ESG y los 3 de Soft Costs— e
+Imprevistos existe únicamente como un porcentaje en «00 Datos Activo». Darles código sin sitio donde
+escribirlos habría creado actuaciones imposibles de exportar. Pendiente de decidir con el cliente.
+
+**Totales de la semilla:** **4 categorías · 21 capítulos** (15 de Hard Costs + `MA.General` +
+`ESG.General` + `SC.General` + 3 de Soft Costs) · **128 elementos** (100 de Hard Costs + 13 de
+Medioambiental + 11 de ESG + 1 de `SC.General` + 3 de los capítulos de Soft Costs). **153 nodos** en
+total.
 
 `[REC]` La cifra de «121» que arrastraba una versión anterior de este documento era **capítulos más
-elementos** (18 + 103), no elementos. Se corrige aquí y hay una prueba que fija los cuatro recuentos,
-para que no vuelva a desajustarse.
+elementos**, no elementos. Hay una prueba que fija los cuatro recuentos para que no vuelva a
+desajustarse.
 
 ### Codificación
 

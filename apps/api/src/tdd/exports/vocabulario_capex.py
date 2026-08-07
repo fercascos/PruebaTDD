@@ -11,11 +11,19 @@ Por eso aquí no se traduce nada. Se lee la etiqueta del fichero que se va a
 rellenar, indexada por el **código** del catálogo de la aplicación. Añadir un
 idioma es añadir una plantilla, no tocar la base de datos.
 
-`[SUP]` El emparejamiento es **posicional**: `HC.H09.02` es el segundo objeto
-de la fila de H09 en «00 Datos Objeto». Se comprobó que las dos plantillas
-declaran las listas en el mismo orden y que ese orden coincide con el catálogo
-sembrado. `test_vocabulario_capex.py` vuelve a comprobarlo en cada ejecución,
-para que una plantilla nueva que reordene una lista se note enseguida.
+El emparejamiento **no es posicional**, y esa es la parte que costó. La idea
+obvia —«`HC.H09.02` es el segundo objeto de la fila de H09»— funciona en Hard
+Costs pero miente en Medioambiental y ESG: el catálogo conserva `General` en la
+primera posición para no renumerar las líneas ya codificadas cuando llegó el
+desglose, mientras que la plantilla lo pone **el último** de su lista. Con un
+emparejamiento por índice, un hallazgo de `MA.General.01` habría salido escrito
+como «Situación legal».
+
+Así que el puente se tiende por el **nombre español**: el catálogo sembrado
+(`data/catalogos/codigos_capex.csv`) dice cómo se llama cada código, la
+plantilla española dice en qué casilla vive ese nombre, y la plantilla del
+idioma pedido dice qué pone en esa misma casilla. Un nombre que no aparezca en
+la plantilla revienta al construir el vocabulario, no al exportar.
 """
 
 from __future__ import annotations
@@ -171,12 +179,13 @@ def leer(idioma: str = "es") -> Vocabulario:
     hojas = libro.worksheets
     objeto, activo, leyenda = hojas[POS_OBJETO], hojas[POS_ACTIVO], hojas[POS_LEYENDA]
 
+    # Por nombre y no por índice: ver la cabecera del módulo. `General` ocupa
+    # la primera posición del catálogo en MA y ESG y la última en la plantilla.
     objetos: dict[str, str] = {}
-    for categoria, fila in FILA_OBJETO.items():
-        for i in range(MAX_OBJETOS):
-            etiqueta = _texto(objeto.cell(fila, COL_PRIMER_OBJETO + i))
-            if etiqueta is not None:
-                objetos[f"{categoria}.{i + 1:02d}"] = etiqueta
+    for codigo, (fila, columna) in _casillas_de_objeto().items():
+        etiqueta = _texto(objeto.cell(fila, columna))
+        if etiqueta is not None:
+            objetos[codigo] = etiqueta
 
     tipos_de_edificio = {
         COD_TIPOLOGIA[i]: t
@@ -225,6 +234,67 @@ def leer(idioma: str = "es") -> Vocabulario:
         conceptos=conceptos,
         recuperables=recuperables,
     )
+
+
+def _normalizar(texto: str) -> str:
+    """Para comparar nombres entre el catálogo y la plantilla sin tropezar con
+    una tilde de más, un espacio final o una mayúscula."""
+    limpio = " ".join(texto.split()).lower()
+    return limpio.translate(str.maketrans("áéíóúüàèìòù", "aeiouuaeiou"))
+
+
+@lru_cache(maxsize=1)
+def _nombres_del_catalogo() -> dict[str, tuple[str, str]]:
+    """`código de nivel 3` → `(capítulo, nombre español)`, del CSV sembrado.
+
+    El CSV es el que genera `tools/generar_catalogos.py` desde §5.3, así que es
+    la misma fuente de la que sale la base de datos: si el documento y la
+    plantilla se separan, se nota aquí y no en un Excel ya enviado.
+    """
+    import csv
+
+    from tdd.catalogs.seeding import CATALOGOS
+
+    nombres: dict[str, tuple[str, str]] = {}
+    with (CATALOGOS / "codigos_capex.csv").open(encoding="utf-8") as f:
+        for fila in csv.DictReader(f):
+            if fila["level"] == "3":
+                nombres[fila["code"]] = (fila["parent_code"], fila["name_es"])
+    return nombres
+
+
+@lru_cache(maxsize=1)
+def _casillas_de_objeto() -> dict[str, tuple[int, int]]:
+    """`código de nivel 3` → casilla `(fila, columna)` de «00 Datos Objeto».
+
+    Se tiende sobre la plantilla **española**, que es de la que salieron los
+    nombres del catálogo, y vale para todos los idiomas porque la rejilla ocupa
+    las mismas casillas en todos.
+    """
+    libro = load_workbook(PLANTILLAS / FICHERO["es"])
+    hoja = libro.worksheets[POS_OBJETO]
+    # (capítulo, nombre normalizado) → casilla
+    por_nombre: dict[tuple[str, str], tuple[int, int]] = {}
+    for capitulo, fila in FILA_OBJETO.items():
+        for i in range(MAX_OBJETOS):
+            columna = COL_PRIMER_OBJETO + i
+            etiqueta = _texto(hoja.cell(fila, columna))
+            if etiqueta is not None:
+                por_nombre.setdefault((capitulo, _normalizar(etiqueta)), (fila, columna))
+    libro.close()
+
+    casillas: dict[str, tuple[int, int]] = {}
+    for codigo, (capitulo, nombre) in _nombres_del_catalogo().items():
+        if capitulo not in FILA_OBJETO:
+            continue  # los capítulos de soft costs no tienen lista de objetos
+        casilla = por_nombre.get((capitulo, _normalizar(nombre)))
+        if casilla is None:
+            raise FaltaEnLaPlantilla(
+                f"el catálogo trae {codigo} «{nombre}» en {capitulo}, y la plantilla "
+                "española no lo tiene en esa lista"
+            )
+        casillas[codigo] = casilla
+    return casillas
 
 
 @lru_cache(maxsize=1)

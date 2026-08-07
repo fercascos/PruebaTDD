@@ -36,7 +36,7 @@ HC.H06.09,Evacuación de ocupantes,3,HC.H06
 HC.H06.10,General,3,HC.H06
 HC.H07,Accesibilidad,2,HC
 HC.H07.01,Accesibilidad desde el exterior,3,HC.H07
-HC.H07.02,Accesibilidad entre plantas,3,HC.H07
+HC.H07.02,Accesibilidad entre las plantas,3,HC.H07
 HC.H07.03,Accesibilidad en las plantas,3,HC.H07
 HC.H07.04,Dotación de plazas de aparcamiento accesibles,3,HC.H07
 HC.H07.05,Dotación de servicios higiénicos accesibles,3,HC.H07
@@ -52,7 +52,7 @@ HC.H08.03,Distribución,3,HC.H08
 HC.H08.04,Grupos de presión,3,HC.H08
 HC.H08.05,Elementos terminales,3,HC.H08
 HC.H08.06,Humectación,3,HC.H08
-HC.H08.07,Ventilación de aire primario,3,HC.H08
+HC.H08.07,Ventilación aire primario,3,HC.H08
 HC.H08.08,Extracción,3,HC.H08
 HC.H08.09,Ventilación natural de humos,3,HC.H08
 HC.H08.10,General,3,HC.H08
@@ -80,8 +80,8 @@ HC.H10.04,Columna seca,3,HC.H10
 HC.H10.05,BIEs,3,HC.H10
 HC.H10.06,Extintores portátiles,3,HC.H10
 HC.H10.07,Extinción automática por gas,3,HC.H10
-HC.H10.08,Detección de CO2,3,HC.H10
-HC.H10.09,Extracción de CO2 y ventilación del parking,3,HC.H10
+HC.H10.08,Detección de CO,3,HC.H10
+HC.H10.09,Extracción de CO y ventilación del parking,3,HC.H10
 HC.H10.10,Rociadores,3,HC.H10
 HC.H10.11,Detección y alarma de incendios,3,HC.H10
 HC.H10.12,Inspección RIPCI,3,HC.H10
@@ -120,7 +120,35 @@ HC.H15,Otros,2,HC
 HC.H15.01,General,3,HC.H15
 MA.General,General,2,MA
 MA.General.01,General,3,MA.General
+MA.General.02,Situación legal,3,MA.General
+MA.General.03,Gestión de residuos urbanos,3,MA.General
+MA.General.04,Gestión de residuos peligrosos,3,MA.General
+MA.General.05,Emisiones de gases,3,MA.General
+MA.General.06,Consumo de agua,3,MA.General
+MA.General.07,Sistemas de drenaje,3,MA.General
+MA.General.08,Ruido,3,MA.General
+MA.General.09,Contaminación del suelo,3,MA.General
+MA.General.10,Almacenamiento de sustancias peligrosas,3,MA.General
+MA.General.11,Sustancias reductoras de la capa de ozono (ODS),3,MA.General
+MA.General.12,Presencia potencial de PCBs,3,MA.General
+MA.General.13,Certificado de sostenibilidad,3,MA.General
 ESG.General,General,2,ESG
 ESG.General.01,General,3,ESG.General
+ESG.General.02,Análisis CRREM,3,ESG.General
+ESG.General.03,Análisis de Riesgos Climáticos,3,ESG.General
+ESG.General.04,Certificación BREEAM,3,ESG.General
+ESG.General.05,Certificación LEED,3,ESG.General
+ESG.General.06,Certificación WELL,3,ESG.General
+ESG.General.07,Certificación WIRESCORED,3,ESG.General
+ESG.General.08,Certificado de Eficiencia Energética,3,ESG.General
+ESG.General.09,Auditoría Net Zero,3,ESG.General
+ESG.General.10,Auditoría Energética,3,ESG.General
+ESG.General.11,Cumplimiento Nuevo Reglamento EPBD,3,ESG.General
 SC.General,General,2,SC
 SC.General.01,General,3,SC.General
+SC.S01,"Proyectos, Diseño y DO",2,SC
+SC.S01.01,General,3,SC.S01
+SC.S02,Trabajos Complementarios,2,SC
+SC.S02.01,General,3,SC.S02
+SC.S03,Licencias y Tasas,2,SC
+SC.S03.01,General,3,SC.S03

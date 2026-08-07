@@ -171,20 +171,41 @@ def codigos_capex(doc: str) -> list[dict[str, str]]:
                 }
             )
 
-    # P-03: las categorías sin desglose se siembran con «General»/«General»
-    for code, _ in categorias:
-        if code == "HC":
+    # Nivel 2 y 3 del resto de categorías, de la tabla que cierra P-03:
+    #   | **MA. General** | General · Situación legal · … |
+    #   | **SC. S01 · Proyectos, Diseño y DO** | General |
+    # El capítulo lleva `CAT.SUFIJO`; el nombre visible es lo que va detrás del
+    # punto, salvo en los de soft costs, que traen su propio nombre tras «·».
+    for linea in cuerpo.splitlines():
+        if not linea.startswith("|") or "---" in linea:
             continue
-        cap_code = f"{code}.General"
-        filas.append({"code": cap_code, "name_es": "General", "level": "2", "parent_code": code})
+        c = _celdas(linea)
+        if len(c) != 2:
+            continue
+        m = re.match(r"^\*\*([A-Z]{2,4})\.\s*([A-Za-z0-9]+)(?:\s*·\s*(.+?))?\*\*$", c[0])
+        if not m or m.group(1) == "HC":
+            continue
+        cat, sufijo, nombre = m.group(1), m.group(2), m.group(3)
+        cap_code = f"{cat}.{sufijo}"
         filas.append(
             {
-                "code": f"{cap_code}.01",
-                "name_es": "General",
-                "level": "3",
-                "parent_code": cap_code,
+                "code": cap_code,
+                "name_es": (nombre or sufijo).strip(),
+                "level": "2",
+                "parent_code": cat,
             }
         )
+        for i, elemento in enumerate(x.strip() for x in c[1].split("·")):
+            if not elemento:
+                continue
+            filas.append(
+                {
+                    "code": f"{cap_code}.{i + 1:02d}",
+                    "name_es": elemento,
+                    "level": "3",
+                    "parent_code": cap_code,
+                }
+            )
     return filas
 
 

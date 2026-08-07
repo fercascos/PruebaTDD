@@ -282,7 +282,7 @@ envejecen mal.
 
 > **Distinción importante** `[REC]`: `zone` (catálogo, §3.3.2) y `location_node` (árbol físico del
 > edificio) son cosas distintas y ambas necesarias. `zone` es la **clasificación normalizada** que
-> exige el CAPEX («Cubierta», «Cuadros técnicos»), común a todos los proyectos y dependiente de la
+> exige el CAPEX («Cubierta», «Cuartos técnicos»), común a todos los proyectos y dependiente de la
 > tipología. `location_node` es la **ubicación concreta** de este edificio («Cubierta / Sala de
 > máquinas 2»). Una línea de CAPEX usa `zone`; una fotografía puede usar ambas. Fundirlas obligaría a
 > elegir entre poder agregar por zona en el informe o poder localizar una foto en el edificio.

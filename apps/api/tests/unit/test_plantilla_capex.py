@@ -282,3 +282,32 @@ def test_la_categoria_h15_coincide_con_su_bloque_en_las_dos_plantillas() -> None
         if isinstance(cabecera, str) and not cabecera.startswith("="):
             assert categoria == cabecera, f"{idioma}: {categoria!r} != {cabecera!r}"
         libro.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  El puente entre el catálogo y la plantilla
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_todo_el_catalogo_tiene_etiqueta_en_las_dos_plantillas() -> None:
+    """Si el catálogo crece y la plantilla no, la exportación escribiría un
+    valor fuera de la lista del desplegable: la hoja se abriría bien y las
+    tablas dinámicas dejarían esa fila fuera, sin decir nada."""
+    from tdd.exports.vocabulario_capex import _casillas_de_objeto
+
+    codigos = set(_casillas_de_objeto())
+    assert codigos, "no se ha construido el puente catálogo → plantilla"
+    for idioma in IDIOMAS:
+        faltan = [c for c in codigos if leer(idioma).objetos.get(c) is None]
+        assert faltan == [], f"{idioma}: sin etiqueta para {faltan}"
+
+
+def test_el_general_de_medioambiental_no_se_empareja_por_posicion() -> None:
+    """El caso que rompió el emparejamiento posicional: el catálogo conserva
+    `General` el primero para no renumerar lo ya codificado, y la plantilla lo
+    pone el último de su lista. Por índice, `MA.General.01` habría salido
+    escrito como «Situación legal»."""
+    assert leer("es").objeto("MA.General.01") == "General"
+    assert leer("en").objeto("MA.General.01") == "General"
+    assert leer("es").objeto("MA.General.02") == "Situación legal"
+    assert leer("en").objeto("MA.General.02") == "Legal status"

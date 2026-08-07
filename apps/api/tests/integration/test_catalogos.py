@@ -59,7 +59,7 @@ def test_los_csv_no_divergen_del_documento_de_diseno() -> None:
     [
         ("asset_typology", 6, "tipologías [REQ] P-01"),
         ("zone", 20, "zonas normalizadas"),
-        ("capex_code", 125, "nodos del árbol de códigos"),
+        ("capex_code", 153, "nodos del árbol de códigos"),
         ("risk_level", 4, "grados de riesgo"),
         ("capex_concept", 10, "conceptos"),
         ("time_horizon", 5, "horizontes"),
@@ -82,7 +82,11 @@ def test_la_matriz_tiene_86_relaciones(motor_admin) -> None:
 
 
 def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
-    """4 categorías + 18 capítulos + 103 elementos = 125 nodos."""
+    """4 categorías + 21 capítulos + 128 elementos = 153 nodos.
+
+    Los recuentos crecieron al cerrar P-03 con la plantilla CAPEX vigente:
+    Medioambiental pasó de 1 elemento a 13, ESG de 1 a 11, y Soft Costs ganó
+    los capítulos `S01`, `S02` y `S03` con su `General` cada uno."""
     with motor_admin.connect() as c:
         por_nivel = dict(
             c.execute(
@@ -92,7 +96,7 @@ def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
                 )
             ).all()
         )
-    assert por_nivel == {1: 4, 2: 18, 3: 103}
+    assert por_nivel == {1: 4, 2: 21, 3: 128}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -211,10 +215,12 @@ def test_el_path_ltree_es_coherente_con_la_jerarquia(motor_admin) -> None:
         assert n == 16, "H09 Electricidad: el capítulo y sus 15 elementos"
 
 
-def test_las_tres_categorias_sin_desglose_son_utilizables(motor_admin) -> None:
-    """P-03 · MA, ESG y SC se siembran con capítulo y elemento «General»."""
+def test_las_categorias_que_cerraron_p03_tienen_su_desglose(motor_admin) -> None:
+    """P-03 · MA, ESG y SC se sembraron con un «General» provisional hasta que
+    llegó la plantilla CAPEX vigente. Ahora traen su desglose."""
+    esperado = {"MA": 13, "ESG": 11, "SC": 4}
     with motor_admin.connect() as c:
-        for cat in ("MA", "ESG", "SC"):
+        for cat, cuantos in esperado.items():
             n = c.execute(
                 text(
                     "SELECT count(*) FROM capex_code "
@@ -222,7 +228,27 @@ def test_las_tres_categorias_sin_desglose_son_utilizables(motor_admin) -> None:
                 ),
                 {"c": cat},
             ).scalar_one()
-            assert n == 1, f"{cat} debe tener un elemento «General» seleccionable"
+            assert n == cuantos, f"{cat} debe tener {cuantos} elementos, tiene {n}"
+
+
+def test_el_general_de_p03_conserva_su_codigo(motor_admin) -> None:
+    """`[REQ]` §5.3 prometió cerrar P-03 **sin migración de datos**. Si
+    `MA.General.01` dejara de ser «General», toda línea de CAPEX ya codificada
+    pasaría a decir otra cosa sin que nadie la tocara."""
+    with motor_admin.connect() as c:
+        filas = dict(
+            c.execute(
+                text(
+                    "SELECT code, name_es FROM capex_code "
+                    "WHERE code IN ('MA.General.01', 'ESG.General.01', 'SC.General.01')"
+                )
+            ).all()
+        )
+    assert filas == {
+        "MA.General.01": "General",
+        "ESG.General.01": "General",
+        "SC.General.01": "General",
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
