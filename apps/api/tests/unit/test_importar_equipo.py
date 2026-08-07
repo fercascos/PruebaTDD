@@ -25,8 +25,8 @@ OFICINAS = Activo(id="a-ofi", name="Edificio de Oficinas", asset_code=None)
 ACTIVOS = [NAVE, OFICINAS]
 
 SISTEMAS = [
-    Sistema(id="s-clima", code="CLIMATIZACION", name_es="Climatización"),
-    Sistema(id="s-asc", code="ASCENSORES", name_es="Ascensores"),
+    Sistema(id="s-clima", code="CLIMA", name_es="Climatización"),
+    Sistema(id="s-asc", code="ASC", name_es="Ascensores"),
 ]
 
 CABECERA = [
@@ -118,7 +118,7 @@ def test_falta_el_tipo_de_equipo() -> None:
 
 
 def test_el_sistema_casa_sin_tildes_y_en_cualquier_caja() -> None:
-    resultado = correr([fila("NAVE-A", "CL-01", "Enfriadora", "CLIMATIZACION")])
+    resultado = correr([fila("NAVE-A", "CL-01", "Enfriadora", "CLIMA")])
     assert resultado.filas[0].valores["technical_system_id"] == "s-clima"
 
 

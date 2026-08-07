@@ -12,6 +12,7 @@ from tdd.evidence.naming import (
     LONGITUD_MAXIMA,
     PLANTILLA_POR_DEFECTO,
     generar_nombre,
+    iniciales,
     numero_correlativo,
     resolver_colisiones,
     sanear,
@@ -184,3 +185,27 @@ def test_el_correlativo_se_rellena_con_ceros() -> None:
 def test_el_correlativo_no_se_trunca_si_se_pasa_de_digitos() -> None:
     """Con más de 999 fotos —que las hay— el número crece, no se corta."""
     assert numero_correlativo(1234) == "1234"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Iniciales del autor (§15.4 · token `[Autor]`)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_las_iniciales_son_dos_como_mucho() -> None:
+    """«Ana María López Ruiz» daría `AMLR`, que ya no es una inicial sino una
+    matrícula, y en un fichero se lee peor que el nombre entero."""
+    assert iniciales("Ana López") == "AL"
+    assert iniciales("Ana María López Ruiz") == "AM"
+    assert iniciales("Álvaro") == "A"
+
+
+def test_las_iniciales_se_toman_antes_de_sanear() -> None:
+    """`sanear` colapsa los espacios: «Ana López» sale como «AnaLopez» y
+    después ya no hay palabras que separar. La primera versión devolvía `A`."""
+    assert iniciales("Ana López") == "AL"
+
+
+def test_sin_nombre_no_hay_iniciales_y_el_token_se_omite() -> None:
+    assert iniciales(None) is None
+    assert iniciales("   ") is None

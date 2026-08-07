@@ -71,7 +71,7 @@ def test_el_mapeo_a_capitulos_conserva_el_que_apunta_a_dos(cliente: TestClient, 
     a elegir uno de los dos y habría perdido justo lo que motiva la distinción.
     """
     r = cliente.get(f"{RUTA}/catalogs/technical-systems", headers=cab("consultor_a"))
-    pci = next(s for s in r.json() if s["code"] == "PROTECCION_CONTRA_INCENDIOS")
+    pci = next(s for s in r.json() if s["code"] == "PCI")
     assert pci["capex_chapter"] == "H06 + H10"
 
 
@@ -266,8 +266,8 @@ def test_se_filtra_por_sistema_tecnico(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
     sistemas = cliente.get(f"{RUTA}/catalogs/technical-systems", headers=cab("consultor_a")).json()
-    clima = next(s for s in sistemas if s["code"] == "CLIMATIZACION")
-    ascensores = next(s for s in sistemas if s["code"] == "ASCENSORES")
+    clima = next(s for s in sistemas if s["code"] == "CLIMA")
+    ascensores = next(s for s in sistemas if s["code"] == "ASC")
 
     alta(cliente, cab, proyecto, activo, tag="C1", technical_system_id=clima["id"])
     alta(cliente, cab, proyecto, activo, tag="A1", technical_system_id=ascensores["id"])

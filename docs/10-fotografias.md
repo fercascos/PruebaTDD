@@ -152,18 +152,20 @@ demostrada (P-20).
 |---|---|---|---|
 | `[Proyecto]` | `project.internal_code` | `2026-014` | — |
 | `[ProyectoNombre]` | `project.name` saneado | `CarteraLogisticaNorte` | — |
-| `[Activo]` | `asset.asset_code` o `asset.name` | `NaveA` | `SinActivo` |
-| `[Sistema]` | `technical_system.code` | `CLIMA` | `SinSistema` |
+| `[Activo]` | `asset.asset_code`; si no lo tiene, `asset.name` | `NN` | `SinActivo` |
+| `[Sistema]` | `photo.technical_system_id` → `technical_system.code` | `CLIMA` | `SinSistema` |
 | `[Zona]` | `zone.code` (catálogo) | `Cubierta` | se omite con su separador |
 | `[Espacio]` | `location_node` | `SalaMaquinas` | se omite |
-| `[Capitulo]` | capítulo del código CAPEX | `H08` | se omite |
+| `[Capitulo]` | capítulo (nivel 2) del código CAPEX de la foto | `H08` | se omite |
 | `[Categoria]` | `photo_category` | `Climatizacion` | `Otros` |
 | `[Fecha]` / `[Hora]` | `taken_at` o `uploaded_at` | `20260715` / `1142` | fecha de carga / se omite |
 | `[Numero]` | correlativo | `007` | — |
-| `[Autor]` | iniciales | `AL` | — |
+| `[Autor]` | iniciales de quien subió la foto, **dos como mucho** | `AL` | se omite |
 | `[Etiqueta]` | primera etiqueta | `corrosion` | se omite |
 
-### Reglas de saneado `[REC]`
+`[PDV]` **`[Espacio]` es el único token que sigue sin rellenarse**: depende de `location_node`, el
+árbol físico fino, que no está construido. Se omite con su separador, así que una plantilla que lo
+use no produce un nombre roto, solo un campo menos.
 
 1. Transliteración a ASCII: `Cubierta Nº1` → `CubiertaN1`; `Añadido` → `Anadido`.
 2. Caracteres prohibidos (`/ \ : * ? " < > |`) y de control → `-`.

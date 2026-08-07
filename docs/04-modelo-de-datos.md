@@ -526,6 +526,10 @@ quien no, no la ve. La vida residual se calcula, no se teclea (P-15).
 se añade como columna anulable sin tocar nada de lo demás.
 
 #### `technical_system` — los 14 sistemas de §3.2 `[REQ]`
+
+Lo referencian **`equipment`** (§7) y **`photo`** (§15): es el eje transversal que agrupa el
+inventario y clasifica la fotografía.
+
 `id` · `organization_id` NULL · `code` · `name_es` · `capex_chapter` · `sort_order` · `is_system`.
 
 `capex_chapter` es **texto y no clave ajena** por lo que dice §5.8: «Protección contra incendios» es

@@ -39,11 +39,15 @@ export function Subida({
   projectId,
   assetId,
   zoneId,
+  technicalSystemId,
   alTerminar,
 }: {
   projectId: string
   assetId?: string
   zoneId?: string
+  /** `[REQ]` §3.2 · Clasificar al disparar: en la sala de máquinas se sabe que
+   *  la foto es de climatización, y clasificarla después son 400 clics. */
+  technicalSystemId?: string
   alTerminar: () => void
 }) {
   const [elementos, setElementos] = useState<ElementoDeCola[]>([])
@@ -80,6 +84,7 @@ export function Subida({
           origin: elemento.origen,
           asset_id: assetId,
           zone_id: zoneId,
+          technical_system_id: technicalSystemId,
         })
         return { tipo: 'ok' as const, photoId: foto.id }
       } catch (e) {
@@ -95,7 +100,7 @@ export function Subida({
         }
       }
     },
-    [projectId, assetId, zoneId],
+    [projectId, assetId, zoneId, technicalSystemId],
   )
 
   async function anadir(archivos: FileList | null, origen: Origen) {

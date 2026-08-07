@@ -60,6 +60,8 @@ export type Foto = {
   project_id: string
   asset_id: string | null
   zone_id: string | null
+  /** `[REQ]` §3.2 · Alimenta el token `[Sistema]` del renombrado en lote. */
+  technical_system_id: string | null
   status: string
   origin: string
   original_filename: string

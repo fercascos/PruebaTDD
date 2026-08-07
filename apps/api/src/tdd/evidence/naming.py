@@ -85,6 +85,26 @@ class NombreGenerado:
         return f"{self.nombre}{self.extension}"
 
 
+def iniciales(nombre_completo: str | None) -> str | None:
+    """`AL` a partir de «Ana López». `None` si no hay nombre.
+
+    `[REQ]` §15.4 · El token `[Autor]` son iniciales, no el nombre entero: un
+    nombre completo en cada fichero deja nombres de 60 caracteres y, en un
+    entregable que sale de la organización, expone quién estuvo en la visita
+    con más detalle del que hace falta para identificar una fotografía.
+
+    Se toman como mucho **dos**: los nombres compuestos españoles («Ana María
+    López Ruiz») producirían `AMLR`, que ya no es una inicial sino una matrícula.
+    """
+    if not nombre_completo:
+        return None
+    # Se separa ANTES de sanear: `sanear` colapsa los espacios —«Ana López» sale
+    # como «AnaLopez»— y después ya no hay palabras que separar.
+    partes = [sanear(p) for p in nombre_completo.split()]
+    letras = "".join(p[0] for p in partes[:2] if p).upper()
+    return letras or None
+
+
 def _recortar(nombre: str, sufijo_numerico: str) -> str:
     """Recorta preservando **siempre** el sufijo numérico `[REQ]` regla 6.
 

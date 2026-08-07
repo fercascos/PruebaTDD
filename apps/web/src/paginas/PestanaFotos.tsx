@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
-import type { Activo, Foto } from '../api/tipos'
+import type { Activo, Foto, SistemaTecnico } from '../api/tipos'
 import { DetalleDeFoto } from '../fotos/DetalleDeFoto'
 import { Imagen } from '../fotos/Imagen'
 import { RenombradoEnLote } from '../fotos/RenombradoEnLote'
@@ -13,6 +13,9 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[]>([])
   const [activoElegido, setActivoElegido] = useState('')
   const [filtroActivo, setFiltroActivo] = useState('')
+  const [sistemas, setSistemas] = useState<SistemaTecnico[]>([])
+  const [sistemaElegido, setSistemaElegido] = useState('')
+  const [filtroSistema, setFiltroSistema] = useState('')
   const [soloInforme, setSoloInforme] = useState(false)
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
   const [abierta, setAbierta] = useState<Foto | null>(null)
@@ -22,6 +25,7 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
   const recargar = useCallback(() => {
     const filtros = new URLSearchParams()
     if (filtroActivo) filtros.set('asset_id', filtroActivo)
+    if (filtroSistema) filtros.set('technical_system_id', filtroSistema)
     if (soloInforme) filtros.set('include_in_report', 'true')
     obtener<Foto[]>(`/projects/${projectId}/photos?${filtros}`)
       .then((lista) => {
@@ -32,13 +36,16 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
         setAbierta((actual) => (actual ? (lista.find((f) => f.id === actual.id) ?? null) : null))
       })
       .catch((e: Error) => setError(e.message))
-  }, [projectId, filtroActivo, soloInforme])
+  }, [projectId, filtroActivo, filtroSistema, soloInforme])
 
   useEffect(() => {
     recargar()
     obtener<Activo[]>(`/projects/${projectId}/assets`)
       .then(setActivos)
       .catch(() => setActivos([]))
+    obtener<SistemaTecnico[]>('/catalogs/technical-systems')
+      .then(setSistemas)
+      .catch(() => setSistemas([]))
   }, [projectId, recargar])
 
   function alternar(id: string) {
@@ -89,6 +96,20 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
             ))}
           </select>
         </label>
+        {/* [REQ] §3.2 · El sistema técnico es la clasificación transversal, y
+            además es lo que alimenta el token `[Sistema]` del nombre de
+            fichero: sin él, el renombrado en lote escribe «SinSistema». */}
+        <label>
+          Sistema técnico de lo que se suba
+          <select value={sistemaElegido} onChange={(e) => setSistemaElegido(e.target.value)}>
+            <option value="">Sin clasificar</option>
+            {sistemas.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name_es}
+              </option>
+            ))}
+          </select>
+        </label>
         <label>
           Ver solo las de
           <select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)}>
@@ -96,6 +117,17 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
             {activos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          y del sistema
+          <select value={filtroSistema} onChange={(e) => setFiltroSistema(e.target.value)}>
+            <option value="">Todos los sistemas</option>
+            {sistemas.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name_es}
               </option>
             ))}
           </select>
@@ -110,7 +142,12 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
         </label>
       </div>
 
-      <Subida projectId={projectId} assetId={activoElegido || undefined} alTerminar={recargar} />
+      <Subida
+        projectId={projectId}
+        assetId={activoElegido || undefined}
+        technicalSystemId={sistemaElegido || undefined}
+        alTerminar={recargar}
+      />
 
       {seleccion.size > 0 && (
         <div className="barra-seleccion">
@@ -132,6 +169,15 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
               onClick={() => void enLote({ asset_id: activoElegido })}
             >
               Asignar al activo elegido
+            </button>
+          )}
+          {sistemaElegido && (
+            <button
+              type="button"
+              className="secundario"
+              onClick={() => void enLote({ technical_system_id: sistemaElegido })}
+            >
+              Clasificar en {sistemas.find((s) => s.id === sistemaElegido)?.name_es}
             </button>
           )}
           <RenombradoEnLote
@@ -158,7 +204,7 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
         <p className="cargando">Cargando fotografías…</p>
       ) : fotos.length === 0 ? (
         <Vacio>
-          {filtroActivo || soloInforme
+          {filtroActivo || filtroSistema || soloInforme
             ? 'Ninguna fotografía cumple el filtro.'
             : 'Todavía no hay fotografías. Use los botones de arriba para añadirlas.'}
         </Vacio>
@@ -192,6 +238,11 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
                 {f.gps_latitude !== null && <span className="marca">con GPS</span>}
                 {f.taken_at === null && <span className="marca aviso">sin fecha</span>}
                 {f.asset_id === null && <span className="marca aviso">sin activo</span>}
+                {f.technical_system_id === null && (
+                  <span className="marca aviso" title="El renombrado escribirá «SinSistema»">
+                    sin sistema
+                  </span>
+                )}
               </p>
             </li>
           ))}

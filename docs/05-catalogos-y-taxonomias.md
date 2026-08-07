@@ -380,22 +380,28 @@ propiedad» es una de las primeras preguntas de un inversor, y hoy suele calcula
 `[REQ]` §3.2 propone una clasificación de fotografías de 14 categorías. Coincide en buena parte con
 los capítulos de Hard Costs, pero no del todo.
 
-| Categoría de foto (§3.2) | Capítulo equivalente |
-|---|---|
-| Fachada y envolvente | H03 |
-| Cubierta | H02 |
-| Estructura | H01 |
-| Zonas interiores | H04 |
-| Climatización | H08 |
-| Electricidad | H09 |
-| Fontanería y saneamiento | H11 |
-| Protección contra incendios | H06 + H10 |
-| Ascensores | H12 |
-| Seguridad | H13 |
-| Urbanización exterior | H05 |
-| Accesibilidad | H07 |
-| Sostenibilidad | ESG |
-| Otros | H15 |
+| Categoría de foto (§3.2) | Código | Capítulo equivalente |
+|---|---|---|
+| Fachada y envolvente | `FACH` | H03 |
+| Cubierta | `CUB` | H02 |
+| Estructura | `EST` | H01 |
+| Zonas interiores | `INT` | H04 |
+| Climatización | `CLIMA` | H08 |
+| Electricidad | `ELEC` | H09 |
+| Fontanería y saneamiento | `FONT` | H11 |
+| Protección contra incendios | `PCI` | H06 + H10 |
+| Ascensores | `ASC` | H12 |
+| Seguridad | `SEG` | H13 |
+| Urbanización exterior | `URB` | H05 |
+| Accesibilidad | `ACC` | H07 |
+| Sostenibilidad | `SOST` | ESG |
+| Otros | `OTROS` | H15 |
+
+`[REC]` **Los códigos son cortos y sin guion bajo a propósito.** Van al nombre del fichero por el
+token `[Sistema]` (§15.4), y el guion bajo es el separador de la plantilla: un
+`PROTECCION_CONTRA_INCENDIOS` produciría `2026-014_NaveA_PROTECCION_CONTRA_INCENDIOS_Cubierta_001`,
+donde ya no se distingue dónde acaba un campo y empieza el siguiente. Son las abreviaturas de uso
+corriente en construcción —`PCI` es la universal—, no siglas inventadas para el proyecto.
 
 `[REC]` Se mantiene la clasificación de fotos como catálogo propio (`technical_system`) **mapeado** a
 los capítulos, en lugar de fundirlos. Motivos: «Protección contra incendios» es una sola categoría

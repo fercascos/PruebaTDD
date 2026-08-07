@@ -1,15 +1,15 @@
 code,name_es,capex_chapter,sort_order
-FACHADA_Y_ENVOLVENTE,Fachada y envolvente,H03,10
-CUBIERTA,Cubierta,H02,20
-ESTRUCTURA,Estructura,H01,30
-ZONAS_INTERIORES,Zonas interiores,H04,40
-CLIMATIZACION,Climatización,H08,50
-ELECTRICIDAD,Electricidad,H09,60
-FONTANERIA_Y_SANEAMIENTO,Fontanería y saneamiento,H11,70
-PROTECCION_CONTRA_INCENDIOS,Protección contra incendios,H06 + H10,80
-ASCENSORES,Ascensores,H12,90
-SEGURIDAD,Seguridad,H13,100
-URBANIZACION_EXTERIOR,Urbanización exterior,H05,110
-ACCESIBILIDAD,Accesibilidad,H07,120
-SOSTENIBILIDAD,Sostenibilidad,ESG,130
+FACH,Fachada y envolvente,H03,10
+CUB,Cubierta,H02,20
+EST,Estructura,H01,30
+INT,Zonas interiores,H04,40
+CLIMA,Climatización,H08,50
+ELEC,Electricidad,H09,60
+FONT,Fontanería y saneamiento,H11,70
+PCI,Protección contra incendios,H06 + H10,80
+ASC,Ascensores,H12,90
+SEG,Seguridad,H13,100
+URB,Urbanización exterior,H05,110
+ACC,Accesibilidad,H07,120
+SOST,Sostenibilidad,ESG,130
 OTROS,Otros,H15,140

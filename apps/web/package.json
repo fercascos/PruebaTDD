@@ -15,6 +15,7 @@
     "test:comparador": "node herramientas/comprobar-comparador.mjs",
     "test:inventario": "node herramientas/comprobar-inventario.mjs",
     "test:importacion": "node herramientas/comprobar-importacion.mjs",
+    "test:sistema-fotos": "node herramientas/comprobar-sistema-de-fotos.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json"
   },
   "dependencies": {

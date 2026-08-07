@@ -994,6 +994,15 @@ CREATE TABLE photo (
     asset_id          UUID REFERENCES asset(id) ON DELETE SET NULL,
     zone_id           UUID REFERENCES zone(id),
     capex_code_id     UUID REFERENCES capex_code(id),
+    -- [REQ] §3.2 · La clasificación transversal por sistema técnico. Es lo que
+    -- alimenta el token `[Sistema]` del renombrado en lote, que hasta ahora
+    -- escribía siempre «SinSistema» porque este dato no se guardaba en ningún
+    -- sitio: la plantilla por defecto lo pide y no había de dónde sacarlo.
+    --
+    -- Es distinto de `photo_category`, que es texto libre (§15.4 lo separa a
+    -- propósito): uno clasifica contra el catálogo de 14 y el otro es una
+    -- etiqueta suelta del equipo.
+    technical_system_id UUID REFERENCES technical_system(id),
 
     stored_object_id  UUID NOT NULL REFERENCES stored_object(id),
     origin            photo_origin NOT NULL DEFAULT 'ORDENADOR',
@@ -1072,6 +1081,9 @@ CREATE INDEX photo_informe_idx  ON photo (project_id, include_in_report, report_
 CREATE INDEX photo_phash_idx    ON photo (project_id, phash) WHERE phash IS NOT NULL;
 CREATE INDEX photo_exif_idx     ON photo USING GIN (exif_raw);
 CREATE INDEX photo_etiquetas_idx ON photo USING GIN (tags);
+-- Filtrar «las fotos de climatización de este encargo» es lo primero que se
+-- hace al montar el informe, y en una visita de 400 fotos sin índice se nota.
+CREATE INDEX photo_sistema_idx  ON photo (project_id, technical_system_id);
 
 -- ── Barrera 3 aplicada a la fotografía ──────────────────────────────────────
 -- El disparador de `stored_object` ya protege el binario. Este protege la

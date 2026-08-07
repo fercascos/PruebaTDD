@@ -265,13 +265,16 @@ def sistemas_tecnicos(doc: str) -> list[dict[str, str]]:
         if not linea.startswith("|") or "---" in linea:
             continue
         c = _celdas(linea)
-        if len(c) < 2 or c[0].startswith("Categoría"):
+        if len(c) < 3 or c[0].startswith("Categoría"):
             continue
         filas.append(
             {
-                "code": _slug(c[0]),
+                # El código va en el documento y NO se deriva del nombre: `_slug`
+                # daría `PROTECCION_CONTRA_INCENDIOS`, y el guion bajo es el
+                # separador de la plantilla de nombres (§15.4).
+                "code": c[1].strip("`"),
                 "name_es": c[0],
-                "capex_chapter": c[1],
+                "capex_chapter": c[2],
                 # El orden es el de §3.2, que sigue el recorrido de una visita:
                 # envolvente, luego interior, luego instalaciones. Alfabético
                 # dejaría «Accesibilidad» delante de «Cubierta».

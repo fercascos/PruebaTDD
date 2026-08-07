@@ -60,7 +60,7 @@ const sistemas = await api('GET', '/catalogs/technical-systems', null, tk)
 if (sistemas.length !== 14) {
   fallos.push(`Se esperaban 14 sistemas técnicos sembrados, hay ${sistemas.length}`)
 }
-const clima = sistemas.find((s) => s.code === 'CLIMATIZACION')
+const clima = sistemas.find((s) => s.code === 'CLIMA')
 
 // Una enfriadora con la vida agotada y un ascensor recién puesto: la lista
 // tiene que distinguirlos sin que nadie mire el color.

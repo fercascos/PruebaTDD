@@ -859,3 +859,154 @@ def test_sin_derivado_se_sirve_el_original_en_vez_de_un_hueco(
     )
     assert r.status_code == 200
     assert r.content == datos
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los tokens que estaban mudos
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def clima(motor_admin: Any) -> dict[str, str]:
+    with motor_admin.begin() as conn:
+        fila = conn.execute(
+            text("SELECT id, code FROM technical_system WHERE code = 'CLIMA'")
+        ).one()
+    return {"id": str(fila.id), "code": fila.code}
+
+
+def test_el_token_sistema_deja_de_escribir_siempre_sinsistema(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, clima: dict[str, str]
+) -> None:
+    """`[REQ]` §15.4 · Es el defecto que motivó la migración 0003.
+
+    La plantilla por defecto lleva `[Sistema]`, pero la fotografía no guardaba
+    el sistema técnico en ninguna parte: **todo renombrado en lote escribía
+    «SinSistema»**, y nadie lo miraba porque el nombre salía plausible.
+    """
+    foto = subir(
+        cliente, cab, proyecto, foto_unica(), asset_id=activo, technical_system_id=clima["id"]
+    ).json()
+    assert foto["technical_system_id"] == clima["id"]
+
+    plan = cliente.post(
+        f"{RUTA}/photos/bulk-rename",
+        headers=cab("consultor_a"),
+        json={"photo_ids": [foto["id"]], "numerar_desde": 1},
+    ).json()
+    propuesto = plan["cambios"][0]["despues"]
+    assert "SinSistema" not in propuesto
+    assert clima["code"] in propuesto
+
+
+def test_una_foto_sin_clasificar_sigue_diciendo_sinsistema(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """El relleno no era el error: el error era que fuese SIEMPRE. En campo se
+    dispara antes de clasificar, y esa foto tiene que poder renombrarse igual."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    plan = cliente.post(
+        f"{RUTA}/photos/bulk-rename",
+        headers=cab("consultor_a"),
+        json={"photo_ids": [foto["id"]], "numerar_desde": 1},
+    ).json()
+    assert "SinSistema" in plan["cambios"][0]["despues"]
+
+
+def test_el_token_autor_son_las_iniciales_de_quien_subio(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Estaba fijado a `None` en el código: el token existía en la
+    documentación y no se rellenaba nunca."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    plan = cliente.post(
+        f"{RUTA}/photos/bulk-rename",
+        headers=cab("consultor_a"),
+        json={
+            "photo_ids": [foto["id"]],
+            "template": "[Proyecto]_[Autor]_[Numero]",
+            "numerar_desde": 1,
+        },
+    ).json()
+    # El usuario de la suite se llama «consultor_a»: una sola palabra, una inicial.
+    assert plan["cambios"][0]["despues"] == "2026-014_C_001"
+
+
+def test_el_token_capitulo_sale_del_codigo_capex_de_la_foto(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, motor_admin: Any
+) -> None:
+    """`[Capitulo]` es el capítulo de coste, «H08», no el código entero: una
+    foto clasificada en `HC.H08.03` pertenece al capítulo `HC.H08`."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    with motor_admin.begin() as conn:
+        codigo = conn.execute(
+            text("SELECT id FROM capex_code WHERE code LIKE 'HC.H08.%' AND level = 3 LIMIT 1")
+        ).scalar_one()
+        conn.execute(
+            text("UPDATE photo SET capex_code_id = :c WHERE id = :i"),
+            {"c": str(codigo), "i": foto["id"]},
+        )
+    plan = cliente.post(
+        f"{RUTA}/photos/bulk-rename",
+        headers=cab("consultor_a"),
+        json={
+            "photo_ids": [foto["id"]],
+            "template": "[Proyecto]_[Capitulo]_[Numero]",
+            "numerar_desde": 1,
+        },
+    ).json()
+    assert plan["cambios"][0]["despues"] == "2026-014_H08_001"
+
+
+def test_el_token_activo_prefiere_el_codigo_del_activo(
+    cliente: TestClient, cab: Any, proyecto: str, motor_admin: Any, datos_base: dict[str, Any]
+) -> None:
+    """§15.4 dice «`asset.asset_code` o `asset.name`». La consulta usaba solo el
+    nombre, así que el código —que es más corto y es como el equipo llama al
+    edificio— no llegaba nunca al fichero."""
+    with motor_admin.begin() as conn:
+        tipologia = conn.execute(text("SELECT id FROM asset_typology LIMIT 1")).scalar_one()
+        con_codigo = conn.execute(
+            text(
+                "INSERT INTO asset (organization_id, project_id, typology_id, name, asset_code) "
+                "VALUES (:o, :p, :t, 'Edificio de Oficinas Torre Norte', 'TN') RETURNING id"
+            ),
+            {
+                "o": str(datos_base["org_a"]),
+                "p": str(datos_base["proyecto_a"]),
+                "t": str(tipologia),
+            },
+        ).scalar_one()
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=str(con_codigo)).json()
+    plan = cliente.post(
+        f"{RUTA}/photos/bulk-rename",
+        headers=cab("consultor_a"),
+        json={
+            "photo_ids": [foto["id"]],
+            "template": "[Proyecto]_[Activo]_[Numero]",
+            "numerar_desde": 1,
+        },
+    ).json()
+    assert plan["cambios"][0]["despues"] == "2026-014_TN_001"
+
+
+def test_se_clasifican_en_lote_y_se_filtran_por_sistema(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, clima: dict[str, str]
+) -> None:
+    """Clasificar «las de la cubierta» de una vez es lo que hace usable una
+    visita de 400 fotos."""
+    ids = [
+        subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()["id"] for _ in range(3)
+    ]
+    r = cliente.post(
+        f"{RUTA}/photos/bulk-update",
+        headers=cab("consultor_a"),
+        json={"photo_ids": ids[:2], "technical_system_id": clima["id"]},
+    )
+    assert r.status_code == 200, r.text
+
+    filtradas = cliente.get(
+        f"{RUTA}/projects/{proyecto}/photos?asset_id={activo}&technical_system_id={clima['id']}",
+        headers=cab("consultor_a"),
+    ).json()
+    assert {f["id"] for f in filtradas} == set(ids[:2])

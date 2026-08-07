@@ -56,7 +56,12 @@ from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import images, storage
-from tdd.evidence.naming import PLANTILLA_POR_DEFECTO, resolver_colisiones, sanear
+from tdd.evidence.naming import (
+    PLANTILLA_POR_DEFECTO,
+    iniciales,
+    resolver_colisiones,
+    sanear,
+)
 from tdd.evidence.service import (
     ContextoDeFoto,
     EstadoDeFoto,
@@ -115,6 +120,9 @@ class Foto(BaseModel):
     project_id: uuid.UUID
     asset_id: uuid.UUID | None
     zone_id: uuid.UUID | None
+    #: `[REQ]` §3.2 · La clasificación transversal. Alimenta el token
+    #: `[Sistema]` del renombrado, que sin esto escribía siempre «SinSistema».
+    technical_system_id: uuid.UUID | None = None
     status: str
     origin: str
     original_filename: str
@@ -152,6 +160,7 @@ class ActualizarFoto(BaseModel):
 
     asset_id: uuid.UUID | None = None
     zone_id: uuid.UUID | None = None
+    technical_system_id: uuid.UUID | None = None
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     caption: str | None = None
     description: str | None = None
@@ -230,7 +239,8 @@ class Enlace(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 _COLUMNAS = """
-    id, project_id, asset_id, zone_id, status::text AS status, origin::text AS origin,
+    id, project_id, asset_id, zone_id, technical_system_id,
+    status::text AS status, origin::text AS origin,
     original_filename, display_name, file_extension, mime_type, sha256, phash,
     byte_size, width_px, height_px, taken_at, gps_latitude, gps_longitude,
     camera_model, caption, tags, include_in_report, report_order
@@ -320,6 +330,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     origin: Annotated[str, Form()] = "ORDENADOR",
     asset_id: Annotated[uuid.UUID | None, Form()] = None,
     zone_id: Annotated[uuid.UUID | None, Form()] = None,
+    technical_system_id: Annotated[uuid.UUID | None, Form()] = None,
     caption: Annotated[str | None, Form()] = None,
 ) -> Any:
     """Da de alta la foto y sus derivados. **El original se guarda tal cual llegó.**
@@ -388,13 +399,14 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
         text(
             """
             INSERT INTO photo (
-                id, organization_id, project_id, asset_id, zone_id, stored_object_id,
+                id, organization_id, project_id, asset_id, zone_id, technical_system_id,
+                stored_object_id,
                 origin, status, original_filename, display_name, file_extension, mime_type,
                 sha256, phash, byte_size, width_px, height_px, taken_at,
                 gps_latitude, gps_longitude, camera_make, camera_model, orientation,
                 exif_raw, caption, duplicate_of_photo_id, uploaded_by
             ) VALUES (
-                :id, :org, :proy, :activo, :zona, :objeto,
+                :id, :org, :proy, :activo, :zona, :sistema, :objeto,
                 CAST(:origen AS photo_origin), 'LISTA', :llegada, :visible, :ext, :mime,
                 :sha, :phash, :bytes, :ancho, :alto, :fecha,
                 :lat, :lon, :marca, :modelo, :orient,
@@ -407,6 +419,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             "org": str(usuario.organization_id),
             "proy": str(project_id),
             "activo": str(asset_id) if asset_id else None,
+            "sistema": str(technical_system_id) if technical_system_id else None,
             "zona": str(zone_id) if zone_id else None,
             "objeto": str(objeto_id),
             "origen": origin if origin in _ORIGENES else "ORDENADOR",
@@ -540,6 +553,7 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
     s: SesionDep,
     asset_id: uuid.UUID | None = None,
     zone_id: uuid.UUID | None = None,
+    technical_system_id: uuid.UUID | None = None,
     estado: str | None = Query(default=None, alias="status"),
     include_in_report: bool | None = None,
     has_gps: bool | None = None,
@@ -555,6 +569,8 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
               AND (CASE WHEN :papelera THEN deleted_at IS NOT NULL ELSE deleted_at IS NULL END)
               AND (CAST(:activo AS uuid) IS NULL OR asset_id = CAST(:activo AS uuid))
               AND (CAST(:zona AS uuid) IS NULL OR zone_id = CAST(:zona AS uuid))
+              AND (CAST(:sistema AS uuid) IS NULL
+                   OR technical_system_id = CAST(:sistema AS uuid))
               AND (CAST(:estado AS text) IS NULL OR status::text = CAST(:estado AS text))
               AND (CAST(:informe AS boolean) IS NULL
                    OR include_in_report = CAST(:informe AS boolean))
@@ -568,6 +584,7 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
             "p": str(project_id),
             "papelera": papelera,
             "activo": str(asset_id) if asset_id else None,
+            "sistema": str(technical_system_id) if technical_system_id else None,
             "zona": str(zone_id) if zone_id else None,
             "estado": estado,
             "informe": include_in_report,
@@ -659,11 +676,22 @@ def renombrar_en_lote(cuerpo: PeticionDeRenombrado, s: SesionDep, usuario: Usuar
             """
             SELECT p.id, p.display_name, p.file_extension, p.photo_category,
                    pr.internal_code AS proyecto, pr.name AS proyecto_nombre,
-                   a.name AS activo, z.code AS zona, p.tags, p.taken_at, p.uploaded_at
+                   COALESCE(a.asset_code, a.name) AS activo, z.code AS zona,
+                   ts.code AS sistema,
+                   -- [Capitulo] es el capítulo de coste, «H08», no el código
+                   -- entero: `HC.H08.03` sale de un elemento de nivel 3, y su
+                   -- capítulo es el nivel 2. `split_part` lo saca de los dos.
+                   split_part(COALESCE(cap.code, cc.code), '.', 2) AS capitulo,
+                   u.full_name AS autor_nombre,
+                   p.tags, p.taken_at, p.uploaded_at
             FROM photo p
             JOIN project pr ON pr.id = p.project_id
             LEFT JOIN asset a ON a.id = p.asset_id
             LEFT JOIN zone  z ON z.id = p.zone_id
+            LEFT JOIN technical_system ts ON ts.id = p.technical_system_id
+            LEFT JOIN capex_code cc ON cc.id = p.capex_code_id
+            LEFT JOIN capex_code cap ON cap.id = cc.parent_id AND cc.level = 3
+            LEFT JOIN app_user u ON u.id = p.uploaded_by
             WHERE p.id = ANY(CAST(:ids AS uuid[])) AND p.deleted_at IS NULL
             ORDER BY p.uploaded_at
             """
@@ -681,11 +709,19 @@ def renombrar_en_lote(cuerpo: PeticionDeRenombrado, s: SesionDep, usuario: Usuar
                 "proyecto_nombre": f.proyecto_nombre,
                 "activo": f.activo,
                 "zona": f.zona,
+                # `[Sistema]`, `[Capitulo]` y `[Autor]` estaban en la tabla de
+                # tokens de la documentación y ninguno se rellenaba: el primero
+                # porque el dato no se guardaba —lo arregla la migración 0003— y
+                # los otros dos porque esta consulta no los traía. La plantilla
+                # por defecto lleva `[Sistema]`, así que **todo renombrado en
+                # lote escribía «SinSistema»**.
+                "sistema": f.sistema,
+                "capitulo": f.capitulo or None,
                 "categoria": f.photo_category,
                 "etiqueta": (f.tags or [None])[0],
                 "fecha": (f.taken_at or f.uploaded_at).strftime("%Y%m%d"),
                 "hora": f.taken_at.strftime("%H%M") if f.taken_at else None,
-                "autor": None,
+                "autor": iniciales(f.autor_nombre),
             },
         )
         for f in filas
@@ -1164,6 +1200,9 @@ class ActualizacionEnLote(BaseModel):
     photo_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     asset_id: uuid.UUID | None = None
     zone_id: uuid.UUID | None = None
+    #: Clasificar «las de la cubierta» de una vez es lo que hace usable una
+    #: visita de 400 fotos, y es justo lo que alimenta el nombre del fichero.
+    technical_system_id: uuid.UUID | None = None
     photo_category: str | None = Field(default=None, max_length=60)
     include_in_report: bool | None = None
     report_section: str | None = Field(default=None, max_length=60)
