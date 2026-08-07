@@ -408,3 +408,21 @@ def test_el_tipo_de_coste_medioambiental_esta_bien_escrito() -> None:
     libro.close()
     assert "Medioambiente" in _nombres_definidos("es")
     assert "Mediambiente" not in _nombres_definidos("es")
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_cada_bloque_suma_sus_propias_filas(idioma: str) -> None:
+    """El subtotal de `S03.Licencias y Tasas` sumaba `J255:J255` —una fila
+    vacía— en vez de sus diez líneas. Los honorarios ECLU, la licencia de obras
+    y las otras licencias se calculaban bien en sus celdas y **no llegaban a
+    ningún total**: 6,5 % de los hard costs desaparecía sin dejar rastro."""
+    libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+    capex = libro["CapEx"]
+    malos = []
+    for bloque in GEOMETRIA:
+        esperado = f"SUM(J{bloque.primera}:J{bloque.ultima})"
+        real = str(capex[f"J{bloque.subtotal}"].value or "").lstrip("=")
+        if real != esperado:
+            malos.append((bloque.codigo, real, esperado))
+    libro.close()
+    assert malos == [], f"{idioma}: subtotales que no suman su bloque → {malos}"

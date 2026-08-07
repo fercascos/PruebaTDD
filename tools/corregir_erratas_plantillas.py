@@ -47,6 +47,36 @@ ERRATAS: dict[str, dict[str, str]] = {
     "capex_ddt_es.xltm": {"Mediambiente": "Medioambiente"},
 }
 
+#: `fichero → {celda de la hoja CapEx: fórmula correcta}`.
+#:
+#: **El subtotal de `S03.Licencias y Tasas` sumaba una fila vacía.** Decía
+#: `SUM(J255:J255)` donde debía decir `SUM(J245:J254)`: un 245 tecleado como 255
+#: y un 254 como 255. Las tres líneas del bloque —Honorarios ECLU 2 %, Licencia
+#: de Obras 4 % y Otras licencias 0,5 %— **se calculan bien en sus celdas y no
+#: llegan a ningún total**: ni al subtotal, ni a SOFT COSTS, ni al TOTAL de la
+#: fila 11. Son **6,5 % de los hard costs** que desaparecen sin dejar rastro, y
+#: no hay forma de notarlo salvo sumando a mano.
+#:
+#: La inglesa arrastra además el mismo error en la columna `O`, que debería
+#: sumar su propia fila y suma la 255.
+FORMULAS: dict[str, dict[str, str]] = {
+    "capex_ddt_es.xltm": {
+        "J244": "SUM(J245:J254)",
+        "K244": "SUM(K245:K254)",
+        "L244": "SUM(L245:L254)",
+        "M244": "SUM(M245:M254)",
+        "N244": "SUM(N245:N254)",
+    },
+    "capex_ddt_en.xltm": {
+        "J244": "SUM(J245:J254)",
+        "K244": "SUM(K245:K254)",
+        "L244": "SUM(L245:L254)",
+        "M244": "SUM(M245:M254)",
+        "N244": "SUM(N245:N254)",
+        "O244": "SUM(J244:N244)",
+    },
+}
+
 #: Partes donde puede aparecer el literal. `sharedStrings` lleva el texto de las
 #: celdas; `workbook` el nombre definido; `app` el índice de nombres que enseña
 #: PowerPoint en las propiedades; y la caché de la tabla dinámica, su lista de
@@ -60,12 +90,67 @@ PARTES = (
 )
 
 
-def corregir(fichero: Path, cambios: dict[str, str], *, comprobar: bool) -> list[str]:
+NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+POS_CAPEX = 4
+
+
+def _ruta_capex(zf: zipfile.ZipFile) -> str:
+    libro = zf.read("xl/workbook.xml").decode("utf-8")
+    rels = zf.read("xl/_rels/workbook.xml.rels").decode("utf-8")
+    destinos = dict(re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels))
+    hojas = re.findall(r'<sheet name="[^"]+"[^>]*r:id="([^"]+)"', libro)
+    return "xl/" + destinos[hojas[POS_CAPEX]]
+
+
+def _arreglar_formulas(bruto: bytes, formulas: dict[str, str]) -> tuple[bytes, list[str]]:
+    """Sustituye la fórmula de celdas concretas conservando su estilo.
+
+    Se borra también el valor cacheado: dejarlo haría que Excel enseñase el
+    cero viejo hasta que alguien forzase un recálculo, que es la peor forma de
+    arreglar un total —parece que sigue mal—.
+    """
+    from lxml import etree
+
+    raiz = etree.fromstring(bruto)
+    datos = raiz.find(f"{{{NS}}}sheetData")
+    tocadas: list[str] = []
+    for fila in datos.iterfind(f"{{{NS}}}row"):
+        for celda in fila:
+            ref = celda.get("r")
+            if ref not in formulas:
+                continue
+            actual = celda.find(f"{{{NS}}}f")
+            if actual is not None and actual.text == formulas[ref]:
+                continue
+            for hijo in list(celda):
+                celda.remove(hijo)
+            celda.attrib.pop("t", None)
+            etree.SubElement(celda, f"{{{NS}}}f").text = formulas[ref]
+            tocadas.append(ref)
+    faltan = set(formulas) - {c.get("r") for f in datos for c in f}
+    if faltan:
+        raise SystemExit(f"La plantilla no tiene las celdas {sorted(faltan)}")
+    return etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True), tocadas
+
+
+def corregir(
+    fichero: Path,
+    cambios: dict[str, str],
+    formulas: dict[str, str],
+    *,
+    comprobar: bool,
+) -> list[str]:
     with zipfile.ZipFile(fichero) as z:
         nombres = z.namelist()
         partes = {n: z.read(n) for n in nombres}
+        ruta_capex = _ruta_capex(z)
 
     pendientes: list[str] = []
+    if formulas:
+        nuevo, tocadas = _arreglar_formulas(partes[ruta_capex], formulas)
+        if tocadas:
+            pendientes.append(f"{ruta_capex} · fórmulas {', '.join(tocadas)}")
+            partes[ruta_capex] = nuevo
     for parte in PARTES:
         if parte not in partes:
             continue
@@ -95,8 +180,10 @@ def main() -> int:
     args = ap.parse_args()
 
     total = 0
-    for nombre, cambios in ERRATAS.items():
-        tocadas = corregir(PLANTILLAS / nombre, cambios, comprobar=args.check)
+    for nombre in sorted(set(ERRATAS) | set(FORMULAS)):
+        cambios = ERRATAS.get(nombre, {})
+        formulas = FORMULAS.get(nombre, {})
+        tocadas = corregir(PLANTILLAS / nombre, cambios, formulas, comprobar=args.check)
         if not tocadas:
             continue
         total += len(tocadas)
@@ -104,7 +191,7 @@ def main() -> int:
             for parte in tocadas:
                 print(f"ERRATA SIN CORREGIR en {nombre}: {parte}", file=sys.stderr)
         else:
-            print(f"{nombre}: {', '.join(cambios)} corregido en {len(tocadas)} partes")
+            print(f"{nombre}: {len(tocadas)} correcciones")
             for parte in tocadas:
                 print(f"   · {parte}")
     if not total:
