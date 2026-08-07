@@ -49,12 +49,12 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
+from tdd.core.deps import SesionDep, SettingsDep, UsuarioActual, UsuarioDep
 from tdd.evidence import antivirus, guardia, images, storage
 from tdd.evidence.naming import (
     PLANTILLA_POR_DEFECTO,
@@ -951,21 +951,66 @@ class Variante(StrEnum):
     VISTA = "VISTA_1600"
 
 
+#: `[REQ]` docs/10 §15.6 · De estos estados **no se sirve el binario**.
+#:
+#: `CUARENTENA` es el motivo por el que existe el antivirus: el objeto se
+#: conserva para poder analizarlo, pero no se deja bajar. `PURGADA` ya no tiene
+#: bytes detrás. `PAPELERA` sí se sirve: está borrada pero es recuperable, y
+#: quien la recupera suele querer verla antes.
+NO_DESCARGABLES = frozenset({"CUARENTENA", "PURGADA"})
+
+MOTIVO_NO_DESCARGABLE = {
+    "CUARENTENA": (
+        "El antivirus marcó esta fotografía y no se puede descargar. El archivo se "
+        "conserva para poder analizarlo; avise a un administrador."
+    ),
+    "PURGADA": "Esta fotografía se purgó y su archivo ya no existe.",
+}
+
+
 @router.get("/photos/{photo_id}/download")
 def descargar(
     photo_id: uuid.UUID,
     s: SesionDep,
     usuario: UsuarioDep,
     almacen: AlmacenDep,
+    settings: SettingsDep,
     variante: Variante = Variante.ORIGINAL,
 ) -> Any:
-    """`[REQ]` Toda descarga genera `audit_log`.
+    """`[REQ]` §10.7 · Redirige a una **URL firmada** si el almacén sabe firmarlas.
 
-    `[LIM]` Devuelve el binario en la respuesta. En producción debe ser un
-    `302` a una URL firmada de 5 minutos (§10.7); eso depende del adaptador S3,
-    que no está implementado.
+    Es un `302`, no el binario, para que los archivos de 8 MB no atraviesen la
+    API. La autorización se comprueba **antes** de firmar: firmar es conceder
+    permiso, y una URL firmada emitida sin comprobar quién pregunta es una fuga
+    con fecha de caducidad.
+
+    **Lo que cambia con el redirección, y conviene saberlo:**
+
+    `[LIM]` La auditoría deja de saber que la descarga ocurrió. Se anota que se
+    **emitió** una URL, que es lo único cierto: quien la pide puede no llegar a
+    usarla, y quien la usa puede no ser quien la pidió durante los minutos que
+    dura. Por eso la acción se llama `PHOTO_URL_ISSUED` y no
+    `PHOTO_DOWNLOADED`: un registro que afirme más de lo que sabe es peor que
+    uno que afirme menos.
+
+    `[LIM]` La URL vale para cualquiera que la tenga hasta que caduque. Es la
+    contrapartida del diseño y la razón de que el plazo sea corto.
+
+    Con el almacén sobre disco —desarrollo y la suite— no hay nada que firmar y
+    se devuelve el binario, como antes. **No se finge una URL que no existe.**
     """
     fila = _obtener(s, photo_id)
+
+    # Se comprueba ANTES de tocar el almacén. Faltaba: una foto en cuarentena
+    # se descargaba igual, que es exactamente lo que ese estado existe para
+    # impedir. Hoy no lo activa nadie porque el antivirus está desactivado por
+    # defecto, así que el hueco estaba latente.
+    if fila.status in NO_DESCARGABLES:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            MOTIVO_NO_DESCARGABLE.get(fila.status, "Esta fotografía no se puede descargar."),
+        )
+
     clave: str | None = None
     if variante is not Variante.ORIGINAL:
         clave = s.execute(
@@ -990,13 +1035,33 @@ def descargar(
         ).scalar_one()
         variante = Variante.ORIGINAL
 
+    nombre = f"{fila.display_name}.{fila.file_extension}"
+
+    firmador = getattr(almacen, "url_firmada", None)
+    if firmador is not None:
+        # Solo el original cuenta en la auditoría: anotar cada miniatura
+        # llenaría el registro de ruido y taparía lo que importa.
+        if variante is Variante.ORIGINAL:
+            _auditar(
+                s,
+                usuario,
+                "PHOTO_URL_ISSUED",
+                photo_id,
+                {"segundos": settings.storage_signed_url_ttl_seconds},
+            )
+        return RedirectResponse(
+            firmador(clave, segundos=settings.storage_signed_url_ttl_seconds),
+            # 302 y no 307: es una redirección temporal a un recurso distinto,
+            # y no se quiere que ningún intermediario la guarde. La URL caduca.
+            status_code=status.HTTP_302_FOUND,
+            headers={"Cache-Control": "no-store, private"},
+        )
+
     datos = almacen.leer(clave)
-    # Solo el original cuenta como «descarga» en la auditoría: anotar cada
-    # miniatura llenaría el registro de ruido y taparía las descargas de verdad.
     if variante is Variante.ORIGINAL:
+        # Aquí sí se sabe que el binario ha salido: se sirvió desde la API.
         _auditar(s, usuario, "PHOTO_DOWNLOADED", photo_id, {"bytes": len(datos)})
 
-    nombre = f"{fila.display_name}.{fila.file_extension}"
     return Response(
         content=datos,
         # Los derivados son siempre JPEG: se generan así, aunque el original sea

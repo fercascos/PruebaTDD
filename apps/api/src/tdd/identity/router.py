@@ -22,9 +22,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from tdd.core.config import Settings, get_settings
+from tdd.core.config import Settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
-from tdd.core.deps import SesionDep, UsuarioDep
+from tdd.core.deps import SesionDep, SettingsDep, UsuarioDep
 from tdd.core.security import (
     crear_token,
     hash_password,
@@ -99,9 +99,6 @@ class Perfil(BaseModel):
     #: comprobación y la base de datos le bloqueaba la escritura. Que el cliente
     #: la dedujera por su cuenta sería el tercer sitio donde puede desviarse.
     gestiona_sugerencias: bool
-
-
-SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
 def _sesion_sin_contexto(request: Request) -> Session:

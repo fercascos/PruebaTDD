@@ -376,4 +376,18 @@ class AlmacenS3:
                 "El bucket NO tiene Object Lock. Solo se puede habilitar AL CREAR "
                 "el bucket: hay que crear uno nuevo y copiar el contenido."
             )
+        try:
+            self._s3.get_bucket_cors(Bucket=self.bucket)  # type: ignore[attr-defined]
+        except ClientError:
+            # No es un problema de integridad, pero rompe la aplicación entera
+            # en el navegador y de una forma que no se ve desde el servidor: la
+            # API redirige bien, S3 devuelve el objeto, y el navegador se niega
+            # a entregárselo al JavaScript por falta de `Access-Control-Allow-
+            # Origin`. La rejilla sale vacía sin un solo error en el log.
+            problemas.append(
+                "El bucket no tiene reglas CORS. La aplicación sigue el 302 con "
+                "`fetch`, así que el navegador exige que el bucket permita el "
+                "origen de la aplicación en GET; si no, las imágenes no cargan "
+                "y no aparece ningún error en el servidor."
+            )
         return problemas

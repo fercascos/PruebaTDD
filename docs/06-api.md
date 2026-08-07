@@ -241,7 +241,7 @@ sequenceDiagram
 | `GET`/`PATCH` | `/photos/{id}` | **`storage_key` y `sha256` no son escribibles: `422`** |
 | `POST` | `/photos/bulk-rename` | `{photo_ids[], template, dry_run}`. Con `dry_run` devuelve la previsualización y las colisiones **sin escribir nada** `[REQ]` |
 | `POST` | `/photos/bulk-update` | Clasificación y etiquetas en lote |
-| `GET` | `/photos/{id}/download?version=` | `302` a URL firmada de 5 min. **Auditado** |
+| `GET` | `/photos/{id}/download?variante=` | `302` a URL firmada **si el almacén sabe firmar**; el binario si no (adaptador de disco: desarrollo y suite). La autorización se comprueba **antes** de firmar. `403` si la foto está en `CUARENTENA` o `PURGADA`. Se audita `PHOTO_URL_ISSUED`, no `PHOTO_DOWNLOADED`: con la redirección el servidor sabe que **autorizó**, no que el binario saliera |
 | `POST` | `/projects/{id}/photos/download-batch` | `{photo_ids[], strip_metadata, use_display_names}` → `202` ZIP `[REQ]` |
 | `GET`/`POST` | `/photos/{id}/versions` · `POST /versions/{vid}/restore` | |
 | `GET`/`POST`/`DELETE` | `/photos/{id}/links` | Asociación múltiple `[REQ]` |

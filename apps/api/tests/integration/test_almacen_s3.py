@@ -49,19 +49,34 @@ def _cliente():
     )
 
 
-def _bucket(s3, nombre: str, *, con_bloqueo: bool) -> None:
+def _bucket(s3, nombre: str, *, con_bloqueo: bool, con_cors: bool = False) -> None:
     s3.create_bucket(
         Bucket=nombre,
         CreateBucketConfiguration={"LocationConstraint": REGION},
         **({"ObjectLockEnabledForBucket": True} if con_bloqueo else {}),
     )
+    if con_cors:
+        # Un bucket bien preparado permite que el navegador lea el objeto al
+        # seguir el 302 de la API. Sin esto la rejilla sale vacía.
+        s3.put_bucket_cors(
+            Bucket=nombre,
+            CORSConfiguration={
+                "CORSRules": [
+                    {
+                        "AllowedMethods": ["GET"],
+                        "AllowedOrigins": ["https://tdd.ejemplo.example"],
+                        "AllowedHeaders": ["*"],
+                    }
+                ]
+            },
+        )
 
 
 @pytest.fixture
 def almacen():
     with mock_aws():
         s3 = _cliente()
-        _bucket(s3, "tdd-objetos", con_bloqueo=True)
+        _bucket(s3, "tdd-objetos", con_bloqueo=True, con_cors=True)
         yield AlmacenS3(bucket="tdd-objetos", cliente=s3, dias_de_retencion=3650), s3
 
 
@@ -241,11 +256,24 @@ def test_comprobar_detecta_un_bucket_sin_object_lock() -> None:
         _bucket(s3, "tdd-sin-worm", con_bloqueo=False)
         problemas = AlmacenS3(bucket="tdd-sin-worm", cliente=s3).comprobar()
 
-    assert len(problemas) == 2
     texto = " ".join(problemas)
     assert "versionado" in texto.lower()
     assert "Object Lock" in texto
     assert "AL CREAR" in texto
+
+
+def test_comprobar_avisa_de_que_falta_el_cors() -> None:
+    """No es integridad, pero rompe la aplicación en el navegador de la peor
+    forma: la API redirige bien, S3 devuelve el objeto y el navegador se niega
+    a entregarlo al JavaScript. La rejilla sale vacía sin un error en el log."""
+    with mock_aws():
+        s3 = _cliente()
+        _bucket(s3, "tdd-sin-cors", con_bloqueo=True)
+        problemas = AlmacenS3(bucket="tdd-sin-cors", cliente=s3).comprobar()
+
+    assert len(problemas) == 1
+    assert "CORS" in problemas[0]
+    assert "navegador" in problemas[0]
 
 
 def test_comprobar_dice_cuando_el_bucket_ni_existe() -> None:

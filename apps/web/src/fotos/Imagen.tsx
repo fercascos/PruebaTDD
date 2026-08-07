@@ -17,6 +17,20 @@ import { peticionAutenticada } from '../api/cliente'
  *
  * `[LIM]` Cada montaje descarga de nuevo. Con `MINIATURA_320` el coste es
  * pequeño, pero una caché por identificador sigue pendiente.
+ *
+ * **Con almacén S3 la API responde un `302` a una URL firmada**, y `fetch` lo
+ * sigue solo. Dos cosas de las que depende eso, y que no se ven desde aquí:
+ *
+ * 1. El navegador **quita la cabecera `Authorization`** al seguir una
+ *    redirección a otro origen, que es justo lo que hace falta: el permiso
+ *    viaja ya en la firma de la URL.
+ * 2. El bucket **tiene que permitir el origen de la aplicación en CORS**. Sin
+ *    eso, S3 devuelve el objeto y el navegador se niega a entregarlo al
+ *    JavaScript: la rejilla sale vacía y **no aparece ningún error en el log
+ *    del servidor**. `AlmacenS3.comprobar()` lo avisa al arrancar.
+ *
+ * `[LIM]` Ese camino no se ha probado en un navegador contra un S3 real: en el
+ * entorno de desarrollo el almacén es el de disco y devuelve el binario.
  */
 export function Imagen({
   ruta,

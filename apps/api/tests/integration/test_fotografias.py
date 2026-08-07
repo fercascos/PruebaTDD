@@ -1132,3 +1132,182 @@ def test_los_documentos_y_las_plantillas_tambien_se_analizan(
     assert "Eicar-Test-Signature" in documento.json()["detail"]
     assert plantilla.status_code == 422, plantilla.text
     assert "Eicar-Test-Signature" in plantilla.json()["detail"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Descarga: URL firmada y estados que no se sirven
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class AlmacenQueFirma:
+    """El almacén de la suite, más la capacidad de firmar.
+
+    Se envuelve el de memoria en vez de levantar `moto` aquí: lo que se prueba
+    es **la decisión del endpoint** —redirigir en vez de servir— y no la firma,
+    que ya tiene sus pruebas en `test_almacen_s3.py`.
+    """
+
+    def __init__(self, envuelto) -> None:
+        self._e = envuelto
+        self.firmadas: list[tuple[str, int]] = []
+
+    def guardar(self, clave: str, datos: bytes) -> None:
+        self._e.guardar(clave, datos)
+
+    def leer(self, clave: str) -> bytes:
+        return self._e.leer(clave)
+
+    def existe(self, clave: str) -> bool:
+        return self._e.existe(clave)
+
+    def borrar(self, clave: str) -> None:
+        self._e.borrar(clave)
+
+    def url_firmada(self, clave: str, *, segundos: int = 300) -> str:
+        self.firmadas.append((clave, segundos))
+        return f"https://almacen.ejemplo.example/{clave}?X-Amz-Expires={segundos}&X-Amz-Signature=x"
+
+
+@pytest.fixture
+def con_firma(cliente: TestClient):
+    """Sustituye el almacén por uno que sabe firmar, y lo deshace al terminar."""
+    from tdd.evidence.router import obtener_almacen
+
+    almacen = AlmacenQueFirma(cliente.app.state.object_store)
+    cliente.app.dependency_overrides[obtener_almacen] = lambda: almacen
+    yield almacen
+    cliente.app.dependency_overrides.pop(obtener_almacen, None)
+
+
+def test_con_un_almacen_que_firma_se_redirige_en_vez_de_servir(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, con_firma: Any
+) -> None:
+    """`[REQ]` §10.7 · Para que los archivos de 8 MB no atraviesen la API."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"), follow_redirects=False
+    )
+    assert r.status_code == 302
+    assert r.headers["location"].startswith("https://almacen.ejemplo.example/")
+    assert "X-Amz-Signature" in r.headers["location"]
+    # Y no se ha mandado el binario en el cuerpo.
+    assert r.content == b""
+
+
+def test_la_redireccion_no_se_guarda_en_ninguna_cache(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, con_firma: Any
+) -> None:
+    """La URL caduca: una redirección cacheada seguiría entregando un enlace
+    muerto, o peor, uno vivo a quien ya no debería tenerlo."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"), follow_redirects=False
+    )
+    assert "no-store" in r.headers["cache-control"]
+
+
+def test_la_auditoria_dice_que_se_emitio_una_url_y_no_que_se_descargo(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, con_firma: Any, motor_admin: Any
+) -> None:
+    """`[REQ]` Un registro que afirme más de lo que sabe es peor que uno que
+    afirme menos.
+
+    Con la redirección, el servidor sabe que **autorizó**, no que el binario
+    saliera: quien pide la URL puede no usarla, y quien la usa puede no ser
+    quien la pidió durante los minutos que dura.
+    """
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"), follow_redirects=False
+    )
+    with motor_admin.begin() as conn:
+        acciones = {
+            f[0]
+            for f in conn.execute(
+                text("SELECT action FROM audit_log WHERE entity_id = :i"), {"i": foto["id"]}
+            )
+        }
+    assert "PHOTO_URL_ISSUED" in acciones
+    assert "PHOTO_DOWNLOADED" not in acciones
+
+
+def test_sin_almacen_que_firme_se_sigue_sirviendo_el_binario(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """El almacén sobre disco no sabe firmar y **no se finge que sí**: en
+    desarrollo y en la suite se devuelve el archivo, como siempre."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    r = cliente.get(f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    assert len(r.content) > 0
+
+
+def test_una_miniatura_no_ensucia_la_auditoria(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, con_firma: Any, motor_admin: Any
+) -> None:
+    """Anotar cada miniatura de una rejilla de 400 fotos taparía las descargas
+    de verdad."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download?variante=MINIATURA_320",
+        headers=cab("consultor_a"),
+        follow_redirects=False,
+    )
+    with motor_admin.begin() as conn:
+        # Solo las acciones de descarga: el alta deja su propio registro, y ese
+        # sí debe estar.
+        cuantas = conn.execute(
+            text(
+                "SELECT count(*) FROM audit_log WHERE entity_id = :i "
+                "AND action IN ('PHOTO_URL_ISSUED', 'PHOTO_DOWNLOADED')"
+            ),
+            {"i": foto["id"]},
+        ).scalar_one()
+    assert cuantas == 0
+
+
+def test_una_foto_en_cuarentena_no_se_descarga(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, motor_admin: Any
+) -> None:
+    """`[REQ]` docs/10 §15.6 · Es el estado entero por el que existe el
+    antivirus, y hasta ahora la descarga no lo miraba: una foto marcada se
+    bajaba igual. Estaba latente porque nada activa `CUARENTENA` todavía.
+    """
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    with motor_admin.begin() as conn:
+        conn.execute(
+            text("UPDATE photo SET status = 'CUARENTENA' WHERE id = :i"), {"i": foto["id"]}
+        )
+    r = cliente.get(f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"))
+    assert r.status_code == 403
+    assert "antivirus" in r.json()["detail"]
+    # Y el archivo se conserva: docs/10 lo quiere guardado para poder analizarlo.
+    assert "conserva" in r.json()["detail"]
+
+
+def test_en_cuarentena_tampoco_se_firma_una_url(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, con_firma: Any, motor_admin: Any
+) -> None:
+    """Firmar es conceder permiso: comprobar el estado después de firmar sería
+    conceder primero y comprobar luego."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    with motor_admin.begin() as conn:
+        conn.execute(
+            text("UPDATE photo SET status = 'CUARENTENA' WHERE id = :i"), {"i": foto["id"]}
+        )
+    r = cliente.get(
+        f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"), follow_redirects=False
+    )
+    assert r.status_code == 403
+    assert con_firma.firmadas == []
+
+
+def test_una_foto_en_la_papelera_si_se_puede_ver(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Está borrada pero es recuperable, y quien la recupera suele querer verla
+    antes de decidir."""
+    foto = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).json()
+    cliente.delete(f"{RUTA}/photos/{foto['id']}", headers=cab("consultor_a"))
+    r = cliente.get(f"{RUTA}/photos/{foto['id']}/download", headers=cab("consultor_a"))
+    assert r.status_code == 200

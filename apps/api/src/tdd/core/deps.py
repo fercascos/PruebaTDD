@@ -117,3 +117,8 @@ def exigir_gestion_de_sugerencias(
 SesionDep = Annotated[Session, Depends(obtener_sesion)]
 UsuarioDep = Annotated[UsuarioActual, Depends(obtener_usuario)]
 GestorSugerenciasDep = Annotated[UsuarioActual, Depends(exigir_gestion_de_sugerencias)]
+
+
+#: La configuración como dependencia. Vivía en `identity/router.py`, que no es
+#: su sitio: la usan también las fotografías para el plazo de las URL firmadas.
+SettingsDep = Annotated[Settings, Depends(get_settings)]
