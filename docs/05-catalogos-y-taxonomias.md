@@ -174,6 +174,8 @@ flowchart LR
 | `MA` | Medioambiental | ✅ Desarrollada (13 elementos) |
 | `ESG` | ESG & Energía | ✅ Desarrollada (11 elementos) |
 | `SC` | Soft Costs | ✅ Desarrollada (3 capítulos) |
+| `OP` | Operativos | ✅ Desarrollada (2 capítulos) |
+| `IMP` | Imprevistos | ✅ Desarrollada (1 capítulo) |
 
 > **P-03 · CERRADO.** Se recibió la plantilla CAPEX DDT vigente, que **sí trae el desglose** de las
 > tres categorías que faltaban. Se incorpora tal cual viene, y esta sección deja de ser provisional.
@@ -215,6 +217,9 @@ De la plantilla CAPEX DDT vigente. Cierra P-03.
 | **SC. S01 · Proyectos, Diseño y DO** | General |
 | **SC. S02 · Trabajos Complementarios** | General |
 | **SC. S03 · Licencias y Tasas** | General |
+| **OP. C01 · Consumos Obra** | General |
+| **OP. C02 · Limpieza** | General |
+| **IMP. General** | General |
 
 `[REC]` **Los capítulos de soft costs no llevan desglose de elementos, y es fiel a la plantilla.**
 En la hoja `CapEx` las filas de soft costs escriben su concepto —«Redacción de Proyectos y Dirección
@@ -243,16 +248,23 @@ la errata. Se siembra el literal español tal cual porque es el que ofrece su de
 nombre correcto produciría una celda con un valor que no está en su propia lista, y las tablas
 dinámicas lo dejarían fuera. Corregirlo exige corregir antes la plantilla del cliente.
 
-`[LIM]` La plantilla declara además dos tipos de coste, **Operativos** (Consumos Obra, Limpieza) e
-**Imprevistos** (General), que **no se siembran**: la hoja `CapEx` no tiene ningún bloque de filas
-para ellos —solo hay 20 bloques: 15 de Hard Costs, Medioambiental, ESG y los 3 de Soft Costs— e
-Imprevistos existe únicamente como un porcentaje en «00 Datos Activo». Darles código sin sitio donde
-escribirlos habría creado actuaciones imposibles de exportar. Pendiente de decidir con el cliente.
+`[REC]` **Operativos e Imprevistos se siembran, y para eso hubo que darles sitio en la plantilla.**
+Los dos tipos de coste estaban declarados en «00 Datos Categorías» pero la hoja `CapEx` no tenía
+ninguna fila donde escribirlos: solo había 20 bloques. `tools/anadir_bloques_plantillas.py` añade los
+dos **al final** de la hoja —filas 256 y 269, que estaban vacías— clonando el bloque medioambiental
+para heredar sus estilos. Al añadir en vez de insertar, ninguna fila existente se desplaza y por
+tanto ninguna fórmula, celda combinada, regla de formato condicional ni origen de tabla dinámica
+cambia de sitio.
 
-**Totales de la semilla:** **4 categorías · 21 capítulos** (15 de Hard Costs + `MA.General` +
-`ESG.General` + `SC.General` + 3 de Soft Costs) · **128 elementos** (100 de Hard Costs + 13 de
-Medioambiental + 11 de ESG + 1 de `SC.General` + 3 de los capítulos de Soft Costs). **153 nodos** en
-total.
+`Imprevistos` se monta **como los soft costs**, con su importe calculado a partir del porcentaje de
+«00 Datos Activo»!C45, porque es como lo tenía pensado la plantilla: un tanto por ciento de los hard
+costs, no una lista de actuaciones. `Operativos` es un bloque itemizado normal, y su categoría la
+elige el desplegable entre las dos que declara el catálogo.
+
+**Totales de la semilla:** **6 categorías · 24 capítulos** (15 de Hard Costs + `MA.General` +
+`ESG.General` + `SC.General` + 3 de Soft Costs + 2 de Operativos + `IMP.General`) · **131 elementos**
+(100 de Hard Costs + 13 de Medioambiental + 11 de ESG + 1 de `SC.General` + 3 de Soft Costs + 2 de
+Operativos + 1 de Imprevistos). **161 nodos** en total.
 
 `[REC]` La cifra de «121» que arrastraba una versión anterior de este documento era **capítulos más
 elementos**, no elementos. Hay una prueba que fija los cuatro recuentos para que no vuelva a

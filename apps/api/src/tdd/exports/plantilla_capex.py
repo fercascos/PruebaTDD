@@ -69,8 +69,21 @@ class Bloque:
     codigo: str
     #: Fila del subtotal, que es también donde la plantilla escribe el nombre.
     subtotal: int
+    #: Primera fila **que puede escribir la aplicación**.
     primera: int
     ultima: int
+    #: Cuántas filas de la cabeza del bloque se reserva la plantilla para sus
+    #: propias líneas de porcentaje. La aplicación empieza después.
+    reservadas: int = 0
+
+    @property
+    def primera_de_la_hoja(self) -> int:
+        """Dónde empieza el bloque **en la hoja**, líneas de plantilla incluidas.
+
+        No es lo mismo que `primera`: el subtotal suma el bloque entero, así que
+        comprobarlo contra la zona escribible daría un falso positivo.
+        """
+        return self.primera - self.reservadas
 
     @property
     def cabida(self) -> int:
@@ -85,9 +98,27 @@ GEOMETRIA: tuple[Bloque, ...] = (
     ),
     Bloque("MA.General", 194, 195, 204),
     Bloque("ESG.General", 207, 208, 217),
-    Bloque("SC.S01", 220, 221, 230),
-    Bloque("SC.S02", 232, 233, 242),
-    Bloque("SC.S03", 244, 245, 254),
+    # `[REQ]` Los bloques por porcentaje **empiezan después de las líneas que
+    # trae la plantilla**. `SC.S01` ocupa 221-223 con los honorarios de
+    # proyectos, dirección de ejecución y project monitoring; `SC.S02` la 233
+    # con seguridad y salud; `SC.S03` las 245-247 con ECLU, licencia de obras y
+    # otras licencias. Son fórmulas —un tanto por ciento de los hard costs— y
+    # escribir encima una actuación de la aplicación las borraría: el importe
+    # dejaría de recalcularse y nadie lo notaría hasta cuadrar a mano.
+    Bloque("SC.S01", 220, 224, 230, 3),
+    Bloque("SC.S02", 232, 234, 242, 1),
+    Bloque("SC.S03", 244, 248, 254, 3),
+    # Añadidos por `tools/anadir_bloques_plantillas.py`: la plantilla declaraba
+    # los dos tipos de coste en «00 Datos Categorías» pero no tenía dónde
+    # escribirlos. Van al final de la hoja, sobre filas que estaban vacías.
+    # `[LIM]` Operativos tiene dos categorías y **comparten el bloque**: sus
+    # veinte filas son las mismas diez, porque la plantilla no da más. Se
+    # controla con `comprobar_cabida`, que las cuenta juntas.
+    Bloque("OP.C01", 257, 258, 267),
+    Bloque("OP.C02", 257, 258, 267),
+    # La 271 es la línea de imprevistos que calcula la plantilla desde el
+    # porcentaje de «00 Datos Activo». La aplicación escribe a partir de la 272.
+    Bloque("IMP.General", 270, 272, 280, 1),
 )
 POR_CODIGO: dict[str, Bloque] = {b.codigo: b for b in GEOMETRIA}
 
@@ -256,13 +287,23 @@ def comprobar_cabida(actuaciones: list[Actuacion]) -> list[Desbordamiento]:
     desaparece de la hoja que se manda al cliente es exactamente el fallo que
     nadie detecta hasta que alguien suma a mano.
     """
-    cuenta: dict[str, int] = {}
+    # Se cuenta por BLOQUE, no por categoría: `OP.C01` y `OP.C02` comparten
+    # las mismas diez filas —la plantilla no da más—, así que once actuaciones
+    # repartidas entre las dos tampoco caben.
+    cuenta: dict[int, int] = {}
+    etiquetas: dict[int, list[str]] = {}
     for a in actuaciones:
-        cuenta[a.categoria] = cuenta.get(a.categoria, 0) + 1
+        bloque = POR_CODIGO.get(a.categoria)
+        if bloque is None:
+            continue
+        cuenta[bloque.primera] = cuenta.get(bloque.primera, 0) + 1
+        if a.categoria not in etiquetas.setdefault(bloque.primera, []):
+            etiquetas[bloque.primera].append(a.categoria)
+    por_primera = {b.primera: b for b in GEOMETRIA}
     return [
-        Desbordamiento(cod, POR_CODIGO[cod].cabida, n)
-        for cod, n in sorted(cuenta.items())
-        if cod in POR_CODIGO and n > POR_CODIGO[cod].cabida
+        Desbordamiento(" + ".join(sorted(etiquetas[primera])), por_primera[primera].cabida, n)
+        for primera, n in sorted(cuenta.items())
+        if n > por_primera[primera].cabida
     ]
 
 
@@ -369,7 +410,10 @@ def _rellenar_activo(
 
 def _rellenar_capex(bruto: bytes, actuaciones: list[Actuacion]) -> bytes:
     raiz, datos = _arbol(bruto)
-    siguiente: dict[str, int] = {}
+    # La cuenta va por BLOQUE y no por categoría: dos categorías que comparten
+    # tramo —`OP.C01` y `OP.C02`— tienen que seguir la misma fila, o la segunda
+    # empezaría otra vez por arriba y machacaría a la primera.
+    siguiente: dict[int, int] = {}
 
     for a in actuaciones:
         bloque = POR_CODIGO.get(a.categoria)
@@ -377,8 +421,8 @@ def _rellenar_capex(bruto: bytes, actuaciones: list[Actuacion]) -> bytes:
             raise CeldaInexistente(
                 f"la plantilla no tiene bloque para la categoría {a.categoria!r}"
             )
-        fila = siguiente.get(a.categoria, bloque.primera)
-        siguiente[a.categoria] = fila + 1
+        fila = siguiente.get(bloque.primera, bloque.primera)
+        siguiente[bloque.primera] = fila + 1
 
         escribir(datos, f"{COL_OBJETO}{fila}", a.objeto)
         escribir(datos, f"{COL_ZONA}{fila}", a.zona)

@@ -59,7 +59,7 @@ def test_los_csv_no_divergen_del_documento_de_diseno() -> None:
     [
         ("asset_typology", 6, "tipologías [REQ] P-01"),
         ("zone", 20, "zonas normalizadas"),
-        ("capex_code", 153, "nodos del árbol de códigos"),
+        ("capex_code", 161, "nodos del árbol de códigos"),
         ("risk_level", 4, "grados de riesgo"),
         ("capex_concept", 10, "conceptos"),
         ("time_horizon", 5, "horizontes"),
@@ -82,11 +82,13 @@ def test_la_matriz_tiene_86_relaciones(motor_admin) -> None:
 
 
 def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
-    """4 categorías + 21 capítulos + 128 elementos = 153 nodos.
+    """6 categorías + 24 capítulos + 131 elementos = 161 nodos.
 
     Los recuentos crecieron al cerrar P-03 con la plantilla CAPEX vigente:
     Medioambiental pasó de 1 elemento a 13, ESG de 1 a 11, y Soft Costs ganó
-    los capítulos `S01`, `S02` y `S03` con su `General` cada uno."""
+    los capítulos `S01`, `S02` y `S03` con su `General` cada uno. Después
+    entraron Operativos e Imprevistos, en cuanto la plantilla tuvo dónde
+    escribirlos."""
     with motor_admin.connect() as c:
         por_nivel = dict(
             c.execute(
@@ -96,7 +98,7 @@ def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
                 )
             ).all()
         )
-    assert por_nivel == {1: 4, 2: 21, 3: 128}
+    assert por_nivel == {1: 6, 2: 24, 3: 131}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,7 +220,7 @@ def test_el_path_ltree_es_coherente_con_la_jerarquia(motor_admin) -> None:
 def test_las_categorias_que_cerraron_p03_tienen_su_desglose(motor_admin) -> None:
     """P-03 · MA, ESG y SC se sembraron con un «General» provisional hasta que
     llegó la plantilla CAPEX vigente. Ahora traen su desglose."""
-    esperado = {"MA": 13, "ESG": 11, "SC": 4}
+    esperado = {"MA": 13, "ESG": 11, "SC": 4, "OP": 2, "IMP": 1}
     with motor_admin.connect() as c:
         for cat, cuantos in esperado.items():
             n = c.execute(

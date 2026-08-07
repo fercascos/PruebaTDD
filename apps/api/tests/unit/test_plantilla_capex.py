@@ -178,8 +178,17 @@ def test_una_categoria_que_la_plantilla_no_tiene_revienta(encargo: Encargo) -> N
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_la_plantilla_admite_diez_por_categoria() -> None:
-    assert all(b.cabida == 10 for b in GEOMETRIA)
+def test_la_plantilla_admite_diez_filas_por_bloque() -> None:
+    """Diez en la hoja. La aplicación dispone de menos en los bloques por
+    porcentaje, porque la plantilla se reserva las primeras para sus
+    honorarios."""
+    assert all(b.ultima - b.primera_de_la_hoja + 1 == 10 for b in GEOMETRIA)
+    assert {b.codigo: b.cabida for b in GEOMETRIA if b.reservadas} == {
+        "SC.S01": 7,
+        "SC.S02": 9,
+        "SC.S03": 7,
+        "IMP.General": 9,
+    }
 
 
 def test_once_actuaciones_no_caben_y_se_dice_cual(encargo: Encargo) -> None:
@@ -420,9 +429,95 @@ def test_cada_bloque_suma_sus_propias_filas(idioma: str) -> None:
     capex = libro["CapEx"]
     malos = []
     for bloque in GEOMETRIA:
-        esperado = f"SUM(J{bloque.primera}:J{bloque.ultima})"
+        esperado = f"SUM(J{bloque.primera_de_la_hoja}:J{bloque.ultima})"
         real = str(capex[f"J{bloque.subtotal}"].value or "").lstrip("=")
         if real != esperado:
             malos.append((bloque.codigo, real, esperado))
     libro.close()
     assert malos == [], f"{idioma}: subtotales que no suman su bloque → {malos}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Operativos e Imprevistos, y las líneas que trae la plantilla
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_operativos_e_imprevistos_tienen_bloque(idioma: str) -> None:
+    """Estaban declarados en «00 Datos Categorías» y no tenían ninguna fila
+    donde escribirse. `tools/anadir_bloques_plantillas.py` se los da."""
+    libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+    capex = libro["CapEx"]
+    esperado = {"es": ("OPERATIVOS", "IMPREVISTOS"), "en": ("OPERATING", "CONTINGENCIES")}[idioma]
+    assert (capex["A256"].value, capex["A269"].value) == esperado
+    libro.close()
+
+
+def test_el_total_general_cuenta_los_bloques_nuevos() -> None:
+    """Un bloque que no entra en la fórmula del TOTAL es dinero que se escribe
+    y no se suma: exactamente el fallo de `S03`."""
+    for idioma in IDIOMAS:
+        libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+        total = str(libro["CapEx"]["J11"].value or "")
+        libro.close()
+        for seccion in ("J256", "J269"):
+            assert seccion in total, f"{idioma}: el TOTAL no cuenta {seccion} → {total}"
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_los_imprevistos_se_calculan_desde_la_hoja_de_parametros(idioma: str) -> None:
+    """`[REQ]` Decisión del cliente: manda «00 Datos Activo». El porcentaje se
+    lee de ahí y no se teclea, para que cambiarlo una vez lo cambie en todas
+    las líneas."""
+    libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+    formula = str(libro["CapEx"]["T271"].value or "")
+    libro.close()
+    assert "C45" in formula
+    assert ("00 Asset Data" if idioma == "en" else "00 Datos Activo") in formula
+
+
+def test_la_exportacion_no_pisa_las_lineas_de_honorarios(encargo: Encargo) -> None:
+    """`SC.S01`, `SC.S02`, `SC.S03` e `IMP` traen líneas de la plantilla con su
+    porcentaje. Escribir una actuación encima borraría la fórmula: el importe
+    dejaría de recalcularse y nadie lo notaría hasta cuadrar a mano."""
+    datos = generar(
+        encargo,
+        [
+            _actuacion("SC.S03", objeto="General", descripcion="Tasa extra"),
+            _actuacion("IMP.General", objeto="General", descripcion="Partida adicional"),
+        ],
+    )
+    hoja = load_workbook(BytesIO(datos))["CapEx"]
+    # Las de la plantilla, intactas.
+    assert hoja["G245"].value == "Honorarios ECLU"
+    assert hoja["T245"].value == 0.02
+    assert "C45" in str(hoja["T271"].value)
+    # Y las de la aplicación, justo debajo.
+    assert hoja["G248"].value == "Tasa extra"
+    assert hoja["G272"].value == "Partida adicional"
+
+
+def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
+    encargo: Encargo,
+) -> None:
+    """La plantilla da un solo bloque para los dos capítulos. Si cada categoría
+    llevase su propia cuenta, la segunda empezaría otra vez por arriba y
+    machacaría a la primera."""
+    datos = generar(
+        encargo,
+        [
+            _actuacion("OP.C01", objeto="General", descripcion="Consumos de obra"),
+            _actuacion("OP.C02", objeto="General", descripcion="Limpieza final"),
+        ],
+    )
+    hoja = load_workbook(BytesIO(datos))["CapEx"]
+    assert hoja["G258"].value == "Consumos de obra"
+    assert hoja["G259"].value == "Limpieza final"
+
+
+def test_el_desbordamiento_de_operativos_cuenta_las_dos_categorias_juntas() -> None:
+    once = [
+        _actuacion("OP.C01" if i % 2 else "OP.C02", descripcion=f"Actuación {i}") for i in range(11)
+    ]
+    sobra = comprobar_cabida(once)
+    assert [(d.categoria, d.hay, d.caben) for d in sobra] == [("OP.C01 + OP.C02", 11, 10)]

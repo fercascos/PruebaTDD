@@ -3,6 +3,8 @@ HC,Hard Costs,1,
 MA,Medioambiental,1,
 ESG,ESG & Energía,1,
 SC,Soft Costs,1,
+OP,Operativos,1,
+IMP,Imprevistos,1,
 HC.H01,Estructura,2,HC
 HC.H01.01,Cimentación,3,HC.H01
 HC.H01.02,Solera,3,HC.H01
@@ -152,3 +154,9 @@ SC.S02,Trabajos Complementarios,2,SC
 SC.S02.01,General,3,SC.S02
 SC.S03,Licencias y Tasas,2,SC
 SC.S03.01,General,3,SC.S03
+OP.C01,Consumos Obra,2,OP
+OP.C01.01,General,3,OP.C01
+OP.C02,Limpieza,2,OP
+OP.C02.01,General,3,OP.C02
+IMP.General,General,2,IMP
+IMP.General.01,General,3,IMP.General
