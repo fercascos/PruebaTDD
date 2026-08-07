@@ -32,9 +32,9 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
-from tdd.evidence import images, storage
+from tdd.evidence import guardia, images, storage
 from tdd.evidence.naming import sanear
-from tdd.evidence.router import AlmacenDep
+from tdd.evidence.router import AlmacenDep, AntivirusDep
 
 router = APIRouter(tags=["Documentos"])
 
@@ -203,6 +203,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     s: SesionDep,
     usuario: UsuarioDep,
     almacen: AlmacenDep,
+    av: AntivirusDep,
     archivo: Annotated[UploadFile, File(alias="file")],
     doc_type: Annotated[str | None, Form()] = None,
     confidentiality: Annotated[str, Form()] = "INTERNO",
@@ -278,6 +279,18 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
                 status.HTTP_422_UNPROCESSABLE_ENTITY, "El documento al que sustituye no existe"
             )
         version = int(anterior) + 1
+
+    # `[REQ]` §18.5 · Un PDF o un XLSX que llega de un cliente es un vector
+    # mucho más probable que una fotografía.
+    guardia.rechazar_si_infectado(
+        av,
+        datos,
+        s=s,
+        organization_id=usuario.organization_id,
+        actor_id=usuario.id,
+        nombre=archivo.filename or "",
+        entidad="document",
+    )
 
     document_id = uuid.uuid4()
     clave = storage.clave_de_documento(usuario.organization_id, project_id, document_id, extension)

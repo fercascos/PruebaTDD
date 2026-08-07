@@ -159,3 +159,221 @@ class AlmacenEnMemoria:
         if es_original(clave):
             raise OriginalInmutable(f"Un original no se borra desde el almacén ({clave})")
         self._objetos.pop(clave, None)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Adaptador S3 · barrera 4
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class AlmacenConUrlFirmada(Protocol):
+    """Puerto opcional: no todos los adaptadores saben firmar URLs.
+
+    El de disco no puede, y no se finge que sí. Quien quiera una URL firmada
+    comprueba con `isinstance`/`hasattr` en vez de recibir una cadena inútil.
+    """
+
+    def url_firmada(self, clave: str, *, segundos: int) -> str: ...
+
+
+#: `[REQ]` Modos de Object Lock, y por qué el valor por defecto es `GOVERNANCE`.
+#:
+#: `COMPLIANCE` es más fuerte: **nadie**, ni la cuenta raíz, puede acortar la
+#: retención ni borrar la versión hasta que venza. Es la lectura literal de
+#: «los archivos originales nunca deben sobrescribirse».
+#:
+#: Y por eso mismo no puede ser el valor por defecto: choca de frente con el
+#: derecho de supresión. Si un cliente ejerce su derecho al borrado, o si por
+#: error entra en el bucket una fotografía con una persona identificable,
+#: `COMPLIANCE` **impide atenderlo** durante los años que dure la retención. Se
+#: cambiaría un riesgo técnico por uno legal.
+#:
+#: `GOVERNANCE` protege igual del accidente —hace falta un permiso explícito,
+#: `s3:BypassGovernanceRetention`, que la aplicación no tiene— y deja una vía
+#: auditable para el borrado legítimo. Quien despliegue puede subir a
+#: `COMPLIANCE` sabiendo lo que acepta.
+MODOS_DE_BLOQUEO = ("GOVERNANCE", "COMPLIANCE")
+
+
+def construir_cliente(
+    *,
+    endpoint_url: str | None = None,
+    region: str | None = None,
+    access_key_id: str | None = None,
+    secret_access_key: str | None = None,
+) -> object:
+    """El cliente de S3, con dos ajustes que no son opcionales.
+
+    **Firma v4.** Sin fijarla, botocore firma algunas peticiones con la v2, que
+    AWS **ya no admite** en las regiones creadas después de 2014: las URL
+    firmadas saldrían con `AWSAccessKeyId=` y el almacén las rechazaría. Se vio
+    en una prueba que miraba la URL generada.
+
+    **Direccionamiento por ruta cuando hay `endpoint_url`.** Es la señal de que
+    detrás hay un MinIO o similar, que no resuelve `bucket.host`.
+
+    Las credenciales llegan por parámetro desde la configuración, que las lee
+    del entorno. Si vienen vacías, botocore usa su cadena habitual —rol de la
+    instancia, perfil—, que es lo preferible en producción: la credencial más
+    segura es la que no hay que guardar en ningún sitio.
+    """
+    import boto3  # noqa: PLC0415 — solo se importa si se usa este adaptador
+    from botocore.config import Config  # noqa: PLC0415
+
+    ajustes = Config(signature_version="s3v4")
+    if endpoint_url:
+        ajustes = Config(signature_version="s3v4", s3={"addressing_style": "path"})
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url or None,
+        region_name=region or None,
+        aws_access_key_id=access_key_id or None,
+        aws_secret_access_key=secret_access_key or None,
+        config=ajustes,
+    )
+
+
+class AlmacenS3:
+    """Adaptador sobre almacenamiento compatible con S3 (AWS, MinIO, …).
+
+    **La barrera 4 no la pone este código: la pone el bucket.** Aquí solo se
+    hacen tres cosas y conviene no confundirlas con la garantía:
+
+    1. No se ofrece ninguna operación de sobrescritura de un original, y se
+       comprueba antes de escribir.
+    2. Al subir un original se le pide a S3 que lo retenga (`ObjectLockMode`).
+    3. Borrar un original se rechaza aquí mismo.
+
+    Lo que de verdad impide perder los bytes es que el bucket tenga
+    **versionado y Object Lock activados al crearlo** —no se pueden activar
+    después—, y eso es una propiedad de la infraestructura. `comprobar()` lo
+    verifica contra el bucket real y dice qué falta.
+
+    `[LIM]` Probado contra `moto`, que es un simulador en proceso: eso ejercita
+    este código —incluido que S3 rechace borrar una versión retenida—, pero
+    **no demuestra que un bucket concreto esté bien configurado**. Para eso
+    está `comprobar()`, que hay que ejecutar contra el bucket de verdad.
+    """
+
+    def __init__(
+        self,
+        *,
+        bucket: str,
+        cliente: object | None = None,
+        endpoint_url: str | None = None,
+        region: str | None = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        object_lock: bool = True,
+        modo_de_bloqueo: str = "GOVERNANCE",
+        dias_de_retencion: int = 3650,
+    ) -> None:
+        if modo_de_bloqueo not in MODOS_DE_BLOQUEO:
+            raise ValueError(f"Modo de bloqueo no válido: {modo_de_bloqueo}")
+        self.bucket = bucket
+        self.object_lock = object_lock
+        self.modo_de_bloqueo = modo_de_bloqueo
+        self.dias_de_retencion = dias_de_retencion
+
+        if cliente is not None:
+            self._s3 = cliente
+            return
+        self._s3 = construir_cliente(
+            endpoint_url=endpoint_url,
+            region=region,
+            access_key_id=access_key_id,
+            secret_access_key=secret_access_key,
+        )
+
+    # ── Puerto ───────────────────────────────────────────────────────────────
+
+    def guardar(self, clave: str, datos: bytes) -> None:
+        if es_original(clave) and self.existe(clave):
+            # Comprobar y escribir no es atómico, y da igual: la clave lleva un
+            # UUID recién generado, así que no hay dos escrituras compitiendo
+            # por la misma. Y si las hubiera, el versionado del bucket conserva
+            # las dos: no se pierde nada, que es lo que importa.
+            raise OriginalInmutable(f"El original {clave} ya existe y no se sobrescribe")
+
+        extra: dict[str, object] = {}
+        if self.object_lock and es_original(clave):
+            from datetime import UTC, datetime, timedelta  # noqa: PLC0415
+
+            extra = {
+                "ObjectLockMode": self.modo_de_bloqueo,
+                "ObjectLockRetainUntilDate": datetime.now(UTC)
+                + timedelta(days=self.dias_de_retencion),
+            }
+        self._s3.put_object(Bucket=self.bucket, Key=clave, Body=datos, **extra)  # type: ignore[attr-defined]
+
+    def leer(self, clave: str) -> bytes:
+        from botocore.exceptions import ClientError  # noqa: PLC0415
+
+        try:
+            respuesta = self._s3.get_object(Bucket=self.bucket, Key=clave)  # type: ignore[attr-defined]
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] in ("NoSuchKey", "404"):
+                raise ObjetoNoEncontrado(clave) from exc
+            raise
+        return respuesta["Body"].read()  # type: ignore[no-any-return]
+
+    def existe(self, clave: str) -> bool:
+        from botocore.exceptions import ClientError  # noqa: PLC0415
+
+        try:
+            self._s3.head_object(Bucket=self.bucket, Key=clave)  # type: ignore[attr-defined]
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
+                return False
+            raise
+        return True
+
+    def borrar(self, clave: str) -> None:
+        if es_original(clave):
+            raise OriginalInmutable(f"Un original no se borra desde el almacén ({clave})")
+        self._s3.delete_object(Bucket=self.bucket, Key=clave)  # type: ignore[attr-defined]
+
+    # ── Extras del adaptador ─────────────────────────────────────────────────
+
+    def url_firmada(self, clave: str, *, segundos: int = 300) -> str:
+        """URL temporal de lectura directa contra el almacén.
+
+        `[REQ]` §18.5 · Un recurso, cinco minutos, y **después** de autorizar:
+        firmar es un permiso, así que quien llame tiene que haber comprobado
+        antes que ese usuario puede ver ese objeto. Una URL firmada emitida sin
+        esa comprobación es una fuga con fecha de caducidad.
+        """
+        return self._s3.generate_presigned_url(  # type: ignore[attr-defined,no-any-return]
+            "get_object", Params={"Bucket": self.bucket, "Key": clave}, ExpiresIn=segundos
+        )
+
+    def comprobar(self) -> list[str]:
+        """Qué le falta al bucket para sostener la barrera 4. Vacío = correcto.
+
+        Existe porque **el versionado y el Object Lock no se pueden activar
+        después de crear el bucket**: si el bucket se creó mal, no hay arreglo,
+        hay que crear otro y copiar. Descubrirlo el día que alguien sobrescribe
+        un original es descubrirlo tarde.
+        """
+        from botocore.exceptions import ClientError  # noqa: PLC0415
+
+        problemas: list[str] = []
+        try:
+            versionado = self._s3.get_bucket_versioning(Bucket=self.bucket)  # type: ignore[attr-defined]
+        except ClientError as exc:
+            codigo = exc.response["Error"]["Code"]
+            return [f"No se puede consultar el bucket «{self.bucket}»: {codigo}"]
+        if versionado.get("Status") != "Enabled":
+            problemas.append(
+                "El versionado del bucket NO está activado. Sin él, sobrescribir "
+                "una clave destruye los bytes anteriores. No se puede activar de "
+                "forma retroactiva sobre lo ya escrito."
+            )
+        try:
+            self._s3.get_object_lock_configuration(Bucket=self.bucket)  # type: ignore[attr-defined]
+        except ClientError:
+            problemas.append(
+                "El bucket NO tiene Object Lock. Solo se puede habilitar AL CREAR "
+                "el bucket: hay que crear uno nuevo y copiar el contenido."
+            )
+        return problemas

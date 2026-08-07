@@ -29,8 +29,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
-from tdd.evidence import anotaciones, images
-from tdd.evidence.router import AlmacenDep
+from tdd.evidence import anotaciones, guardia, images
+from tdd.evidence.router import AlmacenDep, AntivirusDep
 from tdd.reporting import generator
 from tdd.reporting import snapshot as snap
 from tdd.reporting.warnings import (
@@ -113,6 +113,7 @@ def registrar_plantilla(
     s: SesionDep,
     usuario: UsuarioDep,
     almacen: AlmacenDep,
+    av: AntivirusDep,
     archivo: Annotated[UploadFile, File(alias="file")],
     name: Annotated[str, Form()],
     language: Annotated[str, Form()] = "es",
@@ -127,6 +128,20 @@ def registrar_plantilla(
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "La plantilla supera el tamaño máximo"
         )
+    # `[REQ]` §18.5 · Se analiza **antes** de `_comprobar_zip`, no después.
+    # Una plantilla es un ZIP con XML dentro que llega de fuera, y comprobarla
+    # significa abrirla: el analizador de ZIP es él mismo superficie de ataque
+    # (bombas de descompresión, rutas con `..`). Lo que viene de fuera se
+    # analiza antes de interpretarlo, no después.
+    guardia.rechazar_si_infectado(
+        av,
+        datos,
+        s=s,
+        organization_id=usuario.organization_id,
+        actor_id=usuario.id,
+        nombre=archivo.filename or "",
+        entidad="report_template",
+    )
     _comprobar_zip(datos)
     try:
         analisis = generator.analizar(datos)

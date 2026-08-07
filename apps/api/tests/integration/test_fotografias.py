@@ -1010,3 +1010,125 @@ def test_se_clasifican_en_lote_y_se_filtran_por_sistema(
         headers=cab("consultor_a"),
     ).json()
     assert {f["id"] for f in filtradas} == set(ids[:2])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Antivirus §18.5
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class AntivirusQueSiempreEncuentra:
+    """`clamd` de mentira que da positivo. Aquí lo que se prueba no es la
+    detección —eso es la base de firmas de ClamAV— sino **qué hace la
+    aplicación** cuando el análisis da positivo."""
+
+    def analizar(self, datos: bytes):  # noqa: ARG002
+        from tdd.evidence.antivirus import Resultado, Veredicto
+
+        return Resultado(Veredicto.INFECTADO, "Eicar-Test-Signature")
+
+
+def test_un_fichero_infectado_no_se_sube_ni_deja_rastro(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, motor_admin: Any
+) -> None:
+    """`[REQ]` §18.5 · Se analiza **antes** de que el fichero sea accesible.
+
+    Y antes de escribir en la base: el orden importa, porque una foto rechazada
+    que ya tuviera fila quedaría de fantasma en el listado.
+    """
+    from tdd.evidence.guardia import obtener_antivirus
+
+    antes = cliente.get(
+        f"{RUTA}/projects/{proyecto}/photos?asset_id={activo}", headers=cab("consultor_a")
+    ).json()
+
+    cliente.app.dependency_overrides[obtener_antivirus] = AntivirusQueSiempreEncuentra
+    try:
+        r = subir(cliente, cab, proyecto, foto_unica(), asset_id=activo)
+    finally:
+        cliente.app.dependency_overrides.pop(obtener_antivirus, None)
+
+    assert r.status_code == 422
+    assert "Eicar-Test-Signature" in r.json()["detail"]
+
+    despues = cliente.get(
+        f"{RUTA}/projects/{proyecto}/photos?asset_id={activo}", headers=cab("consultor_a")
+    ).json()
+    assert len(despues) == len(antes)
+
+
+def test_el_positivo_queda_auditado_como_critico(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, motor_admin: Any
+) -> None:
+    """Un intento de subir malware es lo que alguien va a querer reconstruir."""
+    from tdd.evidence.guardia import obtener_antivirus
+
+    cliente.app.dependency_overrides[obtener_antivirus] = AntivirusQueSiempreEncuentra
+    try:
+        subir(cliente, cab, proyecto, foto_unica(), nombre="factura.jpg", asset_id=activo)
+    finally:
+        cliente.app.dependency_overrides.pop(obtener_antivirus, None)
+
+    with motor_admin.begin() as conn:
+        fila = conn.execute(
+            text(
+                "SELECT after_data, severity::text FROM audit_log "
+                "WHERE action = 'UPLOAD_INFECTED' ORDER BY occurred_at DESC LIMIT 1"
+            )
+        ).first()
+    assert fila is not None
+    assert fila[0]["firma"] == "Eicar-Test-Signature"
+    assert fila[0]["nombre"] == "factura.jpg"
+    assert fila[1] == "CRITICO"
+
+
+def test_sin_antivirus_la_subida_pasa_pero_no_se_dice_que_esta_limpia(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Bloquear las subidas sin ClamAV dejaría la aplicación inservible; darlas
+    por limpias sería mentir. Pasa, y `SinAntivirus` deja dicho por qué."""
+    from tdd.evidence.antivirus import SinAntivirus, Veredicto
+
+    assert subir(cliente, cab, proyecto, foto_unica(), asset_id=activo).status_code == 201
+    resultado = SinAntivirus().analizar(b"x")
+    assert resultado.veredicto is Veredicto.NO_ANALIZADO
+
+
+def test_los_documentos_y_las_plantillas_tambien_se_analizan(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """Era el hueco importante: el antivirus estaba solo en las fotografías.
+
+    Un PDF o un PPTX que llega de un cliente es un vector mucho más probable
+    que un JPEG, y las dos rutas escribían en el almacén sin mirar.
+    """
+    import io as _io
+
+    from tdd.evidence.guardia import obtener_antivirus
+
+    cliente.app.dependency_overrides[obtener_antivirus] = AntivirusQueSiempreEncuentra
+    try:
+        documento = cliente.post(
+            f"{RUTA}/projects/{proyecto}/documents",
+            headers=cab("consultor_a"),
+            files={"file": ("informe.pdf", _io.BytesIO(b"%PDF-1.4 lo que sea"), "application/pdf")},
+        )
+        plantilla = cliente.post(
+            f"{RUTA}/report-templates",
+            headers=cab("admin_a"),
+            files={
+                "file": (
+                    "modelo.pptx",
+                    _io.BytesIO(b"PK\x03\x04 lo que sea"),
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                )
+            },
+            data={"name": "Modelo A"},
+        )
+    finally:
+        cliente.app.dependency_overrides.pop(obtener_antivirus, None)
+
+    assert documento.status_code == 422, documento.text
+    assert "Eicar-Test-Signature" in documento.json()["detail"]
+    assert plantilla.status_code == 422, plantilla.text
+    assert "Eicar-Test-Signature" in plantilla.json()["detail"]

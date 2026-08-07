@@ -372,6 +372,22 @@ Playwright, en Chromium y WebKit (por Safari e iOS), con datos ficticios.
 `[REC]` Se limita deliberadamente el número de pruebas end to end: son las más caras de mantener y las
 más frágiles. Cubren **flujos**, no casos; los casos van en las capas inferiores, rápidas y estables.
 
+### 19.10.0. Lo que se prueba contra un simulador, y lo que eso significa
+
+Dos adaptadores de infraestructura no se pueden probar contra la cosa real en este entorno, y
+conviene que quede escrito qué demuestra cada prueba:
+
+| Adaptador | Se prueba contra | Qué demuestra | Qué **no** demuestra |
+|---|---|---|---|
+| **S3 con Object Lock** | `moto`, simulador en proceso | Que el adaptador manda los parámetros correctos, que se niega a sobrescribir un original, que la retención queda puesta y que **S3 rechaza borrar una versión retenida** aunque se hable con él saltándose el adaptador | Que un bucket concreto esté bien creado. El versionado y el Object Lock **solo se activan al crear el bucket**; por eso existe `AlmacenS3.comprobar()`, que corre contra el bucket real al arrancar |
+| **ClamAV** | Un `clamd` de mentira que habla `INSTREAM` de verdad | El troceado, el orden de bytes de los prefijos de longitud, el trozo final vacío y la lectura de la respuesta —que es donde falla un cliente de protocolo binario, y falla en silencio— | Que ClamAV detecte nada. Eso es su base de firmas |
+
+`[REQ]` En los dos casos la regla es la misma: **nada devuelve «correcto» por no haber podido
+comprobarlo**. Si el antivirus no contesta, el veredicto es `NO_ANALIZADO`, no `LIMPIO`; si el
+bucket no tiene Object Lock, se registra en el log al arrancar.
+
+---
+
 ### 19.10.1. Comprobaciones en navegador ya escritas
 
 Lo construido hasta ahora no está cubierto por la tabla anterior —que es el plan— sino por estas

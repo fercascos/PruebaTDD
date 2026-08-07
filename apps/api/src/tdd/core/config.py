@@ -36,12 +36,36 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 14
 
     # ── Almacenamiento de objetos ───────────────────────────────────────────
-    # [LIM] Solo está implementado el adaptador sobre disco. El de S3 con
-    # Object Lock —la cuarta barrera que protege los originales— no existe
-    # todavía y no se afirma que funcione.
+    # `disco` es el adaptador de desarrollo; `s3` el de producción, con Object
+    # Lock sobre los originales. [LIM] El de S3 está probado contra `moto`, un
+    # simulador: eso ejercita el código, no demuestra que un bucket concreto
+    # esté bien creado. Para eso está `AlmacenS3.comprobar()`, que corre contra
+    # el bucket real al arrancar.
+    storage_backend: Literal["disco", "s3"] = "disco"
     storage_local_dir: Path = Path("./var/objetos")
+    storage_endpoint_url: str = ""
+    storage_region: str = ""
+    storage_bucket: str = ""
+    storage_access_key_id: str = Field(default="", repr=False)
+    storage_secret_access_key: str = Field(default="", repr=False)
+    storage_signed_url_ttl_seconds: int = 300
+    storage_enable_object_lock: bool = True
+    # GOVERNANCE y no COMPLIANCE: ver el comentario de `MODOS_DE_BLOQUEO` en
+    # evidence/storage.py. COMPLIANCE impediría atender un derecho de supresión
+    # durante los años que dure la retención.
+    storage_object_lock_mode: Literal["GOVERNANCE", "COMPLIANCE"] = "GOVERNANCE"
+    storage_object_lock_days: int = 3650
     max_upload_mb: int = 50
     photo_trash_purge_days: int = 30
+
+    # ── Antivirus ───────────────────────────────────────────────────────────
+    # Desactivado por defecto y **se nota**: sin él, cada fichero queda
+    # `NO_ANALIZADO`, que no es lo mismo que limpio, y el informe lo avisa.
+    # [LIM] El adaptador de ClamAV no se ha probado contra un ClamAV real.
+    antivirus_enabled: bool = False
+    clamav_host: str = ""
+    clamav_port: int = 3310
+    clamav_timeout_seconds: float = 30.0
 
     # ── Precios ─────────────────────────────────────────────────────────────
     # P-06: no hay ninguna fuente externa. La bandera existe para que el
@@ -60,6 +84,18 @@ class Settings(BaseSettings):
     @property
     def required_font_families(self) -> list[str]:
         return [f.strip() for f in self.corporate_fonts_required.split(",") if f.strip()]
+
+    @field_validator("storage_bucket")
+    @classmethod
+    def _bucket_requerido_con_s3(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]
+        """Elegir el adaptador de S3 sin bucket no arranca a medias.
+
+        Sin esto, la aplicación levantaría y fallaría en la primera subida, que
+        es en una visita y sin cobertura para depurar.
+        """
+        if info.data.get("storage_backend") == "s3" and not v:
+            raise ValueError("STORAGE_BACKEND=s3 exige STORAGE_BUCKET")
+        return v
 
     @field_validator("app_secret_key")
     @classmethod

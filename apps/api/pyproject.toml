@@ -24,6 +24,9 @@ dependencies = [
     # PPTX y XLSX.
     "python-pptx>=1.0",
     "openpyxl>=3.1",
+    # Adaptador de almacenamiento S3. Solo se importa si STORAGE_BACKEND=s3:
+    # con el adaptador sobre disco la aplicación arranca sin tocarlo.
+    "boto3>=1.34",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +39,10 @@ dev = [
     # Construye el EXIF de las imágenes de prueba. [REQ] No hay ni una
     # fotografía real en el repositorio: todas se generan en el momento.
     "piexif>=1.1",
+    # Simulador de S3 en proceso. Permite probar el adaptador —incluido que S3
+    # rechace borrar una versión retenida— sin credenciales ni red. [LIM] Es un
+    # simulador: no demuestra que un bucket concreto esté bien creado.
+    "moto[s3]>=5.0",
 ]
 
 [build-system]

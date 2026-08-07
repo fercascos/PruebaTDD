@@ -385,9 +385,9 @@ prueba que lo respalda; lo que no, está marcado y **no se afirma que funcione**
 
 | Pendiente | Consecuencia hoy | `[LIM]` |
 |---|---|---|
-| **Antivirus (ClamAV)** | Ninguna foto pasa por `CUARENTENA`. El estado existe y la máquina de estados lo contempla, pero **nada lo activa** | Sí |
-| **Almacén S3 con Object Lock** | Solo hay adaptador sobre disco y otro en memoria. La **barrera 4** (WORM) es una propiedad del bucket y **no se ha probado contra ninguno** | Sí |
-| **URLs firmadas** | La descarga devuelve el binario en la respuesta en vez de un `302` de 5 minutos | Sí |
+| **Antivirus contra un ClamAV real** | El adaptador habla `INSTREAM` y está probado contra un servidor de mentira que responde ese protocolo: eso verifica el troceado y la lectura de la respuesta, **no** que ClamAV detecte nada. Desactivado por defecto; sin él, cada fichero queda `NO_ANALIZADO`, que **no es lo mismo que limpio**, y así se dice | Sí |
+| **Bucket S3 de verdad** | El adaptador existe y está probado contra `moto`, un simulador —incluido que S3 rechace borrar una versión retenida—. Lo que **no** demuestra es que un bucket concreto esté bien creado: el versionado y el Object Lock solo se activan AL CREARLO. `AlmacenS3.comprobar()` lo verifica contra el bucket real al arrancar y lo registra en el log | Sí |
+| **URLs firmadas en la descarga** | El adaptador S3 sabe firmarlas (`url_firmada`), pero la descarga **sigue devolviendo el binario por la API**. Es un cambio de diseño, no una carencia técnica: una URL firmada es un permiso que viaja solo, y hoy la autorización se comprueba en cada petición. Migrar exige decidir qué se hace con las miniaturas y con el enlace ya emitido cuando alguien pierde el acceso | Sí |
 | **Worker asíncrono** (§15.3) | La subida es directa y síncrona. Aceptable para una visita; deja de serlo con 400 fotos | Sí |
 | **Anotaciones vectoriales** | La tabla y el `CHECK` están; no hay ni editor ni rasterizado | Sí |
 | **Descarga en lote (ZIP)** | No implementada | Sí |

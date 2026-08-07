@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -16,9 +17,10 @@ from tdd.core.config import get_settings
 from tdd.core.conflictos import registrar as registrar_conflictos
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
 from tdd.equipment.router import router as equipment_router
+from tdd.evidence import antivirus
 from tdd.evidence.documents import router as documents_router
 from tdd.evidence.router import router as evidence_router
-from tdd.evidence.storage import AlmacenEnDisco
+from tdd.evidence.storage import AlmacenEnDisco, AlmacenS3
 from tdd.findings.router import router as findings_router
 from tdd.identity.directorio import router as directorio_router
 from tdd.identity.router import router as identity_router
@@ -43,13 +45,49 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
     )
     app.state.engine = engine
     app.state.session_factory = crear_fabrica_de_sesiones(engine)
-    # [LIM] Almacén sobre disco: el adaptador S3 con Object Lock (barrera 4 de
-    # las fotografías) no está implementado ni probado. Ver evidence/storage.py.
-    app.state.object_store = AlmacenEnDisco(settings.storage_local_dir)
+    app.state.object_store = _almacen(settings)
+    app.state.antivirus = antivirus.construir(
+        habilitado=settings.antivirus_enabled,
+        host=settings.clamav_host,
+        puerto=settings.clamav_port,
+        timeout=settings.clamav_timeout_seconds,
+    )
     try:
         yield
     finally:
         engine.dispose()
+
+
+def _almacen(settings: Any) -> Any:
+    """El adaptador de almacenamiento, y su diagnóstico al arrancar.
+
+    Con S3 se comprueba el bucket **aquí**, no en la primera subida: el
+    versionado y el Object Lock solo se pueden activar al crear el bucket, así
+    que descubrir que falta el día que alguien sobrescribe un original es
+    descubrirlo cuando ya no tiene arreglo.
+
+    Se avisa y se sigue en vez de negarse a arrancar: un bucket sin WORM
+    protege peor, pero negarse dejaría la aplicación caída por algo que quizá
+    esté a medio migrar. Lo que no se hace es callarlo.
+    """
+    if settings.storage_backend != "s3":
+        # [LIM] Sobre disco: sin URLs firmadas, sin versionado y sin Object
+        # Lock. Vale para desarrollo y para la suite, no para producción.
+        return AlmacenEnDisco(settings.storage_local_dir)
+
+    almacen = AlmacenS3(
+        bucket=settings.storage_bucket,
+        endpoint_url=settings.storage_endpoint_url,
+        region=settings.storage_region,
+        access_key_id=settings.storage_access_key_id,
+        secret_access_key=settings.storage_secret_access_key,
+        object_lock=settings.storage_enable_object_lock,
+        modo_de_bloqueo=settings.storage_object_lock_mode,
+        dias_de_retencion=settings.storage_object_lock_days,
+    )
+    for problema in almacen.comprobar():
+        logging.getLogger("tdd.almacen").error("Barrera 4 incompleta: %s", problema)
+    return almacen
 
 
 def crear_app() -> FastAPI:

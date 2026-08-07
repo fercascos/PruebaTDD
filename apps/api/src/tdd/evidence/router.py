@@ -55,7 +55,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
-from tdd.evidence import images, storage
+from tdd.evidence import antivirus, guardia, images, storage
 from tdd.evidence.naming import (
     PLANTILLA_POR_DEFECTO,
     iniciales,
@@ -87,6 +87,9 @@ def obtener_almacen(request: Request) -> storage.AlmacenDeObjetos:
 
 
 AlmacenDep = Annotated[storage.AlmacenDeObjetos, Depends(obtener_almacen)]
+
+
+AntivirusDep = Annotated[antivirus.Antivirus, Depends(guardia.obtener_antivirus)]
 
 #: `[SUP]` Tamaño máximo por fichero. Una foto de móvil ronda 3-5 MB; 50 deja
 #: sitio de sobra para una réflex sin abrir la puerta a subir un vídeo.
@@ -326,6 +329,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     s: SesionDep,
     usuario: UsuarioDep,
     almacen: AlmacenDep,
+    av: AntivirusDep,
     archivo: Annotated[UploadFile, File(alias="file")],
     origin: Annotated[str, Form()] = "ORDENADOR",
     asset_id: Annotated[uuid.UUID | None, Form()] = None,
@@ -364,6 +368,17 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             status.HTTP_409_CONFLICT,
             f"{duplicado.mensaje} (fotografía {duplicado.photo_id})",
         )
+
+    # `[REQ]` §18.5 · Antes de escribir nada, ni en el almacén ni en la base.
+    guardia.rechazar_si_infectado(
+        av,
+        datos,
+        s=s,
+        organization_id=usuario.organization_id,
+        actor_id=usuario.id,
+        nombre=archivo.filename or "",
+        entidad="photo",
+    )
 
     photo_id = uuid.uuid4()
     extension = meta.extension
