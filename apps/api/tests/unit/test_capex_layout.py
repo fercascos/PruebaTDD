@@ -13,46 +13,62 @@ import pytest
 
 from tdd.reporting import capex_layout as cl
 
+
+def _linea(**kw) -> cl.LineaCapex:
+    """Una línea con los tres niveles del árbol puestos, que es como llegan del
+    snapshot desde que la tabla agrupa igual que la plantilla."""
+    base = dict(
+        numero="",
+        zona="Cubierta",
+        concepto="Vida útil",
+        descripcion="Renovar impermeabilización",
+        riesgo="Moderado",
+        comentarios="Fin de vida útil",
+        horizonte="MEDIO",
+        importe=Decimal("83407.50"),
+        tipo_de_coste="Hard Costs",
+        capitulo="Cubierta",
+        objeto="Cubierta",
+        recuperable="NO",
+    )
+    return cl.LineaCapex(**{**base, **kw})
+
+
 LINEAS = [
-    cl.LineaCapex(
-        "",
-        "Cubierta",
-        "Vida útil",
-        "Renovar impermeabilización",
-        "Moderado",
-        "Fin de vida útil",
-        "MEDIO",
-        Decimal("83407.50"),
+    _linea(),
+    _linea(
+        concepto="Mantenimiento",
+        descripcion="Limpieza de lucernarios",
+        riesgo="Bajo",
+        comentarios="Gasto operativo",
+        horizonte="CORTO",
+        importe=Decimal("2300.00"),
+        objeto="General",
+        recuperable="SI",
     ),
-    cl.LineaCapex(
-        "",
-        "Cubierta",
-        "Mantenimiento",
-        "Limpieza de lucernarios",
-        "Bajo",
-        "Gasto operativo",
-        "CORTO",
-        Decimal("2300.00"),
+    _linea(
+        zona="General",
+        concepto="Normativa",
+        descripcion="Adecuación RIPCI",
+        riesgo="Extremo",
+        comentarios="Incumplimiento",
+        horizonte="CORTO",
+        importe=Decimal("144780.00"),
+        capitulo="Protección activa contra incendios",
+        objeto="Inspección RIPCI",
     ),
-    cl.LineaCapex(
-        "",
-        "General",
-        "Normativa",
-        "Adecuación RIPCI",
-        "Extremo",
-        "Incumplimiento",
-        "CORTO",
-        Decimal("144780.00"),
-    ),
-    cl.LineaCapex(
-        "",
-        "General",
-        "Otro",
-        "Petición del cliente",
-        "Bajo",
-        "Fuera del alcance",
-        "OTRO",
-        Decimal("12000.00"),
+    _linea(
+        zona="General",
+        concepto="Otro",
+        descripcion="Petición del cliente",
+        riesgo="Bajo",
+        comentarios="Fuera del alcance",
+        horizonte="OTRO",
+        importe=Decimal("12000.00"),
+        tipo_de_coste="Soft Costs",
+        capitulo="Licencias y Tasas",
+        objeto="General",
+        recuperable="N.A.",
     ),
 ]
 
@@ -68,20 +84,26 @@ def _layout(**kw) -> cl.CapexTableLayout:
 
 def test_las_columnas_son_las_del_render_y_en_su_orden() -> None:
     """docs/20 §20.3 C-6 · El render destapó `Nº` y `Group`, y que `Comments`
-    va ANTES de las columnas de plazo."""
+    va ANTES de las columnas de plazo. Al llegar la plantilla CAPEX vigente se
+    añadieron `Objeto`, `Recuperable` y `TOTAL`; el tipo de coste y el capítulo
+    NO son columnas —son filas de sección— porque en 4:3 no cabe repetir el
+    mismo texto quince veces."""
     claves = [c.key for c in _layout().columnas]
     assert claves == [
         "no",
+        "objeto",
         "zona",
-        "concepto",
         "descripcion",
         "riesgo",
         "comentarios",
+        "concepto",
+        "recuperable",
         "corto",
         "medio",
         "largo",
         "mejoras",
         "otro",
+        "total",
     ]
 
 
@@ -115,7 +137,7 @@ def test_una_celda_sin_importe_queda_en_blanco_y_no_a_cero() -> None:
     """Es como está en la plantilla, y distingue «no aplica» de «cero»: un cero
     explícito afirma que la actuación cuesta cero, que no es lo mismo."""
     assert cl.formatear_importe(None) == ""
-    fila = next(f for f in _layout().filas if f.celdas.get("no") == "1.1")
+    fila = next(f for f in _layout().filas if f.celdas.get("no") == "1.1.1")
     vacias = [fila.celdas[k] for k in ("largo", "mejoras", "otro")]
     assert vacias == ["", "", ""]
     assert "0,00" not in "".join(vacias)
@@ -139,17 +161,32 @@ def test_formato_de_importe(valor: Decimal, locale: str, esperado: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_hay_una_fila_de_seccion_por_zona_con_su_subtotal() -> None:
+def test_se_agrupa_por_tipo_de_coste_y_capitulo_como_la_plantilla() -> None:
+    """Antes se agrupaba por zona, que no está en la plantilla y separaba dos
+    actuaciones del mismo sistema por estar en plantas distintas."""
     secciones = [f for f in _layout().filas if f.tipo == "seccion"]
-    assert {f.capitulo for f in secciones} == {"Cubierta", "General"}
-    cubierta = next(f for f in secciones if f.capitulo == "Cubierta")
+    assert [(f.nivel, f.capitulo) for f in secciones] == [
+        (1, "Hard Costs"),
+        (2, "Cubierta"),
+        (2, "Protección activa contra incendios"),
+        (1, "Soft Costs"),
+        (2, "Licencias y Tasas"),
+    ]
+
+
+def test_cada_seccion_lleva_su_subtotal() -> None:
+    secciones = {f.capitulo: f for f in _layout().filas if f.tipo == "seccion"}
+    cubierta = secciones["Cubierta"]
     assert cubierta.celdas["corto"] == "2.300,00 €"
     assert cubierta.celdas["medio"] == "83.407,50 €"
+    assert cubierta.celdas["total"] == "85.707,50 €"
+    # El de nivel 1 suma sus capítulos.
+    assert secciones["Hard Costs"].celdas["total"] == "230.487,50 €"
 
 
 def test_la_numeracion_es_jerarquica_como_en_el_original() -> None:
     numeros = [f.celdas["no"] for f in _layout().filas if f.tipo in ("seccion", "dato")]
-    assert numeros == ["1.", "1.1", "1.2", "2.", "2.1", "2.2"]
+    assert numeros == ["1.", "1.1", "1.1.1", "1.1.2", "1.2", "1.2.1", "2.", "2.1", "2.1.1"]
 
 
 def test_los_totales_cuadran_con_las_lineas() -> None:
@@ -157,7 +194,9 @@ def test_los_totales_cuadran_con_las_lineas() -> None:
     assert t["corto"] == Decimal("147080.00")
     assert t["medio"] == Decimal("83407.50")
     assert t["otro"] == Decimal("12000.00")
-    assert sum(t.values()) == sum(ln.importe for ln in LINEAS)
+    # `total` es la suma de los cinco plazos: se excluye o contaría dos veces.
+    assert t["total"] == sum(ln.importe for ln in LINEAS)
+    assert sum(v for k, v in t.items() if k != "total") == t["total"]
 
 
 PLAZOS = ("corto", "medio", "largo", "mejoras", "otro")
@@ -223,7 +262,9 @@ def test_los_totales_cuentan_las_dos_lineas_de_una_recurrente() -> None:
     t = cl.construir(RECURRENTE, capitulo="Arquitectura").totales
     assert t["corto"] == Decimal("2300.00")
     assert t["largo"] == Decimal("2300.00")
-    assert sum(t.values()) == Decimal("4600.00")
+    # `total` es la suma de los plazos, así que se excluye del cuadre.
+    assert t["total"] == Decimal("4600.00")
+    assert sum(v for k, v in t.items() if k != "total") == Decimal("4600.00")
 
 
 def test_p05_sigue_intacta_a_nivel_de_linea() -> None:
@@ -251,7 +292,7 @@ def test_sin_hallazgo_cada_linea_va_por_su_cuenta() -> None:
 def test_el_titulo_cambia_con_el_idioma() -> None:
     assert "VALORACIÓN" in _layout(locale="es-ES").titulo
     assert "ESTIMATE ASSESSMENT" in _layout(locale="en-GB").titulo
-    assert _layout(locale="en-GB").titulo_columna(_layout().columnas[1]) == "Affected area"
+    assert _layout(locale="en-GB").titulo_columna(_layout().columnas[1]) == "Item"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

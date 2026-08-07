@@ -18,6 +18,9 @@ VERDE_TITULO = RGBColor(0xA9, 0xC7, 0x8C)
 GRIS_CABECERA = RGBColor(0xB0, 0xB0, 0xB0)
 ORO_GRUPO = RGBColor(0x9A, 0x8C, 0x4E)
 GRIS_SECCION = RGBColor(0xA6, 0xA6, 0xA6)
+#: Las secciones de nivel 1 —el tipo de coste— y la fila de TOTAL, más oscuras
+#: que las de capítulo para que se lean como lo que son: el grupo de arriba.
+GRIS_TIPO_DE_COSTE = RGBColor(0x59, 0x59, 0x59)
 BLANCO = RGBColor(0xFF, 0xFF, 0xFF)
 NEGRO = RGBColor(0x00, 0x00, 0x00)
 
@@ -139,13 +142,19 @@ def insertar_tabla(
     )
 
     # ── Cuerpo ──────────────────────────────────────────────────────────────
+    #
+    # Las secciones vienen en dos niveles: el tipo de coste —«HARD COSTS»— y
+    # dentro el capítulo. Se distinguen por tono, como en la hoja del cliente:
+    # si los dos fuesen del mismo gris, una tabla con cinco capítulos parecería
+    # tener diez secciones sueltas en vez de dos grupos.
     for f, fila in enumerate(layout.filas, start=3):
         seccion = fila.tipo in ("seccion", "total")
+        fondo = GRIS_SECCION if fila.nivel == 2 else GRIS_TIPO_DE_COSTE
         for i, col in enumerate(layout.columnas):
             celda = tabla.cell(f, i)
             if seccion:
                 celda.fill.solid()
-                celda.fill.fore_color.rgb = GRIS_SECCION
+                celda.fill.fore_color.rgb = fondo
             else:
                 celda.fill.background()
             _escribir(

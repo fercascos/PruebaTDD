@@ -135,11 +135,25 @@ def construir(
         "CAST(f.tenant_recoverable AS text) AS tenant_recoverable, "
         "z.code AS zone_code, z.name_es AS zone_name, "
         "cc.code AS capex_code, cc.name_es AS capex_name, "
+        # `[REQ]` Los ancestros viajan **resueltos** en el snapshot, no como una
+        # referencia a resolver luego. La tabla del informe agrupa por tipo de
+        # coste y por capítulo igual que la plantilla del cliente, y un informe
+        # de hace seis meses tiene que poder reconstruirse aunque el catálogo
+        # haya cambiado de nombre desde entonces.
+        "tipo.code AS capex_type_code, tipo.name_es AS capex_type_name, "
+        "cap.code AS capex_chapter_code, cap.name_es AS capex_chapter_name, "
+        "CASE WHEN cc.level = 3 THEN cc.name_es END AS capex_item_name, "
         "rl.code AS risk_code, rl.name_es AS risk_name, rl.score AS risk_score, "
         "con.name_es AS concept_name "
         "FROM finding f "
         "JOIN zone z ON z.id = f.zone_id "
         "JOIN capex_code cc ON cc.id = f.capex_code_id "
+        "LEFT JOIN capex_code tipo ON tipo.level = 1 "
+        "  AND cc.path OPERATOR(public.<@) tipo.path "
+        "  AND tipo.organization_id IS NOT DISTINCT FROM cc.organization_id "
+        "LEFT JOIN capex_code cap ON cap.level = 2 "
+        "  AND cc.path OPERATOR(public.<@) cap.path "
+        "  AND cap.organization_id IS NOT DISTINCT FROM cc.organization_id "
         "LEFT JOIN risk_level rl ON rl.id = f.risk_level_id "
         "LEFT JOIN capex_concept con ON con.id = f.capex_concept_id "
         "WHERE f.project_id = :p AND f.deleted_at IS NULL "

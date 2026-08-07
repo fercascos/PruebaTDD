@@ -136,6 +136,23 @@ La estructura real es:
 Dos columnas que no había detectado —**`Nº`** y **`Group`**— y **`Comments` va ANTES de las columnas de
 plazo**, no después. Ya está corregido en `capex_layout.py`.
 
+> ⚠️ **Superado al llegar la plantilla CAPEX DDT vigente.** La tabla pasa al desglose de esa
+> plantilla: se añaden **`Objeto`**, **`Recuperable a inquilino/s`** y **`TOTAL`** de fila, y la
+> agrupación deja de ser por zona para ser la de la hoja `CapEx` —**tipo de coste → capítulo**—.
+>
+> `[REQ]` **El tipo de coste y el capítulo NO son columnas: son filas de sección.** En la hoja de
+> Excel se repiten en cada fila porque allí sobra ancho y las tablas dinámicas los necesitan en
+> columna. En una diapositiva de **4:3 (10 × 7,5 in)** esas dos columnas se comerían 1,7 in de los
+> 9,37 disponibles para repetir el mismo texto quince veces seguidas, a costa de `Descripción` y
+> `Comentarios`, que son las que llevan el contenido. La plantilla ya los enseña como cabecera de
+> bloque —«HARD COSTS», «H01.Estructura»—, así que la tabla del informe hace lo mismo.
+>
+> Las dos secciones se distinguen **por tono**, no solo por posición: con el mismo gris, una tabla de
+> cinco capítulos parecería tener diez secciones sueltas en vez de dos grupos.
+>
+> Ancho resultante: **9,26 in**. `test_la_tabla_cabe_en_la_diapositiva` falla si alguien añade una
+> columna que lo saque de la página, y se comprobó que falla de verdad.
+
 ### C-7 · Sí lleva riesgo: es la columna `Group`
 
 Afirmé que «la tabla no lleva ni código ni riesgo». **Es falso.** La columna `Group` contiene

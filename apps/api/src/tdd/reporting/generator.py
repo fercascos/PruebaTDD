@@ -91,6 +91,11 @@ def _totales(snapshot: dict[str, Any]) -> dict[str, Decimal]:
     return totales
 
 
+#: `finding.tenant_recoverable` → lo que escribe la plantilla en esa columna.
+#: `NA` se guarda sin punto y se enseña con él, que es como está en la hoja.
+RECUPERABLE = {"SI": "SI", "NO": "NO", "NA": "N.A."}
+
+
 def lineas_de_capex(snapshot: dict[str, Any]) -> list[cl.LineaCapex]:
     """Convierte el snapshot en las líneas que consume `CapexTableLayout`.
 
@@ -114,6 +119,15 @@ def lineas_de_capex(snapshot: dict[str, Any]) -> list[cl.LineaCapex]:
                 comentarios=str(hallazgo.get("comments") or hallazgo.get("description") or ""),
                 horizonte=str(linea["time_horizon_code"]),
                 importe=Decimal(str(linea["amount"])),
+                # Los tres niveles del árbol vienen ya resueltos del snapshot.
+                # `capex_item_name` solo trae valor si el hallazgo apunta al
+                # tercer nivel: un hallazgo codificado en el capítulo se queda
+                # sin objeto, y sale con la celda vacía en vez de repetir el
+                # nombre del capítulo, que sería mentir por partida doble.
+                tipo_de_coste=str(hallazgo.get("capex_type_name") or ""),
+                capitulo=str(hallazgo.get("capex_chapter_name") or ""),
+                objeto=str(hallazgo.get("capex_item_name") or ""),
+                recuperable=RECUPERABLE.get(str(hallazgo.get("tenant_recoverable") or ""), ""),
                 # [REQ] P-44 · Las líneas de la misma actuación se agrupan en
                 # una sola fila con varias columnas de plazo rellenas.
                 finding_id=str(hallazgo["id"]),

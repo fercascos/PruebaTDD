@@ -37,23 +37,38 @@ class Columna:
     es_importe: bool = False
 
 
-#: Anchos medidos sobre el render de la plantilla real (9,06 in de ancho total).
+#: Anchos medidos sobre el render de la plantilla real. La diapositiva es
+#: **10 × 7,5 in (4:3)**, así que la tabla dispone de 9,37 in y ni uno más.
+#:
+#: `[REQ]` El desglose es el de la plantilla CAPEX DDT vigente, con una
+#: diferencia deliberada: **el tipo de coste y el capítulo no son columnas, son
+#: filas de sección.** En la hoja de Excel se repiten en cada fila porque allí
+#: sobra ancho y las tablas dinámicas los necesitan en columna; en una
+#: diapositiva de 4:3 esas dos columnas se comerían 1,7 in para repetir el mismo
+#: texto quince veces seguidas. La plantilla ya los enseña como cabecera de
+#: bloque —«HARD COSTS», «H01.Estructura»—, así que la tabla del informe hace lo
+#: mismo y gasta el ancho en lo que cambia de fila a fila.
 COLUMNAS: tuple[Columna, ...] = (
-    Columna("no", "Nº", "No.", 0.32, Alineacion.CENTRO),
-    Columna("zona", "Zona afectada", "Affected area", 0.78),
-    Columna("concepto", "Concepto", "Purpose", 0.90),
-    Columna("descripcion", "Descripción", "Description", 1.32),
+    Columna("no", "Nº", "No.", 0.30, Alineacion.CENTRO),
+    Columna("objeto", "Objeto", "Item", 0.84),
+    Columna("zona", "Zona afectada", "Affected area", 0.66),
+    Columna("descripcion", "Descripción", "Description", 1.22),
     # `Group` es el grado de riesgo. El análisis por texto no lo detectó y llevó
     # a afirmar que la tabla no llevaba riesgo; el render demostró lo contrario.
-    Columna("riesgo", "Grupo", "Group", 0.55, Alineacion.CENTRO),
-    Columna("comentarios", "Comentarios", "Comments", 1.90),
-    Columna("corto", "Corto plazo", "Short term", 0.72, Alineacion.DERECHA, "capex", True),
-    Columna("medio", "Medio plazo", "Mid term", 0.72, Alineacion.DERECHA, "capex", True),
-    Columna("largo", "Largo plazo", "Long term", 0.72, Alineacion.DERECHA, "capex", True),
-    Columna("mejoras", "Mejoras", "Improvements", 0.72, Alineacion.DERECHA, "capex", True),
+    Columna("riesgo", "Grupo", "Group", 0.44, Alineacion.CENTRO),
+    Columna("comentarios", "Comentarios", "Comments", 1.26),
+    Columna("concepto", "Concepto", "Purpose", 0.60),
+    Columna("recuperable", "Recup.", "Recov.", 0.42, Alineacion.CENTRO),
+    Columna("corto", "Corto plazo", "Short term", 0.58, Alineacion.DERECHA, "capex", True),
+    Columna("medio", "Medio plazo", "Mid term", 0.58, Alineacion.DERECHA, "capex", True),
+    Columna("largo", "Largo plazo", "Long term", 0.58, Alineacion.DERECHA, "capex", True),
+    Columna("mejoras", "Mejoras", "Improvements", 0.58, Alineacion.DERECHA, "capex", True),
     # [REQ] P-37 · «Otro» se muestra siempre: el Excel de trabajo la tiene y es
     # la versión más actualizada. La imagen de la plantilla estaba desfasada.
-    Columna("otro", "Otro", "Other", 0.72, Alineacion.DERECHA, "capex", True),
+    Columna("otro", "Otro", "Other", 0.58, Alineacion.DERECHA, "capex", True),
+    # El TOTAL de la fila. La plantilla lo lleva en la columna O y es lo que
+    # mira quien lee: sin él hay que sumar cinco casillas con la vista.
+    Columna("total", "TOTAL", "TOTAL", 0.62, Alineacion.DERECHA, None, True),
 )
 
 TITULO_GRUPO = {"capex": ("CAPEX ESTIMADO", "ESTIMATED CAPEX")}
@@ -90,6 +105,26 @@ class LineaCapex:
     importe: Decimal
     #: Agrupa las líneas de una misma actuación. Si es `None`, la línea va sola.
     finding_id: str | None = None
+    #: `[REQ]` Los tres niveles del árbol de códigos, como en la plantilla. Los
+    #: dos primeros agrupan —salen como filas de sección— y el tercero es una
+    #: columna. Van con valor por defecto para no romper a quien construya la
+    #: línea sin ellos: una tabla sin capítulo se agrupa bajo «Sin clasificar»,
+    #: que es visible, en vez de repartir las filas en silencio.
+    tipo_de_coste: str = ""
+    capitulo: str = ""
+    objeto: str = ""
+    #: «SI» / «NO» / «N.A.», tal como lo escribe la plantilla.
+    recuperable: str = ""
+
+
+#: Dónde caen las actuaciones a las que les falta el tipo de coste o el
+#: capítulo. Se agrupan bajo un rótulo **visible**: repartirlas en silencio
+#: entre las demás secciones es cómo se pierde una actuación en una tabla.
+SIN_CLASIFICAR = {"es": "Sin clasificar", "en": "Unclassified"}
+
+
+def locale_corto(locale: str) -> str:
+    return "es" if locale.startswith("es") else "en"
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +133,9 @@ class Fila:
     celdas: dict[str, str]
     #: Solo en filas de sección: el capítulo al que pertenecen.
     capitulo: str | None = None
+    #: Solo en filas de sección: 1 = tipo de coste, 2 = capítulo. Lo usa el
+    #: renderizador para darles peso distinto, como hace la plantilla.
+    nivel: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,67 +200,105 @@ def construir(
             por_hallazgo[ln.finding_id] = grupo
             actuaciones.append(grupo)
 
-    por_seccion: dict[str, list[list[LineaCapex]]] = {}
+    # `[REQ]` Dos niveles de agrupación, los mismos que la hoja `CapEx` de la
+    # plantilla: primero el tipo de coste —«HARD COSTS»— y dentro el capítulo
+    # —«H01.Estructura»—. Antes se agrupaba por zona, que no está en la
+    # plantilla y hacía que dos actuaciones del mismo sistema saliesen
+    # separadas por estar en plantas distintas.
+    sin_clasificar = SIN_CLASIFICAR[locale_corto(locale)]
+    por_tipo: dict[str, dict[str, list[list[LineaCapex]]]] = {}
     for grupo in actuaciones:
-        por_seccion.setdefault(grupo[0].zona or "GENERAL", []).append(grupo)
+        cabeza = grupo[0]
+        tipo = cabeza.tipo_de_coste or sin_clasificar
+        cap = cabeza.capitulo or sin_clasificar
+        por_tipo.setdefault(tipo, {}).setdefault(cap, []).append(grupo)
 
     filas: list[Fila] = []
-    totales: dict[str, Decimal] = {c.key: Decimal(0) for c in columnas if c.es_importe}
+    claves_importe = [c.key for c in columnas if c.es_importe]
+    totales: dict[str, Decimal] = dict.fromkeys(claves_importe, Decimal(0))
 
-    for i, (seccion, grupo) in enumerate(sorted(por_seccion.items()), 1):
-        subtotal = {c.key: Decimal(0) for c in columnas if c.es_importe}
-        for actuacion in grupo:
-            for ln in actuacion:
-                col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
-                if col in subtotal:
-                    subtotal[col] += ln.importe
-                    totales[col] += ln.importe
+    def _sumar(destino: dict[str, Decimal], actuacion: list[LineaCapex]) -> None:
+        for ln in actuacion:
+            col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
+            if col in destino:
+                destino[col] += ln.importe
+                destino["total"] += ln.importe
+
+    for i, tipo in enumerate(sorted(por_tipo), 1):
+        capitulos = por_tipo[tipo]
+        del_tipo = dict.fromkeys(claves_importe, Decimal(0))
+        for grupos in capitulos.values():
+            for actuacion in grupos:
+                _sumar(del_tipo, actuacion)
+        for k, v in del_tipo.items():
+            totales[k] += v
 
         filas.append(
             Fila(
                 tipo="seccion",
-                capitulo=seccion,
+                capitulo=tipo,
+                nivel=1,
                 celdas={
                     "no": f"{i}.",
-                    "zona": seccion.upper(),
-                    **{k: formatear_importe(v or None, locale) for k, v in subtotal.items()},
+                    "objeto": tipo.upper(),
+                    **{k: formatear_importe(v or None, locale) for k, v in del_tipo.items()},
                 },
             )
         )
-        for j, actuacion in enumerate(grupo, 1):
-            # Una actuación = una fila, aunque tenga varias líneas [REQ] P-44.
-            # Los datos descriptivos los aporta la primera; los importes, todas.
-            cabeza = actuacion[0]
-            importes: dict[str, Decimal] = {}
-            for ln in actuacion:
-                col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
-                if col:
-                    importes[col] = importes.get(col, Decimal(0)) + ln.importe
+
+        for j, capitulo_actual in enumerate(sorted(capitulos), 1):
+            grupos = capitulos[capitulo_actual]
+            del_capitulo = dict.fromkeys(claves_importe, Decimal(0))
+            for actuacion in grupos:
+                _sumar(del_capitulo, actuacion)
+
             filas.append(
                 Fila(
-                    tipo="dato",
+                    tipo="seccion",
+                    capitulo=capitulo_actual,
+                    nivel=2,
                     celdas={
                         "no": f"{i}.{j}",
-                        "zona": cabeza.zona,
-                        "concepto": cabeza.concepto,
-                        "descripcion": cabeza.descripcion,
-                        "riesgo": cabeza.riesgo,
-                        "comentarios": cabeza.comentarios,
+                        "objeto": capitulo_actual,
                         **{
-                            c.key: formatear_importe(importes.get(c.key), locale)
-                            for c in columnas
-                            if c.es_importe
+                            k: formatear_importe(v or None, locale) for k, v in del_capitulo.items()
                         },
                     },
                 )
             )
+            for k, actuacion in enumerate(grupos, 1):
+                # Una actuación = una fila, aunque tenga varias líneas [REQ]
+                # P-44. Los datos descriptivos los aporta la primera; los
+                # importes, todas.
+                cabeza = actuacion[0]
+                importes = dict.fromkeys(claves_importe, Decimal(0))
+                _sumar(importes, actuacion)
+                filas.append(
+                    Fila(
+                        tipo="dato",
+                        celdas={
+                            "no": f"{i}.{j}.{k}",
+                            "objeto": cabeza.objeto,
+                            "zona": cabeza.zona,
+                            "descripcion": cabeza.descripcion,
+                            "riesgo": cabeza.riesgo,
+                            "comentarios": cabeza.comentarios,
+                            "concepto": cabeza.concepto,
+                            "recuperable": cabeza.recuperable,
+                            **{
+                                clave: formatear_importe(importes.get(clave) or None, locale)
+                                for clave in claves_importe
+                            },
+                        },
+                    )
+                )
 
     filas.append(
         Fila(
             tipo="total",
             celdas={
                 "no": "",
-                "zona": "TOTAL" if locale.startswith("es") else "TOTAL",
+                "objeto": "TOTAL",
                 **{k: formatear_importe(v or None, locale) for k, v in totales.items()},
             },
         )
