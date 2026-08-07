@@ -521,3 +521,22 @@ def test_el_desbordamiento_de_operativos_cuenta_las_dos_categorias_juntas() -> N
     ]
     sobra = comprobar_cabida(once)
     assert [(d.categoria, d.hay, d.caben) for d in sobra] == [("OP.C01 + OP.C02", 11, 10)]
+
+
+def test_los_capitulos_sin_lista_de_objetos_dan_celda_vacia() -> None:
+    """`[LIM]` Soft costs, Operativos e Imprevistos no tienen lista de objetos
+    en la plantilla, y es a propósito: sus filas escriben el concepto en la
+    columna de descripción. Ahí la celda va vacía, no revienta."""
+    v = leer("es")
+    assert v.objeto("SC.S01.01") is None
+    assert v.objeto("OP.C01.01") is None
+    assert v.objeto("IMP.General.01") is None
+
+
+def test_un_objeto_que_deberia_estar_y_no_esta_si_revienta() -> None:
+    """El capítulo tiene lista y el código no aparece en ella: el catálogo y la
+    plantilla se han separado, y conviene enterarse antes de exportar."""
+    from tdd.exports.vocabulario_capex import FaltaEnLaPlantilla
+
+    with pytest.raises(FaltaEnLaPlantilla, match="MA.General.99"):
+        leer("es").objeto("MA.General.99")

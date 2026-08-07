@@ -125,14 +125,26 @@ class Vocabulario:
     recuperables: dict[str, str]
 
     def objeto(self, codigo: str | None) -> str | None:
+        """La etiqueta del objeto, o `None` si su capítulo no tiene lista.
+
+        `[LIM]` Los capítulos de soft costs, Operativos e Imprevistos **no
+        tienen lista de objetos** en «00 Datos Objeto», y es fiel a la
+        plantilla: sus filas escriben el concepto en la columna de descripción,
+        no en un desplegable. Ahí la celda va vacía, que es lo que espera la
+        hoja. Reventar sería tratar como error algo que la plantilla hace a
+        propósito.
+
+        Lo que sí revienta es un objeto que **debería** estar y no está: si el
+        capítulo tiene lista y el código no aparece en ella, el catálogo y la
+        plantilla se han separado y conviene enterarse ahora.
+        """
         if codigo is None:
             return None
-        try:
+        if codigo in self.objetos:
             return self.objetos[codigo]
-        except KeyError as e:
-            raise FaltaEnLaPlantilla(
-                f"la plantilla «{self.idioma}» no tiene el objeto {codigo!r}"
-            ) from e
+        if codigo.rsplit(".", 1)[0] not in FILA_OBJETO:
+            return None
+        raise FaltaEnLaPlantilla(f"la plantilla «{self.idioma}» no tiene el objeto {codigo!r}")
 
     def zona(self, codigo: str | None, tipologia: str) -> str | None:
         if codigo is None:
