@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { alCambiarSesion, haySesion, restaurarSesion } from './api/cliente'
 import { Marco } from './ui/Marco'
 import { Entrar } from './paginas/Entrar'
+import { Recuperar, Restablecer } from './paginas/Recuperar'
 import { Proyectos } from './paginas/Proyectos'
 import { FichaDeProyecto } from './paginas/FichaDeProyecto'
 import { Plantillas } from './paginas/Plantillas'
@@ -35,6 +36,11 @@ export function App() {
           path="/entrar"
           element={autenticado ? <Navigate to="/proyectos" replace /> : <Entrar />}
         />
+        {/* Las dos son anónimas a propósito: quien ha perdido el acceso no
+            tiene sesión, y redirigirle a «entrar» le dejaría en el bucle del
+            que intenta salir. */}
+        <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/restablecer" element={<Restablecer />} />
         <Route
           path="/*"
           element={

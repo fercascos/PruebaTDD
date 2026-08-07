@@ -381,6 +381,7 @@ conviene que quede escrito qué demuestra cada prueba:
 |---|---|---|---|
 | **S3 con Object Lock** | `moto`, simulador en proceso | Que el adaptador manda los parámetros correctos, que se niega a sobrescribir un original, que la retención queda puesta y que **S3 rechaza borrar una versión retenida** aunque se hable con él saltándose el adaptador | Que un bucket concreto esté bien creado. El versionado y el Object Lock **solo se activan al crear el bucket**; por eso existe `AlmacenS3.comprobar()`, que corre contra el bucket real al arrancar |
 | **ClamAV** | Un `clamd` de mentira que habla `INSTREAM` de verdad | El troceado, el orden de bytes de los prefijos de longitud, el trozo final vacío y la lectura de la respuesta —que es donde falla un cliente de protocolo binario, y falla en silencio— | Que ClamAV detecte nada. Eso es su base de firmas |
+| **SMTP** | Un servidor SMTP de mentira | La conversación, el mensaje construido —`From`, `To`, `Auto-Submitted`, el asunto codificado en RFC 2047 por la eñe— y que **sin STARTTLS no se envíe en claro** | Que su proveedor lo acepte |
 
 `[REQ]` En los dos casos la regla es la misma: **nada devuelve «correcto» por no haber podido
 comprobarlo**. Si el antivirus no contesta, el veredicto es `NO_ANALIZADO`, no `LIMPIO`; si el
@@ -403,6 +404,7 @@ más de setecientas pruebas no vio**, porque solo aparece cuando la aplicación 
 | `npm run test:comparador` | Nada se elige solo, se enumera lo no consultado y **no sale ni una petición a terceros** | Los importes se leían como «52000.0000»; los paneles heredaban la barra oscura de la aplicación |
 | `npm run test:inventario` | **No existe ningún campo donde teclear la vida residual** (P-15) y lo vencido se lee sin depender del color | `??` no cae con cadena vacía: el formulario se quedaba sin activo mientras el desplegable enseñaba el primero, y el botón de guardar seguía deshabilitado sin decir por qué |
 | `npm run test:sistema-fotos` | Que el sistema técnico llega al **nombre del fichero** y que lo sin clasificar se distingue en la rejilla | La plantilla por defecto lleva `[Sistema]` y la foto no guardaba el sistema: **todo renombrado en lote escribía «SinSistema»**, y nadie lo vio porque el nombre salía plausible. `[Capitulo]` y `[Autor]` tampoco se rellenaban nunca |
+| `npm run test:recuperacion` | Que el enlace de «he olvidado mi contraseña» esté a la vista, que las dos pantallas —cuenta existente y cuenta inventada— digan **exactamente lo mismo**, y que un enlace sin token explique qué hacer en vez de dejar un formulario roto | Es la protección que más fácil se deshace desde la interfaz por querer ser amable. El flujo con token vive en la suite de integración, que sí puede leer el correo capturado |
 | `npm run test:importacion` | **Previsualizar no escribe nada** —se cuenta el inventario contra la API antes y después—, cada fila dice qué le pasa con su número de Excel, y reimportar la misma hoja no pisa una corrección hecha a mano | El selector de fichero nativo rotulaba su botón en inglés en una aplicación enteramente en español |
 
 Necesitan la API y la aplicación construida en marcha:

@@ -91,6 +91,7 @@ denegación llamando directamente a la API, sin pasar por la interfaz.
 | Control | Implementación | Req. |
 |---|---|---|
 | Validación del **tipo real** | `libmagic` sobre los primeros bytes, contrastado con el MIME declarado y una lista blanca. Discrepancia ⇒ `415` | `[REQ]` |
+| Recuperación de contraseña | Token de 256 bits, **guardado en huella**, un solo uso, 30 minutos, en el fragmento de la URL. Respuesta idéntica exista o no la cuenta; tope de 3 por hora. Restablecer **revoca todas las sesiones**. `[LIM]` queda una diferencia de tiempo entre las dos ramas hasta que el envío se encole | `[REQ]` |
 | Antivirus | ClamAV por `INSTREAM`, **antes de escribir nada** y antes de interpretar el fichero: fotografías, documentos y plantillas. Positivo ⇒ se rechaza la subida y queda en `audit_log` con severidad `CRITICO`. Desactivado por defecto; sin él el veredicto es `NO_ANALIZADO`, nunca `LIMPIO`. `[LIM]` sin probar contra un ClamAV real | `[REQ]` |
 | Límites de tamaño | 50 MB por archivo, 500 MB por lote, cuota por proyecto y organización | `[REQ]` |
 | Lista blanca | Imágenes: jpg, jpeg, png, webp, heic, heif. Documentos: pdf, docx, xlsx, dwg. Plantillas: pptx. **Nada más** | `[REC]` |

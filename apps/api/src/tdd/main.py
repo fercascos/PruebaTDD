@@ -24,6 +24,7 @@ from tdd.evidence.storage import AlmacenEnDisco, AlmacenS3
 from tdd.findings.router import router as findings_router
 from tdd.identity.directorio import router as directorio_router
 from tdd.identity.router import router as identity_router
+from tdd.notificaciones import correo
 from tdd.phases.operations import router as phase_ops_router
 from tdd.phases.router import router as phases_router
 from tdd.pricing.router import router as pricing_router
@@ -46,6 +47,13 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
     app.state.engine = engine
     app.state.session_factory = crear_fabrica_de_sesiones(engine)
     app.state.object_store = _almacen(settings)
+    app.state.correo = correo.construir(
+        host=settings.smtp_host,
+        puerto=settings.smtp_port,
+        remitente=settings.mail_from,
+        usuario=settings.smtp_user,
+        clave=settings.smtp_password,
+    )
     app.state.antivirus = antivirus.construir(
         habilitado=settings.antivirus_enabled,
         host=settings.clamav_host,

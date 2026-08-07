@@ -26,6 +26,7 @@ from tdd.core.security import crear_token
 from tdd.evidence.antivirus import SinAntivirus
 from tdd.evidence.storage import AlmacenEnMemoria
 from tdd.main import crear_app
+from tdd.notificaciones.correo import CorreoEnMemoria
 from tdd.phases.seeding import sembrar_fases
 
 RAIZ = Path(__file__).resolve().parents[3]
@@ -207,6 +208,8 @@ def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestC
     # Y el antivirus, que por defecto es el que **no analiza y lo dice**. Las
     # pruebas que quieran un positivo lo sustituyen con `dependency_overrides`.
     app.state.antivirus = SinAntivirus()
+    # El correo se captura en memoria: la suite no habla con ningún SMTP.
+    app.state.correo = CorreoEnMemoria()
     app.dependency_overrides[get_settings] = lambda: Settings(
         app_env="test", app_secret_key=SECRETO_PRUEBAS
     )

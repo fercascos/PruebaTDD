@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ErrorDeApi, iniciarSesion } from '../api/cliente'
 import { Mensaje } from '../ui/Marco'
 
@@ -61,6 +62,9 @@ export function Entrar() {
         <button type="submit" disabled={enviando || !email || !clave}>
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
+        <Link className="enlace" to="/recuperar">
+          He olvidado mi contraseña
+        </Link>
       </form>
     </div>
   )

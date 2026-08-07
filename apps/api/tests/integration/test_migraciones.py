@@ -103,10 +103,17 @@ CONSULTAS: dict[str, str] = {
         "SELECT tablename, indexname, indexdef FROM pg_indexes "
         "WHERE schemaname = 'public' ORDER BY tablename, indexname"
     ),
+    # Se ordena también por la FIRMA, no solo por el nombre. `pgcrypto` y
+    # `ltree` traen funciones sobrecargadas —ocho `lca`, tres `pgp_pub_decrypt`—
+    # y con `ORDER BY proname` a secas su orden relativo lo decide PostgreSQL,
+    # que no promete ninguno. La comparación fallaba con los dos esquemas
+    # idénticos: mismo conjunto, distinta lista. Una falsa alarma en el
+    # guardián es peor que no tenerlo, porque enseña a ignorarlo.
     "funciones": (
         "SELECT p.proname, pg_get_functiondef(p.oid) "
         "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
-        "WHERE n.nspname = 'public' ORDER BY p.proname"
+        "WHERE n.nspname = 'public' "
+        "ORDER BY p.proname, pg_get_function_identity_arguments(p.oid)"
     ),
     "enumerados": (
         "SELECT t.typname, e.enumlabel FROM pg_type t "

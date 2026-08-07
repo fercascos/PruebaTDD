@@ -50,8 +50,8 @@ log correlacionado por `request_id`.
 | `POST` | `/auth/login` | Límite estricto; retardo progresivo; respuesta genérica |
 | `POST` | `/auth/refresh` | Rotación; reutilización detectada ⇒ revocación de la familia `[REC]` |
 | `POST` | `/auth/logout` | Revoca en servidor |
-| `POST` | `/auth/password/forgot` | Responde `202` **siempre**, exista o no el email |
-| `POST` | `/auth/password/reset` | Token de un solo uso, 30 min |
+| `POST` | `/auth/password/forgot` | Responde `202` y **el mismo cuerpo** siempre, exista o no la dirección: distinguir «enviado» de «no existe» es un comprobador de cuentas gratuito. Tope de 3 por hora y usuario, sin que la respuesta cambie. `[LIM]` queda una diferencia de **tiempo** —hablar con el SMTP tarda— que solo desaparece encolando el envío, y el worker de §17 no está construido |
+| `POST` | `/auth/password/reset` | Token de un solo uso, 30 min. Se guarda la **huella**, nunca el token, y viaja en el **fragmento** de la URL para no acabar en el log del proxy ni en el `Referer`. Al restablecer se **revocan todas las sesiones** y se invalidan los demás enlaces pendientes, en una sola sentencia. Una contraseña débil da `422` y **no gasta el enlace** |
 | `POST` | `/auth/mfa/enroll` · `/verify` · `/disable` | TOTP |
 | `GET`/`PATCH` | `/me` | Perfil, roles, **permisos efectivos**, preferencias |
 

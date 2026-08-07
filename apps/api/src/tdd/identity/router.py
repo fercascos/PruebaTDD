@@ -14,10 +14,11 @@ esquema.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -30,6 +31,7 @@ from tdd.core.security import (
     necesita_rehash,
     verify_password,
 )
+from tdd.identity import recuperacion
 from tdd.identity.service import (
     ClaveDebil,
     CredencialRechazada,
@@ -46,6 +48,7 @@ from tdd.identity.service import (
     generar_token_de_refresco,
     huella_de,
 )
+from tdd.notificaciones.correo import Correo, Mensaje
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -465,3 +468,235 @@ def cambiar_clave(cuerpo: CambioDeClave, s: SesionDep, usuario: UsuarioDep) -> N
         accion="PASSWORD_CHANGED",
         severidad="AVISO",
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Recuperación de contraseña `[REQ]` §10.2
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def obtener_correo(request: Request) -> Correo:
+    """Lo aporta la aplicación. Por defecto **no envía: registra que no envía**."""
+    return request.app.state.correo  # type: ignore[no-any-return]
+
+
+CorreoDep = Annotated[Correo, Depends(obtener_correo)]
+
+
+class PeticionDeRecuperacion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+
+class RespuestaDeRecuperacion(BaseModel):
+    #: `[REQ]` Siempre la misma frase, exista o no la cuenta.
+    detail: str = recuperacion.RESPUESTA_UNICA
+
+
+ASUNTO = "Restablecer su contraseña"
+
+CUERPO = """Hola{saludo}:
+
+Alguien ha pedido restablecer la contraseña de esta cuenta en la aplicación de
+due diligence técnica. Si ha sido usted, abra este enlace:
+
+  {enlace}
+
+El enlace caduca en 30 minutos y solo se puede usar una vez.
+
+Si no ha sido usted, no hace falta que haga nada: la contraseña actual sigue
+siendo válida y este enlace dejará de servir solo. Si le llegan varios de estos
+correos sin haberlos pedido, avise a un administrador de su organización.
+"""
+
+
+@router.post(
+    "/password/forgot",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=RespuestaDeRecuperacion,
+)
+def olvide_mi_clave(
+    cuerpo: PeticionDeRecuperacion,
+    request: Request,
+    settings: SettingsDep,
+    correo: CorreoDep,
+) -> Any:
+    """`[REQ]` §10.2 · Responde `202` **siempre**, exista o no la dirección.
+
+    Un formulario de «he olvidado mi contraseña» que distingue entre «enviado»
+    y «ese correo no existe» es un comprobador de cuentas gratuito: se prueba
+    una lista de direcciones y se sabe cuáles pertenecen a la organización.
+
+    `[LIM]` Queda una diferencia de **tiempo**: cuando la cuenta existe hay que
+    hablar con el servidor SMTP y eso tarda. Lo correcto es encolar el envío y
+    responder igual de rápido en los dos casos, y para eso hace falta el worker
+    asíncrono de §17, que no está construido. Mientras tanto lo que acota el
+    abuso es el límite por usuario, que además evita usar esto para llenarle el
+    buzón a alguien.
+    """
+    s = _sesion_sin_contexto(request)
+    try:
+        s.begin()
+        fila = (
+            s.execute(
+                text(
+                    "SELECT id, organization_id, full_name, is_active FROM reset_buscar_usuario(:e)"
+                ),
+                {"e": cuerpo.email},
+            )
+            .mappings()
+            .first()
+        )
+
+        # El token se genera SIEMPRE, aunque no haya a quién mandárselo: es
+        # barato y evita que la rama «existe» haga trabajo que la otra no.
+        token = recuperacion.generar(ahora=ahora_utc())
+
+        if fila is not None and fila["is_active"]:
+            aplicar_contexto(
+                s,
+                ContextoRLS(
+                    organization_id=fila["organization_id"],
+                    user_id=fila["id"],
+                    can_manage_suggestions=False,
+                ),
+            )
+            desde = ahora_utc() - timedelta(minutes=recuperacion.MINUTOS_DE_VENTANA)
+            recientes = s.execute(
+                text("SELECT reset_peticiones_recientes(:u, :d)"),
+                {"u": str(fila["id"]), "d": desde},
+            ).scalar_one()
+
+            if recuperacion.se_debe_enviar(int(recientes)):
+                s.execute(
+                    text("SELECT reset_crear(:o, :u, :h, :e, :ip, :ag)"),
+                    {
+                        "o": str(fila["organization_id"]),
+                        "u": str(fila["id"]),
+                        "h": token.huella,
+                        "e": token.expira_el,
+                        "ip": recuperacion.ip_valida(
+                            request.client.host if request.client else None
+                        ),
+                        "ag": request.headers.get("user-agent", ""),
+                    },
+                )
+                _auditar(
+                    s,
+                    organization_id=fila["organization_id"],
+                    user_id=fila["id"],
+                    accion="PASSWORD_RESET_REQUESTED",
+                    severidad="AVISO",
+                )
+                s.commit()
+                # Se envía DESPUÉS de confirmar. Si el correo falla, el token ya
+                # está guardado y quien lo recibiera podría usarlo; al revés
+                # —enviar y luego fallar al guardar— dejaría en circulación un
+                # enlace que la base no reconoce.
+                correo.enviar(
+                    Mensaje(
+                        destinatario=cuerpo.email,
+                        asunto=ASUNTO,
+                        cuerpo=CUERPO.format(
+                            saludo=f", {fila['full_name'].split()[0]}" if fila["full_name"] else "",
+                            enlace=recuperacion.enlace(settings.app_base_url, token.valor),
+                        ),
+                    )
+                )
+            else:
+                # Pasado el tope no se manda otro correo, pero la respuesta no
+                # cambia: cambiarla volvería a delatar qué cuentas existen.
+                _auditar(
+                    s,
+                    organization_id=fila["organization_id"],
+                    user_id=fila["id"],
+                    accion="PASSWORD_RESET_THROTTLED",
+                    severidad="AVISO",
+                )
+                s.commit()
+        else:
+            s.rollback()
+        return {"detail": recuperacion.RESPUESTA_UNICA}
+    finally:
+        s.close()
+
+
+class Restablecimiento(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=1)
+
+
+@router.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT)
+def restablecer_clave(cuerpo: Restablecimiento, request: Request) -> Response:
+    """`[REQ]` Cambia la contraseña, gasta el token y **cierra todas las sesiones**.
+
+    Lo último no es un extra. Quien recupera su contraseña suele hacerlo porque
+    ha perdido el acceso o porque sospecha: dejar vivas las sesiones abiertas
+    mantendría dentro exactamente a quien se quiere echar.
+
+    Las cuatro operaciones van en `reset_consumir`, una sola sentencia, para que
+    no haya un instante en que el token ya sirvió y todavía se pueda reutilizar.
+    """
+    s = _sesion_sin_contexto(request)
+    try:
+        s.begin()
+        fila = (
+            s.execute(
+                text(
+                    "SELECT id, user_id, organization_id, email, expires_at, used_at, is_active "
+                    "FROM reset_buscar_token(:h)"
+                ),
+                {"h": recuperacion.huella_de(cuerpo.token)},
+            )
+            .mappings()
+            .first()
+        )
+        guardado = (
+            recuperacion.TokenGuardado(
+                expira_el=fila["expires_at"],
+                usado_el=fila["used_at"],
+                cuenta_activa=fila["is_active"],
+            )
+            if fila
+            else None
+        )
+        try:
+            recuperacion.comprobar(guardado, ahora=ahora_utc())
+        except recuperacion.TokenRechazado as exc:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+        assert fila is not None  # noqa: S101 — `comprobar` ya ha lanzado si no
+        try:
+            comprobar_fortaleza(cuerpo.new_password, email=fila["email"])
+        except ClaveDebil as exc:
+            # 422 y no 400: el enlace es bueno, la contraseña no. Y el token NO
+            # se gasta, para que se pueda reintentar con otra sin pedir otro
+            # correo.
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+
+        aplicar_contexto(
+            s,
+            ContextoRLS(
+                organization_id=fila["organization_id"],
+                user_id=fila["user_id"],
+                can_manage_suggestions=False,
+            ),
+        )
+        s.execute(
+            text("SELECT reset_consumir(:t, :h)"),
+            {"t": str(fila["id"]), "h": hash_password(cuerpo.new_password)},
+        )
+        _auditar(
+            s,
+            organization_id=fila["organization_id"],
+            user_id=fila["user_id"],
+            accion="PASSWORD_RESET_COMPLETED",
+            severidad="AVISO",
+        )
+        s.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    finally:
+        s.close()

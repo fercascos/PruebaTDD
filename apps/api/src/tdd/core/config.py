@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 14
 
+    # ── Correo saliente ─────────────────────────────────────────────────────
+    # Sin `SMTP_HOST` o sin `MAIL_FROM` no se envía nada: se registra en el log
+    # que NO se ha enviado. Una aplicación recién desplegada sin SMTP no debe
+    # fallar al pedir una recuperación —dejaría a la gente fuera sin saber por
+    # qué— ni fingir que ha mandado un correo que nadie va a recibir.
+    # [LIM] El adaptador SMTP no se ha probado contra un servidor real.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = Field(default="", repr=False)
+    mail_from: str = ""
+
     # ── Almacenamiento de objetos ───────────────────────────────────────────
     # `disco` es el adaptador de desarrollo; `s3` el de producción, con Object
     # Lock sobre los originales. [LIM] El de S3 está probado contra `moto`, un

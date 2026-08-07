@@ -537,6 +537,13 @@ select {
   display: grid;
   gap: 0.9rem;
 }
+/* El enlace de recuperar, debajo del botón y centrado: es la salida de quien
+   no puede entrar, así que tiene que verse sin buscarla. */
+.entrar form > a.enlace {
+  justify-self: center;
+  color: var(--acento);
+  font-size: 0.88rem;
+}
 
 /* ── Formularios ─────────────────────────────────────────────────────────── */
 
