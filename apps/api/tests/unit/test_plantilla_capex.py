@@ -311,3 +311,87 @@ def test_el_general_de_medioambiental_no_se_empareja_por_posicion() -> None:
     assert leer("en").objeto("MA.General.01") == "General"
     assert leer("es").objeto("MA.General.02") == "Situación legal"
     assert leer("en").objeto("MA.General.02") == "Legal status"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los desplegables en cascada
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# La columna «Categoría» se valida con `INDIRECT(C)` sobre el tipo de coste, y
+# la de «Objeto» con `INDIRECT(D)` sobre la categoría: cada texto tiene que
+# existir como nombre definido. La plantilla inglesa llegó con los nombres sin
+# renombrar, así que cuatro tipos de coste no sacaban lista. Lo arregló
+# `tools/reparar_nombres_plantilla_en.py`.
+
+
+def _nombres_definidos(idioma: str) -> dict[str, str]:
+    import re
+    import zipfile
+
+    with zipfile.ZipFile(PLANTILLAS / FICHERO[idioma]) as z:
+        libro = z.read("xl/workbook.xml").decode("utf-8")
+    return dict(re.findall(r'<definedName name="([^"]+)"[^>]*>([^<]*)</definedName>', libro))
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_ningun_nombre_definido_apunta_a_un_error(idioma: str) -> None:
+    rotos = {n: d for n, d in _nombres_definidos(idioma).items() if "#REF" in d or "#NAME" in d}
+    assert rotos == {}
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_cada_tipo_de_coste_saca_su_lista_de_categorias(idioma: str) -> None:
+    """Sin esto, elegir «Operating» dejaba la columna de categoría en blanco y
+    no había forma de saber por qué."""
+    nombres = _nombres_definidos(idioma)
+    libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+    categorias = libro.worksheets[0]
+    sin_lista = []
+    for columna in range(3, 10):
+        tipo = categorias.cell(3, columna).value
+        if not tipo or tipo in ("Cost Type", "Tipo Coste", "-"):
+            continue
+        destino = nombres.get(str(tipo).strip())
+        # Tiene que apuntar a la hoja de categorías, no a la de objetos.
+        if destino is None or "Item Data" in destino or "Datos Objeto" in destino:
+            sin_lista.append((tipo, destino))
+    libro.close()
+    assert sin_lista == [], f"{idioma}: tipos de coste sin lista de categorías → {sin_lista}"
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_cada_categoria_con_objetos_saca_su_lista(idioma: str) -> None:
+    """Solo se exigen las categorías que **tienen** lista de objetos: las 15 de
+    Hard Costs, la de Medioambiental y la de ESG. Las de soft costs no la
+    tienen ni en español, y es correcto: sus filas escriben el concepto en la
+    columna de descripción, no en un desplegable."""
+    nombres = _nombres_definidos(idioma)
+    libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+    categorias = libro.worksheets[0]
+    # Columna C = Hard Costs (15 categorías); F = Medioambiental; G = ESG.
+    con_objetos = [categorias.cell(f, 3).value for f in range(4, 19)]
+    con_objetos += [categorias.cell(4, 6).value, categorias.cell(4, 7).value]
+    libro.close()
+
+    faltan = []
+    for etiqueta in con_objetos:
+        destino = nombres.get(str(etiqueta).strip())
+        if destino is None or ("Item Data" not in destino and "Datos Objeto" not in destino):
+            faltan.append((etiqueta, destino))
+    assert faltan == [], f"{idioma}: categorías sin lista de objetos → {faltan}"
+
+
+def test_el_tipo_de_coste_medioambiental_no_choca_con_su_categoria() -> None:
+    """En inglés los dos niveles se llamaban «Environmental», y un nombre
+    definido no puede apuntar a dos listas: la de categorías se quedaba sin
+    resolver. El tipo pasa a `Environmental_Cost` y la categoría no se toca,
+    porque es la que sale en cada fila y por la que agrupan las dinámicas."""
+    libro = load_workbook(PLANTILLAS / FICHERO["en"], keep_vba=True)
+    categorias, capex = libro.worksheets[0], libro["CapEx"]
+    assert categorias["F3"].value == "Environmental_Cost"
+    assert categorias["F4"].value == "Environmental"
+    bloque = POR_CODIGO["MA.General"]
+    for fila in range(bloque.primera, bloque.ultima + 1):
+        assert capex[f"C{fila}"].value == "Environmental_Cost"
+        assert capex[f"D{fila}"].value == "Environmental"
+    libro.close()

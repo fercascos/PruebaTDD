@@ -227,6 +227,16 @@ existía y el que tienen asignado las líneas sembradas antes de recibir el desg
 posición mantiene estable su código `MA.General.01`, y ninguna línea de CAPEX existente cambia de
 código. Poner `Situación legal` delante habría renumerado todo el capítulo.
 
+`[REC]` **En inglés el tipo de coste medioambiental se llama `Environmental_Cost`.** Los
+desplegables de la plantilla van en cascada: la columna «Categoría» se valida con `INDIRECT()` sobre
+el tipo de coste y la de «Objeto» con `INDIRECT()` sobre la categoría, de modo que cada texto tiene
+que existir como nombre definido. En español los dos niveles se llaman distinto —`Mediambiente` el
+tipo y `Medioamb` la categoría—, pero en inglés **los dos se llamaban `Environmental`**, y un nombre
+definido no puede apuntar a dos listas: la de categorías se quedaba sin resolver. Se renombró el
+**tipo**, que es el nivel que menos se ve, y no la categoría, que es la que sale en cada fila del
+CAPEX y por la que agrupan las tablas dinámicas. `tools/reparar_nombres_plantilla_en.py` lo aplica y
+hay pruebas que comprueban los dos niveles en las dos plantillas.
+
 `[REC]` **`Certificación WIRESCORED` está mal escrito, y se copia igual.** El producto es
 *WiredScore*, y la plantilla inglesa lo escribe bien («WIREDSCORE Certification»); la española tiene
 la errata. Se siembra el literal español tal cual porque es el que ofrece su desplegable: escribir el
