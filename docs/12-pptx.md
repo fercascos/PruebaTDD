@@ -473,6 +473,7 @@ antiguo mostrase huecos. Es la diferencia entre archivar un PDF y poder reconstr
 | 🟠 ALTA | `TEXT_OVERFLOW` | Exceso estimado > 10 % | No |
 | 🟠 ALTA | `TABLE_DOES_NOT_FIT` | La tabla se partirá en N diapositivas | No |
 | 🟠 ALTA | `PHOTO_WITHOUT_ASSET` | Foto seleccionada sin activo | No |
+| 🟠 ALTA | `DRAFT_FINDINGS_EXCLUDED` | Hallazgos en «borrador» que el informe deja fuera, con su importe | No, pero **muy visible** `[REC]` |
 | 🟡 MEDIA | `UNVALIDATED_PRICES` | Líneas con precio sin validar, con su importe | No, pero **muy visible** `[REC]` |
 | 🟡 MEDIA | `MISSING_PHOTO` | Activo o hallazgo sin fotos seleccionadas | No |
 | 🟡 MEDIA | `SMARTART_DETECTED` | SmartArt en zona de datos | No |
@@ -487,6 +488,13 @@ interno), pero enviarlo al cliente sin darse cuenta es un problema real. Aparece
 previsualización y, si el mapeo declara un marcador de marca de agua, se inserta «BORRADOR — precios
 pendientes de validación». La marca **solo** se inserta si la plantilla lo prevé: no se altera el
 diseño sin permiso.
+
+`[REC]` `DRAFT_FINDINGS_EXCLUDED` es el mismo caso visto desde el otro lado. El snapshot solo publica
+los hallazgos en `EN_REVISION` y `VALIDADO` (§17.2), así que un encargo cuyos hallazgos siguen todos
+en borrador genera un documento con la tabla de CAPEX **vacía** y un total de `0,00 €`. Es correcto
+—un borrador no se entrega al cliente— pero un cero se lee como «no hay nada que hacer», no como
+«esto todavía no se ha revisado». El aviso dice cuántos hallazgos se quedan fuera y **cuánto dinero
+se va con ellos**. No bloquea: un Red Flag temprano con todo en borrador es un uso legítimo.
 
 **Ante campo vacío** `[REQ]`: el marcador se sustituye por **texto vacío**, nunca por el literal
 `{{...}}` ni por un «N/D» inventado. Si el mapeo declara `default:`, se usa ese texto.

@@ -544,3 +544,70 @@ def test_otra_organizacion_no_ve_el_trabajo_de_las_fases(
     # La fase misma queda fuera de su alcance, así que ni siquiera llega a la
     # lista: la RLS corta antes.
     assert r.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Estados desconocidos
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Los tres estados de `operations.py` se escriben con un `CAST(:status AS ...)`
+# contra un tipo enumerado de PostgreSQL. Mientras el campo fue `str` un valor
+# que la base no reconocía reventaba la consulta y salía un **500**: «Error
+# interno», sin decir qué valor sobraba ni cuáles se admiten, cuando el fallo
+# era enteramente de quien llamaba. Se descubrió tecleando `PENDIENTE` en una
+# línea del checklist documental, que usa `SOLICITADA`.
+
+
+def test_un_estado_inexistente_del_checklist_se_rechaza_con_422(
+    cliente: TestClient, cab: Any, proyecto: str, categoria: str
+) -> None:
+    linea = cliente.post(
+        f"{RUTA}/projects/{proyecto}/doc-requests",
+        headers=cab("consultor_a"),
+        json={"category_id": categoria, "title": "Licencia de actividad"},
+    ).json()
+
+    r = cliente.patch(
+        f"{RUTA}/doc-requests/{linea['id']}",
+        headers=cab("consultor_a"),
+        # `PENDIENTE` es un estado de *fase*, no de línea del checklist.
+        json={"status": "PENDIENTE"},
+    )
+    assert r.status_code == 422, r.text
+    # El error dice cuáles valen, que es lo que faltaba en el 500.
+    assert "SOLICITADA" in r.text
+
+
+def test_un_estado_inexistente_de_visita_se_rechaza_con_422(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    visita = cliente.post(
+        f"{RUTA}/projects/{proyecto}/visits", headers=cab("consultor_a"), json={"asset_id": activo}
+    ).json()
+
+    r = cliente.patch(
+        f"{RUTA}/visits/{visita['id']}", headers=cab("consultor_a"), json={"status": "COMPLETADA"}
+    )
+    assert r.status_code == 422, r.text
+    assert "VISITADO" in r.text
+
+
+def test_un_estado_inexistente_de_pregunta_se_rechaza_con_422(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    ronda = cliente.post(
+        f"{RUTA}/projects/{proyecto}/qa-rounds", headers=cab("consultor_a"), json={}
+    ).json()
+    pregunta = cliente.post(
+        f"{RUTA}/qa-rounds/{ronda['id']}/questions",
+        headers=cab("consultor_a"),
+        json={"question": "¿Existe licencia de primera ocupación?"},
+    ).json()["questions"][0]
+
+    r = cliente.patch(
+        f"{RUTA}/qa-questions/{pregunta['id']}",
+        headers=cab("consultor_a"),
+        json={"status": "CERRADA"},
+    )
+    assert r.status_code == 422, r.text
+    assert "RESPONDIDA" in r.text

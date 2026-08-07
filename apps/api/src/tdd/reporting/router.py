@@ -396,6 +396,20 @@ def _reunir_estado(
         .all()
     )
 
+    # Lo que el informe se deja fuera por estado. El snapshot solo publica
+    # `EN_REVISION` y `VALIDADO`, así que un encargo entero en borrador genera
+    # un documento con la tabla vacía y un total de cero. Contarlo aquí es lo
+    # que permite decirlo antes de generar en vez de después de enviarlo.
+    borradores = s.execute(
+        text(
+            "SELECT count(DISTINCT f.id) AS hallazgos, COALESCE(sum(ci.amount), 0) AS importe "
+            "FROM finding f LEFT JOIN capex_item ci ON ci.finding_id = f.id "
+            "WHERE f.project_id = :p AND f.deleted_at IS NULL "
+            "  AND CAST(f.status AS text) = 'BORRADOR'"
+        ),
+        {"p": str(project_id)},
+    ).one()
+
     pendientes = s.execute(
         text(
             "SELECT count(*) FROM doc_request_item d "
@@ -424,6 +438,8 @@ def _reunir_estado(
         lineas_con_zona_a_revisar=tuple(zonas_rotas),
         fuentes_ausentes=ausentes,
         solicitudes_pendientes=pendientes,
+        hallazgos_en_borrador=borradores.hallazgos,
+        importe_en_borrador=Decimal(borradores.importe),
     )
 
 

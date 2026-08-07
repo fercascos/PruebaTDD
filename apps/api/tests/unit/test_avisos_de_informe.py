@@ -85,6 +85,8 @@ def test_solo_bloquean_los_cinco_que_producirian_un_documento_incorrecto() -> No
         fuentes_ausentes=("Gotham Book",),
         campos_vacios=("asset.city",),
         solicitudes_pendientes=4,
+        hallazgos_en_borrador=8,
+        importe_en_borrador=Decimal("1099100.00"),
     )
     bloqueantes = {a.codigo for a in evaluar(todo) if a.bloquea}
     assert bloqueantes == {
@@ -110,7 +112,29 @@ def test_los_precios_sin_validar_avisan_con_su_importe_y_no_bloquean() -> None:
     aviso = next(a for a in avisos if a.codigo == "UNVALIDATED_PRICES")
     assert aviso.bloquea is False
     assert "12 líneas" in aviso.mensaje
-    assert "184,300.00" in aviso.mensaje
+    # En español, no «184,300.00»: es el mismo formateador que la tabla del PPTX.
+    assert "184.300,00 €" in aviso.mensaje
+
+
+def test_los_hallazgos_en_borrador_avisan_de_lo_que_se_queda_fuera() -> None:
+    """El informe solo publica `EN_REVISION` y `VALIDADO`. Un encargo entero en
+    borrador producía un documento que decía «CAPEX total: 0,00 €» sin una sola
+    advertencia, y el cero se lee como «no hay nada que hacer»."""
+    avisos = evaluar(
+        EstadoDelInforme(hallazgos_en_borrador=8, importe_en_borrador=Decimal("1099100.00"))
+    )
+    aviso = next(a for a in avisos if a.codigo == "DRAFT_FINDINGS_EXCLUDED")
+    # No bloquea: un Red Flag temprano con todo en borrador es legítimo.
+    assert aviso.bloquea is False
+    assert "8 hallazgos" in aviso.mensaje
+    # Dice el dinero que se va, que es lo que hace que se note.
+    assert "1.099.100,00 €" in aviso.mensaje
+
+
+def test_sin_borradores_no_se_avisa_de_nada() -> None:
+    """El aviso mira los hallazgos que EXISTEN y quedan fuera. Un encargo sin
+    ninguno no tiene nada que declarar."""
+    assert "DRAFT_FINDINGS_EXCLUDED" not in codigos(EstadoDelInforme())
 
 
 def test_un_desbordamiento_pequeno_no_avisa() -> None:

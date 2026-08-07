@@ -270,7 +270,84 @@ def test_los_precios_sin_validar_avisan_sin_impedir_generar(
     assert r["can_generate"] is True
     aviso = next(w for w in r["warnings"] if w["codigo"] == "UNVALIDATED_PRICES")
     assert aviso["bloquea"] is False
-    assert "83,407.50" in aviso["mensaje"]
+    # En español, no «83,407.50»: la aplicación entera va en español.
+    assert "83.407,50 €" in aviso["mensaje"]
+
+
+def test_un_hallazgo_en_borrador_avisa_de_que_no_saldra_en_el_informe(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    motor_admin: Engine,
+) -> None:
+    """El snapshot solo publica `EN_REVISION` y `VALIDADO`. Sin este aviso, un
+    encargo con todo en borrador generaba un informe con la tabla de CAPEX
+    vacía y «CAPEX total: 0,00 €», sin advertir de nada."""
+    with motor_admin.begin() as conn:
+        tipologia = conn.execute(
+            text("SELECT id FROM asset_typology ORDER BY sort_order LIMIT 1")
+        ).scalar_one()
+        zona = conn.execute(
+            text(
+                "SELECT z.id FROM zone z JOIN zone_typology zt ON zt.zone_id = z.id "
+                "WHERE zt.typology_id = :t LIMIT 1"
+            ),
+            {"t": tipologia},
+        ).scalar_one()
+        codigo = conn.execute(
+            text("SELECT id FROM capex_code WHERE level = 3 LIMIT 1")
+        ).scalar_one()
+
+    activo = cliente.post(
+        f"{RUTA}/projects/{proyecto}/assets",
+        headers=cab("consultor_a"),
+        json={"name": "Nave en borrador", "typology_id": str(tipologia)},
+    ).json()
+    # Se queda en BORRADOR: no se pide ninguna transición.
+    cliente.post(
+        f"{RUTA}/projects/{proyecto}/findings",
+        headers=cab("consultor_a"),
+        json={
+            "asset_id": activo["id"],
+            "capex_code_id": str(codigo),
+            "zone_id": str(zona),
+            "title": "Sustitución de enfriadora",
+            "description": "Equipo fuera de reglamento.",
+            "capex_lines": [{"time_horizon_code": "CORTO", "amount": "271700.00"}],
+        },
+    )
+
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": plantilla["id"], "mapping_id": mapeo["id"]},
+    ).json()
+    aviso = next(w for w in r["warnings"] if w["codigo"] == "DRAFT_FINDINGS_EXCLUDED")
+    # No bloquea: un Red Flag temprano con todo en borrador es legítimo.
+    assert aviso["bloquea"] is False
+    assert r["can_generate"] is True
+    assert "1 hallazgos" in aviso["mensaje"]
+    assert "271.700,00 €" in aviso["mensaje"]
+
+
+def test_un_hallazgo_ya_en_revision_no_dispara_el_aviso_de_borradores(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+) -> None:
+    """`con_hallazgo` deja el hallazgo en `EN_REVISION`: sí sale en el informe,
+    así que no hay nada que declarar."""
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": plantilla["id"], "mapping_id": mapeo["id"]},
+    ).json()
+    assert not any(w["codigo"] == "DRAFT_FINDINGS_EXCLUDED" for w in r["warnings"])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

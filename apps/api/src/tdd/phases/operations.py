@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from enum import StrEnum
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -28,6 +29,41 @@ from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 
 router = APIRouter(tags=["Trabajo de las fases"])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Estados
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Son enumeraciones y no `str` a propósito. Los tres estados de aquí abajo se
+# escriben con un `CAST(:status AS ...)` contra un tipo enumerado de PostgreSQL,
+# así que un valor que la base no reconozca la hace fallar: sin estas clases el
+# error salía como **500** —«Error interno», sin decir qué valor sobraba ni
+# cuáles se admiten— cuando la culpa era enteramente de quien llamaba. Con la
+# enumeración, FastAPI responde `422` con la lista de valores válidos y además
+# los publica en el OpenAPI. Se descubrió tecleando `PENDIENTE` en una línea del
+# checklist documental, que usa `SOLICITADA`.
+
+
+class DocRequestStatus(StrEnum):
+    SOLICITADA = "SOLICITADA"
+    RECIBIDA = "RECIBIDA"
+    PARCIAL = "PARCIAL"
+    NO_DISPONIBLE = "NO_DISPONIBLE"
+    NO_APLICA = "NO_APLICA"
+
+
+class VisitStatus(StrEnum):
+    PENDIENTE_DEFINIR = "PENDIENTE_DEFINIR"
+    AGENDADO = "AGENDADO"
+    VISITADO = "VISITADO"
+
+
+class QaQuestionStatus(StrEnum):
+    ABIERTA = "ABIERTA"
+    RESPONDIDA = "RESPONDIDA"
+    SIN_RESPUESTA = "SIN_RESPUESTA"
+    RETIRADA = "RETIRADA"
 
 
 def _fase(s: Session, project_id: uuid.UUID, codigo: PhaseCode) -> uuid.UUID:
@@ -71,7 +107,7 @@ class LineaDeSolicitud(BaseModel):
 class ActualizarSolicitud(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: str | None = None
+    status: DocRequestStatus | None = None
     unavailable_reason: str | None = None
     description: str | None = None
     received_at: Any | None = None
@@ -272,7 +308,7 @@ class Visita(BaseModel):
 class ActualizarVisita(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: str | None = None
+    status: VisitStatus | None = None
     scheduled_date: date | None = None
     actual_date: date | None = None
     led_by: uuid.UUID | None = None
@@ -410,7 +446,7 @@ class Respuesta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     answer: str | None = None
-    status: str | None = None
+    status: QaQuestionStatus | None = None
 
 
 class PreguntaLeida(BaseModel):

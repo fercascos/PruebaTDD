@@ -23,6 +23,12 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
 
+# El mismo formateador que usa la tabla del PPTX. Antes estos avisos usaban
+# `f"{...:,.2f}"` directamente, que es la convención inglesa: en una aplicación
+# entera en español el importe salía como «1,099,100.00 €» al lado de la
+# pantalla de CAPEX, que muestra «1.099.100,00 €» para la misma cifra.
+from tdd.reporting.capex_layout import formatear_importe
+
 
 class Severidad(StrEnum):
     BLOQUEANTE = "BLOQUEANTE"
@@ -72,6 +78,10 @@ class EstadoDelInforme:
     campos_vacios: tuple[str, ...] = ()
     solicitudes_pendientes: int = 0
     hay_marca_de_borrador_en_plantilla: bool = False
+    #: Hallazgos vivos que el informe **deja fuera** por seguir en `BORRADOR`,
+    #: con el importe que se va con ellos. Ver `DRAFT_FINDINGS_EXCLUDED`.
+    hallazgos_en_borrador: int = 0
+    importe_en_borrador: Decimal = Decimal("0")
 
 
 #: Exceso a partir del cual se avisa de desbordamiento `[REQ]` §17.7.
@@ -170,6 +180,26 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 foto,
             )
         )
+    if estado.hallazgos_en_borrador:
+        avisos.append(
+            Aviso(
+                "DRAFT_FINDINGS_EXCLUDED",
+                Severidad.ALTA,
+                # No bloquea, por lo mismo que `UNVALIDATED_PRICES`: un Red Flag
+                # temprano con todo en borrador es un uso legítimo. Lo que no es
+                # legítimo es que **no se note**. Sin este aviso, un encargo con
+                # todos los hallazgos en borrador producía un informe que decía
+                # «CAPEX total: 0,00 €» sin una sola advertencia, y el cero se
+                # lee como «no hay nada que hacer», no como «esto no se ha
+                # revisado todavía». Se descubrió generando el informe de un
+                # proyecto de demostración con 1,1 M€ en hallazgos.
+                f"{estado.hallazgos_en_borrador} hallazgos siguen en «borrador» y "
+                f"NO saldrán en el informe: se quedan fuera "
+                f"{formatear_importe(estado.importe_en_borrador)} de CAPEX. "
+                "Páselos a «en revisión» si deben aparecer.",
+                "finding",
+            )
+        )
 
     # ── Medias ──────────────────────────────────────────────────────────────
     if estado.lineas_con_precio_sin_validar:
@@ -180,7 +210,7 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 # No bloquea —un borrador interno es legítimo— pero enviarlo al
                 # cliente sin darse cuenta sí es un problema real.
                 f"{estado.lineas_con_precio_sin_validar} líneas con precio sin validar, "
-                f"por un total de {estado.importe_sin_validar:,.2f} €. "
+                f"por un total de {formatear_importe(estado.importe_sin_validar)}. "
                 "Revíselas antes de enviar el informe al cliente.",
                 "capex",
             )
