@@ -395,3 +395,16 @@ def test_el_tipo_de_coste_medioambiental_no_choca_con_su_categoria() -> None:
         assert capex[f"C{fila}"].value == "Environmental_Cost"
         assert capex[f"D{fila}"].value == "Environmental"
     libro.close()
+
+
+def test_el_tipo_de_coste_medioambiental_esta_bien_escrito() -> None:
+    """`Mediambiente` le faltaba la «o». Es una etiqueta que sale impresa, y su
+    nombre definido se renombró con ella para que el desplegable siga
+    resolviendo. `Medioamb` —la categoría— no se toca: es otro texto."""
+    libro = load_workbook(PLANTILLAS / FICHERO["es"], keep_vba=True)
+    categorias = libro.worksheets[0]
+    assert categorias["F3"].value == "Medioambiente"
+    assert categorias["F4"].value == "Medioamb"
+    libro.close()
+    assert "Medioambiente" in _nombres_definidos("es")
+    assert "Mediambiente" not in _nombres_definidos("es")
