@@ -245,3 +245,40 @@ def test_el_idioma_elige_la_plantilla_y_sus_etiquetas(encargo: Encargo) -> None:
 def test_un_idioma_sin_plantilla_se_rechaza(encargo: Encargo) -> None:
     with pytest.raises(ValueError, match="idioma no soportado"):
         generar(encargo, [_actuacion()], idioma="fr")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Que la plantilla inglesa siga en inglés
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# La inglesa se hizo copiando la española y quedaron cinco textos sin traducir,
+# repartidos por once celdas. `tools/traducir_plantilla_capex.py` los corrigió.
+# Esta prueba impide que vuelvan a colarse si alguien actualiza la plantilla.
+
+
+def test_la_plantilla_inglesa_no_tiene_texto_en_espanol() -> None:
+    import re
+    import zipfile
+
+    with zipfile.ZipFile(PLANTILLAS / FICHERO["en"]) as z:
+        cadenas = z.read("xl/sharedStrings.xml").decode("utf-8")
+    visibles = re.findall(r"<t[^>]*>([^<]{3,})</t>", cadenas)
+    # Palabras que no existen en inglés y sí en el original español.
+    delatoras = re.compile(
+        r"\b(procede|necesario|eliminar|adaptar|fuera|imprevistos|otras|otros|"
+        r"licencias|obras|tasas|construcción|estimado)\b",
+        re.IGNORECASE,
+    )
+    assert [t for t in visibles if delatoras.search(t)] == []
+
+
+def test_la_categoria_h15_coincide_con_su_bloque_en_las_dos_plantillas() -> None:
+    """El desplegable de categorías ofrecía «H15.Otros» mientras la cabecera
+    del bloque decía «H15.Others»: el valor no estaba en su propia lista."""
+    for idioma in IDIOMAS:
+        libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+        categoria = libro.worksheets[0]["C18"].value
+        cabecera = libro["CapEx"][f"A{POR_CODIGO['HC.H15'].subtotal}"].value
+        if isinstance(cabecera, str) and not cabecera.startswith("="):
+            assert categoria == cabecera, f"{idioma}: {categoria!r} != {cabecera!r}"
+        libro.close()
