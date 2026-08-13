@@ -883,3 +883,51 @@ def test_la_generacion_queda_auditada(
             .all()
         )
     assert "REPORT_GENERATED" in acciones
+
+
+def test_el_pptx_y_el_excel_del_informe_llevan_las_mismas_actuaciones(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+) -> None:
+    """`[REQ]` P-31 · Los dos ficheros viajan en el mismo correo.
+
+    Antes esto se garantizaba compartiendo `CapexTableLayout`, pero el Excel
+    pasó a ser **la plantilla del cliente rellenada** y sus columnas son otras
+    a propósito. Lo que sigue teniendo que cuadrar es el contenido: una
+    actuación que sale en la diapositiva y no en la hoja —o al revés— es dinero
+    que aparece o desaparece según qué fichero abra quien lo recibe.
+    """
+    import io
+    import zipfile
+
+    from openpyxl import load_workbook
+    from pptx import Presentation
+
+    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pptx = cliente.get(f"{RUTA}/reports/{version['id']}/download", headers=cab("admin_a")).content
+    xlsx = cliente.get(
+        f"{RUTA}/reports/{version['id']}/download?formato=xlsx", headers=cab("admin_a")
+    ).content
+
+    titulo = "Renovación de impermeabilización"
+
+    en_pptx = any(
+        titulo in celda.text
+        for slide in Presentation(io.BytesIO(pptx)).slides
+        for forma in slide.shapes
+        if forma.has_table
+        for fila in forma.table.rows
+        for celda in fila.cells
+    )
+    hoja = load_workbook(io.BytesIO(xlsx))["CapEx"]
+    en_xlsx = any(hoja[f"G{f}"].value == titulo for f in range(14, 281))
+
+    assert en_pptx, "la actuación no sale en la tabla del PowerPoint"
+    assert en_xlsx, "la actuación no sale en la hoja del Excel"
+    # Y el Excel es la plantilla del cliente, no un libro construido a mano.
+    with zipfile.ZipFile(io.BytesIO(xlsx)) as z:
+        assert "xl/pivotTables/pivotTable1.xml" in z.namelist()

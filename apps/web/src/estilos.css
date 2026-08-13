@@ -168,6 +168,16 @@ select {
   margin-bottom: 1rem;
 }
 
+/* El selector de idioma de la exportación. Va pegado a su botón y no en una
+   fila propia: es una opción DE esa descarga, no un filtro de la pantalla. */
+.filtro .idioma {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  color: var(--tinta-2, #46525f);
+}
+
 .ayuda {
   font-size: 0.8rem;
   color: var(--tinta-suave);

@@ -121,7 +121,11 @@ def construir(
         "SELECT a.id, a.name, a.asset_code, a.city, a.address_line, a.year_built, "
         "a.year_last_refurb, a.total_built_sqm, a.plot_area_sqm, a.warehouse_area_sqm, "
         "a.office_area_sqm, a.warehouse_height_m, a.floors_above, a.floors_below, "
-        "a.latitude, a.longitude, a.main_photo_id, t.name_es AS typology_name "
+        "a.latitude, a.longitude, a.main_photo_id, "
+        # El **código** de tipología, no solo el nombre: la plantilla ofrece
+        # una lista de zonas distinta por tipo de edificio, y para escribir la
+        # etiqueta que espera su desplegable hace falta saber cuál es.
+        "t.code AS typology_code, t.name_es AS typology_name "
         "FROM asset a JOIN asset_typology t ON t.id = a.typology_id "
         "WHERE a.project_id = :p AND a.deleted_at IS NULL ORDER BY a.name",
         {"p": str(project_id)},
@@ -144,7 +148,7 @@ def construir(
         "cap.code AS capex_chapter_code, cap.name_es AS capex_chapter_name, "
         "CASE WHEN cc.level = 3 THEN cc.name_es END AS capex_item_name, "
         "rl.code AS risk_code, rl.name_es AS risk_name, rl.score AS risk_score, "
-        "con.name_es AS concept_name "
+        "con.code AS concept_code, con.name_es AS concept_name "
         "FROM finding f "
         "JOIN zone z ON z.id = f.zone_id "
         "JOIN capex_code cc ON cc.id = f.capex_code_id "

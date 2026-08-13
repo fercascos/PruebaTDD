@@ -47,6 +47,9 @@ class ResultadoDeGeneracion:
     marcas_de_agua_retiradas: list[str] = field(default_factory=list)
     fotos_insertadas: int = 0
     totales: dict[str, Decimal] = field(default_factory=dict)
+    #: Lo que la hoja del cliente no puede representar de este encargo: tiene
+    #: sitio para un activo y el encargo puede tener varios.
+    avisos_del_excel: list[str] = field(default_factory=list)
 
 
 def valores_de_marcadores(snapshot: dict[str, Any]) -> dict[str, str]:
@@ -190,8 +193,15 @@ def generar(
     locale: str = "es-ES",
     retirar_marca_de_agua: bool = True,
 ) -> ResultadoDeGeneracion:
-    """Produce el PPTX y el XLSX. **Sobre bytes: el original no se toca.**"""
-    from tdd.exports.capex_xlsx import generar_xlsx
+    """Produce el PPTX y el XLSX. **Sobre bytes: el original no se toca.**
+
+    El PPTX lleva la tabla nativa; el XLSX es **la plantilla CAPEX del cliente
+    rellenada**, con sus gráficos y sus fórmulas. Los dos salen del mismo
+    snapshot, así que el Excel que viaja adjunto al informe dice lo mismo que
+    la diapositiva.
+    """
+    from tdd.exports import capex_desde_snapshot as puente
+    from tdd.exports.plantilla_capex import generar as generar_plantilla
 
     # `Presentation` sobre BytesIO: la plantilla del disco no se abre ni se
     # toca, se trabaja sobre una copia en memoria.
@@ -239,11 +249,21 @@ def generar(
     # 4 · [REQ] P-43 · La marca de agua de borrador no aparece en lo generado.
     marcas = retirar_marcas_de_agua(prs) if retirar_marca_de_agua else []
 
+    # 5 · El Excel, sobre la plantilla del cliente y en el mismo idioma.
+    idioma = cl.locale_corto(locale)
+    encargo, actuaciones = puente.preparar(snapshot, idioma=idioma)
+    avisos_del_excel = puente.avisos_de_cartera(snapshot)
+    # `NoCabe` sube tal cual: no se devuelve un Excel a medias, porque
+    # faltarían actuaciones y no habría forma de saber cuáles. El router lo
+    # traduce a un 409 con el capítulo que se pasa y por cuánto.
+    xlsx = generar_plantilla(encargo, actuaciones, idioma=idioma)
+
     salida = io.BytesIO()
     prs.save(salida)
     return ResultadoDeGeneracion(
         pptx=salida.getvalue(),
-        xlsx=generar_xlsx(layout),
+        xlsx=xlsx,
+        avisos_del_excel=avisos_del_excel,
         diapositivas=len(prs.slides),
         diapositivas_de_tabla=len(trozos),
         marcadores_sin_resolver=sorted(set(sin_resolver)),

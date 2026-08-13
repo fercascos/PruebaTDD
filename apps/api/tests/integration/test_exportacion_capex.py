@@ -113,9 +113,14 @@ def hojas(contenido: bytes) -> list[str]:
     cabecera correcta sobre un cuerpo corrupto es exactamente el fallo que un
     adjunto de correo no perdona.
     """
+    import re
+    from xml.sax.saxutils import unescape
+
     with zipfile.ZipFile(io.BytesIO(contenido)) as z:
         libro = z.read("xl/workbook.xml").decode("utf-8")
-    return [t.split('"')[0] for t in libro.split('name="')[1:]]
+    # Solo los `<sheet name=...>`: `name=` también lo llevan los nombres
+    # definidos, y la plantilla del cliente trae veintitantos.
+    return [unescape(n) for n in re.findall(r'<sheet name="([^"]+)"', libro)]
 
 
 def test_el_libro_se_descarga_y_se_abre(
@@ -130,7 +135,17 @@ def test_el_libro_se_descarga_y_se_abre(
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == TIPO_XLSX
     assert r.content[:2] == b"PK", "no es un ZIP: el libro está corrupto"
-    assert "CAPEX" in hojas(r.content)
+    # Sale la plantilla del cliente entera, no una hoja construida a mano: sus
+    # siete hojas con los gráficos, las dinámicas y las listas.
+    assert hojas(r.content) == [
+        "00 Datos Categorías",
+        "00 Datos Objeto",
+        "00 Datos Activo",
+        "Leyenda",
+        "CapEx",
+        "Resumen CapEx",
+        "Gráficas & Desglose Hard Costs",
+    ]
 
 
 def test_el_nombre_del_fichero_lleva_el_codigo_del_encargo(
@@ -160,7 +175,7 @@ def test_un_encargo_sin_capex_no_devuelve_un_libro_vacio(
     sin que nadie note que no lleva nada dentro."""
     r = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
     assert r.status_code == 409
-    assert "CAPEX" in r.json()["detail"]
+    assert "actuación" in r.json()["detail"]
 
 
 def test_incluye_los_hallazgos_en_borrador(
@@ -221,19 +236,68 @@ def test_el_lector_tambien_puede_exportar(
     assert r.status_code == 200, r.text
 
 
-def test_el_libro_y_la_tabla_del_informe_comparten_estructura(
+# ─────────────────────────────────────────────────────────────────────────────
+#  La plantilla del cliente, rellenada
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _capex(contenido: bytes):
+    from openpyxl import load_workbook
+
+    return load_workbook(io.BytesIO(contenido))["CapEx"]
+
+
+def test_la_actuacion_llega_a_su_bloque_de_la_plantilla(
     cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str], activo: str
 ) -> None:
-    """`[REQ]` P-31 · La misma `CapexTableLayout` alimenta la tabla nativa del
-    PPTX y esta hoja. Construirla dos veces es exactamente lo que hace que en
-    seis meses tengan columnas distintas."""
-    from tdd.exports.capex_xlsx import escribir_hoja
-    from tdd.reporting.capex_layout import construir
-
-    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Contraste", importe="900.00")
+    """No basta con que el fichero se abra: hay que ver el dato dentro, y en la
+    fila que le toca por su capítulo."""
+    crear_hallazgo(
+        cliente, cab, proyecto, catalogo, activo, titulo="Cubierta agotada", importe="36125.00"
+    )
     r = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
-    assert r.status_code == 200
+    hoja = _capex(r.content)
 
-    # El contrato: el exportador consume el layout, no una estructura propia.
-    assert escribir_hoja.__doc__ and "layout" in escribir_hoja.__doc__
-    assert construir.__module__ == "tdd.reporting.capex_layout"
+    descripciones = [hoja[f"G{fila}"].value for fila in range(14, 255) if hoja[f"G{fila}"].value]
+    assert "Cubierta agotada" in descripciones
+
+
+def test_el_idioma_elige_la_plantilla(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str], activo: str
+) -> None:
+    """`[REQ]` Al extraer el informe se elige español o inglés, y el Excel tiene
+    que salir en el mismo idioma que el PowerPoint que lo acompaña."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Roof", importe="1000.00")
+
+    es = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
+    en = cliente.get(f"{EXPORTACION.format(proyecto)}?idioma=en", headers=cab("consultor_a"))
+    assert (es.status_code, en.status_code) == (200, 200)
+
+    from openpyxl import load_workbook
+
+    assert load_workbook(io.BytesIO(es.content)).sheetnames[0] == "00 Datos Categorías"
+    assert load_workbook(io.BytesIO(en.content)).sheetnames[0] == "00 Category Data"
+
+
+def test_un_idioma_sin_plantilla_se_rechaza_con_422(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """Y no con un 500 al no encontrar el fichero: el error es de quien llama."""
+    r = cliente.get(f"{EXPORTACION.format(proyecto)}?idioma=fr", headers=cab("consultor_a"))
+    assert r.status_code == 422
+    assert "es" in r.text and "en" in r.text
+
+
+def test_mas_actuaciones_de_las_que_caben_dan_409_y_dicen_cual(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str], activo: str
+) -> None:
+    """`[LIM]` Cada capítulo admite diez filas. La undécima no cabe, y lo que no
+    puede pasar es que se pierda en silencio: se corta la descarga diciendo qué
+    capítulo se pasa y por cuánto."""
+    for i in range(11):
+        crear_hallazgo(
+            cliente, cab, proyecto, catalogo, activo, titulo=f"Actuación {i}", importe="100.00"
+        )
+    r = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
+    assert r.status_code == 409
+    assert "11 de 10" in r.json()["detail"]

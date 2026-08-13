@@ -331,42 +331,6 @@ def test_solo_el_ultimo_trozo_lleva_los_totales() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 #  El contrato entre los dos generadores  [REQ] P-31
 # ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_el_pptx_y_el_xlsx_no_pueden_divergir() -> None:
-    """La prueba que sostiene P-31.
-
-    Si alguien añade una columna en un solo generador, esto falla. Sin ella, en
-    seis meses el PowerPoint y el Excel que viajan en el mismo correo tendrían
-    columnas distintas y nadie se daría cuenta hasta que lo notase un cliente.
-    """
-    from io import BytesIO
-
-    from openpyxl import load_workbook
-
-    from tdd.exports.capex_xlsx import generar_xlsx
-
-    layout = _layout()
-    ws = load_workbook(BytesIO(generar_xlsx(layout)))["CAPEX"]
-
-    # Mismo número de columnas
-    assert ws.max_column == len(layout.columnas)
-
-    # Mismos encabezados, en el mismo orden. Las de plazo van en la fila 3;
-    # las demás, combinadas en la 2.
-    for i, col in enumerate(layout.columnas, 1):
-        fila = 3 if col.grupo == "capex" else 2
-        assert ws.cell(row=fila, column=i).value == layout.titulo_columna(col), (
-            f"La columna {i} no coincide entre el informe y el Excel"
-        )
-
-    # Mismos valores, celda a celda
-    for f, fila in enumerate(layout.filas, start=4):
-        for i, col in enumerate(layout.columnas, 1):
-            esperado = fila.celdas.get(col.key, "") or None
-            assert ws.cell(row=f, column=i).value == esperado
-
-
 def test_el_ancho_total_se_mantiene_cerca_del_original() -> None:
     """El original mide 9,06 in. Con la quinta columna de P-37 crece, pero no
     puede desbordar la diapositiva de 10 in menos márgenes."""

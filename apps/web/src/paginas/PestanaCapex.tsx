@@ -22,12 +22,16 @@ const euros = new Intl.NumberFormat('es-ES', {
  * en el Excel del cliente. Enseñarla de otra forma obligaría al consultor a
  * traducir mentalmente entre la pantalla y lo que va a entregar.
  */
+/** Los idiomas para los que hay plantilla CAPEX. */
+type Idioma = 'es' | 'en'
+
 export function PestanaCapex({ projectId }: { projectId: string }) {
   const [hallazgos, setHallazgos] = useState<Hallazgo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState(false)
   const [abierto, setAbierto] = useState<Hallazgo | null>(null)
   const [exportando, setExportando] = useState(false)
+  const [idioma, setIdioma] = useState<Idioma>('es')
   // Aparte del error de carga: que falle la exportación no debe dejar la
   // pestaña en blanco y hacer perder de vista la tabla.
   const [errorExport, setErrorExport] = useState<string | null>(null)
@@ -70,14 +74,18 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
 
   /**
    * `[REQ]` P-31 · Exportar el CAPEX a XLSX para adjuntarlo en el envío que el
-   * equipo hace fuera de la plataforma. Sale la misma tabla que el informe:
-   * comparten `CapexTableLayout`, así que no pueden divergir.
+   * equipo hace fuera de la plataforma. **Sale la plantilla CAPEX del cliente
+   * rellenada**, con sus gráficos, sus tablas dinámicas y sus fórmulas, no un
+   * libro construido a mano.
    */
   async function exportar() {
     setExportando(true)
     setErrorExport(null)
     try {
-      await descargar(`/projects/${projectId}/capex/export.xlsx`, 'CAPEX.xlsx')
+      await descargar(
+        `/projects/${projectId}/capex/export.xlsx?idioma=${idioma}`,
+        `CAPEX_${idioma.toUpperCase()}.xlsx`,
+      )
     } catch (e) {
       setErrorExport((e as Error).message)
     } finally {
@@ -95,10 +103,24 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
         className="secundario"
         onClick={exportar}
         disabled={exportando || !hallazgos?.length}
-        title="Descarga la misma tabla que lleva el informe, en Excel"
+        title="Rellena la plantilla CAPEX del cliente y la descarga"
       >
         {exportando ? 'Preparando…' : 'Exportar a XLSX'}
       </button>
+      {/* `[REQ]` Hay una plantilla por idioma, y no es solo la cabecera: las
+          etiquetas de zona, riesgo y concepto salen de listas cerradas de la
+          propia plantilla, así que el idioma se elige ANTES de descargar. */}
+      <label className="idioma">
+        Idioma
+        <select
+          value={idioma}
+          onChange={(e) => setIdioma(e.target.value as Idioma)}
+          disabled={exportando}
+        >
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </label>
     </div>
   )
 

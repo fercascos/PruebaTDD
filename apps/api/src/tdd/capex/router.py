@@ -22,6 +22,7 @@ from sqlalchemy import text
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core.deps import SesionDep, UsuarioDep
+from tdd.exports.plantilla_capex import Idioma
 
 router = APIRouter(tags=["CAPEX"])
 
@@ -190,7 +191,7 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
         }
     },
 )
-def exportar_xlsx(project_id: uuid.UUID, s: SesionDep) -> Response:
+def exportar_xlsx(project_id: uuid.UUID, s: SesionDep, idioma: Idioma = Idioma.ES) -> Response:
     """`[REQ]` P-31 · El botón de **exportar el CAPEX a XLSX**.
 
     Lo pidió el cliente para poder adjuntar el fichero en el envío que el equipo
@@ -198,18 +199,17 @@ def exportar_xlsx(project_id: uuid.UUID, s: SesionDep) -> Response:
     había ninguna ruta que lo sirviera: el botón no habría tenido a dónde
     llamar. Se detectó recorriendo la aplicación en marcha.
 
-    `[REQ]` Consume **el mismo `CapexTableLayout`** que la tabla nativa del
-    PPTX. Es lo que garantiza que el Excel que el equipo adjunta a un correo y
-    el PowerPoint que va en ese mismo correo no tengan columnas distintas.
+    `[REQ]` **Rellena la plantilla CAPEX DDT del cliente**, no un libro
+    construido a mano. Sale con sus gráficos, sus tablas dinámicas y sus
+    fórmulas, y el equipo lo adjunta tal cual.
 
     `[LIM]` Exporta el estado **actual** del proyecto, no una versión emitida.
     Para el CAPEX congelado de un informe ya publicado está la descarga de esa
     versión, que lee de su snapshot. El nombre del fichero lo dice.
     """
-    from tdd.exports.capex_xlsx import generar_xlsx
+    from tdd.exports import capex_desde_snapshot as puente
+    from tdd.exports.plantilla_capex import NoCabe, generar
     from tdd.reporting import snapshot as snap
-    from tdd.reporting.capex_layout import construir
-    from tdd.reporting.generator import lineas_de_capex
 
     # Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
     # mientras todavía lo construye, y un fichero que se deja fuera las líneas
@@ -217,19 +217,26 @@ def exportar_xlsx(project_id: uuid.UUID, s: SesionDep) -> Response:
     # pulsó el botón. Lo descartado sigue fuera.
     datos = snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
     proyecto = datos["project"]
-    lineas = lineas_de_capex(datos)
-    if not lineas:
+    encargo, actuaciones = puente.preparar(datos, idioma=idioma.value)
+    if not actuaciones:
         # 409 y no un libro vacío: un Excel con la cabecera y ninguna fila se
         # adjunta a un correo sin que nadie note que no lleva nada dentro.
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "El encargo todavía no tiene ninguna línea de CAPEX que exportar",
+            "El encargo todavía no tiene ninguna actuación que exportar",
         )
 
-    layout = construir(lineas, capitulo=str(proyecto.get("name") or ""), locale="es-ES")
+    try:
+        contenido = generar(encargo, actuaciones, idioma=idioma.value)
+    except NoCabe as exc:
+        # 409 y no 500: no es un fallo del servidor, es que el encargo tiene
+        # más actuaciones de las que admite la plantilla. El mensaje dice qué
+        # capítulo se pasa y por cuánto, que es lo accionable.
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+
     nombre = f"CAPEX_{proyecto.get('internal_code') or project_id}_actual.xlsx"
     return Response(
-        content=generar_xlsx(layout),
+        content=contenido,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )

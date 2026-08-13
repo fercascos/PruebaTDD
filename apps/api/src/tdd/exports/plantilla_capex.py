@@ -28,6 +28,7 @@ import re
 import zipfile
 from dataclasses import dataclass, field
 from decimal import Decimal
+from enum import StrEnum
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,18 @@ CT_LIBRO = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.ma
 
 PLANTILLAS = Path(__file__).resolve().parent / "plantillas"
 FICHERO = {"es": "capex_ddt_es.xltm", "en": "capex_ddt_en.xltm"}
+
+
+class Idioma(StrEnum):
+    """Los idiomas para los que hay plantilla.
+
+    Enumeración y no `str` para que la API lo publique en el OpenAPI y rechace
+    con un `422` legible lo que no exista, en vez de reventar al abrir el
+    fichero. Añadir un idioma es añadir una plantilla y una línea aquí.
+    """
+
+    ES = "es"
+    EN = "en"
 
 
 def _q(etiqueta: str) -> str:
