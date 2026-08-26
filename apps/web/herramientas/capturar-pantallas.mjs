@@ -54,6 +54,7 @@ await foto('03-proyectos')
 const pantallas = [
   ['04-fases', ``, '.pestanas'],
   ['05-activos', `/activos`, '.tabla, .vacio'],
+  ['05b-documentacion', `/documentacion`, '.autorizacion-ia'],
   ['06-fotos', `/fotos`, '.rejilla li'],
   ['07-mapa', `/mapa`, '.leaflet-container'],
   ['08-inventario', `/equipo`, '.tabla.inventario'],
@@ -67,10 +68,17 @@ for (const [nombre, sufijo, espera] of pantallas) {
   await foto(nombre, { completa: true, espera: 900 })
 }
 
+// 11b · El árbol de ubicaciones, dentro de la ficha del activo (§8.4)
+await pg.goto(`${BASE}/proyectos/${PID}/activos`)
+await pg.waitForSelector('.tabla tbody tr')
+await pg.locator('.tabla tbody tr button').first().click()
+await pg.waitForSelector('.ubicaciones')
+await foto('11b-ubicaciones', { completa:true, espera:600 })
+
 // 12 · Ficha de hallazgo con el comparador abierto
 await pg.goto(`${BASE}/proyectos/${PID}/capex`)
 await pg.waitForSelector('.tabla.capex')
-await pg.click('button.enlace:has-text("Enfriadora")')
+await pg.locator('button.enlace').first().click()
 await pg.waitForSelector('.linea-capex')
 await foto('12-ficha-hallazgo', { completa:true })
 await pg.click('button:has-text("Ver referencias y validar el precio")')

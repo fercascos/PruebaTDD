@@ -33,16 +33,41 @@ export type Fase = {
   estado_sugerido: string | null
 }
 
+/**
+ * El tipo estaba **incompleto**: solo declaraba nueve de los campos que la API
+ * devuelve. Por eso la ficha inicializaba a vacío media docena de superficies
+ * en vez de leerlas del activo, y en `year_last_refurb` eso llegaba a borrar el
+ * dato al guardar. Se completa con lo que el endpoint devuelve de verdad.
+ */
 export type Activo = {
   id: string
   project_id: string
   typology_id: string
   name: string
   asset_code: string | null
+  main_use: string | null
+  address_line: string | null
   city: string | null
-  year_built: number | null
+  province: string | null
+  postal_code: string | null
+  country_code: string
+  latitude: string | null
+  longitude: string | null
+  geocode_source: string | null
+  plot_area_sqm: string | null
   total_built_sqm: string | null
+  lettable_area_sqm: string | null
+  warehouse_area_sqm: string | null
+  office_area_sqm: string | null
+  warehouse_height_m: string | null
+  floors_above: number | null
+  floors_below: number | null
+  year_built: number | null
+  year_last_refurb: number | null
+  description: string | null
+  notes: string | null
   main_photo_id: string | null
+  row_version: number
 }
 
 export type ElementoCatalogo = { id: string; code: string; name_es: string }

@@ -47,6 +47,18 @@ await pg.locator('.tabla tbody tr button').first().click()
 await pg.waitForSelector('.ubicaciones', { timeout: 15000 })
 comprobar(true, 'la ficha del activo lleva el árbol de ubicaciones')
 
+// La ficha tiene que ENSEÑAR lo que la API guarda. Cinco superficies
+// arrancaban en blanco aunque el activo las tuviera, y con el año de reforma
+// eso llegaba a borrarlo: `guardar()` manda `null` cuando el campo está vacío,
+// así que abrir y pulsar Guardar perdía el dato en silencio.
+const rellenos = await pg.locator('input[type="number"]').evaluateAll((inputs) =>
+  inputs.filter((i) => i.value.trim() !== '').length,
+)
+comprobar(
+  rellenos >= 4,
+  `la ficha carga las superficies que la API guarda (${rellenos} campos con valor)`,
+)
+
 // ── 2 · Se crean una planta y una sala dentro ──────────────────────────────
 const sufijo = Date.now().toString().slice(-6)
 const planta = `Planta ${sufijo}`

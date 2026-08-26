@@ -35,14 +35,20 @@ export function FichaDeActivo({
   const [codigo, setCodigo] = useState(activo?.asset_code ?? '')
   const [ciudad, setCiudad] = useState(activo?.city ?? '')
   const [ano, setAno] = useState(activo?.year_built?.toString() ?? '')
-  const [reforma, setReforma] = useState('')
+  const [reforma, setReforma] = useState(activo?.year_last_refurb?.toString() ?? '')
+  // Todos los campos se cargan del activo. Cinco de los seis arrancaban en
+  // cadena vacía y solo `total_built_sqm` se leía, así que al abrir una ficha
+  // ya rellena se veían huecos donde había datos. Y con `year_last_refurb` era
+  // **pérdida de datos**: `guardar()` manda `null` cuando está vacío sin
+  // condición, así que abrir un activo con año de reforma y pulsar Guardar lo
+  // borraba en silencio.
   const [numericos, setNumericos] = useState<Numericos>({
-    plot_area_sqm: '',
+    plot_area_sqm: activo?.plot_area_sqm ?? '',
     total_built_sqm: activo?.total_built_sqm ?? '',
-    lettable_area_sqm: '',
-    warehouse_area_sqm: '',
-    office_area_sqm: '',
-    warehouse_height_m: '',
+    lettable_area_sqm: activo?.lettable_area_sqm ?? '',
+    warehouse_area_sqm: activo?.warehouse_area_sqm ?? '',
+    office_area_sqm: activo?.office_area_sqm ?? '',
+    warehouse_height_m: activo?.warehouse_height_m ?? '',
   })
 
   useEffect(() => {
