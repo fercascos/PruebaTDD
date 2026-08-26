@@ -206,10 +206,26 @@ CREATE TABLE project (
     status           project_status NOT NULL DEFAULT 'BORRADOR',
     currency         CHAR(3) NOT NULL DEFAULT 'EUR',
     report_due_date  DATE,
+
+    -- [REQ] La revisión de documentación con IA es OPT-IN POR ENCARGO y nace
+    -- apagada. La restricción del cliente exige «autorización expresa y
+    -- verificable»: la restricción de abajo es lo que la hace verificable, al
+    -- impedir que el interruptor esté encendido sin que conste quién lo
+    -- encendió y cuándo. Un BOOLEAN suelto no habría sido una autorización,
+    -- sino un ajuste.
+    ai_doc_review_enabled     BOOLEAN NOT NULL DEFAULT FALSE,
+    ai_doc_review_enabled_at  TIMESTAMPTZ,
+    ai_doc_review_enabled_by  UUID REFERENCES app_user(id),
+
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at       TIMESTAMPTZ,
-    UNIQUE (organization_id, internal_code)
+    UNIQUE (organization_id, internal_code),
+
+    CONSTRAINT project_revision_ia_con_autoria
+        CHECK (NOT ai_doc_review_enabled
+               OR (ai_doc_review_enabled_at IS NOT NULL
+                   AND ai_doc_review_enabled_by IS NOT NULL))
 );
 
 CREATE TABLE asset (
@@ -1321,6 +1337,115 @@ CREATE TRIGGER document_original_inmutable
     FOR EACH ROW EXECUTE FUNCTION impedir_sobrescritura_de_documento();
 
 -- =============================================================================
+--  Revisión de documentación asistida por IA [REQ]
+--
+--  Lo que la IA produce son PROPUESTAS, nunca decisiones. La separación es
+--  deliberada y está sostenida por el esquema, no por el código:
+--
+--   1. `doc_request_item.status` NO se toca desde aquí. Un documento puede
+--      estar RECIBIDA y ser no conforme a la vez: son dos ejes distintos, y
+--      colapsarlos habría obligado a inventar un estado «RECIBIDA pero mal»
+--      que la checklist del cliente no tiene.
+--   2. Una observación no sale de PROPUESTA sin que conste QUIÉN la aceptó o
+--      rechazó (`doc_finding_decidida_con_persona`). Es la traducción a SQL de
+--      «la IA sugiere, una persona confirma»: si mañana alguien escribe un
+--      proceso que acepta propuestas en lote sin usuario, la base lo rechaza.
+--   3. Cada revisión congela el `sha256` del documento analizado. Si el
+--      documento se sustituye por una versión nueva, la revisión sigue
+--      diciendo con exactitud sobre qué bytes se pronunció, en vez de
+--      aparentar que opinó sobre el fichero de hoy.
+--
+--  `[LIM]` Qué se revisa vive en `doc_check_type`, no en el código. Los
+--  criterios exactos están pendientes de definir con el cliente `[PDV]`, así
+--  que añadir o quitar uno tiene que ser una fila, no una migración.
+-- =============================================================================
+
+CREATE TABLE doc_check_type (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    code            VARCHAR(40) NOT NULL,
+    name_es         VARCHAR(120) NOT NULL,
+    -- Lo que se le pide comprobar, en castellano llano. No es documentación:
+    -- es el texto que alimenta la instrucción enviada al proveedor, y por eso
+    -- vive en la base y no en una constante de Python.
+    description_es  TEXT NOT NULL,
+    display_order   SMALLINT NOT NULL DEFAULT 0,
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE NULLS NOT DISTINCT (organization_id, code)
+);
+
+CREATE TYPE doc_review_status AS ENUM (
+    'PENDIENTE', 'EN_CURSO', 'COMPLETADA', 'FALLIDA', 'CANCELADA'
+);
+
+CREATE TABLE doc_review (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id     UUID NOT NULL REFERENCES organization(id),
+    project_id          UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    document_id         UUID NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+    doc_request_item_id UUID REFERENCES doc_request_item(id) ON DELETE SET NULL,
+    status              doc_review_status NOT NULL DEFAULT 'PENDIENTE',
+
+    -- Qué produjo la propuesta. Sin esto no se puede auditar ni reproducir, y
+    -- `is_simulated` impide que una revisión de mentira pase por una de verdad:
+    -- mientras no haya proveedor elegido, TODAS son simuladas y se ven así.
+    provider            VARCHAR(40) NOT NULL,
+    model               VARCHAR(80),
+    is_simulated        BOOLEAN NOT NULL DEFAULT TRUE,
+    document_sha256     CHAR(64) NOT NULL,
+
+    requested_by        UUID NOT NULL REFERENCES app_user(id),
+    requested_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    started_at          TIMESTAMPTZ,
+    finished_at         TIMESTAMPTZ,
+    error_message       TEXT,
+
+    CONSTRAINT doc_review_fallida_con_motivo
+        CHECK (status <> 'FALLIDA'
+               OR (error_message IS NOT NULL AND length(trim(error_message)) > 0)),
+    CONSTRAINT doc_review_terminada_con_fecha
+        CHECK (status NOT IN ('COMPLETADA', 'FALLIDA') OR finished_at IS NOT NULL)
+);
+CREATE INDEX doc_review_documento_idx ON doc_review (document_id, requested_at DESC);
+CREATE INDEX doc_review_proyecto_idx ON doc_review (project_id, status);
+
+CREATE TYPE doc_finding_verdict  AS ENUM ('CONFORME', 'NO_CONFORME', 'FALTA', 'DUDOSO');
+CREATE TYPE doc_finding_decision AS ENUM ('PROPUESTA', 'ACEPTADA', 'RECHAZADA');
+
+CREATE TABLE doc_review_finding (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    doc_review_id   UUID NOT NULL REFERENCES doc_review(id) ON DELETE CASCADE,
+    check_type_id   UUID NOT NULL REFERENCES doc_check_type(id),
+    verdict         doc_finding_verdict NOT NULL,
+    summary         TEXT NOT NULL,
+
+    -- [REQ] La evidencia es lo que hace verificable la propuesta. Quien la
+    -- confirma tiene que poder ir a la página y leerlo, en vez de creerse un
+    -- veredicto sin respaldo. `evidence_page` es 1-indexado como el visor.
+    evidence_text   TEXT,
+    evidence_page   INT,
+    confidence      NUMERIC(4, 3),
+
+    decision        doc_finding_decision NOT NULL DEFAULT 'PROPUESTA',
+    decided_by      UUID REFERENCES app_user(id),
+    decided_at      TIMESTAMPTZ,
+    decision_note   TEXT,
+
+    -- El corazón del requisito: sin persona, la observación se queda en
+    -- propuesta. No hay forma de aceptarla «desde el sistema».
+    CONSTRAINT doc_finding_decidida_con_persona
+        CHECK (decision = 'PROPUESTA'
+               OR (decided_by IS NOT NULL AND decided_at IS NOT NULL)),
+    CONSTRAINT doc_finding_confianza_valida
+        CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
+    CONSTRAINT doc_finding_pagina_valida
+        CHECK (evidence_page IS NULL OR evidence_page >= 1)
+);
+CREATE INDEX doc_finding_revision_idx ON doc_review_finding (doc_review_id, decision);
+
+-- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
 --
 --  La garantía que estructura todo el bloque: **un informe emitido debe seguir
@@ -1685,7 +1810,7 @@ BEGIN
         'qa_round', 'phase_event',
         'photo', 'photo_version', 'photo_derivative', 'photo_link',
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
-        'password_reset_token',
+        'password_reset_token', 'doc_review', 'doc_review_finding',
         'report_template', 'template_mapping', 'report_version'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
@@ -1705,7 +1830,8 @@ DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'asset_typology', 'zone', 'capex_code', 'risk_level',
-        'capex_concept', 'time_horizon', 'doc_request_category', 'technical_system'
+        'capex_concept', 'time_horizon', 'doc_request_category', 'technical_system',
+        'doc_check_type'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

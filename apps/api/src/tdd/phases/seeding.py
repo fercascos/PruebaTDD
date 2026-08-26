@@ -33,9 +33,52 @@ CATEGORIAS_DOCUMENTACION: tuple[tuple[str, str], ...] = (
     ("GARANTIAS", "Garantías"),
 )
 
+#: `[PDV]` Qué se le pide comprobar a la IA sobre cada documento recibido.
+#:
+#: Los cuatro criterios están **acordados en su enunciado y pendientes en su
+#: detalle**: el cliente todavía tiene que decir qué hace exactamente que un
+#: documento sea no conforme. Por eso son filas de catálogo y no constantes:
+#: afinar la redacción, añadir un quinto o desactivar uno es un `UPDATE`.
+#:
+#: `description_es` no es documentación para quien lee el código: es el texto
+#: que viaja al proveedor como parte de la instrucción. Cambiarlo cambia lo que
+#: se revisa, y por eso se audita como dato y no se esconde en un `.py`.
+TIPOS_DE_COMPROBACION: tuple[tuple[str, str, str], ...] = (
+    (
+        "CORRESPONDENCIA",
+        "Corresponde con lo solicitado",
+        "Comprueba si el documento es el que pide la línea de la checklist. Un "
+        "certificado de baja tensión subido donde se pedía el proyecto de "
+        "actividad es el fallo más frecuente y el más barato de detectar.",
+    ),
+    (
+        "VIGENCIA",
+        "Vigencia y caducidad",
+        "Localiza las fechas de emisión, validez o caducidad y compáralas con la "
+        "fecha del encargo. Cita siempre la fecha exacta que has leído y la "
+        "página donde aparece: quien revise tiene que poder comprobarla.",
+    ),
+    (
+        "COMPLETITUD",
+        "Completitud",
+        "Comprueba si faltan páginas, anexos, planos referenciados en el índice, "
+        "firmas o sellos. Un documento de tres páginas cuyo índice anuncia "
+        "cuarenta está incompleto aunque se lea perfectamente.",
+    ),
+    (
+        "LEGIBILIDAD",
+        "Legibilidad",
+        "Comprueba si el documento se puede leer: escaneo con resolución "
+        "suficiente, sin páginas giradas, cortadas ni en negro.",
+    ),
+)
 
-def sembrar_fases(conn: Connection) -> tuple[int, int]:
-    """Siembra las definiciones de fase y las categorías. Idempotente."""
+
+def sembrar_fases(conn: Connection) -> tuple[int, int, int]:
+    """Siembra las definiciones de fase, las categorías y los tipos de comprobación.
+
+    Idempotente.
+    """
     for orden, (code, nombre, chk, enlace, visitas, rondas, derivado) in enumerate(FASES, 1):
         conn.execute(
             text(
@@ -66,4 +109,15 @@ def sembrar_fases(conn: Connection) -> tuple[int, int]:
             {"c": code, "n": nombre, "o": orden},
         )
 
-    return len(FASES), len(CATEGORIAS_DOCUMENTACION)
+    for orden, (code, nombre, descripcion) in enumerate(TIPOS_DE_COMPROBACION, 1):
+        conn.execute(
+            text(
+                "INSERT INTO doc_check_type (organization_id, code, name_es, "
+                "description_es, display_order, is_system) "
+                "VALUES (NULL, :c, :n, :d, :o, TRUE) "
+                "ON CONFLICT (organization_id, code) DO NOTHING"
+            ),
+            {"c": code, "n": nombre, "d": descripcion, "o": orden},
+        )
+
+    return len(FASES), len(CATEGORIAS_DOCUMENTACION), len(TIPOS_DE_COMPROBACION)
