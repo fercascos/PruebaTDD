@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd import cola
 from tdd.core.config import Settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
 from tdd.core.deps import SesionDep, SettingsDep, UsuarioDep
@@ -48,7 +49,7 @@ from tdd.identity.service import (
     generar_token_de_refresco,
     huella_de,
 )
-from tdd.notificaciones.correo import Correo, Mensaje
+from tdd.notificaciones.correo import Correo
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
@@ -525,12 +526,15 @@ def olvide_mi_clave(
     y «ese correo no existe» es un comprobador de cuentas gratuito: se prueba
     una lista de direcciones y se sabe cuáles pertenecen a la organización.
 
-    `[LIM]` Queda una diferencia de **tiempo**: cuando la cuenta existe hay que
-    hablar con el servidor SMTP y eso tarda. Lo correcto es encolar el envío y
-    responder igual de rápido en los dos casos, y para eso hace falta el worker
-    asíncrono de §17, que no está construido. Mientras tanto lo que acota el
-    abuso es el límite por usuario, que además evita usar esto para llenarle el
-    buzón a alguien.
+    `[REQ]` **El envío se encola.** Antes se hablaba con el servidor SMTP dentro
+    de la petición, y eso hacía que la rama «la cuenta existe» tardara cientos
+    de milisegundos más: la respuesta era la misma, pero el cronómetro delataba
+    qué direcciones estaban dadas de alta.
+
+    `[LIM]` No es tiempo constante y no se afirma que lo sea: quedan la consulta
+    del usuario y la escritura del token. Lo que se ha quitado es la parte
+    observable, que era la conversación con un tercero. El límite por usuario
+    sigue acotando el abuso y evita usar esto para llenarle el buzón a alguien.
     """
     s = _sesion_sin_contexto(request)
     try:
@@ -586,21 +590,31 @@ def olvide_mi_clave(
                     accion="PASSWORD_RESET_REQUESTED",
                     severidad="AVISO",
                 )
-                s.commit()
-                # Se envía DESPUÉS de confirmar. Si el correo falla, el token ya
-                # está guardado y quien lo recibiera podría usarlo; al revés
-                # —enviar y luego fallar al guardar— dejaría en circulación un
-                # enlace que la base no reconoce.
-                correo.enviar(
-                    Mensaje(
-                        destinatario=cuerpo.email,
-                        asunto=ASUNTO,
-                        cuerpo=CUERPO.format(
+                # El envío se ENCOLA, no se hace aquí. Dos cosas a la vez:
+                #
+                # 1. La respuesta deja de esperar al servidor SMTP.
+                # 2. Cierra el canal lateral que este mismo endpoint declaraba:
+                #    la rama «la cuenta existe» ya no habla con un tercero, así
+                #    que lo que la distingue de la otra es una fila más en una
+                #    tabla, no cientos de milisegundos observables desde fuera.
+                #
+                # Va en la MISMA transacción que el token: si el token no se
+                # guarda, no se manda un enlace que la base no reconocería.
+                cola.encolar(
+                    s,
+                    kind=cola.Tarea.ENVIAR_CORREO,
+                    organization_id=fila["organization_id"],
+                    created_by=fila["id"],
+                    payload={
+                        "destinatario": cuerpo.email,
+                        "asunto": ASUNTO,
+                        "cuerpo": CUERPO.format(
                             saludo=f", {fila['full_name'].split()[0]}" if fila["full_name"] else "",
                             enlace=recuperacion.enlace(settings.app_base_url, token.valor),
                         ),
-                    )
+                    },
                 )
+                s.commit()
             else:
                 # Pasado el tope no se manda otro correo, pero la respuesta no
                 # cambia: cambiarla volvería a delatar qué cuentas existen.

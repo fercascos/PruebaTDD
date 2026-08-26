@@ -53,8 +53,28 @@ def usuario(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> dict[str, 
     return {"id": str(uid), "email": email}
 
 
+def correr_worker(cliente: TestClient) -> int:
+    """Hace lo que la aplicación de verdad: dejar que el worker vacíe la cola.
+
+    `[REQ]` §17 · Generar un informe y enviar un correo ya **no ocurren dentro
+    de la petición**. Una prueba que quiera ver el resultado tiene que llegar
+    hasta aquí, igual que quien pulsa «Generar» espera a que el worker lo haga.
+    """
+    from tdd.cola import worker as w
+    from tdd.cola.tareas import Recursos, registrar_todas
+
+    registrar_todas()
+    estado = cliente.app.state  # type: ignore[attr-defined]
+    return w.vaciar(
+        estado.session_factory,
+        recursos=Recursos(almacen=estado.object_store, correo=estado.correo),
+    )
+
+
 def pedir(cliente: TestClient, email: str):
-    return cliente.post(f"{RUTA}/auth/password/forgot", json={"email": email})
+    r = cliente.post(f"{RUTA}/auth/password/forgot", json={"email": email})
+    correr_worker(cliente)
+    return r
 
 
 def token_del_correo(mensaje) -> str:

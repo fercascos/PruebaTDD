@@ -16,7 +16,6 @@ sustituye. Lo garantiza un disparador, no una comprobación en este fichero.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import uuid
 from decimal import Decimal
@@ -28,8 +27,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd import cola
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
-from tdd.evidence import anotaciones, guardia, images
+from tdd.evidence import guardia, images
 from tdd.evidence.router import AlmacenDep, AntivirusDep
 from tdd.reporting import generator
 from tdd.reporting import snapshot as snap
@@ -584,59 +584,14 @@ def generar(
             "No se puede generar el informe: " + "; ".join(motivos_de_bloqueo(avisos)),
         )
 
-    # [REQ] §17.6 · El snapshot ES la versión de los datos del informe. Todo lo
-    # que viene después lee de aquí, no de la base.
+    # [REQ] §17.6 · El snapshot ES la versión de los datos del informe. Se
+    # congela AQUÍ, en la petición, y no en el worker: entre pulsar «Generar» y
+    # que el worker coja la tarea pueden pasar minutos, y el informe tiene que
+    # corresponder a lo que había cuando se pidió.
     congelado = snap.construir(s, project_id)
     huella_snapshot = snap.huella(congelado)
 
-    clave_plantilla = s.execute(
-        text("SELECT storage_key FROM stored_object WHERE id = :i"),
-        {"i": str(plantilla["stored_object_id"])},
-    ).scalar_one()
-    bytes_plantilla = almacen.leer(clave_plantilla)
-
-    fotos: list[generator.FotoParaInsertar] = []
-    if cuerpo.incluir_fotos:
-        for foto in congelado.get("photos", []):
-            clave = s.execute(
-                text(
-                    "SELECT o.storage_key FROM photo p "
-                    "JOIN stored_object o ON o.id = p.stored_object_id WHERE p.id = :i"
-                ),
-                {"i": str(foto["id"])},
-            ).scalar()
-            if clave is None:
-                continue
-            try:
-                # [REQ] §15.6 · Lo que entra en el PPTX son solo píxeles: el
-                # derivado va sin EXIF y con la orientación ya aplicada.
-                datos = images.generar_derivado(
-                    almacen.leer(clave), lado_maximo=1600, sin_metadatos=True
-                )
-            except Exception:  # noqa: BLE001 — una foto ilegible no tumba el informe
-                continue
-
-            # `[REQ]` §15.2 · Las anotaciones se **queman aquí**, sobre el
-            # derivado desechable. Es el único momento en que dejan de ser
-            # vectores: el original sigue limpio y la capa se puede volver a
-            # editar. Antes se guardaban y no las pintaba nadie, así que anotar
-            # una foto producía un JSON que no llegaba al informe.
-            capa_bruta = foto.get("annotations")
-            if capa_bruta:
-                # La capa se valida al guardarla. Si aun así llega algo raro —un
-                # snapshot anterior a que existiera esa validación—, se inserta
-                # la foto limpia: mejor sin flechas que sin foto.
-                with contextlib.suppress(anotaciones.AnotacionInvalida):
-                    datos = anotaciones.rasterizar(datos, anotaciones.leer(capa_bruta))
-
-            fotos.append(
-                generator.FotoParaInsertar(
-                    photo_id=str(foto["id"]), datos=datos, caption=str(foto.get("caption") or "")
-                )
-            )
-
-    resultado = generator.generar(bytes_plantilla, congelado, fotos=fotos)
-
+    version_id = uuid.uuid4()
     anterior = s.execute(
         text(
             "SELECT id FROM report_version WHERE project_id = :p "
@@ -645,34 +600,16 @@ def generar(
         {"p": str(project_id)},
     ).scalar()
 
-    version_id = uuid.uuid4()
-    objeto_pptx = _guardar(
-        s,
-        almacen,
-        usuario,
-        project_id,
-        f"reports/{version_id}.pptx",
-        resultado.pptx,
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    )
-    objeto_xlsx = _guardar(
-        s,
-        almacen,
-        usuario,
-        project_id,
-        f"reports/{version_id}.xlsx",
-        resultado.xlsx,
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
+    # La fila nace en GENERANDO y **sin ficheros**. El `CHECK`
+    # `report_generado_con_fichero` lo permite solo en GENERANDO y ERROR: el
+    # esquema ya estaba pensado para esto.
     s.execute(
         text(
             "INSERT INTO report_version (id, organization_id, project_id, version_number, status, "
             "template_id, template_sha256, mapping_id, data_snapshot, data_snapshot_sha256, "
-            "stored_object_id, pptx_sha256, xlsx_object_id, warnings, supersedes_version_id, "
-            "generated_by) "
-            "SELECT :id, :o, :p, COALESCE(MAX(version_number), 0) + 1, 'GENERADO', :t, :th, :m, "
-            "  CAST(:snap AS jsonb), :sh, :obj, :hash, :xlsx, CAST(:w AS jsonb), :sup, :u "
+            "warnings, supersedes_version_id, generated_by) "
+            "SELECT :id, :o, :p, COALESCE(MAX(version_number), 0) + 1, 'GENERANDO', :t, :th, :m, "
+            "  CAST(:snap AS jsonb), :sh, CAST(:w AS jsonb), :sup, :u "
             "FROM report_version WHERE project_id = :p"
         ),
         {
@@ -684,15 +621,23 @@ def generar(
             "m": str(cuerpo.mapping_id) if cuerpo.mapping_id else None,
             "snap": json.dumps(congelado, ensure_ascii=False),
             "sh": huella_snapshot,
-            "obj": str(objeto_pptx),
-            "hash": images.sha256_de(resultado.pptx),
-            "xlsx": str(objeto_xlsx),
             "w": json.dumps(_a_json(avisos), ensure_ascii=False),
             "sup": str(anterior) if anterior else None,
             "u": str(usuario.id),
         },
     )
-    _auditar(s, usuario, "REPORT_GENERATED", version_id, {"snapshot": huella_snapshot})
+
+    # Encolar va en ESTA transacción: si el `INSERT` de arriba revirtiera, la
+    # tarea revierte con él y el worker no se encuentra un encargo sobre una
+    # versión que no existe.
+    cola.encolar(
+        s,
+        kind=cola.Tarea.GENERAR_INFORME,
+        organization_id=usuario.organization_id,
+        payload={"version_id": str(version_id), "incluir_fotos": cuerpo.incluir_fotos},
+        created_by=usuario.id,
+    )
+    _auditar(s, usuario, "REPORT_REQUESTED", version_id, {"snapshot": huella_snapshot})
     return _version(s, version_id)
 
 

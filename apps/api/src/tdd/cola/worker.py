@@ -143,6 +143,34 @@ def una_vuelta(
         return Resultado(tarea=tarea, ok=False, error=motivo)
 
 
+def vaciar(
+    fabrica: Callable[[], Session],
+    *,
+    recursos: Any,
+    colas: tuple[Cola, ...] = (Cola.PESADA, Cola.LIGERA),
+    tope: int = 500,
+) -> int:
+    """Procesa lo que haya pendiente y termina. Devuelve cuántas tareas hizo.
+
+    No es un apaño de pruebas: es el modo que hace falta para **vaciar la cola
+    antes de un despliegue** y para ejecutar el worker desde un `cron` en vez de
+    como servicio permanente.
+
+    `tope` evita un bucle infinito si una tarea se reencola sola: sin él, un
+    fallo que la devuelve a la cola con `run_after` en el pasado dejaría el
+    proceso girando para siempre.
+    """
+    hechas = 0
+    for cola in colas:
+        for _ in range(tope):
+            with fabrica() as s:
+                resultado = una_vuelta(s, cola=cola, recursos=recursos)
+            if not resultado.hubo_trabajo:
+                break
+            hechas += 1
+    return hechas
+
+
 def servir(
     fabrica: Callable[[], Session],
     *,

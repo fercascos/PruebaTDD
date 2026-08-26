@@ -22,9 +22,10 @@ convertirse en una ruta con caracteres raros.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 #: Nombre de fichero de cada derivado dentro de su carpeta.
 NOMBRE_DE_DERIVADO = {
@@ -391,3 +392,39 @@ class AlmacenS3:
                 "y no aparece ningún error en el servidor."
             )
         return problemas
+
+
+def construir(settings: Any) -> Any:
+    """El adaptador de almacenamiento, y su diagnóstico al arrancar.
+
+    Vive aquí y no en `main` porque **el worker también lo necesita**, y
+    arrancar el worker no debe levantar la aplicación web entera para conseguir
+    un almacén.
+
+    Con S3 se comprueba el bucket **aquí**, no en la primera subida: el
+    versionado y el Object Lock solo se pueden activar al crear el bucket, así
+    que descubrir que falta el día que alguien sobrescribe un original es
+    descubrirlo cuando ya no tiene arreglo.
+
+    Se avisa y se sigue en vez de negarse a arrancar: un bucket sin WORM
+    protege peor, pero negarse dejaría la aplicación caída por algo que quizá
+    esté a medio migrar. Lo que no se hace es callarlo.
+    """
+    if settings.storage_backend != "s3":
+        # [LIM] Sobre disco: sin URLs firmadas, sin versionado y sin Object
+        # Lock. Vale para desarrollo y para la suite, no para producción.
+        return AlmacenEnDisco(settings.storage_local_dir)
+
+    almacen = AlmacenS3(
+        bucket=settings.storage_bucket,
+        endpoint_url=settings.storage_endpoint_url,
+        region=settings.storage_region,
+        access_key_id=settings.storage_access_key_id,
+        secret_access_key=settings.storage_secret_access_key,
+        object_lock=settings.storage_enable_object_lock,
+        modo_de_bloqueo=settings.storage_object_lock_mode,
+        dias_de_retencion=settings.storage_object_lock_days,
+    )
+    for problema in almacen.comprobar():
+        logging.getLogger("tdd.almacen").error("Barrera 4 incompleta: %s", problema)
+    return almacen

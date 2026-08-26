@@ -149,14 +149,38 @@ def con_hallazgo(
     return {"asset": activo, "finding": hallazgo}
 
 
+
+def correr_worker(cliente: TestClient) -> int:
+    """Hace lo que la aplicación de verdad: dejar que el worker vacíe la cola.
+
+    `[REQ]` §17 · Generar un informe y enviar un correo ya **no ocurren dentro
+    de la petición**. Una prueba que quiera ver el resultado tiene que llegar
+    hasta aquí, igual que quien pulsa «Generar» espera a que el worker lo haga.
+    """
+    from tdd.cola import worker as w
+    from tdd.cola.tareas import Recursos, registrar_todas
+
+    registrar_todas()
+    estado = cliente.app.state  # type: ignore[attr-defined]
+    return w.vaciar(
+        estado.session_factory,
+        recursos=Recursos(almacen=estado.object_store, correo=estado.correo),
+    )
+
+
 def generar(
     cliente: TestClient, cab: Any, proyecto: str, plantilla: dict[str, Any], **extra: Any
 ) -> Any:
-    return cliente.post(
+    r = cliente.post(
         f"{RUTA}/projects/{proyecto}/reports",
         headers=cab("admin_a"),
         json={"template_id": plantilla["id"], **extra},
     )
+    if r.status_code == 201:
+        # La petición solo encola. Quien llama espera el informe terminado, que
+        # es lo que ve el usuario tras el aviso de «generando».
+        correr_worker(cliente)
+    return r
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -365,11 +389,20 @@ def test_se_genera_el_informe_con_su_pptx_y_su_xlsx(
 ) -> None:
     r = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"])
     assert r.status_code == 201, r.text
-    version = r.json()
+
+    # `[REQ]` §17 · La petición responde de inmediato y **no trae el informe**:
+    # devuelve una versión en GENERANDO, con el snapshot ya congelado y sin
+    # ficheros. Es lo que ve la pantalla mientras espera.
+    pedido = r.json()
+    assert pedido["status"] == "GENERANDO"
+    assert pedido["pptx_sha256"] is None
+    assert len(pedido["data_snapshot_sha256"]) == 64
+
+    # `generar` ya pasó el worker: al releer, el informe está.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     assert version["version_number"] == 1
     assert version["status"] == "GENERADO"
     assert len(version["pptx_sha256"]) == 64
-    assert len(version["data_snapshot_sha256"]) == 64
 
     for formato in ("pptx", "xlsx"):
         descarga = cliente.get(
@@ -713,7 +746,10 @@ def test_el_informe_recorre_su_ciclo_hasta_emitirse(
     mapeo: dict[str, Any],
     con_hallazgo: dict[str, Any],
 ) -> None:
-    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pedido = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    # Se relee tras el worker: la respuesta a la petición viene en GENERANDO y
+    # todavía sin `pptx_sha256`, que es justo lo que esta prueba verifica.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     for destino in ("EN_REVISION", "APROBADO", "EMITIDO"):
         r = cliente.post(
             f"{RUTA}/reports/{version['id']}/transitions",
@@ -772,7 +808,10 @@ def test_un_informe_emitido_no_se_puede_cambiar_por_la_api(
     mapeo: dict[str, Any],
     con_hallazgo: dict[str, Any],
 ) -> None:
-    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pedido = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    # Se relee tras el worker: la respuesta a la petición viene en GENERANDO y
+    # todavía sin `pptx_sha256`, que es justo lo que esta prueba verifica.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     for destino in ("EN_REVISION", "APROBADO", "EMITIDO"):
         cliente.post(
             f"{RUTA}/reports/{version['id']}/transitions",
@@ -799,7 +838,10 @@ def test_la_base_de_datos_tampoco_deja_tocarlo(
 ) -> None:
     """La garantía de verdad. Si alguien escribe un `UPDATE` nuevo dentro de
     seis meses, esto sigue en pie."""
-    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pedido = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    # Se relee tras el worker: la respuesta a la petición viene en GENERANDO y
+    # todavía sin `pptx_sha256`, que es justo lo que esta prueba verifica.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     for destino in ("EN_REVISION", "APROBADO", "EMITIDO"):
         cliente.post(
             f"{RUTA}/reports/{version['id']}/transitions",
@@ -822,7 +864,10 @@ def test_un_informe_emitido_no_se_borra(
     con_hallazgo: dict[str, Any],
     motor_admin: Engine,
 ) -> None:
-    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pedido = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    # Se relee tras el worker: la respuesta a la petición viene en GENERANDO y
+    # todavía sin `pptx_sha256`, que es justo lo que esta prueba verifica.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     for destino in ("EN_REVISION", "APROBADO", "EMITIDO"):
         cliente.post(
             f"{RUTA}/reports/{version['id']}/transitions",
@@ -844,7 +889,10 @@ def test_el_informe_emitido_sigue_descargandose_igual(
     """Es lo que hace verificable el `pptx_sha256` que se guardó al generarlo."""
     from tdd.evidence.images import sha256_de
 
-    version = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    pedido = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
+    # Se relee tras el worker: la respuesta a la petición viene en GENERANDO y
+    # todavía sin `pptx_sha256`, que es justo lo que esta prueba verifica.
+    version = cliente.get(f"{RUTA}/reports/{pedido['id']}", headers=cab("admin_a")).json()
     for destino in ("EN_REVISION", "APROBADO", "EMITIDO"):
         cliente.post(
             f"{RUTA}/reports/{version['id']}/transitions",

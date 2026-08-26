@@ -354,3 +354,87 @@ def test_el_worker_trabaja_con_el_contexto_de_la_organizacion_de_la_tarea(
         assert vistas == [quien["org"]]
     finally:
         w._MANEJADORES.pop(Tarea.ENVIAR_CORREO, None)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Lo que el worker cambia de verdad, visto desde la API
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_la_peticion_de_recuperacion_no_habla_con_el_smtp(
+    cliente: Any, motor_admin: Engine
+) -> None:
+    """`[REQ]` §10.2 · El canal lateral de tiempo, cerrado.
+
+    Antes, la rama «la cuenta existe» hablaba con el servidor SMTP **dentro de
+    la petición**: la respuesta era idéntica, pero el cronómetro delataba qué
+    direcciones estaban dadas de alta.
+
+    Esta prueba no mide tiempos —serían inestables, y con el correo en memoria
+    tampoco probarían nada—. Comprueba el hecho del que se deduce: al volver de
+    la petición **no se ha enviado nada**, y lo que hay es una tarea encolada.
+    """
+    with motor_admin.begin() as conn:
+        conn.execute(text("DELETE FROM job WHERE kind = 'ENVIAR_CORREO'"))
+    buzon = cliente.app.state.correo
+    antes = len(buzon.enviados)
+
+    r = cliente.post("/api/v1/auth/password/forgot", json={"email": "admin@alfa.example"})
+    assert r.status_code == 202
+    assert len(buzon.enviados) == antes, "no se ha hablado con ningún SMTP en la petición"
+
+    with motor_admin.begin() as conn:
+        pendientes = conn.execute(
+            text("SELECT count(*) FROM job WHERE kind = 'ENVIAR_CORREO' AND status = 'PENDIENTE'")
+        ).scalar_one()
+    assert pendientes >= 1, "el envío quedó encolado"
+
+
+def test_una_cuenta_inventada_no_encola_nada(cliente: Any, motor_admin: Engine) -> None:
+    """La otra rama. La diferencia observable pasa a ser una fila en una tabla,
+    no una conversación con un tercero."""
+    with motor_admin.begin() as conn:
+        conn.execute(text("DELETE FROM job WHERE kind = 'ENVIAR_CORREO'"))
+    r = cliente.post(
+        "/api/v1/auth/password/forgot", json={"email": "no-existe-nadie@ejemplo.example"}
+    )
+    assert r.status_code == 202
+    with motor_admin.begin() as conn:
+        pendientes = conn.execute(
+            text("SELECT count(*) FROM job WHERE kind = 'ENVIAR_CORREO'")
+        ).scalar_one()
+    assert pendientes == 0
+
+
+def test_un_informe_que_falla_no_deja_la_pantalla_esperando(
+    sesion: Any, quien: dict[str, uuid.UUID], motor_admin: Engine
+) -> None:
+    """`[REQ]` §17 · «Sin versión a medias.»
+
+    Si el manejador revienta, la versión tiene que quedar en `ERROR` **aunque
+    el bucle deshaga la transacción**. Sin eso, la pantalla se quedaría en
+    «generando» para siempre esperando algo que nadie va a terminar.
+    """
+    from tdd.cola.tareas import Recursos, registrar_todas
+    from tdd.evidence.storage import AlmacenEnMemoria
+    from tdd.notificaciones.correo import CorreoEnMemoria
+
+    registrar_todas()
+    recursos = Recursos(almacen=AlmacenEnMemoria(), correo=CorreoEnMemoria())
+    # Una tarea que apunta a una versión inexistente: `producir` levanta
+    # `VersionInexistente` y el manejador tiene que dejar rastro igualmente.
+    job_id = ColaEnPostgres().encolar(
+        sesion,
+        kind=Tarea.GENERAR_INFORME,
+        organization_id=quien["org"],
+        payload={"version_id": str(uuid.uuid4())},
+        created_by=quien["usuario"],
+    )
+    sesion.commit()
+
+    resultado = w.una_vuelta(sesion, cola=Cola.PESADA, recursos=recursos, worker="x")
+    assert resultado.ok is False
+    error = sesion.execute(
+        text("SELECT last_error FROM job WHERE id = :i"), {"i": str(job_id)}
+    ).scalar()
+    assert "VersionInexistente" in error
