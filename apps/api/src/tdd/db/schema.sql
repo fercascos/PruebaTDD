@@ -356,6 +356,101 @@ CREATE TABLE asset_assignment (
     UNIQUE NULLS NOT DISTINCT (asset_id, project_member_id, specialty)
 );
 
+-- ── El árbol físico del edificio [REC] §8.4 ─────────────────────────────────
+--
+--  `zone` y `location_node` son cosas distintas y las dos hacen falta:
+--
+--  * `zone` es la **clasificación normalizada** que exige el CAPEX
+--    («Cubierta», «Cuartos Técnicos»): común a todos los proyectos y
+--    dependiente de la tipología. Es lo que permite agregar por zona en el
+--    informe y comparar entre encargos.
+--  * `location_node` es la **ubicación concreta de este edificio**
+--    («Cubierta / Sala de máquinas 2»). Es lo que permite volver a encontrar
+--    algo seis meses después.
+--
+--  Fundirlas obligaría a elegir entre agregar por zona o localizar una foto, y
+--  las dos cosas se usan. Una línea de CAPEX usa `zone`; una fotografía puede
+--  usar las dos.
+--
+--  Es un árbol y no tres tablas rígidas —zona, planta, espacio— porque los
+--  edificios no se dejan: una nave puede tener muelles sin planta, y un hotel
+--  tiene plantas dentro de plantas. `node_type` dice qué es cada nodo sin
+--  imponer cuántos niveles hay.
+
+CREATE TYPE location_node_type AS ENUM ('ZONA', 'PLANTA', 'ESPACIO');
+
+CREATE TABLE location_node (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_id        UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    parent_id       UUID REFERENCES location_node(id) ON DELETE CASCADE,
+    node_type       location_node_type NOT NULL,
+
+    -- El enlace con el catálogo, opcional. Un nodo de tipo ZONA suele apuntar
+    -- a su `zone`; una sala concreta no tiene por qué.
+    zone_id         UUID REFERENCES zone(id),
+    code            VARCHAR(60),
+    name            VARCHAR(160) NOT NULL,
+    level_order     SMALLINT NOT NULL DEFAULT 0,
+
+    -- La ruta la calcula el disparador `location_node_ruta`, nunca la
+    -- aplicación: una ruta escrita a mano que no case con `parent_id` produce
+    -- un árbol que se lee distinto según por dónde se mire.
+    path            LTREE NOT NULL,
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    deleted_at      TIMESTAMPTZ,
+
+    CONSTRAINT location_node_no_es_su_propio_padre CHECK (parent_id IS DISTINCT FROM id),
+    CONSTRAINT location_node_con_nombre CHECK (length(trim(name)) > 0)
+);
+
+CREATE INDEX location_node_activo_idx ON location_node (asset_id, node_type);
+CREATE INDEX location_node_path_idx ON location_node USING GIST (path);
+-- Dos espacios con el mismo nombre bajo el mismo padre serían indistinguibles
+-- en el desplegable y en el nombre del fichero. `lower` porque «Sala 1» y
+-- «sala 1» son el mismo sitio para quien los escribe.
+-- `NULLS NOT DISTINCT` es imprescindible, igual que en `asset_assignment`:
+-- sin él, dos raíces tienen `parent_id` NULL, dos NULL se consideran distintos
+-- y el mismo activo admitiría dos «Cubierta» de primer nivel.
+CREATE UNIQUE INDEX location_node_hermanos_uniq
+    ON location_node (asset_id, parent_id, lower(name))
+    NULLS NOT DISTINCT
+    WHERE deleted_at IS NULL;
+
+--  La etiqueta de `ltree` sale del `id`: solo admite [A-Za-z0-9_], así que un
+--  nombre como «Sala de máquinas 2» no vale, y el `code` es opcional. Con el
+--  `id` la ruta es estable aunque se renombre el nodo.
+CREATE OR REPLACE FUNCTION location_node_ruta() RETURNS TRIGGER AS $$
+DECLARE ruta_padre LTREE;
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        NEW.path := text2ltree(replace(NEW.id::TEXT, '-', '_'));
+    ELSE
+        SELECT path INTO ruta_padre FROM location_node WHERE id = NEW.parent_id;
+        IF ruta_padre IS NULL THEN
+            RAISE EXCEPTION 'El nodo padre % no existe', NEW.parent_id
+                USING ERRCODE = 'foreign_key_violation';
+        END IF;
+        -- Un ciclo dejaría el árbol irrecorrible y la consulta de descendientes
+        -- en un bucle infinito. La clave ajena no lo impide: A puede ser padre
+        -- de B y B de A sin violarla.
+        IF ruta_padre OPERATOR(public.<@) text2ltree(replace(NEW.id::TEXT, '-', '_')) THEN
+            RAISE EXCEPTION 'Ese movimiento metería el nodo dentro de sí mismo'
+                USING ERRCODE = 'raise_exception';
+        END IF;
+        NEW.path := ruta_padre OPERATOR(public.||) text2ltree(replace(NEW.id::TEXT, '-', '_'));
+    END IF;
+    NEW.updated_at := now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER location_node_ruta
+    BEFORE INSERT OR UPDATE OF parent_id ON location_node
+    FOR EACH ROW EXECUTE FUNCTION location_node_ruta();
+
 -- ── Fases del proceso [REQ] §3.1.5 ──────────────────────────────────────────
 --
 -- El otro eje del proyecto. Se crean SOLO las fases que el usuario marca al dar
@@ -1039,6 +1134,10 @@ CREATE TABLE photo (
     -- antes de saber a qué activo corresponde. Se avisa, no se bloquea.
     asset_id          UUID REFERENCES asset(id) ON DELETE SET NULL,
     zone_id           UUID REFERENCES zone(id),
+    -- [REQ] §10 · La ubicación física concreta. Es lo que rellena el token
+    -- `[Espacio]` del renombrado en lote, que hasta ahora se omitía siempre
+    -- porque este árbol no existía.
+    location_node_id  UUID REFERENCES location_node(id) ON DELETE SET NULL,
     capex_code_id     UUID REFERENCES capex_code(id),
     -- [REQ] §3.2 · La clasificación transversal por sistema técnico. Es lo que
     -- alimenta el token `[Sistema]` del renombrado en lote, que hasta ahora
@@ -2035,7 +2134,7 @@ BEGIN
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
         'qa_round', 'phase_event',
-        'photo', 'photo_version', 'photo_derivative', 'photo_link',
+        'photo', 'photo_version', 'photo_derivative', 'photo_link', 'location_node',
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version'

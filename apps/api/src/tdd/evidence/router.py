@@ -123,6 +123,7 @@ class Foto(BaseModel):
     project_id: uuid.UUID
     asset_id: uuid.UUID | None
     zone_id: uuid.UUID | None
+    location_node_id: uuid.UUID | None
     #: `[REQ]` §3.2 · La clasificación transversal. Alimenta el token
     #: `[Sistema]` del renombrado, que sin esto escribía siempre «SinSistema».
     technical_system_id: uuid.UUID | None = None
@@ -163,6 +164,7 @@ class ActualizarFoto(BaseModel):
 
     asset_id: uuid.UUID | None = None
     zone_id: uuid.UUID | None = None
+    location_node_id: uuid.UUID | None = None
     technical_system_id: uuid.UUID | None = None
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     caption: str | None = None
@@ -242,7 +244,7 @@ class Enlace(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 _COLUMNAS = """
-    id, project_id, asset_id, zone_id, technical_system_id,
+    id, project_id, asset_id, zone_id, location_node_id, technical_system_id,
     status::text AS status, origin::text AS origin,
     original_filename, display_name, file_extension, mime_type, sha256, phash,
     byte_size, width_px, height_px, taken_at, gps_latitude, gps_longitude,
@@ -334,6 +336,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     origin: Annotated[str, Form()] = "ORDENADOR",
     asset_id: Annotated[uuid.UUID | None, Form()] = None,
     zone_id: Annotated[uuid.UUID | None, Form()] = None,
+    location_node_id: Annotated[uuid.UUID | None, Form()] = None,
     technical_system_id: Annotated[uuid.UUID | None, Form()] = None,
     caption: Annotated[str | None, Form()] = None,
 ) -> Any:
@@ -414,14 +417,15 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
         text(
             """
             INSERT INTO photo (
-                id, organization_id, project_id, asset_id, zone_id, technical_system_id,
+                id, organization_id, project_id, asset_id, zone_id, location_node_id,
+                technical_system_id,
                 stored_object_id,
                 origin, status, original_filename, display_name, file_extension, mime_type,
                 sha256, phash, byte_size, width_px, height_px, taken_at,
                 gps_latitude, gps_longitude, camera_make, camera_model, orientation,
                 exif_raw, caption, duplicate_of_photo_id, uploaded_by
             ) VALUES (
-                :id, :org, :proy, :activo, :zona, :sistema, :objeto,
+                :id, :org, :proy, :activo, :zona, :espacio, :sistema, :objeto,
                 CAST(:origen AS photo_origin), 'LISTA', :llegada, :visible, :ext, :mime,
                 :sha, :phash, :bytes, :ancho, :alto, :fecha,
                 :lat, :lon, :marca, :modelo, :orient,
@@ -436,6 +440,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             "activo": str(asset_id) if asset_id else None,
             "sistema": str(technical_system_id) if technical_system_id else None,
             "zona": str(zone_id) if zone_id else None,
+            "espacio": str(location_node_id) if location_node_id else None,
             "objeto": str(objeto_id),
             "origen": origin if origin in _ORIGENES else "ORDENADOR",
             "llegada": nombre_original[:260],
@@ -568,6 +573,7 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
     s: SesionDep,
     asset_id: uuid.UUID | None = None,
     zone_id: uuid.UUID | None = None,
+    location_node_id: uuid.UUID | None = None,
     technical_system_id: uuid.UUID | None = None,
     estado: str | None = Query(default=None, alias="status"),
     include_in_report: bool | None = None,
@@ -584,6 +590,8 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
               AND (CASE WHEN :papelera THEN deleted_at IS NOT NULL ELSE deleted_at IS NULL END)
               AND (CAST(:activo AS uuid) IS NULL OR asset_id = CAST(:activo AS uuid))
               AND (CAST(:zona AS uuid) IS NULL OR zone_id = CAST(:zona AS uuid))
+              AND (CAST(:espacio AS uuid) IS NULL
+                   OR location_node_id = CAST(:espacio AS uuid))
               AND (CAST(:sistema AS uuid) IS NULL
                    OR technical_system_id = CAST(:sistema AS uuid))
               AND (CAST(:estado AS text) IS NULL OR status::text = CAST(:estado AS text))
@@ -601,6 +609,7 @@ def listar(  # noqa: PLR0913 — filtros de §10.7, cada uno independiente
             "activo": str(asset_id) if asset_id else None,
             "sistema": str(technical_system_id) if technical_system_id else None,
             "zona": str(zone_id) if zone_id else None,
+            "espacio": str(location_node_id) if location_node_id else None,
             "estado": estado,
             "informe": include_in_report,
             "gps": has_gps,
@@ -693,6 +702,11 @@ def renombrar_en_lote(cuerpo: PeticionDeRenombrado, s: SesionDep, usuario: Usuar
                    pr.internal_code AS proyecto, pr.name AS proyecto_nombre,
                    COALESCE(a.asset_code, a.name) AS activo, z.code AS zona,
                    ts.code AS sistema,
+                   -- [Espacio]: el nombre del nodo concreto, no su ruta. La
+                   -- ruta entera —«Cubierta › Sala de máquinas 2»— produciría
+                   -- un campo larguísimo en el nombre del fichero, y la zona
+                   -- ya va en su propio token.
+                   ln.name AS espacio,
                    -- [Capitulo] es el capítulo de coste, «H08», no el código
                    -- entero: `HC.H08.03` sale de un elemento de nivel 3, y su
                    -- capítulo es el nivel 2. `split_part` lo saca de los dos.
@@ -703,6 +717,7 @@ def renombrar_en_lote(cuerpo: PeticionDeRenombrado, s: SesionDep, usuario: Usuar
             JOIN project pr ON pr.id = p.project_id
             LEFT JOIN asset a ON a.id = p.asset_id
             LEFT JOIN zone  z ON z.id = p.zone_id
+            LEFT JOIN location_node ln ON ln.id = p.location_node_id AND ln.deleted_at IS NULL
             LEFT JOIN technical_system ts ON ts.id = p.technical_system_id
             LEFT JOIN capex_code cc ON cc.id = p.capex_code_id
             LEFT JOIN capex_code cap ON cap.id = cc.parent_id AND cc.level = 3
@@ -724,6 +739,9 @@ def renombrar_en_lote(cuerpo: PeticionDeRenombrado, s: SesionDep, usuario: Usuar
                 "proyecto_nombre": f.proyecto_nombre,
                 "activo": f.activo,
                 "zona": f.zona,
+                # `[Espacio]` era el último token que no se rellenaba nunca:
+                # dependía de `location_node`, que no existía. Ahora sí.
+                "espacio": f.espacio,
                 # `[Sistema]`, `[Capitulo]` y `[Autor]` estaban en la tabla de
                 # tokens de la documentación y ninguno se rellenaba: el primero
                 # porque el dato no se guardaba —lo arregla la migración 0003— y

@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from tdd.assets.router import router as assets_router
+from tdd.assets.ubicaciones import router as ubicaciones_router
 from tdd.capex.router import router as capex_router
 from tdd.catalogs.router import router as catalogs_router
 from tdd.core.config import get_settings
@@ -128,6 +129,7 @@ def crear_app() -> FastAPI:
     app.include_router(phases_router, prefix=api)
     app.include_router(phase_ops_router, prefix=api)
     app.include_router(assets_router, prefix=api)
+    app.include_router(ubicaciones_router, prefix=api)
     app.include_router(equipment_router, prefix=api)
     app.include_router(findings_router, prefix=api)
     app.include_router(capex_router, prefix=api)

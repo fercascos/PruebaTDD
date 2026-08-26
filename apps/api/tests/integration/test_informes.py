@@ -149,7 +149,6 @@ def con_hallazgo(
     return {"asset": activo, "finding": hallazgo}
 
 
-
 def correr_worker(cliente: TestClient) -> int:
     """Hace lo que la aplicación de verdad: dejar que el worker vacíe la cola.
 
