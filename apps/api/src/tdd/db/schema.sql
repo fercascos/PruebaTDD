@@ -1724,6 +1724,156 @@ CREATE INDEX password_reset_usuario_idx ON password_reset_token (user_id, used_a
 
 
 -- =============================================================================
+--  Cola de tareas · §17 · nada bloquea la interfaz más de 3 s
+--
+--  La cola vive **en esta base de datos** y no en un broker aparte. Dos razones,
+--  y la segunda es la que importa:
+--
+--   1. No añade un servicio a producción. Con la carga real de la aplicación
+--      —un puñado de informes al día y los correos de recuperación— un broker
+--      dedicado sería una pieza más que vigilar sin ganar nada.
+--   2. **El encolado es transaccional.** La tarea solo existe si la
+--      transacción que la creó confirma. Con un broker externo se puede
+--      encolar la generación de un informe cuya fila acaba revirtiendo, y el
+--      worker se encuentra trabajo sobre algo que no existe.
+--
+--  `[REC]` El reparto entre workers usa `FOR UPDATE SKIP LOCKED`: cada uno se
+--  lleva una tarea distinta sin bloquear a los demás y sin necesitar ningún
+--  coordinador. Es el patrón estándar para esto desde PostgreSQL 9.5.
+--
+--  `queue` separa `heavy` (informes) de `io` (correo), que es lo que pide E-10:
+--  una cola de informes saturada no puede retrasar un correo de recuperación
+--  de contraseña.
+-- =============================================================================
+
+CREATE TYPE job_status AS ENUM ('PENDIENTE', 'EN_CURSO', 'HECHA', 'FALLIDA', 'CANCELADA');
+
+CREATE TABLE job (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id  UUID NOT NULL REFERENCES organization(id),
+    kind             VARCHAR(40) NOT NULL,
+    queue            VARCHAR(20) NOT NULL DEFAULT 'io',
+    payload          JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status           job_status NOT NULL DEFAULT 'PENDIENTE',
+
+    -- Cuándo se puede coger. Es lo que implementa la espera entre reintentos:
+    -- un fallo la empuja hacia adelante en vez de reintentar en bucle contra
+    -- un servidor SMTP que está caído.
+    run_after        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    attempts         SMALLINT NOT NULL DEFAULT 0,
+    max_attempts     SMALLINT NOT NULL DEFAULT 3,
+
+    -- Quién la tiene cogida. Sirve para diagnosticar un worker que murió a
+    -- mitad: la tarea se queda EN_CURSO con su nombre y su hora.
+    locked_by        TEXT,
+    locked_at        TIMESTAMPTZ,
+    last_error       TEXT,
+
+    created_by       UUID REFERENCES app_user(id),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    started_at       TIMESTAMPTZ,
+    finished_at      TIMESTAMPTZ,
+
+    CONSTRAINT job_intentos_validos CHECK (max_attempts >= 1 AND attempts >= 0),
+    -- Una tarea fallida sin motivo no se puede diagnosticar, y diagnosticarla
+    -- es lo único que se puede hacer con ella.
+    CONSTRAINT job_fallida_con_motivo
+        CHECK (status <> 'FALLIDA'
+               OR (last_error IS NOT NULL AND length(trim(last_error)) > 0)),
+    CONSTRAINT job_terminada_con_fecha
+        CHECK (status NOT IN ('HECHA', 'FALLIDA') OR finished_at IS NOT NULL)
+);
+
+-- El índice que hace barata la consulta de reparto: solo indexa lo pendiente,
+-- así que no crece con el histórico de tareas ya hechas.
+CREATE INDEX job_reparto_idx ON job (queue, run_after, created_at)
+    WHERE status = 'PENDIENTE';
+CREATE INDEX job_seguimiento_idx ON job (organization_id, kind, created_at DESC);
+
+
+-- ── El reparto, en funciones acotadas ────────────────────────────────────────
+--
+--  El worker tiene que ver las tareas de TODAS las organizaciones: ese es su
+--  trabajo. Pero darle BYPASSRLS al usuario de aplicación dejaría decorativas
+--  todas las políticas de arriba.
+--
+--  Se resuelve igual que la recuperación de contraseña, que tenía el mismo
+--  problema: **funciones `SECURITY DEFINER` que hacen exactamente una cosa.**
+--  El usuario de aplicación sigue sin poder leer la tabla `job` de otra
+--  organización; lo único que puede hacer es pedir «dame la siguiente tarea de
+--  esta cola», que es la operación del worker y de nadie más.
+--
+--  `[REC]` En producción conviene además que el worker conecte con su propio
+--  rol. No es imprescindible —la superficie ya está acotada aquí— pero separa
+--  en los registros quién hizo qué.
+
+CREATE OR REPLACE FUNCTION job_coger(p_cola TEXT, p_worker TEXT)
+RETURNS job
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    UPDATE job SET
+        status     = 'EN_CURSO',
+        attempts   = attempts + 1,
+        locked_by  = p_worker,
+        locked_at  = now(),
+        started_at = COALESCE(started_at, now())
+    WHERE id = (
+        SELECT id FROM job
+        WHERE status = 'PENDIENTE' AND queue = p_cola AND run_after <= now()
+        ORDER BY run_after, created_at
+        -- El corazón del reparto: cada worker se lleva una tarea distinta sin
+        -- bloquear a los demás y sin necesitar ningún coordinador.
+        FOR UPDATE SKIP LOCKED
+        LIMIT 1
+    )
+    RETURNING *;
+$$;
+
+CREATE OR REPLACE FUNCTION job_hecha(p_id UUID)
+RETURNS VOID
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    UPDATE job SET status = 'HECHA', finished_at = now(), locked_by = NULL
+    WHERE id = p_id;
+$$;
+
+--  Un fallo no es definitivo hasta agotar los intentos. `p_espera` empuja la
+--  tarea hacia adelante: reintentar en bucle contra un SMTP caído no arregla
+--  nada y llena la tabla de intentos inútiles.
+CREATE OR REPLACE FUNCTION job_fallada(p_id UUID, p_error TEXT, p_espera INTERVAL)
+RETURNS VOID
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    UPDATE job SET
+        status      = CASE WHEN attempts >= max_attempts THEN 'FALLIDA'::job_status
+                           ELSE 'PENDIENTE'::job_status END,
+        run_after   = CASE WHEN attempts >= max_attempts THEN run_after
+                           ELSE now() + p_espera END,
+        finished_at = CASE WHEN attempts >= max_attempts THEN now() ELSE NULL END,
+        last_error  = COALESCE(NULLIF(trim(p_error), ''), 'sin detalle'),
+        locked_by   = NULL
+    WHERE id = p_id;
+$$;
+
+--  Un worker que muere a mitad deja su tarea EN_CURSO para siempre. Esto la
+--  devuelve a la cola pasado un tiempo, contando el intento que ya gastó: sin
+--  esto, matar un worker perdería silenciosamente el informe que tenía entre
+--  manos, que es justo el fallo que nadie relaciona con la causa.
+CREATE OR REPLACE FUNCTION job_rescatar(p_limite INTERVAL)
+RETURNS INTEGER
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$
+    WITH rescatadas AS (
+        UPDATE job SET
+            status     = CASE WHEN attempts >= max_attempts THEN 'FALLIDA'::job_status
+                              ELSE 'PENDIENTE'::job_status END,
+            last_error = 'El worker que la tenía cogida no terminó',
+            finished_at = CASE WHEN attempts >= max_attempts THEN now() ELSE NULL END,
+            locked_by  = NULL
+        WHERE status = 'EN_CURSO' AND locked_at < now() - p_limite
+        RETURNING 1
+    )
+    SELECT COUNT(*)::INTEGER FROM rescatadas;
+$$;
+
+
+-- =============================================================================
 --  Recuperación de contraseña · SECURITY DEFINER
 --
 --  Los dos endpoints son ANÓNIMOS: quien ha olvidado su contraseña no tiene
@@ -1887,7 +2037,7 @@ BEGIN
         'qa_round', 'phase_event',
         'photo', 'photo_version', 'photo_derivative', 'photo_link',
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
-        'password_reset_token', 'doc_review', 'doc_review_finding',
+        'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
