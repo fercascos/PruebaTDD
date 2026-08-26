@@ -182,8 +182,12 @@ def downgrade() -> None:
     Es aceptable y hay que decirlo: lo que se pierde es el encargo de generar
     un informe, no el informe. Se vuelve a pedir desde la pantalla.
     """
-    for f in ("job_rescatar(INTERVAL)", "job_fallada(UUID, TEXT, INTERVAL)",
-              "job_hecha(UUID)", "job_coger(TEXT, TEXT)"):
+    for f in (
+        "job_rescatar(INTERVAL)",
+        "job_fallada(UUID, TEXT, INTERVAL)",
+        "job_hecha(UUID)",
+        "job_coger(TEXT, TEXT)",
+    ):
         op.execute(f"DROP FUNCTION IF EXISTS {f}")
     op.execute("DROP TABLE IF EXISTS job")
     op.execute("DROP TYPE IF EXISTS job_status")
