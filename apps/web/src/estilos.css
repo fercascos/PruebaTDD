@@ -1411,3 +1411,13 @@ button.enlace {
 
 .sueltos { border: 1px dashed var(--borde); border-radius: 6px; padding: 0.6rem 0.9rem; }
 .sueltos ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+
+/* Una versión en curso o fallida no ofrece descarga: el fichero no existe. */
+.tabla .generando {
+  font-size: 0.85rem;
+  color: var(--acento);
+}
+.tabla .fallo {
+  font-size: 0.85rem;
+  color: var(--error);
+}

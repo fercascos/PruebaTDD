@@ -31,6 +31,22 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
     recargarVersiones()
   }, [recargarVersiones])
 
+  /**
+   * `[REQ]` §17 · Generar ya no bloquea: la petición encola y el worker
+   * produce el fichero. Mientras haya alguna versión en GENERANDO se vuelve a
+   * preguntar cada dos segundos.
+   *
+   * Se sondea en vez de abrir una conexión permanente porque es una espera de
+   * segundos y ocurre unas pocas veces por encargo: montar WebSockets para eso
+   * añadiría un canal que mantener a cambio de nada.
+   */
+  const generando = versiones.some((v) => v.status === 'GENERANDO')
+  useEffect(() => {
+    if (!generando) return
+    const t = setInterval(() => void recargarVersiones(), 2000)
+    return () => clearInterval(t)
+  }, [generando, recargarVersiones])
+
   useEffect(() => {
     if (!plantillaElegida) return
     obtener<Mapeo[]>(`/report-templates/${plantillaElegida}/mappings`)
@@ -64,11 +80,13 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
     setTrabajando(true)
     setError(null)
     try {
+      // La respuesta trae la versión en GENERANDO. No se espera aquí: se
+      // recarga la lista y el sondeo de arriba se encarga del resto.
       await enviar<VersionDeInforme>(`/projects/${projectId}/reports`, {
         template_id: plantillaElegida,
         mapping_id: mapeoElegido || null,
       })
-      recargarVersiones()
+      await recargarVersiones()
     } catch (e) {
       setError(
         e instanceof ErrorDeApi && e.esConflicto
@@ -188,31 +206,47 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
                   <code title={v.pptx_sha256 ?? ''}>{v.pptx_sha256?.slice(0, 12) ?? '—'}…</code>
                 </td>
                 <td className="acciones">
-                  <button
-                    type="button"
-                    className="secundario"
-                    onClick={() =>
-                      void descargar(
-                        `/reports/${v.id}/download`,
-                        `informe-v${v.version_number}.pptx`,
-                      )
-                    }
-                  >
-                    PPTX
-                  </button>
-                  <button
-                    type="button"
-                    className="secundario"
-                    onClick={() =>
-                      void descargar(
-                        `/reports/${v.id}/download?formato=xlsx`,
-                        `capex-v${v.version_number}.xlsx`,
-                      )
-                    }
-                  >
-                    XLSX
-                  </button>
-                  {!v.is_locked && (
+                  {/* Mientras el worker no ha terminado no hay ningún fichero
+                      que descargar: ofrecer el botón daría un 404 y parecería
+                      un fallo cuando lo único que pasa es que aún se está
+                      generando. */}
+                  {v.status === 'GENERANDO' && (
+                    <span className="generando">Generando… se actualiza solo</span>
+                  )}
+                  {v.status === 'ERROR' && (
+                    <span className="fallo">
+                      No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.
+                    </span>
+                  )}
+                  {v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
+                    <>
+                      <button
+                        type="button"
+                        className="secundario"
+                        onClick={() =>
+                          void descargar(
+                            `/reports/${v.id}/download`,
+                            `informe-v${v.version_number}.pptx`,
+                          )
+                        }
+                      >
+                        PPTX
+                      </button>
+                      <button
+                        type="button"
+                        className="secundario"
+                        onClick={() =>
+                          void descargar(
+                            `/reports/${v.id}/download?formato=xlsx`,
+                            `capex-v${v.version_number}.xlsx`,
+                          )
+                        }
+                      >
+                        XLSX
+                      </button>
+                    </>
+                  )}
+                  {!v.is_locked && v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
                     <select
                       value=""
                       onChange={(e) => e.target.value && void cambiarEstado(v, e.target.value)}
