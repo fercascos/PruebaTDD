@@ -1421,3 +1421,59 @@ button.enlace {
   font-size: 0.85rem;
   color: var(--error);
 }
+
+/* ── Árbol de ubicaciones (§8.4) ─────────────────────────────────────────── */
+
+.ubicaciones {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}
+.nueva-ubicacion {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.nueva-ubicacion input {
+  flex: 1 1 18rem;
+}
+.arbol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.arbol li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--borde);
+  flex-wrap: wrap;
+}
+/* El tipo se lee sin depender del color: la etiqueta lleva el texto. */
+.arbol .tipo {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  background: #e2e8f0;
+  color: var(--tinta-suave);
+}
+.arbol .tipo.t-zona {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.arbol .tipo.t-planta {
+  background: #dcfce7;
+  color: #166534;
+}
+.arbol .zona-ligada {
+  font-size: 0.78rem;
+  color: var(--tinta-suave);
+}
+.arbol select {
+  margin-left: auto;
+  font-size: 0.8rem;
+}

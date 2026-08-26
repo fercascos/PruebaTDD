@@ -3,6 +3,7 @@ import { borrar, obtener } from '../api/cliente'
 import type { Activo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeActivo } from './FichaDeActivo'
+import { ArbolDeUbicaciones } from './ArbolDeUbicaciones'
 
 export function PestanaActivos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[] | null>(null)
@@ -31,15 +32,20 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
 
   if (editando) {
     return (
-      <FichaDeActivo
-        projectId={projectId}
-        activo={editando === 'nuevo' ? undefined : editando}
-        alGuardar={() => {
-          setEditando(null)
-          recargar()
-        }}
-        alCancelar={() => setEditando(null)}
-      />
+      <>
+        <FichaDeActivo
+          projectId={projectId}
+          activo={editando === 'nuevo' ? undefined : editando}
+          alGuardar={() => {
+            setEditando(null)
+            recargar()
+          }}
+          alCancelar={() => setEditando(null)}
+        />
+        {/* El árbol solo tiene sentido sobre un activo que ya existe: sus nodos
+            cuelgan de un `asset_id`. En el alta no se muestra. */}
+        {editando !== 'nuevo' && <ArbolDeUbicaciones assetId={editando.id} />}
+      </>
     )
   }
 

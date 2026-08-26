@@ -163,9 +163,12 @@ demostrada (P-20).
 | `[Autor]` | iniciales de quien subió la foto, **dos como mucho** | `AL` | se omite |
 | `[Etiqueta]` | primera etiqueta | `corrosion` | se omite |
 
-`[PDV]` **`[Espacio]` es el único token que sigue sin rellenarse**: depende de `location_node`, el
-árbol físico fino, que no está construido. Se omite con su separador, así que una plantilla que lo
-use no produce un nombre roto, solo un campo menos.
+`[REQ]` **`[Espacio]` ya se rellena.** Dependía de `location_node`, el árbol físico fino, que se
+construyó en la migración 0010. Sale del **nombre del nodo concreto**, no de su ruta entera: «Cubierta
+› Sala Máquinas 2» produciría un campo larguísimo, y la zona ya viaja en su propio token.
+
+`[LIM]` Una foto sin ubicación asignada sigue omitiendo el token con su separador, como antes: no
+produce un nombre roto, solo un campo menos. Verificado en `npm run test:ubicaciones`.
 
 1. Transliteración a ASCII: `Cubierta Nº1` → `CubiertaN1`; `Añadido` → `Anadido`.
 2. Caracteres prohibidos (`/ \ : * ? " < > |`) y de control → `-`.

@@ -60,6 +60,12 @@ export type Foto = {
   project_id: string
   asset_id: string | null
   zone_id: string | null
+  /**
+   * `[REQ]` §10 · La ubicación física concreta dentro del edificio. Alimenta el
+   * token `[Espacio]`, que era el último del renombrado en lote que se omitía
+   * siempre porque el árbol no existía.
+   */
+  location_node_id: string | null
   /** `[REQ]` §3.2 · Alimenta el token `[Sistema]` del renombrado en lote. */
   technical_system_id: string | null
   status: string
@@ -324,3 +330,33 @@ export type RevisionIa = {
 }
 
 export type CriterioDeRevision = { code: string; name_es: string; description_es: string }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  El árbol físico del activo (§8.4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type TipoDeNodo = 'ZONA' | 'PLANTA' | 'ESPACIO'
+
+/**
+ * Un nodo del árbol de ubicaciones.
+ *
+ * `zone` clasifica —«Cubierta», y con eso se agrega en el informe—; esto
+ * localiza —«Cubierta › Sala Máquinas 2», y con eso se vuelve a encontrar algo
+ * seis meses después—. Son cosas distintas y las dos hacen falta.
+ */
+export type NodoDeUbicacion = {
+  id: string
+  asset_id: string
+  parent_id: string | null
+  node_type: TipoDeNodo
+  zone_id: string | null
+  zone_name: string | null
+  code: string | null
+  name: string
+  level_order: number
+  /** Cuántos antepasados tiene. La pantalla sangra con esto, sin recorrer nada. */
+  profundidad: number
+  /** «Cubierta › Sala Máquinas 2», ya armada por la API. */
+  ruta_legible: string
+}

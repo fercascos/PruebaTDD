@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
-import type { Activo, ElementoCatalogo, Foto } from '../api/tipos'
+import type { Activo, ElementoCatalogo, Foto, NodoDeUbicacion } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje } from '../ui/Marco'
 import { Anotador } from './Anotador'
@@ -30,8 +30,10 @@ export function DetalleDeFoto({
 }) {
   const [activos, setActivos] = useState<Activo[]>([])
   const [zonas, setZonas] = useState<ElementoCatalogo[]>([])
+  const [espacios, setEspacios] = useState<NodoDeUbicacion[]>([])
   const [activo, setActivo] = useState(foto.asset_id ?? '')
   const [zona, setZona] = useState(foto.zone_id ?? '')
+  const [espacio, setEspacio] = useState(foto.location_node_id ?? '')
   const [nombre, setNombre] = useState(foto.display_name)
   const [pie, setPie] = useState(foto.caption ?? '')
   const [etiquetas, setEtiquetas] = useState(foto.tags.join(', '))
@@ -55,6 +57,12 @@ export function DetalleDeFoto({
     obtener<ElementoCatalogo[]>(`/assets/${activo}/allowed-zones`)
       .then(setZonas)
       .catch(() => setZonas([]))
+    // El árbol es de ESTE activo: cambiar de activo cambia los espacios, y
+    // dejar el anterior seleccionado guardaría una foto en una sala de otro
+    // edificio.
+    obtener<NodoDeUbicacion[]>(`/assets/${activo}/locations`)
+      .then(setEspacios)
+      .catch(() => setEspacios([]))
   }, [activo])
 
   async function guardar() {
@@ -66,6 +74,7 @@ export function DetalleDeFoto({
         {
           asset_id: activo || null,
           zone_id: zona || null,
+          location_node_id: espacio || null,
           // El nombre visible va sin extensión: la fija el servidor desde el
           // tipo real del archivo, y mandarla aquí produciría un 422.
           display_name: nombre.trim(),
@@ -157,12 +166,38 @@ export function DetalleDeFoto({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Zona">
+          <Campo etiqueta="Zona" ayuda="Clasificación del catálogo: es lo que agrega el informe">
             <select value={zona} onChange={(e) => setZona(e.target.value)} disabled={!activo}>
               <option value="">— sin zona —</option>
               {zonas.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name_es}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo
+            etiqueta="Espacio"
+            ayuda={
+              espacios.length === 0
+                ? 'Este activo no tiene árbol de ubicaciones todavía'
+                : 'Dónde está exactamente. Alimenta el token [Espacio] al renombrar'
+            }
+          >
+            {/* La sangría se calcula con `profundidad`, que ya viene de la API:
+                la lista llega en orden de recorrido, así que basta con
+                anteponer espacios. `&nbsp;` porque el navegador colapsa los
+                espacios normales dentro de un `<option>`. */}
+            <select
+              value={espacio}
+              onChange={(e) => setEspacio(e.target.value)}
+              disabled={!activo || espacios.length === 0}
+            >
+              <option value="">— sin espacio —</option>
+              {espacios.map((n) => (
+                <option key={n.id} value={n.id}>
+                  {'\u00a0\u00a0'.repeat(n.profundidad)}
+                  {n.name}
                 </option>
               ))}
             </select>
