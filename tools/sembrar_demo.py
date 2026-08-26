@@ -92,30 +92,16 @@ class Api:
     def patch(self, ruta: str, cuerpo: Any) -> Any:
         return self._pedir("PATCH", ruta, cuerpo)
 
-    def esperar_a_ver(self, ruta: str, intentos: int = 20) -> None:
-        """Espera a que un recurso recién creado sea legible.
-
-        `[LIM]` **Rodea un defecto real de la API**, no una lentitud de la red:
-        `obtener_sesion` confirma la transacción en el desmontaje de la
-        dependencia, y FastAPI ejecuta ese desmontaje **después de enviar la
-        respuesta**. Así que un `201` puede devolver un identificador que la
-        petición inmediatamente siguiente todavía no ve.
-
-        Se descubrió aquí: el alta del activo devolvía 404 sobre un encargo que
-        acababa de crearse. Cualquier cliente rápido —este guion, o una pantalla
-        que navega nada más guardar— puede toparse con ello.
-        """
-        import time
-
-        for _ in range(intentos):
-            try:
-                self.get(ruta)
-                return
-            except urllib.error.HTTPError as e:
-                if e.code != 404:
-                    raise
-                time.sleep(0.1)
-        raise RuntimeError(f"{ruta} sigue sin ser legible tras crearlo")
+    # Aquí vivía un `esperar_a_ver()` que reintentaba durante dos segundos
+    # cualquier `404` sobre un recurso recién creado. Rodeaba un defecto real:
+    # la API confirmaba la transacción **después** de enviar la respuesta, así
+    # que un `201` podía devolver un identificador que la petición siguiente no
+    # veía todavía. Este guion fue quien lo destapó, dando 404 al dar de alta un
+    # activo sobre un encargo recién creado.
+    #
+    # El defecto está arreglado —`SesionDep` usa `scope="function"`— y el rodeo
+    # sobra. Se quita a propósito y no «por si acaso»: dejarlo puesto volvería a
+    # tapar la regresión el día que alguien deshaga el arreglo.
 
     def entrar(self) -> None:
         self.token = self.post("/auth/login", {"email": CORREO, "password": CLAVE})[
@@ -219,7 +205,6 @@ def sembrar(api: Api) -> str:
             ],
         },
     )
-    api.esperar_a_ver(f"/projects/{proyecto['id']}")
     print(f"· Encargo {proyecto['internal_code']} · {proyecto['id']}")
 
     tipologia = next(
@@ -247,7 +232,6 @@ def sembrar(api: Api) -> str:
             "warehouse_height_m": "11.50",
         },
     )
-    api.esperar_a_ver(f"/assets/{activo['id']}")
     print(f"· Activo {activo['name']}")
 
     # ── El árbol físico (§8.4) ──────────────────────────────────────────────

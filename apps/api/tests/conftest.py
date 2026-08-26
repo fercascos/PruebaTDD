@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager, contextmanager
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
@@ -197,11 +198,17 @@ async def _sin_ciclo_de_vida(app):  # type: ignore[no-untyped-def]
     yield
 
 
-@pytest.fixture(scope="session")
-def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestClient]:
+def montar_app(motor: Engine, fabrica: sessionmaker[Session]) -> FastAPI:
+    """La aplicación cableada para la suite, sin cliente.
+
+    Está aparte de la fixture `cliente` porque alguna prueba necesita **su
+    propia** aplicación: interponer una sonda antes del envío, o cambiar la
+    fábrica de sesiones, sobre la aplicación compartida por toda la suite
+    contaminaría al resto.
+    """
     app = crear_app()
     app.router.lifespan_context = _sin_ciclo_de_vida
-    app.state.engine = motor_app
+    app.state.engine = motor
     app.state.session_factory = fabrica
     # El almacén de objetos se inyecta: la suite no escribe binarios en disco.
     app.state.object_store = AlmacenEnMemoria()
@@ -213,7 +220,12 @@ def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestC
     app.dependency_overrides[get_settings] = lambda: Settings(
         app_env="test", app_secret_key=SECRETO_PRUEBAS
     )
-    with TestClient(app) as c:
+    return app
+
+
+@pytest.fixture(scope="session")
+def cliente(motor_app: Engine, fabrica: sessionmaker[Session]) -> Iterator[TestClient]:
+    with TestClient(montar_app(motor_app, fabrica)) as c:
         yield c
 
 

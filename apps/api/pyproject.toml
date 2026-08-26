@@ -4,7 +4,12 @@ version = "0.1.0"
 description = "API de gestión de due diligence técnica inmobiliaria"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115",
+    # El suelo lo marca `Depends(..., scope="function")`, que es lo que hace que
+    # la transacción se confirme ANTES de enviar la respuesta (ver `SesionDep`).
+    # 0.141.1 es la versión contra la que se ha comprobado; no se pone un número
+    # menor porque no se ha verificado ninguno, y adivinarlo aquí sería fingir
+    # una compatibilidad que nadie ha probado.
+    "fastapi>=0.141.1",
     "uvicorn[standard]>=0.30",
     "sqlalchemy>=2.0.30",
     "alembic>=1.13",

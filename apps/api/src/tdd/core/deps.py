@@ -73,6 +73,10 @@ def obtener_sesion(
     Es el único punto por el que las rutas obtienen una sesión. Así no hay forma
     de consultar sin contexto: y si la hubiera, la RLS no devolvería nada, que es
     el fallo seguro que se busca.
+
+    El `commit` de abajo va después del `yield`, así que **cuándo** se ejecuta lo
+    decide FastAPI, no este módulo: por eso `SesionDep` la pide con
+    `scope="function"`. Ver allí; el detalle importa más de lo que parece.
     """
     factory = request.app.state.session_factory
     session: Session = factory()
@@ -114,7 +118,29 @@ def exigir_gestion_de_sugerencias(
     return usuario
 
 
-SesionDep = Annotated[Session, Depends(obtener_sesion)]
+#: `[REQ]` `scope="function"` y no el valor por defecto, y esto no es un detalle
+#: de estilo: decide **si la transacción está confirmada cuando el cliente
+#: recibe la respuesta**.
+#:
+#: FastAPI mantiene dos pilas de salida por petición. La de `scope="request"`
+#: —la de siempre— se cierra *después* de haber enviado la respuesta; la de
+#: `scope="function"` se cierra en cuanto la ruta devuelve, *antes* de enviarla.
+#: Como el `commit` de `obtener_sesion` va después del `yield`, con la pila por
+#: defecto se confirmaba con la respuesta ya en el cable, y eso dejaba dos
+#: agujeros reales:
+#:
+#:   · Quien recibía un `201` y pedía ese identificador acto seguido podía no
+#:     encontrarlo. Salió sembrando el encargo de demostración, no de la suite.
+#:   · Y si el `COMMIT` fallaba —interbloqueo, disco lleno—, el cliente ya tenía
+#:     su `201` de algo que se deshizo, sin enterarse jamás.
+#:
+#: Los dos quedan fijados en `test_confirmacion_antes_de_responder.py`, que mide
+#: el orden con una sonda ASGI en vez de encadenar dos peticiones y confiar.
+#:
+#: `[LIM]` Con una versión de FastAPI anterior a la que introdujo los ámbitos,
+#: esto revienta al importar con un `TypeError`. Es lo que se quiere: volver en
+#: silencio al comportamiento anterior sería reintroducir el fallo sin avisar.
+SesionDep = Annotated[Session, Depends(obtener_sesion, scope="function")]
 UsuarioDep = Annotated[UsuarioActual, Depends(obtener_usuario)]
 GestorSugerenciasDep = Annotated[UsuarioActual, Depends(exigir_gestion_de_sugerencias)]
 

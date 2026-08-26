@@ -133,10 +133,41 @@ valiosas de este sistema verifican restricciones, disparadores y RLS, que un dob
 | **Auditoría inmutable** | El usuario de aplicación no puede `UPDATE` ni `DELETE` sobre `audit_log` |
 | **Almacenamiento** | Subida, URL firmada, caducidad, URL de otro recurso, y que el original conserve su hash tras renombrar |
 | **Trabajos en cola** | Encolado, ejecución, reintento, fallo definitivo, cancelación e idempotencia |
+| **Orden de confirmación** `[REQ]` | Que la transacción esté **confirmada antes de enviar la respuesta**: una sonda ASGI se interpone antes del envío y comprueba **desde otra conexión** que la fila del `201` ya se ve. Y que un `COMMIT` que falla produzca un `5xx`, no un `201` de algo que se deshizo. Ver la nota de abajo |
 | **API completa** | Cada endpoint: camino feliz, validación, autorización, `404` entre organizaciones, `409` de concurrencia, `422` de negocio |
 | **Contrato OpenAPI** | Esquema válido y cliente TypeScript comprometido igual al generado |
 | **Migraciones** | Ida y vuelta sobre base vacía y sobre base con datos de prueba |
 | **Semilla de catálogos** | Que la migración cargue **6 tipologías, 20 zonas, 86 relaciones, 125 códigos** (4+18+103), 4 riesgos, 10 conceptos, 5 horizontes, 8 fases |
+
+### Medir un orden, no esperar a que se note
+
+`tests/integration/test_confirmacion_antes_de_responder.py` merece una nota porque su forma es
+distinta de todo lo demás.
+
+El defecto que fija era de **orden**: la sesión se abre en una dependencia con `yield` y el `commit`
+va después, y FastAPI cerraba esa pila **después de haber enviado la respuesta**. Quien recibía un
+`201` y pedía el identificador acto seguido podía no encontrarlo. Lo destapó el sembrador de
+demostración, no la suite: ninguna prueba que use `TestClient` de la forma habitual puede verlo,
+porque el cliente devuelve el control cuando la petición ya ha terminado del todo.
+
+La tentación es encadenar dos peticiones y comprobar que la segunda encuentra lo de la primera. Esa
+prueba **pasaría casi siempre**, que es peor que no tenerla: la ventana dura microsegundos. Así que
+en vez de esperar a que el fallo se note, se mide el orden directamente —una sonda ASGI entre la
+aplicación y el envío, que pregunta desde otra conexión— y entonces falla **siempre** o pasa
+**siempre**. Cuando algo depende de una carrera, la prueba tiene que atacar la causa, no el síntoma.
+
+Que la prueba no dependa del azar no quita que el fallo fuera real, y se comprobó aparte con
+`tools/apretar_lectura_tras_escritura.py`, que crea y lee sobre la misma conexión sin pausa:
+
+| Servidor | Sin el arreglo | Con el arreglo |
+|---|---|---|
+| `uvicorn` con **1 proceso** | 0 de 80 perdidos | 0 de 80 |
+| `uvicorn --workers 4` | **2 de 180 perdidos** | 0 de 300 |
+
+Con un solo proceso casi nunca se ve: el bucle de eventos confirma antes de atender la petición
+siguiente. Con varios procesos —que es como se despliega— la lectura cae en **otro** proceso, con
+otra conexión, y ahí no hay bucle que valga. `[LIM]` Esa medición necesita servidor en marcha, así
+que **no** está en la suite: la suite fija el orden, que es lo que se puede fijar sin azar.
 
 ---
 
