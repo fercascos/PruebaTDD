@@ -219,6 +219,11 @@ CREATE TABLE project (
 
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `project_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
     deleted_at       TIMESTAMPTZ,
     UNIQUE (organization_id, internal_code),
 
@@ -264,6 +269,11 @@ CREATE TABLE asset (
     year_last_refurb    SMALLINT,
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `asset_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
     deleted_at        TIMESTAMPTZ,
     -- La clave foránea se añade más abajo: `photo` todavía no existe aquí, y
     -- reordenar el esquema por una columna opcional no compensa.
@@ -428,6 +438,11 @@ CREATE TABLE doc_request_item (
     affects_report_limitations BOOLEAN
         GENERATED ALWAYS AS (status IN ('NO_DISPONIBLE', 'PARCIAL')) STORED,
     display_order      SMALLINT NOT NULL DEFAULT 0,
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `doc_request_item_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- Decir «no disponible» sin decir por qué deja el informe sin poder
     -- explicar la limitación, que es exactamente para lo que sirve el campo.
@@ -647,6 +662,11 @@ CREATE TABLE finding (
     created_by         UUID NOT NULL REFERENCES app_user(id),
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `finding_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
     deleted_at         TIMESTAMPTZ
 );
 
@@ -685,6 +705,11 @@ CREATE TABLE capex_item (
     calc_version     SMALLINT NOT NULL DEFAULT 1,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `capex_item_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
 
     -- [REQ] La validación es SIEMPRE humana: no hay ruta de código que pueda
     -- dejar VALIDADO sin usuario identificado y sin nota.
@@ -795,6 +820,11 @@ CREATE TABLE equipment (
     created_by          UUID NOT NULL REFERENCES app_user(id),
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
+    -- `equipment_version`, nunca la aplicación: así no hay forma de que un UPDATE
+    -- se salte el contador por olvido.
+    row_version      INTEGER NOT NULL DEFAULT 1,
+    updated_by       UUID REFERENCES app_user(id),
     deleted_at          TIMESTAMPTZ,
 
     -- El año de instalación y la vida esperada van juntos o no van: con solo
@@ -1795,6 +1825,53 @@ $$ LANGUAGE sql STABLE;
 CREATE OR REPLACE FUNCTION puede_gestionar_sugerencias() RETURNS BOOLEAN AS $$
     SELECT COALESCE(NULLIF(current_setting('app.can_manage_suggestions', TRUE), ''), 'false')::BOOLEAN;
 $$ LANGUAGE sql STABLE;
+
+-- =============================================================================
+--  Concurrencia optimista · que dos personas no se pisen en silencio
+--
+--  El problema que resuelve, con nombres: Marta abre un hallazgo, Luis abre el
+--  mismo hallazgo, Marta corrige la descripción y guarda, Luis guarda su
+--  cambio de riesgo treinta segundos después. Sin esto **la corrección de
+--  Marta desaparece y nadie se entera**: es recuperable desde `audit_log`,
+--  pero solo si alguien sospecha que pasó.
+--
+--  Dos decisiones que hacen que no dependa de la disciplina de nadie:
+--
+--   1. **El contador lo lleva el disparador, no la aplicación.** Un `UPDATE`
+--      que se olvide de incrementar `row_version` no existe: la base lo hace
+--      en todos, incluidos los que se escriban mañana.
+--   2. **`updated_by` se rellena solo** desde `usuario_actual()`, la misma
+--      función que ya sostiene la RLS. Sin eso el mensaje de conflicto podría
+--      decir «alguien lo cambió», que no ayuda a resolverlo; con eso dice
+--      quién, y quien lo lee sabe con quién hablar.
+--
+--  `NEW.row_version` se pisa **siempre**, se mande lo que se mande en el
+--  `UPDATE`: el número no es un dato editable, es el estado de la fila.
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION marcar_version_y_autor() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.row_version := OLD.row_version + 1;
+    -- `COALESCE` porque las migraciones y la siembra escriben sin sesión de
+    -- usuario: ahí se conserva el autor anterior en vez de borrarlo.
+    NEW.updated_by := COALESCE(usuario_actual(), OLD.updated_by);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE t TEXT;
+BEGIN
+    FOREACH t IN ARRAY ARRAY[
+        'finding', 'capex_item', 'asset', 'project', 'doc_request_item', 'equipment'
+    ] LOOP
+        EXECUTE format($f$
+            CREATE TRIGGER %1$I_version
+                BEFORE UPDATE ON %1$I
+                FOR EACH ROW EXECUTE FUNCTION marcar_version_y_autor()
+        $f$, t);
+    END LOOP;
+END $$;
 
 -- Aislamiento por organización: la misma política en todas las tablas con
 -- organization_id. Se aplica también a INSERT/UPDATE (WITH CHECK), no solo a

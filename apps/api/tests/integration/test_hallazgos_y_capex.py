@@ -92,6 +92,17 @@ def activo(cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any
     return str(r.json()["id"])
 
 
+def con_version(cabeceras: dict[str, str], fila: dict[str, Any]) -> dict[str, str]:
+    """Las cabeceras de sesión más el `If-Match` que exigen hallazgos y líneas.
+
+    `[REQ]` La API rechaza con `428` una escritura que no diga sobre qué versión
+    escribe. Que estas pruebas tengan que pasar por aquí **es la comprobación**:
+    si alguien quitara la exigencia, seguirían pasando y no habría forma de
+    notarlo, así que `test_concurrencia` cubre además el caso sin cabecera.
+    """
+    return {**cabeceras, "If-Match": f'"{fila["row_version"]}"'}
+
+
 def crear(
     cliente: TestClient,
     cab: Any,
@@ -276,7 +287,9 @@ def test_cambiar_una_linea_devuelve_los_totales_recalculados(
     linea = hallazgo["capex_lines"][0]
 
     r = cliente.patch(
-        f"{RUTA}/capex-items/{linea['id']}", headers=cab("consultor_a"), json={"amount": "2000.00"}
+        f"{RUTA}/capex-items/{linea['id']}",
+        headers=con_version(cab("consultor_a"), linea),
+        json={"amount": "2000.00"},
     )
     assert r.status_code == 200
     assert r.json()["total_amount"] == "2000.0000"
@@ -326,7 +339,7 @@ def test_la_medicion_recalcula_su_base(
 
     r = cliente.patch(
         f"{RUTA}/capex-items/{hallazgo['capex_lines'][0]['id']}",
-        headers=cab("consultor_a"),
+        headers=con_version(cab("consultor_a"), hallazgo["capex_lines"][0]),
         json={"measurement_quantity": "300.00"},
     )
     assert r.json()["capex_lines"][0]["computed_base"] == "6600.0000"
@@ -482,8 +495,10 @@ def test_borrar_una_linea_devuelve_el_hallazgo_sin_ella(
             {"time_horizon_code": "MEDIO", "amount": "200.00"},
         ],
     ).json()
-    a_borrar = hallazgo["capex_lines"][0]["id"]
-    r = cliente.delete(f"{RUTA}/capex-items/{a_borrar}", headers=cab("consultor_a"))
+    a_borrar = hallazgo["capex_lines"][0]
+    r = cliente.delete(
+        f"{RUTA}/capex-items/{a_borrar['id']}", headers=con_version(cab("consultor_a"), a_borrar)
+    )
     assert r.status_code == 200
     assert len(r.json()["capex_lines"]) == 1
 
@@ -712,7 +727,10 @@ def test_el_borrado_del_hallazgo_es_logico(
 ) -> None:
     hallazgo = crear(cliente, cab, proyecto, catalogo, activo).json()
     assert (
-        cliente.delete(f"{RUTA}/findings/{hallazgo['id']}", headers=cab("consultor_a")).status_code
+        cliente.delete(
+            f"{RUTA}/findings/{hallazgo['id']}",
+            headers=con_version(cab("consultor_a"), hallazgo),
+        ).status_code
         == 204
     )
     with motor_admin.begin() as conn:

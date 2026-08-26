@@ -20,11 +20,12 @@ from datetime import date
 from enum import StrEnum
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 
@@ -126,12 +127,15 @@ class Solicitud(BaseModel):
     received_at: Any | None
     affects_report_limitations: bool
     display_order: int
+    #: La versión sobre la que se escribe. Va también como `ETag`.
+    row_version: int = 1
 
 
 _SOLICITUD = """
     SELECT d.id, d.category_id, c.name_es AS category_name, d.asset_id, d.title,
            d.description, CAST(d.status AS text) AS status, d.unavailable_reason,
-           d.requested_at, d.received_at, d.affects_report_limitations, d.display_order
+           d.requested_at, d.received_at, d.affects_report_limitations, d.display_order,
+           d.row_version
     FROM doc_request_item d JOIN doc_request_category c ON c.id = d.category_id
 """
 
@@ -181,7 +185,13 @@ def listar_solicitudes(project_id: uuid.UUID, s: SesionDep) -> Any:
 
 
 @router.patch("/doc-requests/{item_id}", response_model=Solicitud)
-def actualizar_solicitud(item_id: uuid.UUID, cuerpo: ActualizarSolicitud, s: SesionDep) -> Any:
+def actualizar_solicitud(
+    item_id: uuid.UUID,
+    cuerpo: ActualizarSolicitud,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
     """Marcar `NO_DISPONIBLE` **exige motivo**.
 
     Lo impone un `CHECK`, y aquí se traduce a un `422` legible. Decir «no
@@ -193,6 +203,16 @@ def actualizar_solicitud(item_id: uuid.UUID, cuerpo: ActualizarSolicitud, s: Ses
     )
     if actual is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea de solicitud no encontrada")
+    # `If-Match` opcional: la checklist la repasa una persona a la vez, y las
+    # importaciones escriben sin haber leído. Si viene, se honra.
+    cc.comprobar(
+        request,
+        s,
+        tabla="doc_request_item",
+        fila_id=item_id,
+        version_actual=actual["row_version"],
+        que="una línea de la checklist",
+    )
 
     cambios = cuerpo.model_dump(exclude_unset=True)
     nuevo_estado = cambios.get("status", actual["status"])
@@ -204,6 +224,7 @@ def actualizar_solicitud(item_id: uuid.UUID, cuerpo: ActualizarSolicitud, s: Ses
             "es lo que se declara como limitación en el informe",
         )
     if not cambios:
+        cc.poner(respuesta, actual["row_version"])
         return dict(actual)
 
     piezas = [
@@ -217,9 +238,11 @@ def actualizar_solicitud(item_id: uuid.UUID, cuerpo: ActualizarSolicitud, s: Ses
         text(f"UPDATE doc_request_item SET {', '.join(piezas)} WHERE id = :_id"),  # noqa: S608
         {**cambios, "_id": str(item_id)},
     )
-    return dict(
+    nuevo = dict(
         s.execute(text(f"{_SOLICITUD} WHERE d.id = :i"), {"i": str(item_id)}).mappings().one()  # noqa: S608
     )
+    cc.poner(respuesta, nuevo["row_version"])
+    return nuevo
 
 
 # ─────────────────────────────────────────────────────────────────────────────

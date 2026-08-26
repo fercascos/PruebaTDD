@@ -685,9 +685,12 @@ def test_la_comparacion_dice_cuanto_se_movio_el_capex(
     """`[REQ]` §17.6 · Lo que de verdad se mira al comparar dos versiones."""
     v1 = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
     linea = con_hallazgo["finding"]["capex_lines"][0]
-    cliente.patch(
-        f"{RUTA}/capex-items/{linea['id']}", headers=cab("consultor_a"), json={"amount": "90000.00"}
+    cambio = cliente.patch(
+        f"{RUTA}/capex-items/{linea['id']}",
+        headers={**cab("consultor_a"), "If-Match": f'"{linea["row_version"]}"'},
+        json={"amount": "90000.00"},
     )
+    assert cambio.status_code == 200, cambio.text
     v2 = generar(cliente, cab, proyecto, plantilla, mapping_id=mapeo["id"]).json()
 
     diff = cliente.get(f"{RUTA}/reports/{v1['id']}/diff/{v2['id']}", headers=cab("admin_a")).json()

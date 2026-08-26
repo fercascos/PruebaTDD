@@ -20,11 +20,21 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.equipment import importacion, service
 
@@ -53,6 +63,8 @@ class Equipo(BaseModel):
     unit: str
     has_documentation: bool
     notes: str | None
+    #: La versión sobre la que se escribe. Va también como `ETag`.
+    row_version: int = 1
 
     # Calculado, nunca almacenado. P-15.
     end_of_life_year: int | None
@@ -117,7 +129,7 @@ _CAMPOS = """
     CAST(e.condition AS text) AS condition,
     CAST(e.obsolescence AS text) AS obsolescence,
     CAST(e.criticality AS text) AS criticality,
-    e.quantity, e.unit, e.has_documentation, e.notes,
+    e.quantity, e.unit, e.has_documentation, e.notes, e.row_version,
     ts.name_es AS technical_system_name, z.name_es AS zone_name
 """
 
@@ -291,15 +303,36 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
 
 
 @router.get("/equipment/{equipment_id}", response_model=Equipo)
-def leer(equipment_id: uuid.UUID, s: SesionDep) -> Any:
-    return _leer(s, equipment_id)
+def leer(equipment_id: uuid.UUID, s: SesionDep, respuesta: Response) -> Any:
+    fila = _leer(s, equipment_id)
+    cc.poner(respuesta, fila.get("row_version"))
+    return fila
 
 
 @router.patch("/equipment/{equipment_id}", response_model=Equipo)
-def modificar(equipment_id: uuid.UUID, cuerpo: CambioDeEquipo, s: SesionDep) -> Any:
+def modificar(
+    equipment_id: uuid.UUID,
+    cuerpo: CambioDeEquipo,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
+    """`If-Match` opcional: la importación masiva desde XLSX escribe sin haber
+    leído antes, y exigirle una versión que no tiene solo añadiría una lectura
+    previa que tampoco elimina la carrera."""
+    actual = _leer(s, equipment_id)
+    cc.comprobar(
+        request,
+        s,
+        tabla="equipment",
+        fila_id=equipment_id,
+        version_actual=actual.get("row_version"),
+        que="una ficha de equipo",
+    )
     cambios = cuerpo.model_dump(exclude_unset=True)
     if not cambios:
-        return _leer(s, equipment_id)
+        cc.poner(respuesta, actual.get("row_version"))
+        return actual
     _comprobar_enumerados(cambios)
 
     enumerados = {
@@ -329,7 +362,9 @@ def modificar(equipment_id: uuid.UUID, cuerpo: CambioDeEquipo, s: SesionDep) -> 
     ).first()
     if hay is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Equipo no encontrado")
-    return _leer(s, equipment_id)
+    nuevo = _leer(s, equipment_id)
+    cc.poner(respuesta, nuevo.get("row_version"))
+    return nuevo
 
 
 @router.delete("/equipment/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)

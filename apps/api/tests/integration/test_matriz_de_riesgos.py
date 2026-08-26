@@ -263,7 +263,10 @@ def test_un_hallazgo_borrado_tampoco_suma(
         activo,
         lineas=[{"time_horizon_code": "CORTO", "amount": "1000.00"}],
     )
-    cliente.delete(f"{RUTA}/findings/{borrado['id']}", headers=cab("consultor_a"))
+    cliente.delete(
+        f"{RUTA}/findings/{borrado['id']}",
+        headers={**cab("consultor_a"), "If-Match": f'"{borrado["row_version"]}"'},
+    )
     assert Decimal(matriz(cliente, cab, proyecto)["total_importe"]) == Decimal("0")
 
 

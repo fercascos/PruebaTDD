@@ -19,11 +19,12 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.findings.service import (
     EstadoDelHallazgo,
@@ -106,6 +107,11 @@ class LineaLeida(BaseModel):
     selected_price_reference_id: uuid.UUID | None = None
     price_reference_label: str | None = None
     price_validation_note: str | None = None
+    #: `[REQ]` La versión DE LA LÍNEA. Es la que hay que mandar en `If-Match`
+    #: al editarla, no la del hallazgo: editar una línea no toca la fila del
+    #: hallazgo, así que su versión no serviría para detectar que otra persona
+    #: cambió esta misma línea.
+    row_version: int = 1
 
 
 class Hallazgo(BaseModel):
@@ -123,6 +129,10 @@ class Hallazgo(BaseModel):
     tenant_recoverable: str
     status: str
     owner_user_id: uuid.UUID | None
+    #: `[REQ]` La versión sobre la que se está escribiendo. Va también como
+    #: `ETag`; aquí se repite porque la pantalla la reenvía en `If-Match` y
+    #: sacarla del cuerpo evita leer cabeceras en cada `fetch`.
+    row_version: int = 1
     capex_lines: list[LineaLeida] = Field(default_factory=list)
     #: Suma de las líneas. `[REQ]` Cualquier cambio devuelve los totales.
     total_amount: Decimal = Decimal("0")
@@ -154,11 +164,12 @@ _CAMPOS = """
     id, project_id, asset_id, capex_code_id, zone_id, risk_level_id, capex_concept_id,
     title, description, comments, recommendation,
     CAST(tenant_recoverable AS text) AS tenant_recoverable,
-    CAST(status AS text) AS status, owner_user_id
+    CAST(status AS text) AS status, owner_user_id, row_version
 """
 
 _LINEAS = """
     SELECT ci.id, th.code AS time_horizon_code, ci.amount, ci.tax_pct, ci.tax_amount,
+           ci.row_version,
            ci.total_cost, CAST(ci.amount_source AS text) AS amount_source,
            CAST(ci.price_status AS text) AS price_status, ci.computed_base,
            ci.selected_price_reference_id, ci.price_validation_note,
@@ -448,15 +459,40 @@ def listar(  # noqa: PLR0913 — filtros de §10.8, cada uno independiente
 
 
 @router.get("/findings/{finding_id}", response_model=Hallazgo)
-def obtener(finding_id: uuid.UUID, s: SesionDep) -> Any:
-    return _leer(s, finding_id)
+def obtener(finding_id: uuid.UUID, s: SesionDep, respuesta: Response) -> Any:
+    fila = _leer(s, finding_id)
+    cc.poner(respuesta, fila["row_version"])
+    return fila
 
 
 @router.patch("/findings/{finding_id}", response_model=Hallazgo)
-def actualizar(finding_id: uuid.UUID, cuerpo: ActualizarHallazgo, s: SesionDep) -> Any:
+def actualizar(
+    finding_id: uuid.UUID,
+    cuerpo: ActualizarHallazgo,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
+    """`[REQ]` `If-Match` es **obligatorio** aquí.
+
+    Un hallazgo es lo que de verdad se edita a cuatro manos —quien redacta, quien
+    clasifica el riesgo y quien revisa—, así que dejar la cabecera opcional
+    significaría que una pantalla nueva que se olvide de mandarla pierde la
+    protección sin que nadie lo note.
+    """
     actual = _leer(s, finding_id)
+    cc.comprobar(
+        request,
+        s,
+        tabla="finding",
+        fila_id=finding_id,
+        version_actual=actual["row_version"],
+        que="un hallazgo",
+        obligatoria=True,
+    )
     cambios = cuerpo.model_dump(exclude_unset=True)
     if not cambios:
+        cc.poner(respuesta, actual["row_version"])
         return actual
     if "zone_id" in cambios or "asset_id" in cambios:
         _zona_permitida(
@@ -474,14 +510,29 @@ def actualizar(finding_id: uuid.UUID, cuerpo: ActualizarHallazgo, s: SesionDep) 
         text(f"UPDATE finding SET {', '.join(piezas)}, updated_at = now() WHERE id = :_id"),  # noqa: S608
         {**cambios, "_id": str(finding_id)},
     )
-    return _leer(s, finding_id)
+    nuevo = _leer(s, finding_id)
+    cc.poner(respuesta, nuevo["row_version"])
+    return nuevo
 
 
 @router.delete("/findings/{finding_id}", status_code=status.HTTP_204_NO_CONTENT)
-def borrar(finding_id: uuid.UUID, s: SesionDep) -> None:
+def borrar(finding_id: uuid.UUID, s: SesionDep, request: Request) -> None:
     """Borrado lógico. Para quitarlo del informe conservando el rastro de que
-    se valoró, lo correcto es `DESCARTADO`, no borrarlo."""
-    _leer(s, finding_id)
+    se valoró, lo correcto es `DESCARTADO`, no borrarlo.
+
+    `If-Match` obligatorio: borrar un hallazgo que otro acaba de reescribir es
+    justo el caso en que hace más falta enterarse.
+    """
+    actual = _leer(s, finding_id)
+    cc.comprobar(
+        request,
+        s,
+        tabla="finding",
+        fila_id=finding_id,
+        version_actual=actual["row_version"],
+        que="un hallazgo",
+        obligatoria=True,
+    )
     s.execute(
         text("UPDATE finding SET deleted_at = now() WHERE id = :i AND deleted_at IS NULL"),
         {"i": str(finding_id)},
@@ -733,18 +784,46 @@ class ActualizarLinea(BaseModel):
 
 
 @router.patch("/capex-items/{item_id}", response_model=Hallazgo)
-def actualizar_linea(item_id: uuid.UUID, cuerpo: ActualizarLinea, s: SesionDep) -> Any:
+def actualizar_linea(
+    item_id: uuid.UUID,
+    cuerpo: ActualizarLinea,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
     """`[REQ]` Cualquier cambio devuelve **los totales recalculados**.
 
     Devolver solo la línea obligaría a la interfaz a recalcular el total por su
     cuenta, y ese cálculo duplicado es donde aparecen los descuadres entre lo
     que se ve en pantalla y lo que sale en el informe.
+
+    `If-Match` obligatorio, y se compara contra la versión **de la línea**: dos
+    personas ajustando importes distintos del mismo hallazgo no se estorban, y
+    dos ajustando el mismo importe sí se enteran.
+
+    `[LIM]` El `ETag` de la respuesta es el **del hallazgo**, porque el cuerpo
+    es el hallazgo. La versión de cada línea viaja dentro, en `capex_lines`.
     """
-    finding_id = s.execute(
-        text("SELECT finding_id FROM capex_item WHERE id = :i"), {"i": str(item_id)}
-    ).scalar()
-    if finding_id is None:
+    fila = (
+        s.execute(
+            text("SELECT finding_id, row_version FROM capex_item WHERE id = :i"),
+            {"i": str(item_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea no encontrada")
+    finding_id = fila["finding_id"]
+    cc.comprobar(
+        request,
+        s,
+        tabla="capex_item",
+        fila_id=item_id,
+        version_actual=fila["row_version"],
+        que="una línea de CAPEX",
+        obligatoria=True,
+    )
 
     cambios = cuerpo.model_dump(exclude_unset=True)
     if cambios:
@@ -768,15 +847,35 @@ def actualizar_linea(item_id: uuid.UUID, cuerpo: ActualizarLinea, s: SesionDep) 
             ),
             {"i": str(item_id)},
         )
-    return _leer(s, finding_id)
+    nuevo = _leer(s, finding_id)
+    cc.poner(respuesta, nuevo["row_version"])
+    return nuevo
 
 
 @router.delete("/capex-items/{item_id}", response_model=Hallazgo)
-def borrar_linea(item_id: uuid.UUID, s: SesionDep) -> Any:
-    finding_id = s.execute(
-        text("SELECT finding_id FROM capex_item WHERE id = :i"), {"i": str(item_id)}
-    ).scalar()
-    if finding_id is None:
+def borrar_linea(item_id: uuid.UUID, s: SesionDep, request: Request, respuesta: Response) -> Any:
+    """`If-Match` obligatorio: borrar una línea cuyo importe otro acaba de
+    corregir es exactamente la pérdida que esto viene a evitar."""
+    fila = (
+        s.execute(
+            text("SELECT finding_id, row_version FROM capex_item WHERE id = :i"),
+            {"i": str(item_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea no encontrada")
+    cc.comprobar(
+        request,
+        s,
+        tabla="capex_item",
+        fila_id=item_id,
+        version_actual=fila["row_version"],
+        que="una línea de CAPEX",
+        obligatoria=True,
+    )
     s.execute(text("DELETE FROM capex_item WHERE id = :i"), {"i": str(item_id)})
-    return _leer(s, finding_id)
+    nuevo = _leer(s, fila["finding_id"])
+    cc.poner(respuesta, nuevo["row_version"])
+    return nuevo

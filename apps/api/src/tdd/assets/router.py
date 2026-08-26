@@ -20,11 +20,12 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 
 router = APIRouter(tags=["Activos"])
@@ -35,7 +36,7 @@ _CAMPOS = """
     latitude, longitude, geocode_source,
     plot_area_sqm, total_built_sqm, lettable_area_sqm, warehouse_area_sqm,
     office_area_sqm, warehouse_height_m, floors_above, floors_below,
-    year_built, year_last_refurb, description, notes, main_photo_id
+    year_built, year_last_refurb, description, notes, main_photo_id, row_version
 """
 
 
@@ -133,6 +134,8 @@ class Activo(BaseModel):
     description: str | None
     notes: str | None
     main_photo_id: uuid.UUID | None
+    #: La versión sobre la que se escribe. Va también como `ETag`.
+    row_version: int = 1
 
 
 def _proyecto_existe(s: Session, project_id: uuid.UUID) -> None:
@@ -215,16 +218,39 @@ def listar(
 
 
 @router.get("/assets/{asset_id}", response_model=Activo)
-def obtener(asset_id: uuid.UUID, s: SesionDep) -> Any:
-    return _obtener(s, asset_id)
+def obtener(asset_id: uuid.UUID, s: SesionDep, respuesta: Response) -> Any:
+    fila = _obtener(s, asset_id)
+    cc.poner(respuesta, fila.get("row_version"))
+    return fila
 
 
 @router.patch("/assets/{asset_id}", response_model=Activo)
-def actualizar(asset_id: uuid.UUID, cuerpo: ActualizarActivo, s: SesionDep) -> Any:
-    _obtener(s, asset_id)
+def actualizar(
+    asset_id: uuid.UUID,
+    cuerpo: ActualizarActivo,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
+    """`If-Match` **opcional aquí**, a diferencia de hallazgos y líneas.
+
+    La ficha de un activo la edita casi siempre una sola persona, y las
+    importaciones escriben sin haber leído antes. Si la cabecera viene, se
+    honra; si no, se deja pasar. La razón está en `core/concurrencia`.
+    """
+    actual = _obtener(s, asset_id)
+    cc.comprobar(
+        request,
+        s,
+        tabla="asset",
+        fila_id=asset_id,
+        version_actual=actual.get("row_version"),
+        que="un activo",
+    )
     cambios = cuerpo.model_dump(exclude_unset=True)
     if not cambios:
-        return _obtener(s, asset_id)
+        cc.poner(respuesta, actual.get("row_version"))
+        return actual
     if "typology_id" in cambios and cambios["typology_id"] is not None:
         _tipologia_valida(s, cambios["typology_id"])
     asignaciones = ", ".join(f"{c} = :{c}" for c in cambios)
@@ -232,7 +258,9 @@ def actualizar(asset_id: uuid.UUID, cuerpo: ActualizarActivo, s: SesionDep) -> A
         text(f"UPDATE asset SET {asignaciones}, updated_at = now() WHERE id = :_id"),  # noqa: S608
         {**cambios, "_id": str(asset_id)},
     )
-    return _obtener(s, asset_id)
+    nuevo = _obtener(s, asset_id)
+    cc.poner(respuesta, nuevo.get("row_version"))
+    return nuevo
 
 
 @router.delete("/assets/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
