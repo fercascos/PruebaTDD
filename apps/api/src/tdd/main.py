@@ -31,6 +31,7 @@ from tdd.pricing.router import router as pricing_router
 from tdd.projects.router import router as projects_router
 from tdd.reporting.router import router as reporting_router
 from tdd.reporting.snapshot import ProyectoInexistente
+from tdd.revision_documental.router import router as revision_documental_router
 from tdd.suggestions.router import router as suggestions_router
 
 
@@ -168,6 +169,7 @@ def crear_app() -> FastAPI:
     app.include_router(evidence_router, prefix=api)
     app.include_router(documents_router, prefix=api)
     app.include_router(reporting_router, prefix=api)
+    app.include_router(revision_documental_router, prefix=api)
     app.include_router(suggestions_router, prefix=api)
     return app
 
