@@ -4,6 +4,7 @@ import { obtener } from '../api/cliente'
 import type { Proyecto } from '../api/tipos'
 import { Mensaje } from '../ui/Marco'
 import { PestanaFases } from './PestanaFases'
+import { PestanaDocumentacion } from './PestanaDocumentacion'
 import { PestanaActivos } from './PestanaActivos'
 import { PestanaFotos } from './PestanaFotos'
 import { PestanaCapex } from './PestanaCapex'
@@ -53,6 +54,7 @@ export function FichaDeProyecto() {
         <NavLink to={`/proyectos/${id}`} end>
           Fases
         </NavLink>
+        <NavLink to={`/proyectos/${id}/documentacion`}>Documentación</NavLink>
         <NavLink to={`/proyectos/${id}/activos`}>Activos</NavLink>
         <NavLink to={`/proyectos/${id}/fotos`}>Fotografías</NavLink>
         <NavLink to={`/proyectos/${id}/mapa`}>Mapa</NavLink>
@@ -64,6 +66,7 @@ export function FichaDeProyecto() {
 
       <Routes>
         <Route index element={<PestanaFases projectId={id} />} />
+        <Route path="documentacion" element={<PestanaDocumentacion projectId={id} />} />
         <Route path="activos" element={<PestanaActivos projectId={id} />} />
         <Route path="fotos" element={<PestanaFotos projectId={id} />} />
         <Route

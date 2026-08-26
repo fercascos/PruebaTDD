@@ -54,5 +54,12 @@ export default defineConfig({
     // paso, hace que en producción la aplicación sirva de un solo origen.
     proxy: { '/api': { target: 'http://localhost:8000', changeOrigin: true } },
   },
+  // `preview` NO hereda el proxy de `server`, y es el servidor contra el que
+  // corren todas las comprobaciones de navegador de `herramientas/`. Sin esto
+  // la aplicación construida pide `/api` al propio 4173 y recibe el index.html,
+  // que falla como un error de JSON y no como un problema de configuración.
+  preview: {
+    proxy: { '/api': { target: 'http://localhost:8000', changeOrigin: true } },
+  },
   test: { environment: 'jsdom', globals: true },
 })

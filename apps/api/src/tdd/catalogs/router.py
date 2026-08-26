@@ -61,6 +61,23 @@ def tipologias(s: SesionDep) -> Any:
     return [dict(f) for f in filas]
 
 
+@router.get("/doc-request-categories", response_model=list[ElementoCatalogo])
+def categorias_de_solicitud(s: SesionDep) -> Any:
+    """`[REQ]` §3.1.5 · Las categorías de la checklist de documentación.
+
+    Existían en la base y en la API de fases desde el principio, pero no se
+    servían: dar de alta una línea exigía conocer su `category_id` de memoria.
+    """
+    filas = (
+        s.execute(
+            text("SELECT id, code, name_es FROM doc_request_category ORDER BY display_order, code")
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
 @router.get("/zones", response_model=list[ElementoCatalogo])
 def zonas(s: SesionDep, typology_id: uuid.UUID | None = None) -> Any:
     """`[REQ]` §3.3.2 · Zonas filtradas por tipología.

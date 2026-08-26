@@ -404,3 +404,15 @@ def test_una_organizacion_si_puede_tener_su_propio_codigo_igual(motor_admin, dat
             ),
             {"o": str(datos_base["org_a"])},
         )
+
+
+@pytest.mark.db
+def test_las_categorias_de_solicitud_se_sirven_por_api(cliente, cab) -> None:
+    """`[REQ]` §3.1.5 · Existían en la base desde el principio, pero no se
+    servían: dar de alta una línea de la checklist exigía conocer su
+    `category_id` de memoria, y la pantalla no podía ofrecer un desplegable."""
+    r = cliente.get("/api/v1/catalogs/doc-request-categories", headers=cab("consultor_a"))
+    assert r.status_code == 200
+    codigos = {c["code"] for c in r.json()}
+    assert "LICENCIAS_URBANISTICAS" in codigos
+    assert len(r.json()) == 5

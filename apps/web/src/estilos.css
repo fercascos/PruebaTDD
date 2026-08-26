@@ -1333,3 +1333,81 @@ button.enlace {
 .tabla.previa-importacion .observaciones .aviso {
   color: var(--aviso);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Solicitud de documentación y revisión con IA
+   ───────────────────────────────────────────────────────────────────────── */
+
+.documentacion { display: flex; flex-direction: column; gap: 1rem; }
+
+/* [REQ] El interruptor de la autorización tiene que verse de un vistazo:
+   apagado es el estado normal y no debe parecer un error. */
+.autorizacion-ia {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.85rem 1rem; border-radius: 6px; border: 1px solid var(--borde);
+}
+.autorizacion-ia.inactiva { background: var(--fondo-suave, #f6f7f9); }
+.autorizacion-ia.activa { background: #eef6ee; border-color: #b7d5b7; }
+.autorizacion-ia .detalle { margin: 0.25rem 0 0; font-size: 0.85rem; color: var(--tenue); }
+.autorizacion-ia button { white-space: nowrap; }
+
+.nueva-linea { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.nueva-linea input { flex: 1 1 20rem; }
+
+.checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.checklist .linea {
+  border: 1px solid var(--borde); border-left: 4px solid var(--borde);
+  border-radius: 6px; padding: 0.75rem 1rem;
+}
+.checklist .linea.l-recibida { border-left-color: #4a8f4a; }
+.checklist .linea.l-parcial { border-left-color: #c8912a; }
+.checklist .linea.l-no_disponible { border-left-color: #b34a4a; }
+.checklist .linea.l-no_aplica { border-left-color: #999; }
+.checklist .cabecera { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+.checklist .categoria { display: block; font-size: 0.8rem; color: var(--tenue); }
+.checklist .limitacion { font-size: 0.82rem; color: #8a5a1a; margin: 0.4rem 0 0; }
+.checklist .motivo { width: 100%; margin-top: 0.4rem; }
+.checklist .subir { display: inline-block; margin-top: 0.5rem; font-size: 0.85rem; cursor: pointer; }
+.checklist .subir input { display: block; font-size: 0.8rem; }
+
+.documentos { list-style: none; padding: 0; margin: 0.6rem 0 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.documento { border-top: 1px dashed var(--borde); padding-top: 0.5rem; }
+.documento .cabecera { display: flex; gap: 0.75rem; align-items: center; }
+.documento .nombre { font-weight: 600; }
+.documento .peso { font-size: 0.78rem; color: var(--tenue); }
+
+.revision { margin-top: 0.5rem; }
+.observaciones { list-style: none; padding: 0; margin: 0.5rem 0 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.observacion {
+  border: 1px solid var(--borde); border-radius: 5px; padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+}
+.observacion .cabecera { display: flex; justify-content: space-between; gap: 0.75rem; }
+.observacion .criterio { font-weight: 600; }
+/* El color va SIEMPRE junto al fondo. La cabecera de la observación es oscura
+   y hereda texto blanco: una etiqueta con fondo claro y sin color propio sale
+   blanca sobre blanco, que es como salía «Dudoso». */
+.observacion .veredicto {
+  font-size: 0.78rem; padding: 0.1rem 0.45rem; border-radius: 10px;
+  background: #e4e6ea; color: #3a3f47;
+}
+.observacion.v-no_conforme .veredicto { background: #f6dede; color: #7a2020; }
+.observacion.v-falta .veredicto { background: #f7ecd6; color: #7a541a; }
+.observacion.v-conforme .veredicto { background: #dff0df; color: #245524; }
+.observacion.v-dudoso .veredicto { background: #e4e6ea; color: #3a3f47; }
+.observacion .resumen { margin: 0.35rem 0; }
+
+/* La evidencia es lo que hace verificable la propuesta: se destaca para que
+   quien decide la lea antes de pulsar nada. */
+.observacion .evidencia {
+  margin: 0.4rem 0; padding: 0.4rem 0.6rem; border-left: 3px solid var(--borde);
+  background: var(--fondo-suave, #f6f7f9); font-size: 0.84rem; font-style: italic;
+}
+.observacion .evidencia cite { display: block; margin-top: 0.25rem; font-size: 0.76rem; color: var(--tenue); }
+.observacion .decidir { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.observacion .decidida { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--tenue); }
+.observacion.d-aceptada { border-color: #b7d5b7; }
+.observacion.d-rechazada { opacity: 0.65; }
+
+.sueltos { border: 1px dashed var(--borde); border-radius: 6px; padding: 0.6rem 0.9rem; }
+.sueltos ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }

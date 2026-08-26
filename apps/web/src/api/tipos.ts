@@ -233,3 +233,83 @@ export type ResultadoImportacion = {
   resumen: string
   previsualizacion: Previsualizacion
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Solicitud de documentación y su revisión con IA
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EstadoSolicitud = 'SOLICITADA' | 'RECIBIDA' | 'PARCIAL' | 'NO_DISPONIBLE' | 'NO_APLICA'
+
+export type Solicitud = {
+  id: string
+  category_id: string
+  category_name: string
+  asset_id: string | null
+  title: string
+  description: string | null
+  status: EstadoSolicitud
+  unavailable_reason: string | null
+  requested_at: string | null
+  received_at: string | null
+  /** Columna generada: `PARCIAL` y `NO_DISPONIBLE` alimentan las limitaciones. */
+  affects_report_limitations: boolean
+  display_order: number
+}
+
+export type CategoriaDeSolicitud = { id: string; code: string; name_es: string }
+
+export type Documento = {
+  id: string
+  project_id: string
+  asset_id: string | null
+  doc_request_item_id: string | null
+  qa_round_id: string | null
+  original_filename: string
+  display_name: string
+  file_extension: string
+  mime_type: string
+  sha256: string
+  byte_size: number
+  doc_type: string
+  confidentiality: string
+  status: string
+  version_number: number
+  supersedes_document_id: string | null
+  notes: string | null
+  uploaded_by: string
+}
+
+/** `[REQ]` Autorización expresa por encargo, con constancia de quién la dio. */
+export type PermisoDeRevision = { activo: boolean; desde: string | null; por: string | null }
+
+export type VeredictoIa = 'CONFORME' | 'NO_CONFORME' | 'FALTA' | 'DUDOSO'
+export type DecisionIa = 'PROPUESTA' | 'ACEPTADA' | 'RECHAZADA'
+
+export type ObservacionIa = {
+  id: string
+  check_code: string
+  check_name: string
+  verdict: VeredictoIa
+  summary: string
+  evidence_text: string | null
+  evidence_page: number | null
+  confidence: number | null
+  decision: DecisionIa
+  decided_by: string | null
+  decision_note: string | null
+}
+
+export type RevisionIa = {
+  id: string
+  document_id: string
+  status: 'PENDIENTE' | 'EN_CURSO' | 'COMPLETADA' | 'FALLIDA' | 'CANCELADA'
+  provider: string
+  model: string | null
+  /** Si es cierto, ningún proveedor ha leído el documento. */
+  is_simulated: boolean
+  document_sha256: string
+  error_message: string | null
+  observaciones: ObservacionIa[]
+}
+
+export type CriterioDeRevision = { code: string; name_es: string; description_es: string }
