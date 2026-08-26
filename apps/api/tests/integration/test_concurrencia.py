@@ -404,3 +404,91 @@ def test_una_fila_que_no_existe_da_404_no_412(cliente: TestClient, cab: Any) -> 
         json={"comments": "x"},
     )
     assert r.status_code == 404
+
+
+def test_trasladar_la_medicion_honra_la_cabecera(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, Any],
+    activo: str,
+) -> None:
+    """`[REQ]` Trasladar la base pisa un importe que otro pudo teclear con un
+    presupuesto real delante: es la pérdida que más duele de las tres."""
+    h = cliente.post(
+        f"{RUTA}/projects/{proyecto}/findings",
+        headers=cab("consultor_a"),
+        json={
+            "asset_id": activo,
+            "capex_code_id": catalogo["capex_code_id"],
+            "zone_id": catalogo["zone_id"],
+            "title": "Pintura de fachada",
+            "capex_lines": [
+                {
+                    "time_horizon_code": "CORTO",
+                    "amount": "1000.00",
+                    "measurement_unit": "m2",
+                    "measurement_quantity": "250.00",
+                    "measurement_unit_price": "22.00",
+                }
+            ],
+        },
+    )
+    assert h.status_code == 201, h.text
+    h = h.json()
+    linea = h["capex_lines"][0]
+
+    # Otra persona teclea un presupuesto real.
+    cliente.patch(
+        f"{RUTA}/capex-items/{linea['id']}",
+        headers=con(cab("consultor_a"), linea),
+        json={"amount": "4800.00"},
+    )
+
+    # Quien tenía la pantalla abierta intenta trasladar la medición.
+    r = cliente.post(
+        f"{RUTA}/capex-items/{linea['id']}/carry-measurement",
+        headers=con(cab("consultor2_a"), linea),
+        json={"confirmar": True},
+    )
+    assert r.status_code == 412
+    ahora = cliente.get(f"{RUTA}/findings/{h['id']}", headers=cab("admin_a")).json()
+    assert ahora["capex_lines"][0]["amount"] == "4800.0000"
+
+
+def test_trasladar_sin_cabecera_sigue_funcionando(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, Any],
+    activo: str,
+) -> None:
+    """`[LIM]` No se exige: el traslado ya lleva su confirmación explícita, y
+    exigirla rompería a cualquier cliente que hoy no la manda."""
+    h = cliente.post(
+        f"{RUTA}/projects/{proyecto}/findings",
+        headers=cab("consultor_a"),
+        json={
+            "asset_id": activo,
+            "capex_code_id": catalogo["capex_code_id"],
+            "zone_id": catalogo["zone_id"],
+            "title": "Pintura",
+            "capex_lines": [
+                {
+                    "time_horizon_code": "CORTO",
+                    "amount": "1000.00",
+                    "measurement_unit": "m2",
+                    "measurement_quantity": "100.00",
+                    "measurement_unit_price": "10.00",
+                }
+            ],
+        },
+    )
+    assert h.status_code == 201, h.text
+    h = h.json()
+    r = cliente.post(
+        f"{RUTA}/capex-items/{h['capex_lines'][0]['id']}/carry-measurement",
+        headers=cab("consultor_a"),
+        json={"confirmar": True},
+    )
+    assert r.status_code == 200

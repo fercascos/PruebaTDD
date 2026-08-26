@@ -740,3 +740,35 @@ def test_el_borrado_del_hallazgo_es_logico(
             ).scalar_one()
             is not None
         )
+
+
+def test_una_medicion_incompleta_dice_que_falta_en_vez_de_reventar(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    """`[REQ]` Olvidar la unidad daba un `500` «Error interno».
+
+    El `CHECK` de la base exige el trío entero —unidad, cantidad y precio—, y
+    sin traducirlo el usuario recibía un error genérico que no decía qué
+    corregir. Se descubrió escribiendo una prueba de concurrencia que omitía la
+    unidad sin querer.
+    """
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/findings",
+        headers=cab("consultor_a"),
+        json={
+            "asset_id": activo,
+            "capex_code_id": catalogo["codigo"],
+            "zone_id": catalogo["zona"],
+            "title": "Sin unidad",
+            "capex_lines": [
+                {
+                    "time_horizon_code": "CORTO",
+                    "amount": "100.00",
+                    "measurement_quantity": "10.00",
+                    "measurement_unit_price": "10.00",
+                }
+            ],
+        },
+    )
+    assert r.status_code == 422
+    assert "unidad" in r.json()["detail"]

@@ -16,11 +16,12 @@ import uuid
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.exports.plantilla_capex import Idioma
 
@@ -253,7 +254,11 @@ class TrasladarMedicion(BaseModel):
 
 @router.post("/capex-items/{item_id}/carry-measurement")
 def trasladar_medicion(
-    item_id: uuid.UUID, cuerpo: TrasladarMedicion, s: SesionDep, usuario: UsuarioDep
+    item_id: uuid.UUID,
+    cuerpo: TrasladarMedicion,
+    s: SesionDep,
+    usuario: UsuarioDep,
+    request: Request,
 ) -> Any:
     """Traslada `computed_base` al importe de la línea. **Acción explícita.**
 
@@ -271,13 +276,26 @@ def trasladar_medicion(
         )
     fila = (
         s.execute(
-            text("SELECT computed_base, amount FROM capex_item WHERE id = :i"), {"i": item_id}
+            text("SELECT computed_base, amount, row_version FROM capex_item WHERE id = :i"),
+            {"i": item_id},
         )
         .mappings()
         .first()
     )
     if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea no encontrada")
+    # `If-Match` se honra si viene. Trasladar la base pisa un importe que otro
+    # pudo teclear con un presupuesto real delante, así que quien manda su
+    # versión queda protegido de eso; no se exige porque el traslado ya lleva
+    # su propia confirmación explícita.
+    cc.comprobar(
+        request,
+        s,
+        tabla="capex_item",
+        fila_id=item_id,
+        version_actual=fila["row_version"],
+        que="una línea de CAPEX",
+    )
     if fila["computed_base"] is None:
         raise HTTPException(
             status.HTTP_409_CONFLICT,

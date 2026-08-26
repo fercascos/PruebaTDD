@@ -33,6 +33,18 @@ export class ErrorDeApi extends Error {
     return this.status === 409
   }
 
+  /**
+   * Otra persona modificó el registro desde que se abrió (`412`), o se intentó
+   * escribir sin decir sobre qué versión (`428`).
+   *
+   * La pantalla lo trata distinto de un error corriente: no es un fallo del
+   * usuario ni del servidor, es que hay alguien más trabajando en lo mismo, y
+   * lo que hay que ofrecer es recargar, no reintentar.
+   */
+  get esConflictoDeVersion(): boolean {
+    return this.status === 412 || this.status === 428
+  }
+
   get esNoAutorizado(): boolean {
     return this.status === 401
   }
@@ -104,6 +116,12 @@ type Opciones = {
   body?: unknown
   cuerpoCrudo?: BodyInit
   signal?: AbortSignal
+  /**
+   * La versión sobre la que se escribe, tal como vino en `row_version`. Viaja
+   * como `If-Match`. En hallazgos y líneas de CAPEX la API la exige: sin ella
+   * responde `428` en vez de guardar.
+   */
+  version?: number
   /** Interno: evita reintentar el refresco en bucle. */
   reintentado?: boolean
 }
@@ -111,6 +129,9 @@ type Opciones = {
 async function peticion(ruta: string, opciones: Opciones = {}): Promise<Response> {
   const cabeceras: Record<string, string> = {}
   if (tokenDeAcceso) cabeceras.Authorization = `Bearer ${tokenDeAcceso}`
+
+  // Comillas dobles y sin `W/`: `If-Match` exige comparación fuerte.
+  if (opciones.version !== undefined) cabeceras['If-Match'] = `"${opciones.version}"`
 
   let cuerpo = opciones.cuerpoCrudo
   if (opciones.body !== undefined) {
@@ -163,8 +184,13 @@ export async function obtener<T>(ruta: string, signal?: AbortSignal): Promise<T>
   return (await r.json()) as T
 }
 
-export async function enviar<T>(ruta: string, body: unknown, method = 'POST'): Promise<T> {
-  const r = await peticion(ruta, { method, body })
+export async function enviar<T>(
+  ruta: string,
+  body: unknown,
+  method = 'POST',
+  version?: number,
+): Promise<T> {
+  const r = await peticion(ruta, { method, body, version })
   await lanzarSiFalla(r)
   return r.status === 204 ? (undefined as T) : ((await r.json()) as T)
 }
@@ -175,8 +201,8 @@ export async function enviar<T>(ruta: string, body: unknown, method = 'POST'): P
  * devuelve el hallazgo—, y descartarlo obligaría a la interfaz a rehacer la
  * suma por su cuenta, que es donde aparecen los descuadres.
  */
-export async function borrar<T = void>(ruta: string): Promise<T> {
-  const r = await peticion(ruta, { method: 'DELETE' })
+export async function borrar<T = void>(ruta: string, version?: number): Promise<T> {
+  const r = await peticion(ruta, { method: 'DELETE', version })
   await lanzarSiFalla(r)
   return r.status === 204 ? (undefined as T) : ((await r.json()) as T)
 }

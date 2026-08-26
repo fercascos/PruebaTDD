@@ -21,10 +21,11 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.pricing import service
 
@@ -439,7 +440,11 @@ class ValidacionDePrecio(BaseModel):
 
 @router.post("/capex-items/{item_id}/validate-price")
 def validar_precio(
-    item_id: uuid.UUID, cuerpo: ValidacionDePrecio, s: SesionDep, usuario: UsuarioDep
+    item_id: uuid.UUID,
+    cuerpo: ValidacionDePrecio,
+    s: SesionDep,
+    usuario: UsuarioDep,
+    request: Request,
 ) -> Any:
     """`[REQ]` Da un precio por bueno. **Con una persona detrás, siempre.**
 
@@ -450,13 +455,24 @@ def validar_precio(
 
     fila = (
         s.execute(
-            text("SELECT finding_id, amount FROM capex_item WHERE id = :i"), {"i": str(item_id)}
+            text("SELECT finding_id, amount, row_version FROM capex_item WHERE id = :i"),
+            {"i": str(item_id)},
         )
         .mappings()
         .first()
     )
     if fila is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Línea no encontrada")
+    # Se honra si viene: validar un precio que otro acaba de cambiar dejaría la
+    # validación apuntando a un importe que ya no es el que se revisó.
+    cc.comprobar(
+        request,
+        s,
+        tabla="capex_item",
+        fila_id=item_id,
+        version_actual=fila["row_version"],
+        que="una línea de CAPEX",
+    )
 
     if cuerpo.price_reference_id is None:
         # El `CHECK` de la base lo exige igualmente; aquí sale un 422 que dice

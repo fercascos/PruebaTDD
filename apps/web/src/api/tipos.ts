@@ -95,6 +95,12 @@ export type LineaCapex = {
   selected_price_reference_id: string | null
   price_reference_label: string | null
   price_validation_note: string | null
+  /**
+   * La versión **de la línea**, no la del hallazgo. Es la que hay que mandar
+   * al editarla: editar una línea no toca la fila del hallazgo, así que su
+   * versión no detectaría que otra persona cambió esta misma línea.
+   */
+  row_version: number
 }
 
 export type Hallazgo = {
@@ -112,6 +118,11 @@ export type Hallazgo = {
   capex_lines: LineaCapex[]
   total_amount: string
   total_with_tax: string
+  /**
+   * `[REQ]` La versión sobre la que se escribe. La API la exige en `If-Match`
+   * para modificar o borrar un hallazgo: sin ella responde `428`.
+   */
+  row_version: number
 }
 
 export type Destino = { to: string; allowed: boolean; blockers: string[] }

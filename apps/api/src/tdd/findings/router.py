@@ -308,10 +308,21 @@ def _insertar_linea(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             f"Horizonte temporal desconocido: {linea.time_horizon_code}",
         )
-    medicion = (linea.measurement_quantity, linea.measurement_unit_price)
+    # `[REQ]` La medición va entera o no va: unidad, cantidad y precio unitario.
+    # Lo impone un `CHECK` de la base, y sin esta traducción una línea a la que
+    # se le olvida la unidad devolvía **un 500 «Error interno»** en vez de decir
+    # qué falta. Se descubrió escribiendo una prueba que omitía la unidad.
+    trio = (linea.measurement_unit, linea.measurement_quantity, linea.measurement_unit_price)
+    puestos = [v for v in trio if v is not None]
+    if puestos and len(puestos) != len(trio):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "El desglose por medición va entero o no va: hacen falta unidad, "
+            "cantidad y precio unitario. Deje los tres vacíos para dar solo el importe.",
+        )
     base_calculada = (
         linea.measurement_quantity * linea.measurement_unit_price
-        if all(v is not None for v in medicion)
+        if linea.measurement_quantity is not None and linea.measurement_unit_price is not None
         else None
     )
     try:

@@ -19,7 +19,8 @@
     "test:sistema-fotos": "node herramientas/comprobar-sistema-de-fotos.mjs",
     "test:recuperacion": "node herramientas/comprobar-recuperacion.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json",
-    "test:revision": "node herramientas/comprobar-revision-documental.mjs"
+    "test:revision": "node herramientas/comprobar-revision-documental.mjs",
+    "test:concurrencia": "node herramientas/comprobar-concurrencia.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

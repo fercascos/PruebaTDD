@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { borrar, enviar, obtener } from '../api/cliente'
+import { esConflictoDeVersion, mensajeDeConflicto } from '../ui/conflictos'
 import type { Destino, ElementoCatalogo, Hallazgo, LineaCapex } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje } from '../ui/Marco'
@@ -46,13 +47,26 @@ export function FichaDeHallazgo({
   const [recomendacion, setRecomendacion] = useState(inicial.recommendation ?? '')
   const [riesgo, setRiesgo] = useState(inicial.risk_level_id ?? '')
   const [error, setError] = useState<string | null>(null)
+  //  Se distingue del error corriente: un choque de versión no se arregla
+  //  volviendo a pulsar Guardar, que es lo que hace cualquiera ante un error.
+  //  Lo que hay que ofrecer es recargar y mirar qué cambió.
+  const [choque, setChoque] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  //  El aviso se pinta arriba y el botón de guardar está al final de una ficha
+  //  larga: quien guarda desde abajo no lo vería. Se descubrió mirando una
+  //  captura de la pantalla real, no en las pruebas, que solo comprobaban que
+  //  el aviso existiera.
+  const avisoRef = useRef<HTMLDivElement>(null)
 
   const recargarDestinos = useCallback(() => {
     obtener<Destino[]>(`/findings/${inicial.id}/transitions`)
       .then(setDestinos)
       .catch(() => setDestinos([]))
   }, [inicial.id])
+
+  useEffect(() => {
+    if (choque) avisoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [choque])
 
   useEffect(() => {
     obtener<(ElementoCatalogo & { definition_es?: string })[]>('/catalogs/risk-levels')
@@ -83,12 +97,36 @@ export function FichaDeHallazgo({
             risk_level_id: riesgo || null,
           },
           'PATCH',
+          hallazgo.row_version,
         ),
       )
     } catch (e) {
-      setError((e as Error).message)
+      setError(mensajeDeConflicto(e))
+      setChoque(esConflictoDeVersion(e))
     } finally {
       setGuardando(false)
+    }
+  }
+
+  /** Trae la versión de la base y repuebla el formulario con ella.
+   *
+   *  Descarta lo que hubiera escrito quien ve el conflicto, y es lo correcto:
+   *  el texto que se guardó es el del compañero, y editar sobre una copia vieja
+   *  volvería a producir el mismo choque.
+   */
+  async function recargar() {
+    try {
+      const fresco = await obtener<Hallazgo>(`/findings/${hallazgo.id}`)
+      setHallazgo(fresco)
+      setTitulo(fresco.title)
+      setDescripcion(fresco.description)
+      setComentarios(fresco.comments ?? '')
+      setRecomendacion(fresco.recommendation ?? '')
+      setRiesgo(fresco.risk_level_id ?? '')
+      setError(null)
+      setChoque(false)
+    } catch (e) {
+      setError((e as Error).message)
     }
   }
 
@@ -115,7 +153,20 @@ export function FichaDeHallazgo({
         </button>
       </div>
 
-      {error && <Mensaje tipo="error">{error}</Mensaje>}
+      {error && (
+        <div ref={avisoRef}>
+          <Mensaje tipo={choque ? 'aviso' : 'error'}>
+            {error}
+            {choque && (
+              <p className="acciones-conflicto">
+                <button type="button" className="secundario" onClick={() => void recargar()}>
+                  Recargar con los cambios de la otra persona
+                </button>
+              </p>
+            )}
+          </Mensaje>
+        </div>
+      )}
 
       <section>
         <h3>Descripción</h3>
@@ -265,10 +316,11 @@ function Linea({
           `/capex-items/${linea.id}`,
           { amount: importe, tax_pct: impuesto },
           'PATCH',
+          linea.row_version,
         ),
       )
     } catch (e) {
-      alFallar((e as Error).message)
+      alFallar(mensajeDeConflicto(e))
     } finally {
       setOcupado(false)
     }
@@ -360,9 +412,12 @@ function Linea({
             title="Sustituye el importe por la base calculada. No ocurre solo"
             onClick={() =>
               void operar(() =>
-                enviar<Hallazgo>(`/capex-items/${linea.id}/carry-measurement`, {
-                  confirmar: true,
-                }),
+                enviar<Hallazgo>(
+                  `/capex-items/${linea.id}/carry-measurement`,
+                  { confirmar: true },
+                  'POST',
+                  linea.row_version,
+                ),
               )
             }
           >
@@ -380,7 +435,9 @@ function Linea({
         <button
           type="button"
           className="secundario peligro"
-          onClick={() => void operar(() => borrar<Hallazgo>(`/capex-items/${linea.id}`))}
+          onClick={() =>
+            void operar(() => borrar<Hallazgo>(`/capex-items/${linea.id}`, linea.row_version))
+          }
           disabled={ocupado}
         >
           Eliminar
@@ -394,6 +451,7 @@ function Linea({
       {comparando && (
         <ComparadorDePrecios
           itemId={linea.id}
+          version={linea.row_version}
           descripcion={descripcion}
           importeActual={linea.amount}
           alValidar={(h) => {

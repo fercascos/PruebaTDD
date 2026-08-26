@@ -3,6 +3,7 @@ import { enviar, obtener } from '../api/cliente'
 import type { Hallazgo } from '../api/tipos'
 import { Campo, Rejilla } from '../ui/Formulario'
 import { Mensaje, Vacio } from '../ui/Marco'
+import { mensajeDeConflicto } from '../ui/conflictos'
 import { sinCerosSobrantes } from '../ui/numeros'
 
 type Referencia = {
@@ -73,12 +74,16 @@ function siNo(valor: boolean | null): string {
  */
 export function ComparadorDePrecios({
   itemId,
+  version,
   descripcion,
   importeActual,
   alValidar,
   alCerrar,
 }: {
   itemId: string
+  /** La versión de la línea. Validar un precio que otro acaba de cambiar
+   *  dejaría la validación apuntando a un importe que ya no es el revisado. */
+  version: number
   descripcion: string
   importeActual: string
   alValidar: (hallazgo: Hallazgo) => void
@@ -117,14 +122,19 @@ export function ComparadorDePrecios({
     setGuardando(true)
     try {
       alValidar(
-        await enviar<Hallazgo>(`/capex-items/${itemId}/validate-price`, {
-          amount: importe,
-          price_reference_id: elegida,
-          justificacion: justificacion.trim() || null,
-        }),
+        await enviar<Hallazgo>(
+          `/capex-items/${itemId}/validate-price`,
+          {
+            amount: importe,
+            price_reference_id: elegida,
+            justificacion: justificacion.trim() || null,
+          },
+          'POST',
+          version,
+        ),
       )
     } catch (e) {
-      setError((e as Error).message)
+      setError(mensajeDeConflicto(e))
     } finally {
       setGuardando(false)
     }
