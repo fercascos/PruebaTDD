@@ -126,6 +126,29 @@ class Settings(BaseSettings):
             raise ValueError("STORAGE_BACKEND=s3 exige STORAGE_BUCKET")
         return v
 
+    @field_validator("storage_region")
+    @classmethod
+    def _region_requerida_con_s3(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]
+        """`[REQ]` Con S3, la región es obligatoria. Y no es burocracia.
+
+        La firma v4 **cubre la región**. Con la equivocada —o con la que
+        botocore elija por su cuenta— subir puede funcionar, porque el cliente
+        sigue la redirección de S3; pero la **URL firmada sale firmada para otra
+        región y el navegador recibe un 403**. Es decir: la rejilla de
+        fotografías vuelve a salir vacía y el servidor no registra ningún error,
+        porque desde su lado todo fue bien.
+
+        Ya se pagó una vez ese fallo por el extremo público. No se paga dos veces
+        por la región: sin ella, la aplicación no arranca.
+        """
+        if info.data.get("storage_backend") == "s3" and not v:
+            raise ValueError(
+                "STORAGE_BACKEND=s3 exige STORAGE_REGION. La firma v4 cubre la "
+                "región: con la equivocada, las URL firmadas se rechazan y las "
+                "imágenes no cargan sin que aparezca ningún error en el servidor."
+            )
+        return v
+
     @field_validator("app_secret_key")
     @classmethod
     def _secret_required_outside_local(cls, v: str, info) -> str:  # type: ignore[no-untyped-def]

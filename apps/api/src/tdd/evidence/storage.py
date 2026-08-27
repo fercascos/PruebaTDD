@@ -346,13 +346,35 @@ class AlmacenS3:
         return respuesta["Body"].read()  # type: ignore[no-any-return]
 
     def existe(self, clave: str) -> bool:
+        """¿Está esa clave? `[LIM]` Necesita `s3:ListBucket`, aunque no liste.
+
+        Suena absurdo y no lo es. AWS **oculta la existencia** de los objetos a
+        quien no puede listar el bucket: sin `s3:ListBucket`, un `HEAD` sobre una
+        clave que no existe responde **403, no 404**, para no revelar por la vía
+        del código de error lo que la política no deja ver.
+
+        Y esto lo llama `guardar()` antes de cada original, así que una política
+        de mínimo privilegio «perfecta» —`GetObject`, `PutObject`,
+        `PutObjectRetention`— **haría fallar todas las subidas de fotografías,
+        documentos y plantillas**, con un `AccessDenied` sobre `HeadObject` que
+        no dice nada de todo esto. De ahí que el error se traduzca: quien lo lea
+        a las once de la noche tiene que saber qué añadir a la política.
+        """
         from botocore.exceptions import ClientError  # noqa: PLC0415
 
         try:
             self._s3.head_object(Bucket=self.bucket, Key=clave)  # type: ignore[attr-defined]
         except ClientError as exc:
-            if exc.response["Error"]["Code"] in ("404", "NoSuchKey", "NotFound"):
+            codigo = exc.response["Error"]["Code"]
+            if codigo in ("404", "NoSuchKey", "NotFound"):
                 return False
+            if codigo in ("403", "AccessDenied", "AccessDeniedException"):
+                raise PermissionError(
+                    f"Sin permiso para comprobar si «{clave}» ya existe en el bucket "
+                    f"«{self.bucket}». Si la clave no existiera, AWS respondería 403 en "
+                    "vez de 404 para no revelar su existencia: casi seguro falta "
+                    "`s3:ListBucket` sobre el bucket en la política del rol. Ver docs/21."
+                ) from exc
             raise
         return True
 
@@ -384,52 +406,97 @@ class AlmacenS3:
         después de crear el bucket**: si el bucket se creó mal, no hay arreglo,
         hay que crear otro y copiar. Descubrirlo el día que alguien sobrescribe
         un original es descubrirlo tarde.
+
+        `[REQ]` **«No está configurado» y «no puedo mirarlo» no son lo mismo.**
+        Contra AWS con una política de mínimo privilegio —solo acciones sobre
+        objetos, que es lo correcto— las tres consultas de abajo responden
+        `AccessDenied`, y decir entonces «el bucket no tiene Object Lock» es
+        afirmar algo que no se sabe. La aplicación gritaría en cada arranque
+        sobre un bucket perfectamente configurado, y el aviso que salta siempre
+        es el aviso que se acaba ignorando. Se distingue, y se dice qué permiso
+        falta para poder comprobarlo.
         """
         from botocore.exceptions import ClientError  # noqa: PLC0415
 
+        #: Códigos con los que S3 dice «no te dejo», que no es «no existe».
+        denegado = ("AccessDenied", "AccessDeniedException", "AllAccessDisabled", "403")
+
         problemas: list[str] = []
+        # Un booleano explícito y no «el diccionario vacío como centinela»: S3
+        # devuelve un diccionario SIN `Status` para un bucket cuyo versionado no
+        # se activó nunca, que es precisamente el caso que hay que detectar.
+        # Confundir «no pude leerlo» con «lo leí y está vacío» habría hecho que
+        # el fallo real pasara desapercibido.
+        pudo_leer_versionado = True
+        versionado: dict[str, Any] = {}
         try:
             versionado = self._s3.get_bucket_versioning(Bucket=self.bucket)  # type: ignore[attr-defined]
         except ClientError as exc:
             codigo = exc.response["Error"]["Code"]
-            return [f"No se puede consultar el bucket «{self.bucket}»: {codigo}"]
-        if versionado.get("Status") != "Enabled":
+            if codigo in denegado:
+                problemas.append(
+                    "Sin permiso para leer el versionado del bucket "
+                    f"«{self.bucket}»: no se puede comprobar si la barrera 4 se "
+                    "sostiene. Añada `s3:GetBucketVersioning` a la política."
+                )
+                pudo_leer_versionado = False
+            else:
+                # Aquí sí es un fallo duro: si no se puede ni hablar con el
+                # bucket, el resto de comprobaciones no dirían nada útil.
+                return [f"No se puede consultar el bucket «{self.bucket}»: {codigo}"]
+        if pudo_leer_versionado and versionado.get("Status") != "Enabled":
             problemas.append(
                 "El versionado del bucket NO está activado. Sin él, sobrescribir "
                 "una clave destruye los bytes anteriores. No se puede activar de "
                 "forma retroactiva sobre lo ya escrito."
             )
+
         try:
             self._s3.get_object_lock_configuration(Bucket=self.bucket)  # type: ignore[attr-defined]
-        except ClientError:
-            problemas.append(
-                "El bucket NO tiene Object Lock. Solo se puede habilitar AL CREAR "
-                "el bucket: hay que crear uno nuevo y copiar el contenido."
-            )
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] in denegado:
+                problemas.append(
+                    "Sin permiso para leer la configuración de Object Lock: no se "
+                    "puede comprobar la barrera 4. Añada "
+                    "`s3:GetBucketObjectLockConfiguration` a la política."
+                )
+            else:
+                problemas.append(
+                    "El bucket NO tiene Object Lock. Solo se puede habilitar AL CREAR "
+                    "el bucket: hay que crear uno nuevo y copiar el contenido."
+                )
+
         try:
             self._s3.get_bucket_cors(Bucket=self.bucket)  # type: ignore[attr-defined]
-        except ClientError:
-            # No es un problema de integridad, pero puede romper la aplicación
-            # entera en el navegador y de una forma que no se ve desde el
-            # servidor: la API redirige bien, el almacén devuelve el objeto, y
-            # el navegador se niega a entregárselo al JavaScript por falta de
-            # `Access-Control-Allow-Origin`. La rejilla sale vacía sin un solo
-            # error en el log.
-            #
-            # Se dice «puede» a propósito. Aquí NO se puede saber si es un
-            # problema: MinIO y un bucket de AWS sin reglas devuelven el mismo
-            # `NoSuchCORSConfiguration`, y MinIO acepta cualquier origen por
-            # defecto. Distinguirlos exige **probar el comportamiento** —una
-            # petición con `Origin` y mirar si vuelve la cabecera—, y eso es
-            # trabajo de `tools/comprobar_almacen.py`, no del arranque.
-            problemas.append(
-                "El bucket no declara reglas CORS. Contra AWS S3 eso significa que "
-                "el navegador no podrá leer las imágenes: la API redirige bien, S3 "
-                "responde, y el `fetch` falla sin dejar rastro en el servidor. "
-                "Algunos almacenes (MinIO) aceptan cualquier origen por defecto y "
-                "entonces no hay problema; compruébelo con "
-                "`tools/comprobar_almacen.py`, que lo mide en vez de suponerlo."
-            )
+        except ClientError as exc:
+            if exc.response["Error"]["Code"] in denegado:
+                problemas.append(
+                    "Sin permiso para leer las reglas CORS. Añada `s3:GetBucketCORS` "
+                    "a la política, o compruébelo desde fuera con "
+                    "`tools/comprobar_almacen.py`."
+                )
+            else:
+                # No es un problema de integridad, pero puede romper la
+                # aplicación entera en el navegador y de una forma que no se ve
+                # desde el servidor: la API redirige bien, el almacén devuelve el
+                # objeto, y el navegador se niega a entregárselo al JavaScript por
+                # falta de `Access-Control-Allow-Origin`. La rejilla sale vacía
+                # sin un solo error en el log.
+                #
+                # Se dice «puede» a propósito. Aquí NO se puede saber si es un
+                # problema: MinIO y un bucket de AWS sin reglas devuelven el mismo
+                # `NoSuchCORSConfiguration`, y MinIO acepta cualquier origen por
+                # defecto. Distinguirlos exige **probar el comportamiento** —una
+                # petición con `Origin` y mirar si vuelve la cabecera—, y eso es
+                # trabajo de `tools/comprobar_almacen.py`, no del arranque.
+                problemas.append(
+                    "El bucket no declara reglas CORS. Contra AWS S3 eso significa que "
+                    "el navegador no podrá leer las imágenes: la API redirige bien, S3 "
+                    "responde, y el `fetch` falla sin dejar rastro en el servidor. "
+                    "Algunos almacenes (MinIO) aceptan cualquier origen por defecto y "
+                    "entonces no hay problema; compruébelo con "
+                    "`tools/comprobar_almacen.py`, que lo mide en vez de suponerlo."
+                )
         return problemas
 
 

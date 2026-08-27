@@ -51,14 +51,28 @@ def main(argv: list[str] | None = None) -> int:
 
     almacen = storage.construir(settings)
     print(
-        f"Bucket «{settings.storage_bucket}» en {settings.storage_endpoint_url or 'AWS'}"
+        f"Bucket «{settings.storage_bucket}» en "
+        f"{settings.storage_endpoint_url or 'AWS'} · región {settings.storage_region}"
     )
+    if not settings.storage_endpoint_url:
+        # La distinción importa: MinIO es permisivo donde AWS no lo es, así que
+        # un «todo correcto» contra MinIO no dice nada de un bucket de AWS.
+        print("  · Contra AWS de verdad. Es lo que MinIO no puede demostrar (docs/21).")
 
     problemas = almacen.comprobar()  # type: ignore[union-attr]
     for p in problemas:
         print(f"  ✗ {p}")
     if not problemas:
         print("  ✓ Versionado, Object Lock y CORS en su sitio.")
+
+    # `[REQ]` El permiso que rompe cada subida si falta.
+    #
+    # La aplicación sube cada original con `ObjectLockMode`, y **ese parámetro
+    # exige `s3:PutObjectRetention` aparte de `s3:PutObject`**. Sin él fallan
+    # las fotografías, los documentos y las plantillas, pero NO los derivados,
+    # que se suben sin retención: parece un fallo intermitente y no lo es.
+    #
+    # Se comprueba con `--escribir`, porque comprobarlo es subir.
 
     if args.escribir:
         # La clave tiene que **parecer un original**, y eso significa llevar
@@ -67,8 +81,25 @@ def main(argv: list[str] | None = None) -> int:
         # otra forma se trata como derivado —correctamente— y la comprobación
         # acusaría al almacén de un fallo que no tiene. Pasó aquí.
         clave = f"comprobacion/{uuid.uuid4()}/originals/prueba.bin"
-        almacen.guardar(clave, b"objeto de comprobacion, sin datos reales")
+        try:
+            almacen.guardar(clave, b"objeto de comprobacion, sin datos reales")
+        except Exception as exc:  # noqa: BLE001 — es un ClientError de botocore
+            # El caso que más caro sale y peor se diagnostica: los derivados
+            # suben y los originales no.
+            codigo = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
+            if codigo in ("AccessDenied", "AccessDeniedException"):
+                print(
+                    "  ✗ AccessDenied al subir un ORIGINAL. Casi seguro falta "
+                    "`s3:PutObjectRetention`: la retención se pide como parámetro "
+                    "aparte y necesita su propio permiso. Los derivados seguirían "
+                    "subiendo, así que parecería un fallo intermitente.",
+                    file=sys.stderr,
+                )
+                return 1
+            raise
         print(f"  · Subido {clave}")
+
+        print("  ✓ Se puede escribir un original CON retención (s3:PutObjectRetention)")
 
         try:
             almacen.borrar(clave)  # type: ignore[union-attr]

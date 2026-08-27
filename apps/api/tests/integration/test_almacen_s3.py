@@ -304,3 +304,142 @@ def test_el_almacen_en_disco_no_finge_saber_firmar() -> None:
 
     assert not hasattr(AlmacenEnMemoria(), "url_firmada")
     assert not hasattr(AlmacenEnDisco.__init__, "url_firmada")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Lo que solo se rompe contra AWS
+#
+#  MinIO es permisivo donde AWS no lo es, así que un adaptador que funciona
+#  contra MinIO puede fallar el primer día en producción. Estas pruebas fijan
+#  las dos diferencias que más caro salen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _S3QueDeniega:
+    """Un S3 que contesta `AccessDenied` a las consultas de bucket.
+
+    Es lo que hace AWS con la política de **mínimo privilegio**, que es la
+    correcta: la aplicación necesita leer y escribir objetos, no administrar el
+    bucket. `moto` no simula IAM, así que la denegación se pone aquí.
+    """
+
+    def __init__(self, *, deniega: tuple[str, ...]) -> None:
+        self.deniega = deniega
+
+    def _quizas_denegar(self, operacion: str) -> None:
+        from botocore.exceptions import ClientError
+
+        if operacion in self.deniega:
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, operacion
+            )
+
+    def get_bucket_versioning(self, **_: object) -> dict[str, str]:
+        self._quizas_denegar("get_bucket_versioning")
+        return {"Status": "Enabled"}
+
+    def get_object_lock_configuration(self, **_: object) -> dict[str, object]:
+        self._quizas_denegar("get_object_lock_configuration")
+        return {"ObjectLockConfiguration": {"ObjectLockEnabled": "Enabled"}}
+
+    def get_bucket_cors(self, **_: object) -> dict[str, object]:
+        self._quizas_denegar("get_bucket_cors")
+        return {"CORSRules": []}
+
+
+def test_sin_permiso_para_mirar_no_se_afirma_que_falte() -> None:
+    """`[REQ]` «No está configurado» y «no puedo mirarlo» no son lo mismo.
+
+    Con mínimo privilegio, las tres consultas de bucket responden
+    `AccessDenied`. Decir entonces «el bucket NO tiene Object Lock» es afirmar
+    algo que no se sabe, y hacerlo **en cada arranque** sobre un bucket
+    perfectamente configurado enseña a ignorar el aviso.
+    """
+    almacen = AlmacenS3(
+        bucket="da-igual",
+        cliente=_S3QueDeniega(
+            deniega=(
+                "get_bucket_versioning",
+                "get_object_lock_configuration",
+                "get_bucket_cors",
+            )
+        ),
+    )
+    problemas = almacen.comprobar()
+
+    assert len(problemas) == 3
+    # Ninguno afirma que falte nada: los tres dicen que no se ha podido mirar,
+    # y **cuál es el permiso que falta**, que es lo accionable.
+    for p in problemas:
+        assert "Sin permiso" in p
+    assert any("s3:GetBucketVersioning" in p for p in problemas)
+    assert any("s3:GetBucketObjectLockConfiguration" in p for p in problemas)
+    assert any("s3:GetBucketCORS" in p for p in problemas)
+    assert not any("NO está activado" in p or "NO tiene Object Lock" in p for p in problemas)
+
+
+def test_con_permiso_sigue_detectando_un_bucket_mal_creado() -> None:
+    """Y la distinción no tapa el fallo de verdad: si se puede mirar y falta,
+    se dice que falta."""
+
+    class SinObjectLock(_S3QueDeniega):
+        def get_object_lock_configuration(self, **_: object) -> dict[str, object]:
+            from botocore.exceptions import ClientError
+
+            raise ClientError(
+                {"Error": {"Code": "ObjectLockConfigurationNotFoundError", "Message": "no"}},
+                "get_object_lock_configuration",
+            )
+
+    problemas = AlmacenS3(bucket="da-igual", cliente=SinObjectLock(deniega=())).comprobar()
+    assert any("NO tiene Object Lock" in p for p in problemas)
+    assert not any("Sin permiso" in p for p in problemas)
+
+
+def test_un_bucket_sin_versionado_se_detecta_aunque_la_respuesta_venga_vacia() -> None:
+    """S3 devuelve un diccionario **sin `Status`** cuando el versionado no se
+    activó nunca, que es justo el caso que hay que detectar.
+
+    La primera versión de `comprobar()` usaba «diccionario vacío» como centinela
+    de «no pude leerlo», así que confundía las dos cosas y el fallo real pasaba
+    desapercibido. Se separa con un booleano explícito, y esta prueba lo fija.
+    """
+
+    class SinVersionado(_S3QueDeniega):
+        def get_bucket_versioning(self, **_: object) -> dict[str, str]:
+            return {}  # ni `Status` ni nada: versionado nunca activado
+
+    problemas = AlmacenS3(bucket="da-igual", cliente=SinVersionado(deniega=())).comprobar()
+    assert any("versionado del bucket NO está activado" in p for p in problemas)
+
+
+def test_un_403_al_comprobar_existencia_dice_que_falta_listbucket() -> None:
+    """`[REQ]` El fallo que tumbaría **todas** las subidas en producción.
+
+    AWS oculta la existencia de los objetos a quien no puede listar el bucket:
+    sin `s3:ListBucket`, un `HEAD` sobre una clave inexistente responde **403 y
+    no 404**. Como `guardar()` llama a `existe()` antes de cada original, una
+    política de mínimo privilegio «perfecta» —`GetObject`, `PutObject`,
+    `PutObjectRetention`— haría fallar todas las subidas de fotografías,
+    documentos y plantillas.
+
+    Lo que se fija aquí es que el error **diga qué falta**, y no un
+    `AccessDenied` sobre `HeadObject` que no lleva a ninguna parte.
+    """
+    from botocore.exceptions import ClientError
+
+    class SinListBucket:
+        def head_object(self, **_: object) -> dict[str, object]:
+            raise ClientError(
+                {"Error": {"Code": "AccessDenied", "Message": "Access Denied"}}, "HeadObject"
+            )
+
+    almacen = AlmacenS3(bucket="tdd-evidencia", cliente=SinListBucket())
+    with pytest.raises(PermissionError, match="s3:ListBucket"):
+        almacen.existe(ORIGINAL)
+
+
+def test_un_404_al_comprobar_existencia_sigue_siendo_no_existe(almacen) -> None:
+    """Y la traducción no tapa el caso normal: lo que no está, no está."""
+    tienda, _ = almacen
+    assert tienda.existe("cualquiera/que/no/exista/originals/x.jpg") is False

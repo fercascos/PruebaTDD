@@ -69,6 +69,12 @@ aplicación en `502` después de cada despliegue de la API.
 python3 tools/comprobar_almacen.py --escribir   # versionado, Object Lock, CORS y borrado
 ```
 
+Cómo crear ese bucket y **qué permisos exactos** necesita el rol de la aplicación, en
+[`docs/21-bucket-s3.md`](docs/21-bucket-s3.md). Dos avisos de ahí que cuestan caro: Object Lock
+**solo se puede activar al crear el bucket**, y `s3:PutObjectRetention` es un permiso **aparte** de
+`s3:PutObject` —sin él fallan los originales y no los derivados, que parece un fallo intermitente y
+no lo es—.
+
 **Cuando algo falle**, el error que ve el usuario lleva su identificador:
 
 ```json
@@ -122,6 +128,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 | **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
 | **[20](docs/20-poc-pptx.md)** | **Prueba de concepto del bloque 4** · resultados medidos, y lo que corrigen | añadido |
+| **[21](docs/21-bucket-s3.md)** | **El bucket de S3** · cómo crearlo y los permisos exactos del rol. Sin ejecutar contra AWS todavía | añadido |
 | **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 | **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |
 
