@@ -422,6 +422,23 @@ bucket no tiene Object Lock, se registra en el log al arrancar.
 
 ### 19.10.1. Comprobaciones en navegador ya escritas
 
+> **Un motor no es dos motores.** Hasta ahora todo esto corría **solo en Chromium**, y el uso real de
+> esta aplicación es un consultor en una nave con un iPhone, donde manda WebKit.
+> `comprobar-safari.mjs` y `comprobar-sin-red.mjs` aceptan `TDD_NAVEGADOR=webkit` y
+> `TDD_DISPOSITIVO="iPhone 14"`, y la CI las ejecuta así en cada push.
+>
+> `[LIM]` **WebKit de Playwright no es Safari de iOS.** Comparte motor, así que caza las diferencias
+> de CSS y de API de JavaScript, que son la mayoría. Lo que **sigue sin comprobarse en ningún
+> sitio**, y solo se comprueba en un teléfono: la cámara real, un HEIC de verdad, el desalojo de
+> IndexedDB a los siete días sin abrir la aplicación, la presión de memoria que hace que Safari
+> recargue la pestaña, y «Añadir a pantalla de inicio». Hasta que eso se haga, **no se puede afirmar
+> que la vista de campo funcione en un iPhone**.
+>
+> Lo primero que se ejecutó a 390 px encontró dos cosas, las dos de iOS y ninguna visible en
+> escritorio: campos de formulario a 13,6 px —Safari **amplía la página solo** al enfocar un campo
+> de menos de 16 px y no la devuelve, y clasificar una fotografía son cuatro desplegables— y la
+> casilla de elegir fotografías a 13 px, que con una mano y a veces con guantes no se acierta.
+
 Lo construido hasta ahora no está cubierto por la tabla anterior —que es el plan— sino por estas
 comprobaciones, que sí existen y se ejecutan. Cada una nació de un defecto real que **una suite de
 más de setecientas pruebas no vio**, porque solo aparece cuando la aplicación se abre de verdad:

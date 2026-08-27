@@ -15,19 +15,17 @@
  *     npm run build && npx vite preview --port 4173 &
  *     node herramientas/comprobar-sin-red.mjs
  */
-import { chromium } from 'playwright'
+import { abrir } from './navegador.mjs'
 
-const BASE = process.env.URL_BASE ?? 'http://localhost:4173'
+const BASE = process.env.URL_BASE ?? process.env.TDD_WEB ?? 'http://localhost:4173'
 const fallos = []
 
-// Sin ruta fija al navegador: Playwright usa el que tenga instalado. La
-// variable existe para los entornos que traen Chromium en otro sitio; escribir
-// una ruta concreta aquí habría hecho que esto solo funcionara en una máquina.
-const navegador = await chromium.launch(
-  process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
-)
-const contexto = await navegador.newContext()
+// El motor lo elige `TDD_NAVEGADOR`. Importa aquí más que en ninguna otra
+// comprobación: el trabajo sin cobertura se hace en una nave y con un iPhone,
+// así que quien tiene que abrir sin red es **WebKit**, no Chromium.
+const { navegador, contexto, motorUsado, dispositivo } = await abrir()
 const pagina = await contexto.newPage()
+console.log(`Motor: ${motorUsado} · Dispositivo: ${dispositivo}`)
 
 console.log('· Primera visita, con red')
 await pagina.goto(BASE, { waitUntil: 'networkidle' })

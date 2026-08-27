@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErrorDeApi, subirFichero } from '../api/cliente'
 import type { Foto } from '../api/tipos'
-import { comoCola, guardar, guardarVarias, olvidar, pendientesDe } from './almacen'
+import type { Persistencia } from './almacen'
+import {
+  comoCola,
+  guardar,
+  guardarVarias,
+  olvidar,
+  pedirPersistencia,
+  pendientesDe,
+} from './almacen'
 import {
   type ElementoDeCola,
   type Origen,
@@ -59,6 +67,21 @@ export function Subida({
     CARRETE: useRef<HTMLInputElement>(null),
     CAMARA: useRef<HTMLInputElement>(null),
   }
+
+  // Se pide que el navegador no vacíe la cola por su cuenta. En Safari de iOS
+  // el almacenamiento de una web que no está en la pantalla de inicio se borra
+  // tras siete días sin abrirla, y ahí es donde viven las fotografías que
+  // todavía no se han subido.
+  const [persistencia, setPersistencia] = useState<Persistencia | null>(null)
+  useEffect(() => {
+    let vigente = true
+    void pedirPersistencia().then((r) => {
+      if (vigente) setPersistencia(r)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [])
 
   // Al abrir la pestaña se recupera lo que quedó a medias. No se sube solo: la
   // decisión de gastar datos es del usuario, que puede estar con el móvil en
@@ -214,6 +237,16 @@ export function Subida({
             Subirlas ahora
           </button>
         </div>
+      )}
+
+      {/* Solo si hay algo que perder: un aviso permanente sobre una cola vacía
+          es ruido, y el ruido enseña a ignorar los avisos. */}
+      {persistencia === 'denegada' && elementos.length > 0 && (
+        <p className="mensaje aviso">
+          Este navegador no garantiza guardar las fotografías pendientes: puede borrarlas si el
+          dispositivo se queda sin espacio, y en un iPhone también tras varios días sin abrir la
+          aplicación. Añádala a la pantalla de inicio, o súbalas antes de cerrar.
+        </p>
       )}
 
       {descartados.length > 0 && (

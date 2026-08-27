@@ -168,3 +168,92 @@ jobs:
           print(f'{len(csv)} catálogos en {CATALOGOS}')
           "
           docker run --rm tdd-api:ci sh -c 'fc-match --version && id -un'
+
+  safari:
+    name: Safari · la vista de campo en WebKit
+    runs-on: ubuntu-latest
+    # Todo lo demás se comprueba en Chromium, y el uso real de esta aplicación
+    # es un consultor en una nave con un iPhone. Ahí manda WebKit, y hasta
+    # ahora no se ejecutaba en ningún sitio.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - run: pip install -e "apps/api[dev]"
+
+      - name: Base lista
+        env:
+          PGPASSWORD: postgres
+          DATABASE_MIGRATION_URL: postgresql+psycopg://postgres:postgres@localhost:5432/tdd
+          APP_DB_USER: tdd_app
+          APP_DB_PASSWORD: solo-para-esta-ejecucion-de-ci
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE tdd;"
+          cd apps/api && PYTHONPATH=src python -m tdd.db.preparar
+
+      - name: Primera cuenta y encargo de demostración
+        env:
+          DATABASE_MIGRATION_URL: postgresql+psycopg://postgres:postgres@localhost:5432/tdd
+          TDD_BOOTSTRAP_PASSWORD: cubierta invertida 2026
+        run: |
+          cd apps/api && PYTHONPATH=src python -m tdd.db.arranque \
+            --org "Consultora Ficticia" --email admin@ejemplo.example --nombre "Admin Demo"
+
+      - name: API y frontend en marcha
+        env:
+          APP_SECRET_KEY: clave-solo-para-esta-ejecucion-de-ci-0123456789
+          DATABASE_URL: postgresql+psycopg://tdd_app:solo-para-esta-ejecucion-de-ci@localhost:5432/tdd
+        run: |
+          cd apps/api && PYTHONPATH=src python -m uvicorn tdd.main:app --port 8000 &
+          cd apps/web && (if [ -f package-lock.json ]; then npm ci; else npm install; fi) \
+            && npm run build && npx vite preview --port 4173 &
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8000/health >/dev/null 2>&1 && break || sleep 1
+          done
+
+      - name: Datos de demostración
+        run: |
+          echo "TDD_PROYECTO=$(python3 tools/sembrar_demo.py --api http://localhost:8000 | tail -1)" \
+            >> $GITHUB_ENV
+
+      # Aquí es donde se descarga WebKit. Es el motor de Safari, así que caza
+      # las diferencias de CSS y de API de JavaScript. `[LIM]` NO es Safari de
+      # iOS: la cámara, un HEIC de verdad, el desalojo de IndexedDB a los siete
+      # días y «Añadir a pantalla de inicio» siguen sin comprobarse en ningún
+      # sitio, y eso pide un teléfono.
+      - name: WebKit
+        run: cd apps/web && npx playwright install --with-deps webkit
+
+      - name: La vista de campo, en WebKit y a 390 px
+        env:
+          TDD_NAVEGADOR: webkit
+          TDD_DISPOSITIVO: iPhone 14
+          TDD_WEB: http://localhost:4173
+        run: cd apps/web && node herramientas/comprobar-safari.mjs
+
+      - name: Y sin red, que es como se trabaja en una nave
+        env:
+          TDD_NAVEGADOR: webkit
+          TDD_DISPOSITIVO: iPhone 14
+          TDD_WEB: http://localhost:4173
+        run: cd apps/web && node herramientas/comprobar-sin-red.mjs

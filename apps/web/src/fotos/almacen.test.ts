@@ -15,7 +15,15 @@
 
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { comoCola, guardar, guardarVarias, olvidar, pendientesDe, vaciar } from './almacen'
+import {
+  comoCola,
+  guardar,
+  guardarVarias,
+  olvidar,
+  pedirPersistencia,
+  pendientesDe,
+  vaciar,
+} from './almacen'
 import type { ElementoDeCola } from './cola'
 
 const PROYECTO = 'proyecto-1'
@@ -136,5 +144,59 @@ describe('volver a la cola', () => {
     ])
     const vueltos = comoCola(await pendientesDe(PROYECTO))
     expect(vueltos.map((v) => v.origen)).toEqual(['CAMARA', 'ORDENADOR'])
+  })
+})
+
+describe('persistencia del almacenamiento', () => {
+  const original = globalThis.navigator
+
+  afterEach(() => {
+    Object.defineProperty(globalThis, 'navigator', { value: original, configurable: true })
+  })
+
+  const conStorage = (storage: unknown) =>
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { storage },
+      configurable: true,
+    })
+
+  it('no vuelve a pedirla si ya está concedida', async () => {
+    const persist = vi.fn()
+    conStorage({ persisted: async () => true, persist })
+    expect(await pedirPersistencia()).toBe('concedida')
+    // Pedir un permiso que ya se tiene hace que algunos navegadores enseñen un
+    // diálogo en cada arranque, y un permiso que se pide sin parar acaba
+    // denegado.
+    expect(persist).not.toHaveBeenCalled()
+  })
+
+  it('la pide cuando no la hay, y dice si se la dan', async () => {
+    conStorage({ persisted: async () => false, persist: async () => true })
+    expect(await pedirPersistencia()).toBe('concedida')
+  })
+
+  it('dice que se la han denegado en vez de callarlo', async () => {
+    // Es el caso de un iPhone con la aplicación abierta en Safari y sin añadir
+    // a la pantalla de inicio: ahí no la conceden, y quien esté delante tiene
+    // que poder enterarse de que sus fotografías no están a salvo.
+    conStorage({ persisted: async () => false, persist: async () => false })
+    expect(await pedirPersistencia()).toBe('denegada')
+  })
+
+  it('sobrevive a un navegador que no la implementa', async () => {
+    conStorage(undefined)
+    expect(await pedirPersistencia()).toBe('no-soportada')
+  })
+
+  it('sobrevive a un navegador que lanza al preguntar', async () => {
+    // Safari ha lanzado aquí en algunas versiones. Que falle pedir permiso no
+    // puede impedir usar la cola.
+    conStorage({
+      persisted: async () => {
+        throw new Error('nope')
+      },
+      persist: async () => true,
+    })
+    expect(await pedirPersistencia()).toBe('no-soportada')
   })
 })

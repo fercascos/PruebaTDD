@@ -23,9 +23,22 @@
  * está implementada, y decir lo contrario sería prometer que una visita se sube
  * sola con el móvil en el bolsillo.
  *
- * `[LIM]` IndexedDB es almacenamiento *best-effort*: el navegador puede
- * vaciarlo si el dispositivo se queda sin espacio. Ni se pide `persist()` ni se
- * comprueba la cuota todavía.
+ * `[REQ]` Se **pide persistencia** al arrancar, y es lo que separa «la cola
+ * aguanta» de «la cola desaparece sola». En Safari de iOS, el almacenamiento de
+ * una web que no está en la pantalla de inicio se borra tras **siete días sin
+ * abrirla**. Un consultor hace una visita el viernes, no vuelve a abrir la
+ * aplicación hasta el lunes de la semana siguiente, y las fotografías que no se
+ * subieron ya no están. No es un caso rebuscado: es el calendario normal de un
+ * encargo.
+ *
+ * `[LIM]` Pedirla **no garantiza** que la den. En iOS el permiso llega, en la
+ * práctica, cuando la aplicación se añade a la pantalla de inicio. Por eso
+ * `persistencia()` devuelve lo que contestó el navegador en vez de tragárselo:
+ * quien lo pregunte puede avisar a quien esté delante.
+ *
+ * `[LIM]` Aun con persistencia concedida, IndexedDB sigue teniendo cuota: si el
+ * dispositivo se queda sin espacio, la escritura falla. Eso se ve al guardar,
+ * no antes.
  */
 
 import type { ElementoDeCola, EstadoDeElemento, Origen } from './cola'
@@ -122,6 +135,30 @@ function transaccion<T>(
 /** ¿Hay IndexedDB? En un navegador en modo privado antiguo puede no haberla. */
 export function hayAlmacen(): boolean {
   return typeof indexedDB !== 'undefined'
+}
+
+/** Qué contestó el navegador cuando se le pidió no borrar esto. */
+export type Persistencia = 'concedida' | 'denegada' | 'no-soportada'
+
+/**
+ * Pide que el navegador **no** vacíe este almacenamiento por su cuenta.
+ *
+ * Se pregunta primero con `persisted()`: si ya está concedida, volver a pedirla
+ * en cada arranque haría que algunos navegadores enseñaran un diálogo cada vez,
+ * y un permiso que se pide sin parar es un permiso que se acaba denegando.
+ */
+export async function pedirPersistencia(): Promise<Persistencia> {
+  const almacenamiento = globalThis.navigator?.storage
+  if (!almacenamiento?.persist || !almacenamiento?.persisted) return 'no-soportada'
+  try {
+    if (await almacenamiento.persisted()) return 'concedida'
+    return (await almacenamiento.persist()) ? 'concedida' : 'denegada'
+  } catch {
+    // Safari ha lanzado aquí en algunas versiones. Que falle pedir permiso no
+    // puede impedir usar la cola: sin persistencia sigue funcionando, solo que
+    // el navegador puede vaciarla.
+    return 'no-soportada'
+  }
 }
 
 export async function guardar(projectId: string, elemento: ElementoDeCola): Promise<void> {

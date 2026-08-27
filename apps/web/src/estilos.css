@@ -533,7 +533,13 @@ select {
 /* ── Inicio de sesión ────────────────────────────────────────────────────── */
 
 .entrar {
+  /* `100vh` primero como respaldo, y `100dvh` encima para quien la entienda.
+     En Safari de iOS, `100vh` mide la pantalla CON la barra de direcciones
+     retraída, así que el formulario centrado se va por debajo del borde
+     visible y la pantalla de acceso aparece con scroll sin motivo. `100dvh`
+     mide lo que de verdad se ve. */
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -1476,4 +1482,39 @@ button.enlace {
 .arbol select {
   margin-left: auto;
   font-size: 0.8rem;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Pantalla táctil
+
+   `pointer: coarse` y no un ancho: un iPad es ancho y se toca igual, y un
+   portátil con pantalla táctil también. Lo que cambia el trato no es el
+   tamaño, es el dedo.
+   ────────────────────────────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  /* 16 px, y no es una preferencia estética.
+
+     Safari de iOS **amplía la página solo** al enfocar un campo cuyo texto
+     mida menos de 16 px, y después no la devuelve a su sitio: hay que
+     pellizcar para volver, en cada campo. En una pantalla que es toda
+     desplegables —clasificar una fotografía son cuatro— eso convierte el
+     trabajo de campo en una pelea con el zoom.
+
+     La aplicación tenía `body { font-size: 15px }` y `input { font: inherit }`,
+     así que TODOS los campos lo disparaban; dentro de un bloque a `0.85rem`,
+     bajaban a 13,6 px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Y lo que se pulsa, que se pueda pulsar. La casilla de elegir fotografías
+     medía 13 px: en una nave, con una mano y a veces con guantes, se falla. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 32px;
+    height: 32px;
+  }
 }
