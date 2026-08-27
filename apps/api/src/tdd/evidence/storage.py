@@ -1,11 +1,14 @@
-"""Almacenamiento de binarios · **puerto y adaptador de desarrollo**.
+"""Almacenamiento de binarios · puerto y adaptadores.
 
-`[LIM]` **El adaptador de producción (S3 con Object Lock) NO está implementado
-ni probado.** Lo que hay aquí es un adaptador sobre disco que sirve para la
-suite y para levantar la aplicación en local. La barrera 4 del bloque de
-fotografías —versionado y WORM sobre el prefijo `originals/`— es una propiedad
-del bucket, no de este código, y no se puede afirmar que funcione hasta
-probarla contra un bucket real.
+Hay tres adaptadores: memoria y disco para desarrollo y pruebas, y **S3 con
+Object Lock** para producción.
+
+`[REQ]` La barrera 4 —versionado y WORM sobre `originals/`— la sostiene el
+**bucket**, no este código. Se ha comprobado contra un MinIO real con
+`tools/comprobar_almacen.py`: el almacén rechaza borrar la versión retenida de
+un original. `[LIM]` Eso es MinIO, no AWS: contra un bucket de AWS hay que
+volver a ejecutar la misma comprobación, porque lo que se verifica es **ese**
+bucket, no el adaptador.
 
 Lo que sí es definitivo es la **forma de las claves** y el contrato del puerto:
 el resto de la aplicación depende solo de `AlmacenDeObjetos`, así que sustituir
@@ -262,6 +265,7 @@ class AlmacenS3:
         bucket: str,
         cliente: object | None = None,
         endpoint_url: str | None = None,
+        endpoint_publico: str | None = None,
         region: str | None = None,
         access_key_id: str | None = None,
         secret_access_key: str | None = None,
@@ -278,12 +282,35 @@ class AlmacenS3:
 
         if cliente is not None:
             self._s3 = cliente
+            self._s3_publico = cliente
             return
         self._s3 = construir_cliente(
             endpoint_url=endpoint_url,
             region=region,
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
+        )
+        # `[REQ]` El extremo que alcanza el SERVIDOR no tiene por qué ser el que
+        # alcanza el NAVEGADOR, y la URL firmada la usa el navegador.
+        #
+        # La firma v4 cubre el `Host`, así que no vale con reescribir la URL
+        # después: hay que firmarla ya contra el nombre público. De ahí un
+        # segundo cliente, que solo se usa para firmar.
+        #
+        # No es un caso raro: pasa con MinIO en `compose` —el servidor llega por
+        # `objetos:9000` y el navegador no resuelve ese nombre—, y pasa con S3
+        # detrás de un extremo privado de VPC. Sin esto, la rejilla de
+        # fotografías sale vacía con `ERR_NAME_NOT_RESOLVED` y el servidor no
+        # registra ningún error, porque desde su punto de vista todo fue bien.
+        self._s3_publico = (
+            construir_cliente(
+                endpoint_url=endpoint_publico,
+                region=region,
+                access_key_id=access_key_id,
+                secret_access_key=secret_access_key,
+            )
+            if endpoint_publico and endpoint_publico != endpoint_url
+            else self._s3
         )
 
     # ── Puerto ───────────────────────────────────────────────────────────────
@@ -344,7 +371,9 @@ class AlmacenS3:
         antes que ese usuario puede ver ese objeto. Una URL firmada emitida sin
         esa comprobación es una fuga con fecha de caducidad.
         """
-        return self._s3.generate_presigned_url(  # type: ignore[attr-defined,no-any-return]
+        # Con el cliente PÚBLICO: la firma v4 cubre el `Host`, así que la URL
+        # tiene que nacer ya apuntando al nombre que el navegador resuelve.
+        return self._s3_publico.generate_presigned_url(  # type: ignore[attr-defined,no-any-return]
             "get_object", Params={"Bucket": self.bucket, "Key": clave}, ExpiresIn=segundos
         )
 
@@ -380,16 +409,26 @@ class AlmacenS3:
         try:
             self._s3.get_bucket_cors(Bucket=self.bucket)  # type: ignore[attr-defined]
         except ClientError:
-            # No es un problema de integridad, pero rompe la aplicación entera
-            # en el navegador y de una forma que no se ve desde el servidor: la
-            # API redirige bien, S3 devuelve el objeto, y el navegador se niega
-            # a entregárselo al JavaScript por falta de `Access-Control-Allow-
-            # Origin`. La rejilla sale vacía sin un solo error en el log.
+            # No es un problema de integridad, pero puede romper la aplicación
+            # entera en el navegador y de una forma que no se ve desde el
+            # servidor: la API redirige bien, el almacén devuelve el objeto, y
+            # el navegador se niega a entregárselo al JavaScript por falta de
+            # `Access-Control-Allow-Origin`. La rejilla sale vacía sin un solo
+            # error en el log.
+            #
+            # Se dice «puede» a propósito. Aquí NO se puede saber si es un
+            # problema: MinIO y un bucket de AWS sin reglas devuelven el mismo
+            # `NoSuchCORSConfiguration`, y MinIO acepta cualquier origen por
+            # defecto. Distinguirlos exige **probar el comportamiento** —una
+            # petición con `Origin` y mirar si vuelve la cabecera—, y eso es
+            # trabajo de `tools/comprobar_almacen.py`, no del arranque.
             problemas.append(
-                "El bucket no tiene reglas CORS. La aplicación sigue el 302 con "
-                "`fetch`, así que el navegador exige que el bucket permita el "
-                "origen de la aplicación en GET; si no, las imágenes no cargan "
-                "y no aparece ningún error en el servidor."
+                "El bucket no declara reglas CORS. Contra AWS S3 eso significa que "
+                "el navegador no podrá leer las imágenes: la API redirige bien, S3 "
+                "responde, y el `fetch` falla sin dejar rastro en el servidor. "
+                "Algunos almacenes (MinIO) aceptan cualquier origen por defecto y "
+                "entonces no hay problema; compruébelo con "
+                "`tools/comprobar_almacen.py`, que lo mide en vez de suponerlo."
             )
         return problemas
 
@@ -418,6 +457,7 @@ def construir(settings: Any) -> Any:
     almacen = AlmacenS3(
         bucket=settings.storage_bucket,
         endpoint_url=settings.storage_endpoint_url,
+        endpoint_publico=getattr(settings, "storage_public_endpoint_url", "") or None,
         region=settings.storage_region,
         access_key_id=settings.storage_access_key_id,
         secret_access_key=settings.storage_secret_access_key,

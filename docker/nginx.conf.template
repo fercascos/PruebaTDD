@@ -1,0 +1,100 @@
+# `${API_UPSTREAM}` y `${DNS_RESOLVER}` los sustituye la propia imagen de nginx
+# al arrancar (`/etc/nginx/templates/*.template`), así que el mismo fichero vale
+# para `compose` y para un despliegue donde la API viva en otro sitio.
+#
+# `${DNS_RESOLVER}` es el DNS interno de Docker (127.0.0.11) por omisión. En
+# Kubernetes sería el del clúster.
+resolver ${DNS_RESOLVER} valid=10s ipv6=off;
+
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    # Las fotografías se suben desde el móvil y un JPEG de un iPhone pasa de
+    # 8 MB con facilidad. `max_upload_mb` vale 50 por defecto en la aplicación:
+    # esto tiene que ir por encima o nginx cortaría la subida antes de que la
+    # API pudiera dar un error entendible.
+    client_max_body_size 64m;
+
+    # Un solo origen para la aplicación y su API. Así el navegador no necesita
+    # CORS y la cookie de sesión no tiene que ser de terceros, que es lo que la
+    # haría desaparecer en cuanto un navegador endurezca su política.
+    location /api/ {
+        # `proxy_pass` con una VARIABLE, y no con el nombre literal, y esto no
+        # es un adorno: con el nombre literal nginx resuelve `api` **una sola
+        # vez, al arrancar**, y se queda con esa IP para siempre. Al desplegar
+        # una versión nueva de la API el contenedor cambia de IP y nginx sigue
+        # llamando a la vieja: `502` en toda la aplicación hasta que alguien
+        # reinicia nginx. Pasó aquí, recreando el contenedor de la API.
+        #
+        # Con una variable, nginx resuelve en cada petición usando `resolver`.
+        # Y hay que poner `$request_uri` a mano: cuando `proxy_pass` lleva
+        # variables, nginx deja de sustituir el prefijo de `location` por su
+        # cuenta, y sin esto la ruta llegaría amputada.
+        set $destino_api ${API_UPSTREAM};
+        proxy_pass http://$destino_api$request_uri;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # La descarga en lote de fotografías todavía se construye dentro de la
+        # petición. Con un encargo grande eso pasa del minuto, y el 60 s por
+        # defecto lo cortaría a media descarga.
+        proxy_read_timeout 300s;
+        # Sin `proxy_buffering` una descarga grande no se acumula en disco de
+        # nginx antes de salir: empieza a llegar al navegador de inmediato.
+        proxy_buffering off;
+    }
+
+    location = /health {
+        set $destino_salud ${API_UPSTREAM};
+        proxy_pass http://$destino_salud/health;
+        access_log off;
+    }
+
+    # El armazón de la PWA: **nunca en caché**.
+    #
+    # `index.html` apunta a los ficheros con hash, y `sw.js` decide qué se
+    # precachea. Si un intermediario los guarda, el navegador sigue pidiendo el
+    # JavaScript de la versión anterior y la aplicación se queda congelada en
+    # un despliegue viejo sin que nadie entienda por qué. Es el fallo clásico
+    # de una PWA y se cierra aquí.
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        expires -1;
+    }
+    location = /sw.js {
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        expires -1;
+    }
+    location = /manifest.webmanifest {
+        add_header Cache-Control "no-cache" always;
+        types { } default_type application/manifest+json;
+    }
+
+    # Todo lo que Vite emite con hash en el nombre es inmutable por
+    # construcción: si cambia el contenido, cambia el nombre.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Enrutado del lado del cliente: cualquier ruta desconocida devuelve el
+    # `index.html` para que React Router la resuelva. Se excluye `/api/` más
+    # arriba, que ya tiene su propio bloque, para que un endpoint mal escrito
+    # dé 404 de API y no una página HTML que el cliente no sabe interpretar.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cabeceras de seguridad. No sustituyen a nada del servidor, lo acompañan.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+}

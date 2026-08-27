@@ -53,6 +53,7 @@ async def ciclo_de_vida(app: FastAPI) -> AsyncIterator[None]:
         remitente=settings.mail_from,
         usuario=settings.smtp_user,
         clave=settings.smtp_password,
+        ca_fichero=settings.smtp_ca_file,
     )
     app.state.antivirus = antivirus.construir(
         habilitado=settings.antivirus_enabled,

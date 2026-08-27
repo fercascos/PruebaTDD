@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
 from typing import Protocol
@@ -62,12 +63,24 @@ class CorreoEnMemoria:
 
 
 class CorreoPorSmtp:
-    """`[LIM]` Sin probar contra un servidor SMTP real.
+    """Envío por SMTP con STARTTLS **verificado**.
 
     STARTTLS y no SMTPS por el puerto 465 porque es lo que aceptan casi todos
     los relés corporativos en el 587. Si el servidor no ofrece STARTTLS, **no
     se envía en claro**: se lanza. Degradar a texto plano mandaría el enlace de
     recuperación por la red sin cifrar, y eso es peor que no enviarlo.
+
+    `[REQ]` **Y el certificado se comprueba.** `smtplib.starttls()` sin contexto
+    usa uno de biblioteca con `check_hostname=False` y `verify_mode=CERT_NONE`:
+    cifra, pero no autentica, así que quien esté en medio puede presentar
+    cualquier certificado y leer el enlace de recuperación. Negarse a enviar en
+    claro y luego no mirar el certificado protege de la mitad del problema. Aquí
+    se usa `ssl.create_default_context()`, que verifica cadena y nombre.
+
+    Para un relé con una CA propia se indica el fichero en `ca_fichero`. **No
+    hay forma de desactivar la verificación**: quien la necesite tiene una CA
+    que declarar, y un interruptor de «no verificar» acaba encendido en
+    producción.
     """
 
     def __init__(
@@ -79,6 +92,7 @@ class CorreoPorSmtp:
         usuario: str = "",
         clave: str = "",
         timeout: float = 20.0,
+        ca_fichero: str = "",
     ) -> None:
         self.host = host
         self.puerto = puerto
@@ -86,6 +100,7 @@ class CorreoPorSmtp:
         self.usuario = usuario
         self.clave = clave
         self.timeout = timeout
+        self.ca_fichero = ca_fichero
 
     def _construir(self, mensaje: Mensaje) -> EmailMessage:
         correo = EmailMessage()
@@ -98,6 +113,13 @@ class CorreoPorSmtp:
         correo.set_content(mensaje.cuerpo)
         return correo
 
+    def _contexto(self) -> ssl.SSLContext:
+        """Verifica cadena y nombre. Con `ca_fichero`, además esa CA."""
+        contexto = ssl.create_default_context()
+        if self.ca_fichero:
+            contexto.load_verify_locations(cafile=self.ca_fichero)
+        return contexto
+
     def enviar(self, mensaje: Mensaje) -> None:
         with smtplib.SMTP(self.host, self.puerto, timeout=self.timeout) as servidor:
             servidor.ehlo()
@@ -106,7 +128,7 @@ class CorreoPorSmtp:
                     f"El servidor SMTP {self.host}:{self.puerto} no ofrece STARTTLS. "
                     f"No se envía en claro: el mensaje lleva un enlace de recuperación."
                 )
-            servidor.starttls()
+            servidor.starttls(context=self._contexto())
             servidor.ehlo()
             if self.usuario:
                 servidor.login(self.usuario, self.clave)
@@ -114,7 +136,13 @@ class CorreoPorSmtp:
 
 
 def construir(
-    *, host: str, puerto: int, remitente: str, usuario: str = "", clave: str = ""
+    *,
+    host: str,
+    puerto: int,
+    remitente: str,
+    usuario: str = "",
+    clave: str = "",
+    ca_fichero: str = "",
 ) -> Correo:
     """El adaptador que toca. Sin `SMTP_HOST` o sin remitente, no se envía nada.
 
@@ -125,5 +153,10 @@ def construir(
     if not host or not remitente:
         return CorreoALog()
     return CorreoPorSmtp(
-        host=host, puerto=puerto, remitente=remitente, usuario=usuario, clave=clave
+        host=host,
+        puerto=puerto,
+        remitente=remitente,
+        usuario=usuario,
+        clave=clave,
+        ca_fichero=ca_fichero,
     )

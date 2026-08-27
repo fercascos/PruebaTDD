@@ -133,5 +133,73 @@ run:  ## Arranca la API en local (como tdd_app: con la RLS en vigor)
 
 ci: catalogs-check no-fonts lint test  ## Lo que debe pasar antes de un push
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Entorno completo en contenedores
+#
+#  `make up` levanta base, almacén de objetos, correo, API, los dos workers y
+#  el frontend. La aplicación queda en http://localhost:8080 y el correo
+#  capturado en http://localhost:8025.
+# ─────────────────────────────────────────────────────────────────────────────
+
+COMPOSE ?= docker compose
+CERT_DIR ?= var/certificados-desarrollo
+
+# El SMTP de desarrollo tiene que ofrecer STARTTLS o la aplicación se niega a
+# enviar: el mensaje lleva un enlace de recuperación y no se manda en claro. Se
+# genera un certificado autofirmado para `correo`, y ese mismo fichero se le da
+# a la API como CA de confianza. Así el camino que se ejercita en local es el
+# de verdad —TLS **verificado**—, no una versión rebajada.
+#
+# `[REQ]` Es para desarrollo. No se versiona: `var/` está en `.gitignore`.
+certificados:  ## Certificado autofirmado del SMTP local (solo si falta)
+	@if [ ! -f "$(CERT_DIR)/correo.crt" ]; then \
+	  mkdir -p "$(CERT_DIR)"; \
+	  openssl req -x509 -newkey rsa:2048 -nodes -days 825 \
+	    -keyout "$(CERT_DIR)/correo.key" -out "$(CERT_DIR)/correo.crt" \
+	    -subj "/CN=correo" -addext "subjectAltName=DNS:correo,DNS:localhost" 2>/dev/null; \
+	  chmod 644 "$(CERT_DIR)/correo.key" "$(CERT_DIR)/correo.crt"; \
+	  echo "Certificado de desarrollo generado en $(CERT_DIR)."; \
+	fi
+
+up: certificados  ## Levanta el entorno completo en contenedores y espera a que responda
+	$(COMPOSE) up -d --build
+	@echo "Esperando a que la API responda…"
+	@for i in $$(seq 1 60); do \
+	  if curl -fsS http://localhost:$${PUERTO_API:-8000}/health >/dev/null 2>&1; then \
+	    echo "API viva."; break; \
+	  fi; \
+	  if [ $$i = 60 ]; then echo "La API no respondió en 60 s."; $(COMPOSE) ps; exit 1; fi; \
+	  sleep 1; \
+	done
+	@echo
+	@echo "  Aplicación   http://localhost:$${PUERTO_WEB:-8080}"
+	@echo "  API          http://localhost:$${PUERTO_API:-8000}/docs"
+	@echo "  Correo       http://localhost:$${PUERTO_CORREO_WEB:-8025}"
+	@echo "  Objetos      http://localhost:$${PUERTO_S3_CONSOLA:-9001}"
+	@echo
+	@echo "Siguiente paso: make up-admin ORG='...' EMAIL='...' NOMBRE='...'"
+
+down:  ## Para el entorno. Los datos siguen ahí (los volúmenes no se tocan)
+	$(COMPOSE) down
+
+destroy:  ## Para el entorno Y BORRA los volúmenes: base y objetos incluidos
+	$(COMPOSE) down --volumes
+
+logs:  ## Sigue los registros de todos los servicios
+	$(COMPOSE) logs -f
+
+ps:  ## Qué está levantado y con qué salud
+	$(COMPOSE) ps
+
+# Va por el servicio `preparar` y no por `api`, y con su DSN de ADMINISTRACIÓN.
+# El alta de la primera organización escribe filas que la RLS no deja escribir
+# a `tdd_app`: hacerlo desde el contenedor de la API falla con «new row
+# violates row-level security policy», que es señal de que la RLS funciona,
+# pero un mensaje pésimo para el primer arranque de alguien.
+up-admin:  ## Primera organización y su administrador, dentro del contenedor
+	$(COMPOSE) run --rm -it preparar sh -c \
+	  'python -m tdd.db.arranque --dsn "$$DATABASE_MIGRATION_URL" \
+	     --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"'
+
 .PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
-        test-catalogs lint fmt no-fonts run ci
+        test-catalogs lint fmt no-fonts run ci certificados up down destroy logs ps up-admin

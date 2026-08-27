@@ -1,0 +1,38 @@
+# Lo que NO entra en el contexto de construcción.
+#
+# No es solo por tamaño: `var/` puede contener fotografías subidas en local y
+# `.env` contiene secretos. Ninguna de las dos cosas debe acabar dentro de una
+# imagen que después se publica en un registro.
+.git
+.gitignore
+.env
+*.env
+!.env.example
+
+# Nunca: material subido en local.
+var/
+apps/api/var/
+
+# Dependencias y artefactos, que se reconstruyen dentro.
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# Documentación y herramientas de desarrollo: no las necesita ninguna imagen.
+docs/
+tools/
+apps/api/tests/
+apps/web/herramientas/
+
+# Tipografías. `make no-fonts` ya impide versionarlas; esto cierra también la
+# vía de que entren por el contexto de construcción sin pasar por git.
+*.otf
+*.ttf
+*.woff
+*.woff2

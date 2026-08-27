@@ -189,7 +189,12 @@ DOCUMENTOS: tuple[tuple[str, str], ...] = (
 
 def sembrar(api: Api) -> str:
     api.entrar()
-    cliente = api.get("/clients")[0]
+    # Sobre una instalación recién levantada no hay ningún cliente, y esto
+    # reventaba con un `IndexError` que no decía nada. Se crea el que hace
+    # falta: `[REQ]` §15 · con «Ficticia» en el nombre, para que al verlo en
+    # pantalla sea evidente que no es de nadie.
+    clientes = api.get("/clients")
+    cliente = clientes[0] if clientes else api.post("/clients", {"name": "Inversora Ficticia S.L."})
 
     proyecto = api.post(
         "/projects",

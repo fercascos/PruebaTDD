@@ -40,22 +40,39 @@ class Settings(BaseSettings):
     # que NO se ha enviado. Una aplicación recién desplegada sin SMTP no debe
     # fallar al pedir una recuperación —dejaría a la gente fuera sin saber por
     # qué— ni fingir que ha mandado un correo que nadie va a recibir.
-    # [LIM] El adaptador SMTP no se ha probado contra un servidor real.
+    # El adaptador SMTP se ha ejercitado contra un servidor real (Mailpit con
+    # STARTTLS): negocia TLS, **verifica el certificado** y entrega. [LIM] Un
+    # relé corporativo puede exigir autenticación o una CA propia: para eso
+    # están SMTP_USER/SMTP_PASSWORD y SMTP_CA_FILE, sin probar contra uno.
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = Field(default="", repr=False)
     mail_from: str = ""
+    #: `[REQ]` CA propia del relé de correo, si la tiene. Vacío = las CA
+    #: públicas del sistema. El certificado se verifica **siempre**: no hay
+    #: interruptor para desactivarlo, porque acabaría encendido en producción.
+    smtp_ca_file: str = ""
 
     # ── Almacenamiento de objetos ───────────────────────────────────────────
     # `disco` es el adaptador de desarrollo; `s3` el de producción, con Object
-    # Lock sobre los originales. [LIM] El de S3 está probado contra `moto`, un
-    # simulador: eso ejercita el código, no demuestra que un bucket concreto
-    # esté bien creado. Para eso está `AlmacenS3.comprobar()`, que corre contra
-    # el bucket real al arrancar.
+    # Lock sobre los originales. El de S3 se ha ejercitado contra un MinIO real:
+    # el almacén rechaza borrar la versión retenida de un original. [LIM] Eso
+    # verifica ESE bucket, no el adaptador en abstracto: contra un bucket de AWS
+    # hay que repetir `tools/comprobar_almacen.py` antes de darlo por bueno.
     storage_backend: Literal["disco", "s3"] = "disco"
     storage_local_dir: Path = Path("./var/objetos")
     storage_endpoint_url: str = ""
+    #: `[REQ]` El extremo por el que el **navegador** alcanza el almacén, cuando
+    #: no es el mismo por el que lo alcanza el servidor. Vacío = son el mismo.
+    #:
+    #: La URL firmada la usa el navegador, y la firma v4 cubre el `Host`: no
+    #: sirve reescribir la URL después, hay que firmarla ya contra el nombre
+    #: público. Sin esto, con MinIO en `compose` la rejilla de fotografías sale
+    #: vacía con `ERR_NAME_NOT_RESOLVED` y **el servidor no registra ningún
+    #: error**, porque desde su lado todo fue bien. Lo mismo pasa con S3 detrás
+    #: de un extremo privado de VPC.
+    storage_public_endpoint_url: str = ""
     storage_region: str = ""
     storage_bucket: str = ""
     storage_access_key_id: str = Field(default="", repr=False)

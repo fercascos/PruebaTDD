@@ -48,6 +48,11 @@ dist/
 # repositorio. Ver STORAGE_LOCAL_DIR en .env.example.
 apps/api/var/
 var/objetos/
+# `[REQ]` Certificado y CLAVE PRIVADA del SMTP de desarrollo, que genera
+# `make certificados`. Se regeneran solos; una clave privada no se versiona ni
+# aunque sea de mentira, porque el día que alguien copie el patrón para una de
+# verdad ya no habrá nada que lo pare.
+var/certificados-desarrollo/
 
 # ── Caché de compilación de TypeScript ───────────────────────────────────────
 *.tsbuildinfo

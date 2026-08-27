@@ -1,0 +1,266 @@
+# El entorno completo, con un comando: `make up`.
+#
+# `[REQ]` Es un entorno de DESARROLLO, no una plantilla de producción. Lo que
+# aporta —y por lo que existe— es que aquí se habla con un **S3 de verdad** y
+# con un **SMTP de verdad**, no con simuladores en proceso. Los dos adaptadores
+# estaban escritos y probados contra `moto` y contra memoria, es decir: nunca
+# habían escrito un objeto ni enviado un correo a nada externo.
+#
+# `[LIM]` Lo que aquí NO se resuelve, y hace falta para producción: TLS y
+# certificados, secretos fuera del fichero, copias de seguridad, límites de
+# recursos, y las tipografías corporativas montadas en la imagen de la API.
+
+name: tdd
+
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────────
+  base:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-desarrollo-sin-valor-real}
+      POSTGRES_DB: ${POSTGRES_DB:-tdd}
+    volumes:
+      - datos-base:/var/lib/postgresql/data
+    ports:
+      # Expuesto para poder mirar la base con `psql` desde el anfitrión. En un
+      # despliegue de verdad esto no se publica.
+      - "${PUERTO_BASE:-55433}:5432"
+    healthcheck:
+      # `pg_isready` sin más da «acepta conexiones» demasiado pronto durante la
+      # primera inicialización, cuando el servidor arranca, se para y vuelve a
+      # arrancar. Preguntar por la base concreta evita ese arranque en falso.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB:-tdd}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  # ── Almacén de objetos ────────────────────────────────────────────────────
+  objetos:
+    image: minio/minio:latest
+    command: server /datos --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY_ID:-minio-desarrollo}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_ACCESS_KEY:-minio-desarrollo-sin-valor-real}
+    volumes:
+      - datos-objetos:/datos
+    ports:
+      - "${PUERTO_S3:-9000}:9000"
+      - "${PUERTO_S3_CONSOLA:-9001}:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Crea el cubo **con Object Lock activado**. Tiene que ser al crearlo: S3 no
+  # permite activarlo después, y sin él la barrera WORM de §13 no existe aunque
+  # la aplicación pida retención en cada subida.
+  crear-cubo:
+    image: minio/mc:latest
+    depends_on:
+      objetos:
+        condition: service_healthy
+    environment:
+      CLAVE: ${STORAGE_ACCESS_KEY_ID:-minio-desarrollo}
+      SECRETO: ${STORAGE_SECRET_ACCESS_KEY:-minio-desarrollo-sin-valor-real}
+      CUBO: ${STORAGE_BUCKET:-tdd-evidencia}
+      # `[LIM]` Aquí NO se configura CORS, y no por olvido: esta versión de
+      # MinIO no implementa `PutBucketCors` —responde «functionality that is
+      # not implemented»— porque acepta cualquier origen por defecto. En un
+      # bucket de AWS **sí hay que configurarlo**, y ahí sí es un problema
+      # real: la API redirige bien, S3 devuelve el objeto, y el navegador se
+      # niega a entregárselo al JavaScript por falta de
+      # `Access-Control-Allow-Origin`. La rejilla sale vacía y el servidor no
+      # registra ni un error. `tools/comprobar_almacen.py` lo verifica contra
+      # el bucket que toque.
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set tdd http://objetos:9000 $$CLAVE $$SECRETO &&
+      (mc ls tdd/$$CUBO >/dev/null 2>&1 || mc mb --with-lock tdd/$$CUBO) &&
+      mc version enable tdd/$$CUBO &&
+      echo 'Cubo' $$CUBO 'listo, con Object Lock y versionado.'
+      "
+
+  # ── Correo ────────────────────────────────────────────────────────────────
+  # Mailpit habla SMTP de verdad y NO reenvía nada: captura todo y lo enseña en
+  # su interfaz web. Es lo que hace falta para ver el correo de recuperación de
+  # contraseña sin arriesgarse a mandarle nada a una dirección real.
+  correo:
+    image: axllent/mailpit:latest
+    environment:
+      # Con STARTTLS, porque la aplicación **se niega a enviar en claro** un
+      # mensaje que lleva un enlace de recuperación. Sin esto el buzón se queda
+      # vacío y la cola acumula reintentos: correcto, pero inútil para probar.
+      MP_SMTP_TLS_CERT: /certificados/correo.crt
+      MP_SMTP_TLS_KEY: /certificados/correo.key
+    volumes:
+      - ./var/certificados-desarrollo:/certificados:ro
+    ports:
+      - "${PUERTO_CORREO_WEB:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Preparación de la base ────────────────────────────────────────────────
+  # Migra, crea el rol de aplicación, le da permisos y siembra. Corre una vez y
+  # termina; la API espera a que termine BIEN.
+  preparar:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      args:
+        # Por omisión, la base ligera. Se puede cambiar a una imagen que ya
+        # traiga fontconfig si el entorno de construcción no llega a los
+        # repositorios de Debian.
+        BASE: ${BASE_API:-python:3.11-slim-bookworm}
+      secrets:
+        - ca_extra
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      DATABASE_MIGRATION_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD:-desarrollo-sin-valor-real}@base:5432/${POSTGRES_DB:-tdd}
+      APP_DB_USER: ${APP_DB_USER:-tdd_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-desarrollo-sin-valor-real}
+    command: ["python", "-m", "tdd.db.preparar"]
+    restart: "no"
+
+  # ── API ───────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      args:
+        # Por omisión, la base ligera. Se puede cambiar a una imagen que ya
+        # traiga fontconfig si el entorno de construcción no llega a los
+        # repositorios de Debian.
+        BASE: ${BASE_API:-python:3.11-slim-bookworm}
+      secrets:
+        - ca_extra
+    depends_on:
+      preparar:
+        condition: service_completed_successfully
+      objetos:
+        condition: service_healthy
+      correo:
+        condition: service_started
+    environment: &entorno-aplicacion
+      APP_ENV: local
+      # `[REQ]` Valor de desarrollo, evidentemente falso. En `staging` y
+      # `production` la configuración exige 32 caracteres como mínimo y esto no
+      # pasaría de ahí; los secretos de verdad no viven en un fichero del
+      # repositorio.
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-clave-de-desarrollo-sin-ningun-valor-real-0123456789}
+      APP_BASE_URL: http://localhost:${PUERTO_WEB:-8080}
+      DATABASE_URL: postgresql+psycopg://${APP_DB_USER:-tdd_app}:${APP_DB_PASSWORD:-desarrollo-sin-valor-real}@base:5432/${POSTGRES_DB:-tdd}
+      STORAGE_BACKEND: s3
+      STORAGE_ENDPOINT_URL: http://objetos:9000
+      # El navegador NO resuelve «objetos»: ese nombre solo existe dentro de la
+      # red de compose. La URL firmada tiene que nacer apuntando al puerto
+      # publicado en el anfitrión.
+      STORAGE_PUBLIC_ENDPOINT_URL: http://localhost:${PUERTO_S3:-9000}
+      STORAGE_REGION: us-east-1
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-tdd-evidencia}
+      STORAGE_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID:-minio-desarrollo}
+      STORAGE_SECRET_ACCESS_KEY: ${STORAGE_SECRET_ACCESS_KEY:-minio-desarrollo-sin-valor-real}
+      STORAGE_ENABLE_OBJECT_LOCK: "true"
+      SMTP_HOST: correo
+      SMTP_PORT: "1025"
+      # El certificado del SMTP local es autofirmado: se declara como CA. **No
+      # se desactiva la verificación**, que es lo que la haría inútil.
+      SMTP_CA_FILE: /certificados/correo.crt
+      MAIL_FROM: Due diligence <no-responder@ejemplo.example>
+      # `[LIM]` Sin antivirus: es una decisión tomada, no un olvido. Ninguna
+      # fotografía pasa por CUARENTENA mientras esto valga `false`.
+      ANTIVIRUS_ENABLED: "false"
+    volumes:
+      - ./var/certificados-desarrollo:/certificados:ro
+    ports:
+      - "${PUERTO_API:-8000}:8000"
+
+  # ── Workers ───────────────────────────────────────────────────────────────
+  # Dos procesos, uno por cola (E-10). Con uno solo, una tanda de informes
+  # dejaría esperando el correo de recuperación de alguien que no puede entrar.
+  worker-informes:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      args:
+        # Por omisión, la base ligera. Se puede cambiar a una imagen que ya
+        # traiga fontconfig si el entorno de construcción no llega a los
+        # repositorios de Debian.
+        BASE: ${BASE_API:-python:3.11-slim-bookworm}
+      secrets:
+        - ca_extra
+    depends_on:
+      preparar:
+        condition: service_completed_successfully
+      objetos:
+        condition: service_healthy
+    environment: *entorno-aplicacion
+    # La sonda de la imagen pregunta por el puerto 8000, que un worker no
+    # escucha: heredarla lo dejaría «unhealthy» para siempre. Que el proceso
+    # siga vivo ya lo vigila Docker, y si se cae lo reinicia.
+    healthcheck:
+      disable: true
+    command: ["python", "-m", "tdd.cola", "--cola", "heavy"]
+
+  worker-correo:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      args:
+        # Por omisión, la base ligera. Se puede cambiar a una imagen que ya
+        # traiga fontconfig si el entorno de construcción no llega a los
+        # repositorios de Debian.
+        BASE: ${BASE_API:-python:3.11-slim-bookworm}
+      secrets:
+        - ca_extra
+    depends_on:
+      preparar:
+        condition: service_completed_successfully
+      correo:
+        condition: service_started
+    environment: *entorno-aplicacion
+    # La sonda de la imagen pregunta por el puerto 8000, que un worker no
+    # escucha: heredarla lo dejaría «unhealthy» para siempre. Que el proceso
+    # siga vivo ya lo vigila Docker, y si se cae lo reinicia.
+    healthcheck:
+      disable: true
+    volumes:
+      - ./var/certificados-desarrollo:/certificados:ro
+    command: ["python", "-m", "tdd.cola", "--cola", "io"]
+
+  # ── Frontend ──────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      secrets:
+        - ca_extra
+    environment:
+      # Dónde está la API y con qué DNS se resuelve. nginx la resuelve en cada
+      # petición, así que recrear el contenedor de la API no deja el frontend
+      # devolviendo 502 hasta que alguien reinicie nginx.
+      API_UPSTREAM: api:8000
+      DNS_RESOLVER: 127.0.0.11
+    depends_on:
+      api:
+        condition: service_started
+    ports:
+      - "${PUERTO_WEB:-8080}:80"
+
+volumes:
+  datos-base:
+  datos-objetos:
+
+# Certificado de una intercepción TLS corporativa, si la hay. Por omisión
+# apunta a `/dev/null`: el fichero existe, mide cero, y las recetas comprueban
+# el tamaño antes de instalarlo, así que sin configurar nada no ocurre nada.
+#
+#     CA_EXTRA=/ruta/ca-corporativa.crt make up
+secrets:
+  ca_extra:
+    file: ${CA_EXTRA:-/dev/null}

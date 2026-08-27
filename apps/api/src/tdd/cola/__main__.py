@@ -64,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
             remitente=settings.mail_from,
             usuario=settings.smtp_user,
             clave=settings.smtp_password,
+            ca_fichero=settings.smtp_ca_file,
         ),
     )
     registrar_todas()

@@ -8,9 +8,11 @@ el mensaje construido, no que su proveedor lo acepte.
 from __future__ import annotations
 
 import asyncio
+import ssl
 import threading
 from email import message_from_bytes
 from email.policy import default as politica_moderna
+from pathlib import Path
 
 import pytest
 
@@ -177,3 +179,41 @@ def test_no_se_usa_asyncio_por_error() -> None:
     """El adaptador es síncrono a propósito: se llama desde un endpoint
     síncrono, que FastAPI ya ejecuta en su pool de hilos."""
     assert not asyncio.iscoroutinefunction(CorreoPorSmtp.enviar)
+
+
+def test_el_certificado_del_servidor_se_verifica() -> None:
+    """`[REQ]` Cifrar sin autenticar protege de la mitad del problema.
+
+    `smtplib.starttls()` **sin contexto** usa uno de biblioteca con
+    `check_hostname=False` y `verify_mode=CERT_NONE`: quien esté en medio
+    presenta cualquier certificado, el cliente lo acepta, y el enlace de
+    recuperación viaja cifrado hacia el atacante. Era lo que hacía este
+    adaptador.
+
+    Se comprueba sobre el contexto y no negociando TLS de verdad porque lo que
+    puede volver a romperse es exactamente esto: que alguien llame a
+    `starttls()` sin pasarle un contexto.
+    """
+    contexto = CorreoPorSmtp(
+        host="smtp.interno", puerto=587, remitente="tdd@ejemplo.example"
+    )._contexto()  # noqa: SLF001
+    assert contexto.verify_mode == ssl.CERT_REQUIRED
+    assert contexto.check_hostname is True
+
+
+def test_una_ca_propia_se_anade_a_las_del_sistema(tmp_path: Path) -> None:
+    """Un relé corporativo con su propia CA se declara, no se deja de verificar."""
+    # Un PEM que no es un certificado: basta con que `load_verify_locations`
+    # lo intente para saber que la ruta se usa.
+    ca = tmp_path / "ca.crt"
+    ca.write_text("-----BEGIN CERTIFICATE-----\nno soy un certificado\n-----END CERTIFICATE-----\n")
+    adaptador = CorreoPorSmtp(
+        host="smtp.interno", puerto=587, remitente="tdd@ejemplo.example", ca_fichero=str(ca)
+    )
+    with pytest.raises(ssl.SSLError):
+        adaptador._contexto()  # noqa: SLF001
+
+    # Y sin CA declarada, el contexto se construye sin tocar nada del sistema.
+    assert CorreoPorSmtp(
+        host="smtp.interno", puerto=587, remitente="tdd@ejemplo.example"
+    )._contexto()  # noqa: SLF001

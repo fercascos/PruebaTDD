@@ -1,0 +1,170 @@
+# Las puertas del plan (§19.12), ejecutándose de verdad.
+#
+# Regla que se sigue aquí: **cada paso es un objetivo del `Makefile`**. Lo que
+# corre en CI es exactamente lo que cualquiera puede correr en su portátil, así
+# que un fallo de CI se reproduce con una orden y no con una arqueología de
+# ficheros YAML.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Un push nuevo sobre la misma rama cancela el anterior: la respuesta que
+# importa es la de la última versión, no la de hace tres commits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  estatico:
+    name: Estático · ruff, mypy, catálogos, tipografías
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e "apps/api[dev]"
+
+      - name: Formato y reglas (ruff)
+        run: make lint
+
+      # `strict = true` lleva desde el principio en `pyproject.toml` y la
+      # documentación lo llama puerta bloqueante, pero `make lint` solo
+      # ejecutaba ruff: el tipado no se comprobaba en ningún sitio.
+      - name: Tipado estricto (mypy)
+        run: make typecheck
+
+      # Los CSV de catálogos se generan del documento de diseño. Si alguien
+      # edita uno de los dos y no el otro, la semilla y la especificación dejan
+      # de coincidir y nadie se entera hasta que falta un código en pantalla.
+      - name: Catálogos al día
+        run: make catalogs-check
+
+      # `[REQ]` Gotham es comercial. Que no entre al repositorio ni por
+      # descuido ni por un `git add .`.
+      - name: Sin tipografías versionadas
+        run: make no-fonts
+
+  api:
+    name: API · 1.100 pruebas contra PostgreSQL real
+    runs-on: ubuntu-latest
+    services:
+      # PostgreSQL de verdad, no un doble: lo que más valor tiene de esta suite
+      # son las políticas RLS, los CHECK, los disparadores y las columnas
+      # generadas, y nada de eso existe fuera de PostgreSQL.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -e "apps/api[dev]"
+
+      # El rol de aplicación **sin BYPASSRLS**: es lo que hace que las pruebas
+      # de aislamiento signifiquen algo. Con un superusuario pasarían todas y no
+      # demostrarían nada.
+      - name: Base y rol de aplicación
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE DATABASE tdd_test;" \
+            -c "CREATE ROLE tdd_app LOGIN PASSWORD 'prueba-local-sin-valor-real';"
+
+      - name: Suite completa
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/tdd_test
+        run: make test
+
+  web:
+    name: Web · tipos, vitest y construcción
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      # `npm ci` si hay fichero de bloqueo. Sin él no hay reproducibilidad y una
+      # dependencia puede cambiar sola entre dos ejecuciones.
+      - run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      # Chromium pesa 150 MB y aquí no se usa: las comprobaciones de navegador
+      # necesitan la aplicación en marcha y no corren en este trabajo.
+      - name: Tipos
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm run lint
+
+      - name: Pruebas unitarias
+        run: npm test
+
+      # Construir es una puerta, no un trámite: el service worker se genera en
+      # la construcción y un fallo ahí solo se ve aquí.
+      - name: Construcción
+        run: npm run build
+
+  imagenes:
+    name: Imágenes · que se construyan de verdad
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      # Con las bases por omisión —`python:3.11-slim-bookworm`—, que es lo que
+      # se despliega. Es el único sitio donde se ejercita la instalación de
+      # `fontconfig`, que la base ligera no trae.
+      - name: Imagen de la API y del worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/api.Dockerfile
+          push: false
+          load: true
+          tags: tdd-api:ci
+
+      - name: Imagen del frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/web.Dockerfile
+          push: false
+          load: true
+          tags: tdd-web:ci
+
+      # Que construya no basta: tiene que arrancar y encontrar sus catálogos.
+      # `data/catalogos` se localiza contando directorios hacia arriba, así que
+      # un cambio de disposición dentro de la imagen lo rompe sin que ninguna
+      # prueba de Python se entere.
+      - name: La imagen arranca y encuentra lo suyo
+        run: |
+          docker run --rm tdd-api:ci python -c "
+          import tdd.main, tdd.cola, tdd.db.preparar
+          from tdd.catalogs.seeding import CATALOGOS
+          csv = list(CATALOGOS.glob('*.csv'))
+          assert csv, f'sin catálogos en {CATALOGOS}'
+          print(f'{len(csv)} catálogos en {CATALOGOS}')
+          "
+          docker run --rm tdd-api:ci sh -c 'fc-match --version && id -un'
