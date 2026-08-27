@@ -41,6 +41,40 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 | 5 | **El precio es un dato con procedencia** | Fuente, URL, fecha de consulta, ámbito, alcance incluido y excluido, tratamiento fiscal, y el usuario que lo validó. Ningún proceso automático valida un precio |
 | 6 | **La tabla de CAPEX se diseña una sola vez** | La tabla nativa del informe y la hoja `CAPEX` del Excel exportado salen de la **misma estructura intermedia**. Añadir una columna en un solo sitio hace fallar la suite. Sin esa pieza, en seis meses el PPTX y el Excel que viajan en el mismo correo tendrían columnas distintas |
 
+## Levantarlo entero, con un comando
+
+```bash
+make up                                     # base, objetos, correo, API, workers y frontend
+make up-admin ORG='Consultora Ejemplo' EMAIL='admin@ejemplo.example' NOMBRE='Nombre Apellido'
+```
+
+| | |
+|---|---|
+| Aplicación | http://localhost:8080 |
+| API | http://localhost:8000/docs |
+| Correo capturado | http://localhost:8025 |
+| Almacén de objetos | http://localhost:9001 |
+
+`make down` para, `make destroy` borra también los volúmenes, `make logs` sigue los registros.
+
+Lo que este entorno aporta —y por lo que existe— es que aquí se habla con un **S3 de verdad**
+(MinIO con Object Lock) y con un **SMTP de verdad** (Mailpit con STARTTLS). Los dos adaptadores
+estaban escritos y probados contra simuladores en proceso; sacarlos de ahí destapó cinco defectos
+reales, entre ellos que la rejilla de fotografías salía vacía con S3 y que nginx dejaba la
+aplicación en `502` después de cada despliegue de la API.
+
+**Antes de dar por buena una instalación**, contra el bucket de verdad:
+
+```bash
+python3 tools/comprobar_almacen.py --escribir   # versionado, Object Lock, CORS y borrado
+```
+
+`[LIM]` Lo que el `compose` **no** resuelve y hace falta para producción: TLS de entrada, secretos
+fuera del fichero, copias de seguridad, límites de recursos y las tipografías corporativas
+—comerciales, no van en la imagen—. Está declarado en `compose.yml`.
+
+---
+
 ## Arquitectura en una frase
 
 Monolito modular en **Python/FastAPI** sobre **PostgreSQL 16** con *Row Level Security* por
