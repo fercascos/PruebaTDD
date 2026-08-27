@@ -31,6 +31,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from tdd.cola import Cola, ColaEnPostgres, Tarea, TareaPendiente, espera_tras
+from tdd.core import metricas, observabilidad
 from tdd.core.db import ContextoRLS, aplicar_contexto
 
 log = logging.getLogger("tdd.worker")
@@ -111,6 +112,13 @@ def una_vuelta(
     # trabajo tarde: si no, otro worker la cogería otra vez.
     s.commit()
 
+    # Se recupera la traza de la petición que la encargó. A partir de aquí todo
+    # lo que se registre —incluido lo que escriban los manejadores— sale con el
+    # mismo identificador que la petición original, aunque hayan pasado minutos
+    # y estemos en otro proceso. Es la correlación entera del sistema.
+    testigo = observabilidad.peticion_actual.set(tarea.request_id or f"tarea-{tarea.id.hex[:12]}")
+    comienzo = time.perf_counter()
+
     try:
         manejador = _MANEJADORES.get(tarea.kind)
         if manejador is None:
@@ -129,6 +137,14 @@ def una_vuelta(
         manejador(s, tarea, recursos)
         cc.hecha(s, tarea.id)
         s.commit()
+        log.info(
+            "Tarea %s (%s) hecha en %.1f s",
+            tarea.id,
+            tarea.kind,
+            time.perf_counter() - comienzo,
+            extra={"tarea": str(tarea.id), "tipo": str(tarea.kind), "resultado": "hecha"},
+        )
+        metricas.TAREAS.labels(tipo=str(tarea.kind), resultado="hecha").inc()
         return Resultado(tarea=tarea, ok=True)
 
     except Exception as exc:  # noqa: BLE001 — una tarea rota no tumba el worker
@@ -137,10 +153,35 @@ def una_vuelta(
         # envenenada y no se guardaría tampoco.
         s.rollback()
         motivo = f"{type(exc).__name__}: {exc}"
-        log.warning("Tarea %s (%s) falló: %s", tarea.id, tarea.kind, motivo)
+        # `exception` y no `warning`: sin la traza, un fallo en la generación de
+        # un informe deja un mensaje de una línea y ninguna forma de saber en
+        # qué diapositiva se rompió.
+        log.exception(
+            "Tarea %s (%s) falló (intento %s de %s)",
+            tarea.id,
+            tarea.kind,
+            tarea.attempts,
+            tarea.max_attempts,
+            extra={
+                "tarea": str(tarea.id),
+                "tipo": str(tarea.kind),
+                "resultado": "fallida" if tarea.es_ultimo_intento else "reintenta",
+                "intento": tarea.attempts,
+            },
+        )
         cc.fallada(s, tarea.id, error=motivo, espera=espera_tras(tarea.attempts))
         s.commit()
+        metricas.TAREAS.labels(
+            tipo=str(tarea.kind),
+            resultado="fallida" if tarea.es_ultimo_intento else "reintenta",
+        ).inc()
         return Resultado(tarea=tarea, ok=False, error=motivo)
+
+    finally:
+        # Se devuelve el contexto a como estaba: el bucle del worker atiende una
+        # tarea tras otra en el mismo hilo, y sin esto la traza de una se
+        # quedaría pegada a la siguiente.
+        observabilidad.peticion_actual.reset(testigo)
 
 
 def vaciar(

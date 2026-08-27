@@ -32,6 +32,8 @@ dependencies = [
     # Adaptador de almacenamiento S3. Solo se importa si STORAGE_BACKEND=s3:
     # con el adaptador sobre disco la aplicación arranca sin tocarlo.
     "boto3>=1.34",
+    # Métricas. Pequeña y sin dependencias propias: expone `/metrics` y ya.
+    "prometheus-client>=0.20",
 ]
 
 [project.optional-dependencies]

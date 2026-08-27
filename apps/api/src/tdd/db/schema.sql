@@ -1869,6 +1869,12 @@ CREATE TABLE job (
     last_error       TEXT,
 
     created_by       UUID REFERENCES app_user(id),
+    -- La petición que la encargó. Es la correlación que hace falta para operar
+    -- esto: un informe se pide en una petición y se genera minutos después en
+    -- otro proceso, así que sin esto «el informe de las 11:04 salió mal» no se
+    -- puede atar a nada. Es texto y no UUID a propósito: puede venir del
+    -- balanceador con el formato que él use.
+    request_id       TEXT,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
     started_at       TIMESTAMPTZ,
     finished_at      TIMESTAMPTZ,

@@ -25,6 +25,7 @@ from types import FrameType
 from tdd.cola import Cola
 from tdd.cola import worker as w
 from tdd.cola.tareas import Recursos, registrar_todas
+from tdd.core import observabilidad
 from tdd.core.config import get_settings
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
 from tdd.evidence import storage
@@ -48,8 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = get_settings()
+    # El MISMO formato que la API. Es lo que permite mirar los dos flujos
+    # juntos: la petición que pidió el informe y la tarea que lo generó llevan
+    # el mismo identificador, y con formatos distintos no se podrían cruzar.
+    observabilidad.configurar(entorno=settings.app_env, nivel=settings.log_level)
     if not settings.database_url:
         print("DATABASE_URL no está definida.", file=sys.stderr)
         return 2

@@ -158,6 +158,25 @@ requisito de accesibilidad y el de usabilidad en campo apuntan en la misma direc
 | O-9 | Sondas | `/health` y `/ready` diferenciadas | REC |
 | O-10 | Diagnóstico de un fallo reportado | < 30 min desde el `request_id` | REC |
 
+### Qué de esto está construido
+
+| # | Estado | Dónde |
+|---|---|---|
+| O-2 · Correlación | **Hecho.** `X-Request-Id` entra o se genera, viaja en el contexto, se guarda en `job.request_id` y el worker lo restaura: una petición y la tarea que encargó salen con el mismo identificador aunque las separen minutos y dos procesos | `core/observabilidad.py` |
+| O-3 · Logs | **Hecho.** Texto en `local`, JSON fuera. Identificadores, nunca datos personales | `core/observabilidad.py` |
+| O-4 · Métricas técnicas | **Hecho** en lo técnico: peticiones y latencia por ruta y estado, tareas por tipo y resultado, y profundidad y antigüedad de cada cola | `core/metricas.py`, `/metrics` |
+| O-9 · Sondas | **Hecho.** `/health` no mira la base a propósito —si PostgreSQL se cae, reiniciar la API no arregla nada—; `/ready` comprueba base y almacén y dice **cuál** falla | `main.py` |
+| O-10 · Diagnóstico | **Posible ya**: el `500` devuelve su `request_id` al cliente, en el cuerpo y en la cabecera, y registra la traza completa con ese mismo identificador | `main.py` |
+| O-1 · Trazas distribuidas | `[LIM]` **No.** Con dos procesos y una base, el `request_id` cubre el único salto que hay. OpenTelemetry sería lo siguiente |
+| O-5 · Métricas de negocio | `[LIM]` **No.** Las técnicas dicen si el sistema funciona; estas dirían si se está usando como se diseñó, y son las que hay que añadir con datos reales delante |
+| O-6 · Alertas | `[LIM]` **No.** Las métricas están; las reglas dependen del sistema de alerta que se elija |
+| O-7, O-8 · Retención | `[LIM]` **No.** Depende de dónde se envíen los registros |
+
+> **Lo que había antes, dicho con todas las letras:** el manejador de `500` documentaba que «el
+> detalle técnico va al log, correlacionado por `X-Request-Id`» y **descartaba la excepción entera**.
+> No existía ni el identificador ni el registro. Un error en producción no dejaba nada que mirar, y
+> es la clase de cosa que solo se descubre el día que hay que mirarlo.
+
 `[REC]` Dos métricas de O-5 merecen atención: **«avisos bloqueantes por informe generado»** indica si
 el contrato de plantilla funciona —si sube, el problema está en las plantillas, no en el código—; y
 **«líneas con precio sin validar»** es el indicador operativo que revela si el equipo está usando la

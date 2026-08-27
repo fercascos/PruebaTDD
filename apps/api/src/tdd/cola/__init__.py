@@ -26,6 +26,8 @@ from typing import Any, Protocol
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import observabilidad
+
 
 class Cola(StrEnum):
     """`[REQ]` E-10 · Colas separadas, para que una no retrase a la otra.
@@ -86,6 +88,10 @@ class TareaPendiente:
     payload: dict[str, Any] = field(default_factory=dict)
     attempts: int = 1
     max_attempts: int = 3
+    #: La petición HTTP que la encargó, si vino de una. El worker la restaura
+    #: en su contexto de registro: así todo lo que se escriba mientras se
+    #: ejecuta la tarea sale con la misma traza que la petición original.
+    request_id: str = ""
 
     @property
     def es_ultimo_intento(self) -> bool:
@@ -128,13 +134,18 @@ class ColaEnPostgres:
             str(
                 s.execute(
                     text(
-                        "INSERT INTO job (organization_id, kind, queue, payload, created_by) "
-                        "VALUES (:o, :k, :q, CAST(:p AS jsonb), :u) RETURNING id"
+                        "INSERT INTO job (organization_id, kind, queue, payload, created_by, "
+                        "request_id) "
+                        "VALUES (:o, :k, :q, CAST(:p AS jsonb), :u, :t) RETURNING id"
                     ),
                     {
                         "o": str(organization_id),
                         "k": kind.value,
                         "q": COLA_DE[kind].value,
+                        # De dónde vino. Se toma del contexto en vez de pedirla
+                        # por parámetro: obligaría a arrastrarla por media
+                        # docena de firmas y alguien acabaría no pasándola.
+                        "t": observabilidad.id_de_peticion() or None,
                         "p": json.dumps(payload, ensure_ascii=False, default=str),
                         "u": str(created_by),
                     },
@@ -172,6 +183,7 @@ class ColaEnPostgres:
             payload=dict(fila["payload"] or {}),
             attempts=int(fila["attempts"]),
             max_attempts=int(fila["max_attempts"]),
+            request_id=str(fila["request_id"] or ""),
         )
 
     def hecha(self, s: Session, job_id: uuid.UUID) -> None:

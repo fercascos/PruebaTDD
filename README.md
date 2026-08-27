@@ -69,6 +69,18 @@ aplicación en `502` después de cada despliegue de la API.
 python3 tools/comprobar_almacen.py --escribir   # versionado, Object Lock, CORS y borrado
 ```
 
+**Cuando algo falle**, el error que ve el usuario lleva su identificador:
+
+```json
+{"title": "Error interno", "status": 500, "request_id": "3f2a9c…"}
+```
+
+Ese mismo identificador está en el registro con la traza completa, y —si la petición encargó una
+tarea— en `job.request_id` y en las líneas del worker, aunque lo haya generado otro proceso cinco
+minutos después. `/metrics` da peticiones, latencias y **la profundidad de la cola**, que es lo que
+avisa de que el worker ha muerto: la interfaz sigue respondiendo rápido y lo único que se notaría es
+que los informes «tardan».
+
 `[LIM]` Lo que el `compose` **no** resuelve y hace falta para producción: TLS de entrada, secretos
 fuera del fichero, copias de seguridad, límites de recursos y las tipografías corporativas
 —comerciales, no van en la imagen—. Está declarado en `compose.yml`.
