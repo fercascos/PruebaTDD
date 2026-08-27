@@ -128,6 +128,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[18](docs/18-analisis-plantillas-reales.md)** | **Análisis de las 4 plantillas PPTX reales** · corrige el bloque 4 | 17 (rev.) |
 | **[19](docs/19-sugerencias.md)** | **Módulo de Sugerencias** · propuestas de usuario visibles solo para administradores | añadido |
 | **[20](docs/20-poc-pptx.md)** | **Prueba de concepto del bloque 4** · resultados medidos, y lo que corrigen | añadido |
+| **[20b](docs/18-analisis-plantillas-reales.md#generación-a-volumen-con-las-tipografías-puestas)** | **Generación a volumen medida** · 105 diapositivas en 3,1 s, y las tres cosas que solo se ven a ese tamaño | añadido |
 | **[21](docs/21-bucket-s3.md)** | **El bucket de S3** · cómo crearlo y los permisos exactos del rol. Sin ejecutar contra AWS todavía | añadido |
 | **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 | **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |

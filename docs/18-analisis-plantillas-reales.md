@@ -681,3 +681,45 @@ Consecuencias:
 5. **Preparar `A_ES` como plantilla piloto**: 35 marcadores y 28 directivas, ~1,5 jornadas.
 6. Incorporar las cuatro plantillas al **corpus de pruebas** como T21-T24, sustituyendo a las
    plantillas sintéticas que se habían previsto para lo que ahora está cubierto por las reales.
+
+---
+
+## Generación a volumen, con las tipografías puestas
+
+`[REQ]` §20.5 · Medido el 27 de agosto de 2026 con `tools/prueba_de_volumen.py`, sobre la plantilla
+**A_ES** real y con las **seis Gotham instaladas** en el sistema.
+
+| | |
+|---|---|
+| Entrada | 3 activos · 40 hallazgos · 60 líneas · 35 fotografías |
+| **Diapositivas** | **105** (la plantilla trae 67) — el criterio pedía ≥ 40 |
+| De ellas, de tabla CAPEX | 3 |
+| Fotografías insertadas | 35 de 35 |
+| **Tiempo** | **3,1 s** |
+| Tamaño PPTX | 8,8 MB |
+| Tamaño XLSX | 146 KB |
+| Marcas de agua retiradas | 1 |
+| **Marcadores sin resolver** | **6** — ver abajo |
+| Desbordamientos de texto | 0 |
+
+**Tres cosas que solo se ven a este tamaño.**
+
+**1 · Seis marcadores sin resolver, y son los que importan.** `system.name`, `system.description`,
+`system.assessment` y sus gemelos `system2.*`. Son las diapositivas de valoración por sistema
+técnico, y **el sistema no tiene dónde guardar ese texto**. El informe no imprime `{{...}}` —se
+comprobó buscándolo en el XML del fichero generado, y no aparece ninguno— pero esas diapositivas
+salen con el hueco vacío. Es la pieza que falta del bloque 4.
+
+**2 · La hoja de CAPEX del cliente describe UN activo.** Con tres, dos se quedan fuera de la cabecera
+de datos del edificio aunque sus actuaciones sí salgan en las filas. La aplicación lo avisa por su
+nombre; no lo arregla, porque arreglarlo es rediseñar la hoja del cliente.
+
+**3 · El aviso de desbordamiento no llegaba al informe.** `overflow.py` estaba construido, medido con
+la Gotham real y probado… y **no lo llamaba nadie**. Ahora el generador mide cada marco que recibe
+texto, con la familia y el cuerpo que declara la propia forma —`Gotham Light` para el cuerpo,
+`Gotham Ultra` para los titulares—, y devuelve los avisos con el informe.
+
+`[LIM]` Hoy ese aviso **no puede saltar en un informe real**, y no porque falle: los 16 marcadores
+que el sistema rellena llevan textos de 37 caracteres como mucho. El texto largo iría en los
+`system.*` del punto 1, que están sin rellenar. Cuando esa pieza se construya, la medición ya estará
+esperándola.

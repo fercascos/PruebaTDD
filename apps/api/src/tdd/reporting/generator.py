@@ -45,6 +45,11 @@ class ResultadoDeGeneracion:
     diapositivas_de_tabla: int
     marcadores_sin_resolver: list[str] = field(default_factory=list)
     marcas_de_agua_retiradas: list[str] = field(default_factory=list)
+    #: `[REQ]` Textos que probablemente no caben en su marco, medidos con la
+    #: tipografía **real** de la plantilla. Vacío si las corporativas no están
+    #: instaladas: sin ellas el módulo prefiere callarse antes que medir con una
+    #: sustituta y dar un número inventado.
+    desbordamientos: list[str] = field(default_factory=list)
     fotos_insertadas: int = 0
     totales: dict[str, Decimal] = field(default_factory=dict)
     #: Lo que la hoja del cliente no puede representar de este encargo: tiene
@@ -185,6 +190,62 @@ def _hueco_libre(
     )
 
 
+def _evaluar_marco(forma: Any) -> str | None:
+    """El aviso de desbordamiento de una forma, o `None` si cabe o no se sabe.
+
+    La familia sale de la propia forma, no de una constante: la plantilla del
+    cliente usa `Gotham Light` para el texto corrido y `Gotham Ultra` para los
+    titulares, y medir un titular con las métricas del cuerpo daría un número
+    que no significa nada.
+    """
+    from tdd.reporting.overflow import capacidad_del_marco
+    from tdd.reporting.overflow import evaluar as evaluar_marco
+
+    marco = getattr(forma, "text_frame", None)
+    if marco is None:
+        return None
+    texto = marco.text
+    if not texto.strip():
+        return None
+
+    # Sin tamaño no hay marco que medir: pasa con las formas heredadas del
+    # patrón, que toman su geometría de la disposición.
+    if not forma.width or not forma.height:
+        return None
+
+    familia, cuerpo = _tipografia_de(marco)
+    if familia is None:
+        return None
+
+    capacidad = capacidad_del_marco(
+        ancho_in=Emu(forma.width).inches,
+        alto_in=Emu(forma.height).inches,
+        cuerpo_pt=cuerpo,
+        familia=familia,
+    )
+    # `fuente_real` es la condición, no un detalle: si la familia no está
+    # instalada, `capacidad` viene de una heurística y avisar con ella sería
+    # dar un número inventado con aspecto de medición.
+    if not capacidad.fuente_real:
+        return None
+
+    aviso = evaluar_marco(texto, capacidad)
+    if aviso.severidad == "OK":
+        return None
+    return f"«{texto[:40].strip()}…» · {aviso.mensaje}"
+
+
+def _tipografia_de(marco: Any) -> tuple[str | None, float]:
+    """Familia y cuerpo del primer `run` con formato explícito."""
+    for parrafo in marco.paragraphs:
+        for run in parrafo.runs:
+            nombre = run.font.name
+            if nombre:
+                cuerpo = run.font.size.pt if run.font.size else 10.0
+                return nombre, float(cuerpo)
+    return None, 10.0
+
+
 def generar(
     plantilla: bytes,
     snapshot: dict[str, Any],
@@ -210,8 +271,22 @@ def generar(
     # 1 · Marcadores, en todas las diapositivas que los tengan.
     valores = valores_de_marcadores(snapshot)
     sin_resolver: list[str] = []
+    desbordamientos: list[str] = []
+
+    def _medir(forma: Any) -> None:
+        """¿Cabe lo que acaba de entrar en este marco?
+
+        Estaba todo construido —`overflow.py`, las métricas reales, sus pruebas
+        unitarias— y **no lo llamaba nadie**: el aviso de desbordamiento no se
+        emitía jamás sobre un informe de verdad. El consultor se enteraba
+        abriendo el PPTX, o el cliente.
+        """
+        aviso = _evaluar_marco(forma)
+        if aviso is not None:
+            desbordamientos.append(aviso)
+
     for slide in prs.slides:
-        sin_resolver += sustituir_marcadores(slide, valores)
+        sin_resolver += sustituir_marcadores(slide, valores, medir=_medir)
 
     # 2 · Tabla nativa de CAPEX, partida si hace falta.
     layout = cl.construir(lineas_de_capex(snapshot), capitulo="CAPEX", locale=locale)

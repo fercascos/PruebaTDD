@@ -10,13 +10,18 @@ from __future__ import annotations
 
 import copy
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from pptx.presentation import Presentation as Presentacion
 from pptx.slide import Slide
 
 MARCADOR = re.compile(r"\{\{([a-zA-Z0-9_.|:# ]+)\}\}")
+
+#: Qué se hace con una forma cuyo texto acaba de sustituirse. Se pasa desde
+#: fuera para que este módulo no dependa del que mide: aquí solo se sabe QUÉ
+#: formas han recibido texto, que es la mitad que falta.
+Medidor = Callable[[Any], None]
 
 
 def clonar_diapositiva(prs: Presentacion, origen: Slide) -> Slide:
@@ -76,15 +81,22 @@ def _runs_de(forma: Any) -> Iterator[Any]:
     yield from forma.text_frame.paragraphs
 
 
-def sustituir_marcadores(slide: Slide, valores: dict[str, str]) -> list[str]:
+def sustituir_marcadores(
+    slide: Slide, valores: dict[str, str], *, medir: Medidor | None = None
+) -> list[str]:
     """Sustituye `{{clave}}` conservando el formato. Devuelve los no resueltos.
 
     PowerPoint parte un marcador entre varios `run` con pasmosa facilidad —basta
     con que alguien corrigiera una letra al escribirlo—. Por eso se opera sobre
     el texto del párrafo completo y se vuelca en el primer `run`, que es el que
     lleva el formato bueno.
+
+    `medir` recibe **cada forma con su texto ya sustituido**. Es el único punto
+    donde se sabe a la vez cuánto texto ha entrado y en qué marco: después ya no
+    se puede saber, porque el marcador ha desaparecido.
     """
     sin_resolver: list[str] = []
+    tocadas: dict[int, Any] = {}
     for forma in slide.shapes:
         for parrafo in _runs_de(forma):
             runs = parrafo.runs
@@ -107,6 +119,13 @@ def sustituir_marcadores(slide: Slide, valores: dict[str, str]) -> list[str]:
             runs[0].text = nuevo
             for r in runs[1:]:
                 r.text = ""
+            # Se apunta la forma, no el párrafo: lo que desborda es el marco
+            # entero, y un marco puede llevar varios párrafos.
+            tocadas[id(forma)] = forma
+
+    if medir is not None:
+        for forma in tocadas.values():
+            medir(forma)
     return sin_resolver
 
 

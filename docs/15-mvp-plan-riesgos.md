@@ -70,9 +70,13 @@ Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entreg
 Con datos ficticios y sobre una plantilla PPTX real del cliente:
 
 - [ ] Un consultor completa los flujos E1-E9 de [`14-pruebas.md`](./14-pruebas.md) §19.10 sin bloqueos.
-- [ ] Se genera un informe de ≥ 40 diapositivas con 3 activos, 40 hallazgos, 60 líneas y 35
-      fotografías, y **un consultor lo considera entregable con retoques menores** (≥ 90 % de
-      diapositivas sin retocar) `[SUP]`.
+- [x] ~~Se genera un informe de ≥ 40 diapositivas con 3 activos, 40 hallazgos, 60 líneas y 35
+      fotografías~~ **Medido**: 105 diapositivas en 3,1 s, 8,8 MB, las 35 fotografías insertadas,
+      sobre una plantilla real del cliente y con las seis Gotham instaladas
+      (`tools/prueba_de_volumen.py`).
+- [ ] …y **un consultor lo considera entregable con retoques menores** (≥ 90 % de diapositivas sin
+      retocar) `[SUP]`. **Sigue pendiente**: lo decide una persona abriendo el fichero en
+      PowerPoint, y hay un motivo concreto para que hoy no lo pasaría, abajo.
 - [ ] El hash del original de cada plantilla y fotografía es idéntico al de subida tras 100
       renombrados y 20 generaciones.
 - [ ] Las **86 combinaciones** zona × tipología se comportan según la matriz, y un cambio de tipología
@@ -81,6 +85,18 @@ Con datos ficticios y sobre una plantilla PPTX real del cliente:
       exactamente con el total del proyecto en las 10 vistas agregadas.
 - [ ] Las fases derivadas reflejan el trabajo real y no son marcables a mano.
 - [ ] La suite completa está verde, con las puertas de cobertura por módulo cumplidas.
+
+> **Lo que la prueba de volumen destapó, y hay que resolver antes de enseñárselo a un consultor.**
+>
+> Las diapositivas de sistema de la plantilla llevan seis marcadores —`system.name`,
+> `system.description`, `system.assessment` y sus gemelos `system2.*`— que **el sistema no rellena**:
+> no hay dónde escribir la valoración por sistema técnico. El informe **no imprime `{{...}}`** —eso
+> se comprobó, y sería el peor resultado posible— pero esas diapositivas salen **con el hueco
+> vacío**, y son las que un consultor mira primero.
+>
+> Mientras eso siga así, el criterio del «≥ 90 % de diapositivas sin retocar» no lo puede cumplir
+> nadie: hay que escribir a mano el texto de cada sistema. Es la pieza que falta del bloque 4, y no
+> se descubre generando un informe pequeño.
 - [ ] Permisos, RLS y aislamiento entre organizaciones pasan al 100 %.
 - [ ] Ningún endpoint carece de política de autorización declarada.
 - [ ] **Ninguna petición de red sale hacia una fuente de precios deshabilitada.**
