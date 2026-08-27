@@ -1,15 +1,20 @@
-/** La vista de campo, en el motor y el tamaño de un iPhone.
+/** La vista de campo, en el motor y el tamaño de un teléfono.
  *
  *  Es la comprobación que faltaba. Todo lo demás se ha comprobado en Chromium
  *  a 1280×900, y **el uso real de esta aplicación es un consultor en una nave,
- *  con una mano, con un iPhone**. Ahí el motor es WebKit y la pantalla mide 390
- *  puntos de ancho.
+ *  con una mano, con un teléfono**.
  *
+ *      # iPhone: el motor es WebKit
  *      TDD_NAVEGADOR=webkit TDD_DISPOSITIVO="iPhone 14" \
  *        TDD_PROYECTO=<uuid> node herramientas/comprobar-safari.mjs
  *
- *  Sin `TDD_NAVEGADOR` corre en Chromium con el tamaño del teléfono: sirve para
- *  las comprobaciones de maquetación, no para las de motor. Lo dice al empezar.
+ *      # Android: el motor es Blink, y lo que cambia es el ANCHO
+ *      TDD_DISPOSITIVO="Galaxy S9+" \
+ *        TDD_PROYECTO=<uuid> node herramientas/comprobar-safari.mjs
+ *
+ *  Los dos ejes son independientes y hay que recorrerlos los dos. Un iPhone 14
+ *  mide 390 puntos; un Android de gama media, 360, y uno estrecho, 320. Una
+ *  tabla que cabe a 390 puede desbordarse a 320, y eso no lo dice el motor.
  *
  *  `[LIM]` WebKit de Playwright **no es Safari de iOS**. Lo que aquí no se
  *  puede comprobar y sigue sin comprobarse en ningún sitio: la cámara, un HEIC
@@ -45,31 +50,35 @@ const pg = await contexto.newPage()
 const errores = []
 pg.on('pageerror', (e) => errores.push(e.message))
 
-// ── 1 · Se puede entrar con una mano ────────────────────────────────────────
-await pg.goto(`${BASE}/entrar`)
-await pg.fill('input[type="email"]', CORREO)
-await pg.fill('input[type="password"]', CLAVE)
-await pg.click('button[type="submit"]')
-await pg.waitForURL('**/proyectos', { timeout: 20000 })
-comprobar(true, 'se inicia sesión desde el teléfono')
-
-// La pantalla de acceso usa `min-height: 100vh`. En Safari de iOS el `100vh`
-// incluye lo que tapa la barra de direcciones, así que el formulario centrado
-// se va por debajo del borde visible y la página aparece con scroll sin
-// motivo. `100dvh` es la unidad que sí mide lo que se ve.
+// ── 1 · La pantalla de acceso cabe en el alto del teléfono ─────────────────
+//
+// Se mide ANTES de entrar, y no después: con la sesión abierta `/entrar`
+// redirige a la lista de encargos, así que volver aquí más tarde no mide la
+// pantalla de acceso, mide otra cosa. La primera versión de esta comprobación
+// entraba dos veces y se colgaba esperando un campo que ya no estaba.
+//
+// `min-height: 100vh` en Safari de iOS mide la pantalla CON la barra de
+// direcciones retraída, así que el formulario centrado se va por debajo del
+// borde visible y la página aparece con scroll sin motivo. `100dvh` mide lo
+// que de verdad se ve.
 await pg.goto(`${BASE}/entrar`)
 const desbordeVertical = await pg.evaluate(
   () => document.documentElement.scrollHeight > window.innerHeight + 2,
 )
 comprobar(!desbordeVertical, 'la pantalla de acceso cabe sin scroll en el alto del teléfono')
 
-// ── 2 · Nada se sale por los lados ──────────────────────────────────────────
-await pg.goto(`${BASE}/entrar`)
+// ── 2 · Se puede entrar con una mano ────────────────────────────────────────
 await pg.fill('input[type="email"]', CORREO)
 await pg.fill('input[type="password"]', CLAVE)
 await pg.click('button[type="submit"]')
 await pg.waitForURL('**/proyectos', { timeout: 20000 })
+comprobar(true, 'se inicia sesión desde el teléfono')
 
+// ── 3 · Nada se sale por los lados ──────────────────────────────────────────
+// El ancho real, no uno escrito a mano: esta comprobación corre en teléfonos de
+// 320, 360 y 390 puntos, y un mensaje que miente sobre cuál se estaba midiendo
+// es peor que no dar el dato.
+const ancho = await pg.evaluate(() => window.innerWidth)
 for (const [nombre, ruta] of [
   ['proyectos', '/proyectos'],
   ['fotografías', `/proyectos/${PID}/fotos`],
@@ -81,10 +90,10 @@ for (const [nombre, ruta] of [
   const desborda = await pg.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth + 1,
   )
-  comprobar(!desborda, `«${nombre}» no se sale por los lados a 390 px`)
+  comprobar(!desborda, `«${nombre}» no se sale por los lados a ${ancho} px`)
 }
 
-// ── 3 · Los controles se pueden pulsar con el pulgar ────────────────────────
+// ── 4 · Los controles se pueden pulsar con el pulgar ────────────────────────
 // 44×44 puntos es el mínimo que pide la guía de interfaz de Apple, y no es
 // cosmético: por debajo de eso se falla el objetivo con el dedo y en una nave,
 // con guantes, mucho más.
@@ -106,7 +115,7 @@ comprobar(
   `todos los controles llegan a 32 px (${pequenos.length} pequeños: ${pequenos.slice(0, 4).join(', ')})`,
 )
 
-// ── 4 · El texto no se lee con lupa ─────────────────────────────────────────
+// ── 5 · El texto no se lee con lupa ─────────────────────────────────────────
 // Y además: Safari de iOS **hace zoom solo** al enfocar un campo cuyo texto
 // mida menos de 16 px, y luego no lo deshace. La página se queda ampliada y hay
 // que pellizcar para volver, en cada campo del formulario.
@@ -123,7 +132,7 @@ comprobar(
   `ningún campo baja de 16 px, que es lo que dispara el zoom automático (${camposChicos.slice(0, 3).join(', ')})`,
 )
 
-// ── 5 · La cola de subida sobrevive sin red ─────────────────────────────────
+// ── 6 · La cola de subida sobrevive sin red ─────────────────────────────────
 // Es lo que sostiene el trabajo en una nave sin cobertura: si IndexedDB no
 // funciona en este motor, las fotos de una visita se pierden al cerrar.
 const almacenamiento = await pg.evaluate(async () => {
@@ -158,7 +167,7 @@ const almacenamiento = await pg.evaluate(async () => {
 })
 comprobar(almacenamiento.ok, `IndexedDB guarda y devuelve bytes (${almacenamiento.error ?? 'ok'})`)
 
-// ── 6 · Sin errores de página ───────────────────────────────────────────────
+// ── 7 · Sin errores de página ───────────────────────────────────────────────
 comprobar(errores.length === 0, `sin errores de página (${errores.slice(0, 2).join(' · ')})`)
 
 await navegador.close()

@@ -422,10 +422,19 @@ bucket no tiene Object Lock, se registra en el log al arrancar.
 
 ### 19.10.1. Comprobaciones en navegador ya escritas
 
-> **Un motor no es dos motores.** Hasta ahora todo esto corría **solo en Chromium**, y el uso real de
-> esta aplicación es un consultor en una nave con un iPhone, donde manda WebKit.
-> `comprobar-safari.mjs` y `comprobar-sin-red.mjs` aceptan `TDD_NAVEGADOR=webkit` y
-> `TDD_DISPOSITIVO="iPhone 14"`, y la CI las ejecuta así en cada push.
+> **Dos ejes, y hay que recorrer los dos.** Hasta ahora todo corría en **Chromium a 1280×900**, y el
+> uso real es un consultor en una nave con un teléfono:
+>
+> | Eje | iPhone | Android |
+> |---|---|---|
+> | Motor | WebKit | Blink (= Chromium) |
+> | Ancho | 390 pt | 360 pt lo común, **320 pt** los estrechos |
+>
+> Son independientes. El motor caza las diferencias de CSS y de API; el ancho caza la maquetación, y
+> **una tabla que cabe a 390 puede desbordarse a 320**. La casilla de elegir fotografías quedaba en
+> 29 px de ancho a 320 —flexbox la encogía, porque `width` es solo la base— y a 390 se veía
+> perfecta. La CI ejecuta las tres combinaciones en cada push: WebKit a 390, Blink a 360 y Blink a
+> 320.
 >
 > `[LIM]` **WebKit de Playwright no es Safari de iOS.** Comparte motor, así que caza las diferencias
 > de CSS y de API de JavaScript, que son la mayoría. Lo que **sigue sin comprobarse en ningún

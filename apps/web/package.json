@@ -24,7 +24,8 @@
     "test:worker": "node herramientas/comprobar-worker.mjs",
     "test:ubicaciones": "node herramientas/comprobar-ubicaciones.mjs",
     "test:safari": "TDD_NAVEGADOR=webkit TDD_DISPOSITIVO=\"iPhone 14\" node herramientas/comprobar-safari.mjs",
-    "test:movil": "TDD_DISPOSITIVO=\"iPhone 14\" node herramientas/comprobar-safari.mjs"
+    "test:movil": "TDD_DISPOSITIVO=\"iPhone 14\" node herramientas/comprobar-safari.mjs",
+    "test:android": "TDD_DISPOSITIVO=\"Galaxy S9+\" node herramientas/comprobar-safari.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

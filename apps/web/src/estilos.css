@@ -1516,5 +1516,11 @@ button.enlace {
   input[type='radio'] {
     width: 32px;
     height: 32px;
+    /* `flex: none` y no solo `width`. La casilla vive dentro de un contenedor
+       flexible, y `width` es solo la base: flexbox la encoge igual si el sitio
+       aprieta. A 320 px —un Android estrecho— quedaba en 29 px de ancho. Se ve
+       ahí y no en un iPhone de 390, que es justo por lo que hay que recorrer
+       los dos ejes: el motor y el ancho. */
+    flex: none;
   }
 }

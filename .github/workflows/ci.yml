@@ -169,12 +169,18 @@ jobs:
           "
           docker run --rm tdd-api:ci sh -c 'fc-match --version && id -un'
 
-  safari:
-    name: Safari · la vista de campo en WebKit
+  telefono:
+    name: Teléfono · WebKit en iPhone y Blink en Android estrecho
     runs-on: ubuntu-latest
-    # Todo lo demás se comprueba en Chromium, y el uso real de esta aplicación
-    # es un consultor en una nave con un iPhone. Ahí manda WebKit, y hasta
-    # ahora no se ejecutaba en ningún sitio.
+    # Dos ejes independientes, y hay que recorrer los dos:
+    #
+    #   · el MOTOR — un iPhone es WebKit, un Android es Blink;
+    #   · el ANCHO — un iPhone 14 mide 390 puntos, un Android de gama media 360
+    #     y uno estrecho 320.
+    #
+    # Una tabla que cabe a 390 puede desbordarse a 320, y eso no lo dice el
+    # motor. La casilla de elegir fotografías quedaba en 29 px a 320 —flexbox
+    # la encogía— y a 390 se veía perfecta.
     services:
       postgres:
         image: postgres:16
@@ -244,10 +250,25 @@ jobs:
       - name: WebKit
         run: cd apps/web && npx playwright install --with-deps webkit
 
-      - name: La vista de campo, en WebKit y a 390 px
+      - name: iPhone · WebKit a 390 px
         env:
           TDD_NAVEGADOR: webkit
           TDD_DISPOSITIVO: iPhone 14
+          TDD_WEB: http://localhost:4173
+        run: cd apps/web && node herramientas/comprobar-safari.mjs
+
+      # Chromium es el mismo motor que Chrome de Android. Lo que se comprueba
+      # aquí no es el motor —ya está cubierto— sino el ANCHO: 320 puntos es lo
+      # que mide un Android estrecho, y es donde la maquetación se rompe.
+      - name: Android · Blink a 320 px, que es el más estrecho
+        env:
+          TDD_DISPOSITIVO: Galaxy S9+
+          TDD_WEB: http://localhost:4173
+        run: cd apps/web && node herramientas/comprobar-safari.mjs
+
+      - name: Android · Blink a 360 px, que es el más común
+        env:
+          TDD_DISPOSITIVO: Galaxy S24
           TDD_WEB: http://localhost:4173
         run: cd apps/web && node herramientas/comprobar-safari.mjs
 
