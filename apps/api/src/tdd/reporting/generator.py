@@ -223,6 +223,8 @@ def generar(
     # 3 · Fotografías, en el orden que fijó el consultor.
     insertadas = 0
     if fotos:
+        if prs.slide_width is None or prs.slide_height is None:
+            raise ValueError("La plantilla no declara el tamaño de diapositiva")
         ancho_in = Emu(prs.slide_width).inches
         alto_in = Emu(prs.slide_height).inches
         for foto in fotos:
@@ -314,6 +316,10 @@ def analizar(plantilla: bytes) -> dict[str, Any]:
             if run.font.name
         }
     )
+    # Una plantilla sin tamaño de diapositiva declarado es una plantilla rota,
+    # y decirlo aquí es mejor que un `TypeError` a mitad de la generación.
+    if prs.slide_width is None or prs.slide_height is None:
+        raise ValueError("La plantilla no declara el tamaño de diapositiva")
     return {
         "slide_count": len(prs.slides),
         "slide_width_in": round(Emu(prs.slide_width).inches, 2),

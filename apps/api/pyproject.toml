@@ -85,3 +85,28 @@ ignore = ["N818"]
 python_version = "3.11"
 strict = true
 plugins = []
+# Con `strict`, mypy exige que el paquete se localice como paquete. `src/` no es
+# un directorio importable por sí mismo, así que se le dice dónde mirar; sin
+# esto la orden correcta era un conjuro que nadie recordaba y el tipado acababa
+# sin comprobarse, que es justo lo que pasó.
+mypy_path = "src"
+packages = ["tdd"]
+# `python-pptx` publica `py.typed` pero deja sin anotar media biblioteca:
+# `RGBColor(...)`, `fill.solid()`, `Pt(...)`. Con `strict` cada una de esas
+# llamadas es un error, y son decenas. Se excluyen **las llamadas a esa
+# biblioteca**, no nuestro código: lo nuestro se sigue exigiendo entero.
+untyped_calls_exclude = ["pptx"]
+
+# Bibliotecas de terceros **sin tipos**: no publican `py.typed` ni hay stubs
+# razonables. No es dejadez nuestra, y el aviso no aporta nada: lo que sí se
+# hace es anotar en nuestro lado la frontera con cada una.
+[[tool.mypy.overrides]]
+module = [
+    "boto3.*",
+    "botocore.*",
+    "fontTools.*",
+    "lxml.*",
+    "openpyxl.*",
+    "pillow_heif.*",
+]
+ignore_missing_imports = true

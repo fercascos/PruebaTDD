@@ -63,4 +63,5 @@ def crear_token(
 
 def leer_token(token: str, *, secreto: str) -> dict[str, Any]:
     """Descodifica y **valida** el token. Lanza `jwt.PyJWTError` si no es válido."""
-    return jwt.decode(token, secreto, algorithms=["HS256"])
+    datos: dict[str, Any] = jwt.decode(token, secreto, algorithms=["HS256"])
+    return datos

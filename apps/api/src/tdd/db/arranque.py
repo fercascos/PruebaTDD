@@ -34,9 +34,10 @@ import getpass
 import os
 import sys
 import uuid
+from collections.abc import Mapping
 from dataclasses import dataclass
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import Connection, create_engine, text
 
 from tdd.core.security import hash_password
 from tdd.identity.service import ClaveDebil, comprobar_fortaleza
@@ -69,10 +70,10 @@ def _slug(nombre: str) -> str:
     return limpio.strip("-")[:60] or "organizacion"
 
 
-def leer_clave(*, entorno: dict[str, str] | None = None, interactivo: bool | None = None) -> str:
+def leer_clave(*, entorno: Mapping[str, str] | None = None, interactivo: bool | None = None) -> str:
     """La contraseña, del entorno o de la consola. Nunca de un argumento."""
-    entorno = os.environ if entorno is None else entorno
-    clave = entorno.get(VARIABLE_DE_CLAVE, "")
+    fuente: Mapping[str, str] = os.environ if entorno is None else entorno
+    clave = fuente.get(VARIABLE_DE_CLAVE, "")
     if clave:
         return clave
     if interactivo is None:
@@ -89,7 +90,7 @@ def leer_clave(*, entorno: dict[str, str] | None = None, interactivo: bool | Non
 
 
 def sembrar_administrador(
-    conn, *, organizacion: str, email: str, nombre: str, clave: str
+    conn: Connection, *, organizacion: str, email: str, nombre: str, clave: str
 ) -> Resultado:
     """Crea (o reutiliza) la organización y su primer administrador.
 

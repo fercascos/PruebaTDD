@@ -115,8 +115,15 @@ test-catalogs:  ## Las 86 combinaciones zona × tipología y el árbol
 	cd apps/api && TEST_DATABASE_URL="$(TEST_DATABASE_URL)" \
 	  python3 -m pytest tests/integration/test_catalogos.py -q
 
-lint:  ## ruff + mypy
+lint:  ## Formato y reglas (ruff)
 	cd apps/api && python3 -m ruff check src tests && python3 -m ruff format --check src tests
+
+# Estaba configurado desde el principio (`strict = true` en `pyproject.toml`) y
+# la documentación lo llamaba puerta bloqueante, pero `make lint` decía «ruff +
+# mypy» y **solo ejecutaba ruff**: el tipado no se comprobaba en ningún sitio.
+# Al encenderlo salieron 65 errores en 17 ficheros.
+typecheck:  ## Tipado estricto (mypy)
+	cd apps/api && python3 -m mypy
 
 fmt:  ## Formatea
 	cd apps/api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
@@ -131,7 +138,7 @@ run:  ## Arranca la API en local (como tdd_app: con la RLS en vigor)
 	cd apps/api && PYTHONPATH=src DATABASE_URL="$(APP_DATABASE_URL)" \
 	  python3 -m uvicorn tdd.main:app --reload --port 8000
 
-ci: catalogs-check no-fonts lint test  ## Lo que debe pasar antes de un push
+ci: catalogs-check no-fonts lint typecheck test  ## Lo que debe pasar antes de un push
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Entorno completo en contenedores
@@ -202,4 +209,4 @@ up-admin:  ## Primera organización y su administrador, dentro del contenedor
 	     --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"'
 
 .PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
-        test-catalogs lint fmt no-fonts run ci certificados up down destroy logs ps up-admin
+        test-catalogs lint typecheck fmt no-fonts run ci certificados up down destroy logs ps up-admin

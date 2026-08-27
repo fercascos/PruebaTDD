@@ -21,6 +21,7 @@ import io
 from dataclasses import dataclass, field
 from datetime import datetime
 from fractions import Fraction
+from typing import Any
 
 from PIL import Image, ImageOps
 from PIL.ExifTags import GPSTAGS, TAGS
@@ -138,10 +139,13 @@ def distancia_hamming(a: str, b: str) -> int:
 UMBRAL_DUPLICADO_PERCEPTUAL = 5
 
 
-def _a_grados(valor, referencia: str | None) -> float | None:
+def _a_grados(valor: object, referencia: str | None) -> float | None:
     """Convierte los grados/minutos/segundos del EXIF en grados decimales."""
     try:
-        grados, minutos, segundos = (float(Fraction(str(v))) for v in valor)
+        grados, minutos, segundos = (
+            float(Fraction(str(v)))
+            for v in valor  # type: ignore[attr-defined]  # el EXIF trae lo que trae
+        )
     except (TypeError, ValueError, ZeroDivisionError):
         return None
     decimal = grados + minutos / 60 + segundos / 3600
@@ -150,7 +154,7 @@ def _a_grados(valor, referencia: str | None) -> float | None:
     return decimal
 
 
-def _leer_gps(exif: dict) -> Coordenadas | None:
+def _leer_gps(exif: dict[str | int, Any]) -> Coordenadas | None:
     bruto = exif.get("GPSInfo")
     if not bruto:
         return None
@@ -164,7 +168,7 @@ def _leer_gps(exif: dict) -> Coordenadas | None:
     return Coordenadas(latitud=lat, longitud=lon)
 
 
-def _leer_fecha(exif: dict) -> datetime | None:
+def _leer_fecha(exif: dict[str | int, Any]) -> datetime | None:
     for clave in ("DateTimeOriginal", "DateTimeDigitized", "DateTime"):
         valor = exif.get(clave)
         if not valor:
@@ -181,7 +185,7 @@ def _leer_fecha(exif: dict) -> datetime | None:
 _EXIF_QUE_NO_SE_GUARDA = frozenset({"MakerNote", "UserComment", "PrintImageMatching", "GPSInfo"})
 
 
-def _exif_legible(exif: dict) -> dict[str, str]:
+def _exif_legible(exif: dict[str | int, Any]) -> dict[str, str]:
     """Aplana el EXIF a texto para que quepa en un JSONB sin sorpresas.
 
     Los valores del EXIF son racionales, bytes y tuplas anidadas; serializarlos
@@ -253,8 +257,10 @@ def leer(datos: bytes) -> MetadatosDeImagen:
 
 
 def _entero_o_nada(valor: object) -> int | None:
+    if not isinstance(valor, (int, float, str, bytes)):
+        return None
     try:
-        return int(valor)  # type: ignore[arg-type]
+        return int(valor)
     except (TypeError, ValueError):
         return None
 
@@ -268,7 +274,10 @@ def generar_derivado(
     llega con los píxeles apaisados y una etiqueta que dice «gírala». Si no se
     aplica, la miniatura sale tumbada aunque la original se vea bien.
     """
-    imagen = Image.open(io.BytesIO(datos))
+    # El tipo es `Image`, no `ImageFile`: `open` da un `ImageFile` pero
+    # `exif_transpose`, `convert` y `frombytes` devuelven `Image` a secas, y
+    # anotarlo al revés hacía que cada una de esas asignaciones fuera un error.
+    imagen: Image.Image = Image.open(io.BytesIO(datos))
     imagen = ImageOps.exif_transpose(imagen) or imagen
     imagen.thumbnail((lado_maximo, lado_maximo), Image.Resampling.LANCZOS)
     if imagen.mode not in ("RGB", "L"):

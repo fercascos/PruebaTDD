@@ -76,7 +76,10 @@ def mensaje_de(exc: IntegrityError) -> str | None:
 def registrar(app: Any) -> None:
     """Engancha el traductor a la aplicación."""
 
-    @app.exception_handler(IntegrityError)
+    # `app` llega como `Any` —para no arrastrar aquí el tipo de FastAPI—, así
+    # que su decorador tampoco está anotado. La función de dentro sí lo está,
+    # que es lo que se puede comprobar.
+    @app.exception_handler(IntegrityError)  # type: ignore[untyped-decorator]
     async def _conflicto(request: Request, exc: IntegrityError) -> JSONResponse:
         texto = mensaje_de(exc)
         if texto is None:

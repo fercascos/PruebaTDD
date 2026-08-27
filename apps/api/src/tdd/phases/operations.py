@@ -87,7 +87,7 @@ def _fase(s: Session, project_id: uuid.UUID, codigo: PhaseCode) -> uuid.UUID:
             status.HTTP_404_NOT_FOUND,
             f"El proyecto no tiene la fase {codigo.value}: actívela primero",
         )
-    return fila  # type: ignore[return-value]
+    return uuid.UUID(str(fila))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

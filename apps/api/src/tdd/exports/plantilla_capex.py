@@ -197,7 +197,10 @@ class CeldaInexistente(KeyError):
 
 
 def _celda(datos: etree._Element, ref: str) -> etree._Element:
-    numero = int(re.search(r"\d+", ref).group(0))
+    encontrado = re.search(r"\d+", ref)
+    if encontrado is None:
+        raise CeldaInexistente(f"la referencia «{ref}» no lleva número de fila")
+    numero = int(encontrado.group(0))
     for fila in datos.iterfind(_q("row")):
         if int(fila.get("r", "0")) != numero:
             continue
@@ -341,7 +344,7 @@ def ruta_de_hoja(zf: zipfile.ZipFile, posicion: int) -> str:
     destinos = dict(re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', relaciones))
     hojas = re.findall(r'<sheet name="[^"]+"[^>]*r:id="([^"]+)"', libro)
     try:
-        return "xl/" + destinos[hojas[posicion]]
+        return "xl/" + str(destinos[hojas[posicion]])
     except (IndexError, KeyError) as e:  # pragma: no cover - plantilla corrupta
         raise CeldaInexistente(f"la plantilla no tiene hoja en la posición {posicion}") from e
 
@@ -406,7 +409,9 @@ def _arbol(bruto: bytes) -> tuple[etree._Element, etree._Element]:
 
 
 def _serializar(raiz: etree._Element) -> bytes:
-    return etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True)
+    # `lxml` no lleva tipos: devuelve `Any` y el `bytes` de la firma sería una
+    # promesa sin respaldo. `bytes(...)` la convierte en una comprobación.
+    return bytes(etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True))
 
 
 def _rellenar_activo(

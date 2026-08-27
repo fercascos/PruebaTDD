@@ -217,6 +217,10 @@ def construir(
     claves_importe = [c.key for c in columnas if c.es_importe]
     totales: dict[str, Decimal] = dict.fromkeys(claves_importe, Decimal(0))
 
+    def _formateados(importes: dict[str, Decimal], locale: str) -> dict[str, str]:
+        """Las cinco columnas de importe, ya en texto. Un cero es «—», no «0,00»."""
+        return {clave: formatear_importe(v or None, locale) for clave, v in importes.items()}
+
     def _sumar(destino: dict[str, Decimal], actuacion: list[LineaCapex]) -> None:
         for ln in actuacion:
             col = HORIZONTE_A_COLUMNA.get(ln.horizonte)
@@ -230,8 +234,8 @@ def construir(
         for grupos in capitulos.values():
             for actuacion in grupos:
                 _sumar(del_tipo, actuacion)
-        for k, v in del_tipo.items():
-            totales[k] += v
+        for clave, v in del_tipo.items():
+            totales[clave] += v
 
         filas.append(
             Fila(
@@ -241,7 +245,7 @@ def construir(
                 celdas={
                     "no": f"{i}.",
                     "objeto": tipo.upper(),
-                    **{k: formatear_importe(v or None, locale) for k, v in del_tipo.items()},
+                    **_formateados(del_tipo, locale),
                 },
             )
         )
@@ -260,9 +264,7 @@ def construir(
                     celdas={
                         "no": f"{i}.{j}",
                         "objeto": capitulo_actual,
-                        **{
-                            k: formatear_importe(v or None, locale) for k, v in del_capitulo.items()
-                        },
+                        **_formateados(del_capitulo, locale),
                     },
                 )
             )
@@ -299,7 +301,7 @@ def construir(
             celdas={
                 "no": "",
                 "objeto": "TOTAL",
-                **{k: formatear_importe(v or None, locale) for k, v in totales.items()},
+                **_formateados(totales, locale),
             },
         )
     )

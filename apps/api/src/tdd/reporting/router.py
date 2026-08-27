@@ -652,7 +652,7 @@ def _guardar(
 ) -> uuid.UUID:
     clave = f"{usuario.organization_id}/{project_id}/{sufijo}"
     almacen.guardar(clave, datos)
-    return s.execute(  # type: ignore[return-value]
+    nuevo = s.execute(
         text(
             "INSERT INTO stored_object (organization_id, project_id, kind, storage_key, sha256, "
             "byte_size, mime_type, is_original) "
@@ -667,6 +667,7 @@ def _guardar(
             "m": mime,
         },
     ).scalar_one()
+    return uuid.UUID(str(nuevo))
 
 
 def _auditar(

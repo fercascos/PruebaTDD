@@ -6,6 +6,8 @@ render de la plantilla real del cliente, no de una propuesta.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.slide import Slide
@@ -45,7 +47,9 @@ _ALIGN = {
 }
 
 
-def _escribir(celda, texto: str, *, pt: float, negrita: bool, color, alineacion) -> None:
+def _escribir(
+    celda: Any, texto: str, *, pt: float, negrita: bool, color: Any, alineacion: Any
+) -> None:
     celda.text_frame.word_wrap = True
     p = celda.text_frame.paragraphs[0]
     p.alignment = alineacion

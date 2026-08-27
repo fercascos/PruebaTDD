@@ -280,14 +280,15 @@ def _perfil_de_coste(s: Session, organization_id: uuid.UUID) -> uuid.UUID:
         {"o": str(organization_id)},
     ).scalar()
     if fila is not None:
-        return fila  # type: ignore[return-value]
-    return s.execute(  # type: ignore[return-value]
+        return uuid.UUID(str(fila))
+    nuevo = s.execute(
         text(
             "INSERT INTO cost_profile (organization_id, name, cascade_config, is_default) "
             "VALUES (:o, 'Perfil por defecto', CAST(:c AS jsonb), TRUE) RETURNING id"
         ),
         {"o": str(organization_id), "c": '{"convencion": "espanola", "version": 1}'},
     ).scalar_one()
+    return uuid.UUID(str(nuevo))
 
 
 def _insertar_linea(

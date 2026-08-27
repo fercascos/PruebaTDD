@@ -82,5 +82,5 @@ def generar_informe(s: Session, tarea: TareaPendiente, recursos: Recursos) -> No
 
 def registrar_todas() -> None:
     """Enchufa los manejadores. La llaman el worker al arrancar y las pruebas."""
-    w.registrar(Tarea.ENVIAR_CORREO, enviar_correo)  # type: ignore[arg-type]
-    w.registrar(Tarea.GENERAR_INFORME, generar_informe)  # type: ignore[arg-type]
+    w.registrar(Tarea.ENVIAR_CORREO, enviar_correo)
+    w.registrar(Tarea.GENERAR_INFORME, generar_informe)

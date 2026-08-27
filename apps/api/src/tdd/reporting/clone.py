@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import copy
 import re
+from collections.abc import Iterator
+from typing import Any
 
 from pptx.presentation import Presentation as Presentacion
 from pptx.slide import Slide
@@ -48,7 +50,8 @@ def clonar_diapositiva(prs: Presentacion, origen: Slide) -> Slide:
 
     if mapa:
         _reescribir_referencias(destino, mapa)
-    return destino
+    resultado: Slide = destino
+    return resultado
 
 
 #: Atributos que llevan un identificador de relación en el XML de una forma.
@@ -67,7 +70,7 @@ def _reescribir_referencias(slide: Slide, mapa: dict[str, str]) -> None:
                 elemento.set(atributo, mapa[valor])
 
 
-def _runs_de(forma):
+def _runs_de(forma: Any) -> Iterator[Any]:
     if not forma.has_text_frame:
         return
     yield from forma.text_frame.paragraphs
@@ -111,9 +114,9 @@ def texto_completo(slide: Slide) -> str:
     partes = []
     for forma in slide.shapes:
         if forma.has_text_frame:
-            partes.append(forma.text_frame.text)
+            partes.append(forma.text_frame.text)  # type: ignore[attr-defined]
         if getattr(forma, "has_table", False):
-            for fila in forma.table.rows:
+            for fila in forma.table.rows:  # type: ignore[attr-defined]
                 for celda in fila.cells:
                     partes.append(celda.text)
     return "\n".join(partes)
