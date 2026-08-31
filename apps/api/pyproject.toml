@@ -29,6 +29,12 @@ dependencies = [
     # PPTX y XLSX.
     "python-pptx>=1.0",
     "openpyxl>=3.1",
+    # Métrica tipográfica: `reporting/fonts.py` lee la tabla `hmtx` del fichero
+    # OTF para saber si un texto cabe en su marco. NO era transitiva de
+    # `python-pptx` —se creyó que sí—, así que en una instalación limpia el
+    # generador de informes no llegaba ni a importarse. Se descubrió al rehacer
+    # el entorno desde cero: con el entorno ya montado, no se ve.
+    "fonttools>=4.53",
     # Adaptador de almacenamiento S3. Solo se importa si STORAGE_BACKEND=s3:
     # con el adaptador sobre disco la aplicación arranca sin tocarlo.
     "boto3>=1.34",

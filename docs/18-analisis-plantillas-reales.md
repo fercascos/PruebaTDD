@@ -710,9 +710,31 @@ técnico, y **el sistema no tiene dónde guardar ese texto**. El informe no impr
 comprobó buscándolo en el XML del fichero generado, y no aparece ninguno— pero esas diapositivas
 salen con el hueco vacío. Es la pieza que falta del bloque 4.
 
-**2 · La hoja de CAPEX del cliente describe UN activo.** Con tres, dos se quedan fuera de la cabecera
-de datos del edificio aunque sus actuaciones sí salgan en las filas. La aplicación lo avisa por su
-nombre; no lo arregla, porque arreglarlo es rediseñar la hoja del cliente.
+**2 · La hoja de CAPEX del cliente describe UN activo.** Con tres, dos se quedaban fuera de la
+cabecera de datos del edificio aunque sus actuaciones sí salieran en las filas. La aplicación lo
+avisaba por su nombre y no lo arreglaba, porque arreglarlo *dentro* de una hoja es rediseñar la
+hoja del cliente.
+
+**Resuelto sin tocar la plantilla: un libro por activo.** La salida está en no meter tres
+edificios en una hoja que describe uno, sino en rellenar la hoja del cliente **una vez por
+activo**. `separar_por_activo()` trocea el snapshot y cada parte se rellena por el mismo camino
+que el encargo entero —no hay una segunda ruta de código que pueda divergir—; la descarga sale en
+ZIP con un libro por edificio y un `LEEME.txt` que nombra los que se quedaron sin libro por no
+tener todavía ninguna actuación.
+
+Separar arregla de paso dos cosas que el libro conjunto hacía mal, y que no eran evidentes:
+
+* **Las zonas.** La plantilla ofrece una lista de zonas **por tipo de edificio**: «Almacén» existe
+  en industrial y no en oficinas. En el libro conjunto, la zona de un hallazgo se resolvía contra
+  la tipología del *primer* activo, así que zonas correctas de los demás se vaciaban. Cada libro
+  lleva ahora el tipo del suyo.
+* **La cabida.** La plantilla admite diez actuaciones por capítulo. Repartidas entre tres activos
+  son diez **por activo**, no diez entre los tres: doce hallazgos del mismo capítulo en dos naves
+  reventaban la descarga conjunta y caben separados.
+
+`[PDV]` Lo que sigue sin validar es el **mapeo**, no la mecánica: la hoja que entregó el cliente
+describe un solo activo, así que nadie ha confirmado todavía que un libro por edificio sea la
+forma en la que quieren recibir una cartera. Es una pregunta para ellos, no una decisión técnica.
 
 **3 · El aviso de desbordamiento no llegaba al informe.** `overflow.py` estaba construido, medido con
 la Gotham real y probado… y **no lo llamaba nadie**. Ahora el generador mide cada marco que recibe

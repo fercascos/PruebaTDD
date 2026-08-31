@@ -170,7 +170,12 @@ select {
 
 /* El selector de idioma de la exportación. Va pegado a su botón y no en una
    fila propia: es una opción DE esa descarga, no un filtro de la pantalla. */
-.filtro .idioma {
+/* `.alcance` no comparte clase con `.idioma` a propósito: son dos desplegables
+   contiguos, y `comprobar-exportacion.mjs` cuenta `.idioma select` para saber
+   que el selector de idioma es único. Con la clase compartida, un encargo de
+   cartera lo haría fallar sin que nada estuviera roto de verdad. */
+.filtro .idioma,
+.filtro .alcance {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -262,6 +267,27 @@ select {
   display: block;
   overflow-x: auto;
   white-space: nowrap;
+}
+
+/* `[REQ]` El CAPEX de una cartera va separado por activo: cada `tbody` es un
+   edificio, y su primera fila lleva el nombre y el subtotal. El subtotal va
+   ARRIBA y no abajo a propósito: es el número que se busca, y con veinte
+   hallazgos por activo quedaría fuera de pantalla al final del grupo. */
+.tabla .cabecera-grupo th,
+.tabla .cabecera-grupo td {
+  background: #eef2f7;
+  font-weight: 600;
+  border-top: 2px solid var(--borde);
+}
+.tabla .cabecera-grupo .enlace {
+  margin-left: 0.6rem;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+/* Un grupo sin hallazgos sigue ocupando su fila: un activo sin visitar y otro
+   visitado sin hallazgos no pueden verse igual. */
+.tabla .grupo-activo .ayuda {
+  white-space: normal;
 }
 
 .estado {

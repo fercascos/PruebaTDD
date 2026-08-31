@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 771 pruebas
+make test        # 1.138 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un

@@ -158,6 +158,34 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str], ...] = (
     ),
 )
 
+#: `[REQ]` El encargo de demostración es de **cartera**, no de un edificio.
+#: La plantilla CAPEX del cliente describe un solo activo, así que la separación
+#: por activo —un libro para cada uno— solo se ve con más de uno. Con un único
+#: activo la demostración enseñaba el caso fácil y escondía el que importa.
+HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str], ...] = (
+    (
+        "Climatizadora de oficinas fuera de servicio",
+        "H09",
+        "CORTO",
+        "22400.00",
+        "ALTO",
+    ),
+    (
+        "Falso techo con manchas de humedad en dos plantas",
+        "H03",
+        "MEDIO",
+        "11750.00",
+        "MEDIO",
+    ),
+    (
+        "Escalera de emergencia sin señalización fotoluminiscente",
+        "H10",
+        "CORTO",
+        "4300.00",
+        "MUY_ALTO",
+    ),
+)
+
 UBICACIONES: tuple[tuple[str, str, str | None], ...] = (
     ("ZONA", "Cubierta", None),
     ("ESPACIO", "Sala Máquinas 2", "Cubierta"),
@@ -273,6 +301,53 @@ def sembrar(api: Api) -> str:
             },
         )
     print(f"· {len(HALLAZGOS)} hallazgos con su CAPEX")
+
+    # ── El segundo activo, que es lo que hace de esto una cartera ────────────
+    # `[REQ]` Con un solo activo, la separación por activo del CAPEX no se ve:
+    # la pantalla no agrupa y la descarga en ZIP no se ofrece. La demostración
+    # tiene que enseñar el caso que la plantilla del cliente NO sabe hacer sola.
+    oficinas = next(
+        (t for t in api.get("/catalogs/asset-typologies") if t["code"] == "OFICINAS"),
+        tipologia,
+    )
+    segundo = api.post(
+        f"/projects/{proyecto['id']}/assets",
+        {
+            "name": "Edificio B · Getafe Sur",
+            "asset_code": "GTF-B",
+            "typology_id": oficinas["id"],
+            "address_line": "Avenida Inventada 3, Polígono Ficticio",
+            "city": "Getafe",
+            "province": "Madrid",
+            "postal_code": "28906",
+            "latitude": "40.3012",
+            "longitude": "-3.7401",
+            "year_built": 2011,
+            "plot_area_sqm": "6200.00",
+            "total_built_sqm": "5400.00",
+            "office_area_sqm": "5100.00",
+        },
+    )
+    print(f"· Activo {segundo['name']}")
+
+    # Las zonas se piden para SU tipología: la lista de un edificio de oficinas
+    # no es la de una nave, y es justo lo que arregla separar los libros.
+    zonas_b = api.get(f"/catalogs/zones?typology_id={oficinas['id']}")
+    for titulo, capitulo, plazo, importe, riesgo in HALLAZGOS_SEGUNDO:
+        codigo = next((c for c in codigos if capitulo in c["code"]), codigos[0])
+        api.post(
+            f"/projects/{proyecto['id']}/findings",
+            {
+                "asset_id": segundo["id"],
+                "capex_code_id": codigo["id"],
+                "zone_id": zonas_b[hash(titulo) % len(zonas_b)]["id"],
+                "risk_level_id": riesgos.get(riesgo),
+                "title": titulo,
+                "description": "Observado durante la visita. Importe estimado, sin oferta.",
+                "capex_lines": [{"time_horizon_code": plazo, "amount": importe}],
+            },
+        )
+    print(f"· {len(HALLAZGOS_SEGUNDO)} hallazgos más, en el segundo activo")
 
     # ── Fotografías, cada una en su sitio ───────────────────────────────────
     sistemas = api.get("/catalogs/technical-systems")

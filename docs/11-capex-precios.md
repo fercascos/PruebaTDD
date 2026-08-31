@@ -608,6 +608,40 @@ eso la hoja `CAPEX` debe **parecerse a la tabla del informe**, no a un volcado d
 `[REC]` Ese tercer caso es el que evita la incidencia clásica: «el Excel que me mandaste no cuadra con
 el PowerPoint». Se marca en la propia hoja `Resumen`, con la versión y la fecha de emisión.
 
+### Encargos de cartera: **un libro por activo** `[REQ]`
+
+La plantilla CAPEX del cliente describe **un** edificio: un nombre, unas superficies y un tipo que
+además decide qué zonas ofrece el desplegable. Un encargo de tres naves no cabe en ella, y meterlo
+a la fuerza produce una hoja que se abre bien y engaña, que es la peor forma de fallar.
+
+La salida no es rediseñar la hoja del cliente, es rellenarla **una vez por activo**:
+
+| Descarga | Ruta | Cuándo |
+|---|---|---|
+| Encargo entero, un libro | `GET …/capex/export.xlsx` | Un solo activo, o cuando se quiere el total en una hoja. Sigue siendo lo que sale por omisión en la API |
+| **Un libro por activo, en ZIP** | `GET …/capex/export.zip` | Lo que ofrece la pantalla cuando hay más de un activo. Incluye un `LEEME.txt` con los activos que se quedaron sin libro **y por qué** |
+| Un activo suelto | `GET …/capex/export.xlsx?asset_id=…` | El caso cotidiano: mandar el CAPEX de una nave, no el de la cartera |
+
+Separar arregla tres cosas a la vez, y solo la primera es evidente:
+
+1. **La cabecera.** Cada libro describe su edificio, con su dirección, sus superficies y su tipo.
+   La celda de nombre lleva «Proyecto · Activo», porque la hoja `CapEx` y las gráficas la
+   referencian por fórmula y así el nombre se propaga solo al resto del libro.
+2. **Las zonas.** La lista de zonas depende del tipo de edificio: «Almacén» existe en industrial y
+   no en oficinas. En un libro conjunto, las zonas de todos se resolvían contra la tipología del
+   primer activo y las correctas de los demás se vaciaban.
+3. **La cabida.** La plantilla admite diez actuaciones por capítulo. Separadas son diez **por
+   activo**: doce hallazgos del mismo capítulo repartidos entre dos naves no caben juntos y sí
+   caben separados.
+
+`[REQ]` **No se pierde nada al separar.** Los activos sin ninguna actuación se declaran en el
+`LEEME` en vez de desaparecer —un edificio sin visitar y otro visitado sin hallazgos no pueden
+verse igual—, y los hallazgos cuyo activo se borró después de registrarlos van a su propio libro,
+marcados.
+
+`[PDV]` La hoja que entregó el cliente describe un solo activo. Que un libro por edificio sea la
+forma en la que quieren recibir una cartera **está sin validar con ellos**.
+
 ### Hojas del libro
 
 | Hoja | Contenido |

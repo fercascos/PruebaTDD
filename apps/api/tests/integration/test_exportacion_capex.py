@@ -19,6 +19,7 @@ from __future__ import annotations
 import io
 import uuid
 import zipfile
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -301,3 +302,297 @@ def test_mas_actuaciones_de_las_que_caben_dan_409_y_dicen_cual(
     r = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
     assert r.status_code == 409
     assert "11 de 10" in r.json()["detail"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Carteras: el CAPEX separado por activo
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# La plantilla del cliente describe UN edificio. Metidos tres activos en un solo
+# libro, la cabecera describe al primero y los otros dos salen sin identificar.
+# Estas pruebas cubren la salida: un libro por activo.
+
+CARTERA_ZIP = f"{RUTA}/projects/{{}}/capex/export.zip"
+POR_ACTIVO = f"{RUTA}/projects/{{}}/capex/summary/by-asset"
+
+
+@pytest.fixture
+def segundo_activo(cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str]) -> str:
+    return str(
+        cliente.post(
+            f"{RUTA}/projects/{proyecto}/assets",
+            headers=cab("consultor_a"),
+            json={
+                "name": "Nave B",
+                "asset_code": "NB-02",
+                "typology_id": catalogo["tipologia"],
+            },
+        ).json()["id"]
+    )
+
+
+def libros_del_zip(contenido: bytes) -> dict[str, bytes]:
+    with zipfile.ZipFile(io.BytesIO(contenido)) as z:
+        return {n: z.read(n) for n in z.namelist()}
+
+
+def test_la_cartera_se_descarga_con_un_libro_por_activo(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """`[REQ]` Lo que pedía el cliente: el CAPEX **separado por activo**."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Cubierta A", importe="100")
+    crear_hallazgo(
+        cliente, cab, proyecto, catalogo, segundo_activo, titulo="Cubierta B", importe="200"
+    )
+
+    r = cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a"))
+
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == "application/zip"
+    dentro = libros_del_zip(r.content)
+    libros = sorted(n for n in dentro if n.endswith(".xlsx"))
+    assert len(libros) == 2, dentro.keys()
+    # Cada uno es la plantilla del cliente entera, no una hoja recortada.
+    for nombre in libros:
+        assert hojas(dentro[nombre])[0] == "00 Datos Categorías"
+
+
+def test_cada_libro_lleva_solo_las_actuaciones_de_su_activo(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """Es la propiedad que hace útil la separación.
+
+    Si las actuaciones de los dos activos aparecieran en los dos libros, el
+    total de cada edificio estaría inflado y nadie lo vería hasta cuadrar la
+    suma a mano contra el informe.
+    """
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Solo en A", importe="100")
+    crear_hallazgo(
+        cliente, cab, proyecto, catalogo, segundo_activo, titulo="Solo en B", importe="200"
+    )
+
+    dentro = libros_del_zip(
+        cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a")).content
+    )
+    # Solo las descripciones que escribe la aplicación: la columna G lleva
+    # también las filas de soft costs que trae la propia plantilla.
+    nuestras = {"Solo en A", "Solo en B"}
+    textos = [
+        {v for fila in range(14, 255) if (v := _capex(contenido)[f"G{fila}"].value) in nuestras}
+        for nombre, contenido in dentro.items()
+        if nombre.endswith(".xlsx")
+    ]
+
+    assert len(textos) == 2
+    for descripciones in textos:
+        assert len(descripciones) == 1, f"un libro lleva actuaciones ajenas: {descripciones}"
+    assert textos[0] | textos[1] == nuestras, "alguna actuación se ha perdido"
+
+
+def test_el_libro_de_cada_activo_lleva_su_nombre_en_la_cabecera(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """La celda se llama «Nombre del proyecto» y en una cartera no basta.
+
+    La hoja `CapEx` y las gráficas la referencian por fórmula, así que el
+    nombre se propaga solo al resto del libro.
+    """
+    from openpyxl import load_workbook
+
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A", importe="100")
+    crear_hallazgo(cliente, cab, proyecto, catalogo, segundo_activo, titulo="B", importe="200")
+
+    dentro = libros_del_zip(
+        cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a")).content
+    )
+    nombres = {
+        load_workbook(io.BytesIO(c))["00 Datos Activo"]["C5"].value
+        for n, c in dentro.items()
+        if n.endswith(".xlsx")
+    }
+
+    assert any(n and n.endswith("Nave A") for n in nombres), nombres
+    assert any(n and n.endswith("Nave B") for n in nombres), nombres
+
+
+def test_el_zip_declara_los_activos_que_se_quedaron_sin_libro(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """`[REQ]` Un activo sin actuaciones no lleva libro, **y se dice**.
+
+    Omitirlo en silencio haría que un edificio sin visitar y otro visitado sin
+    hallazgos se vieran igual desde fuera del ZIP.
+    """
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Solo A", importe="100")
+
+    dentro = libros_del_zip(
+        cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a")).content
+    )
+
+    assert len([n for n in dentro if n.endswith(".xlsx")]) == 1
+    leeme = dentro["LEEME.txt"].decode("utf-8")
+    assert "Nave B" in leeme
+    assert "SIN libro" in leeme
+
+
+def test_una_cartera_sin_ninguna_actuacion_no_devuelve_un_zip_vacio(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    r = cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a"))
+    assert r.status_code == 409
+    assert "actuación" in r.json()["detail"]
+
+
+def test_la_cabida_de_la_plantilla_se_cuenta_por_activo(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """`[REQ]` Diez actuaciones por capítulo **y por activo**.
+
+    Doce repartidas entre dos naves revientan el libro conjunto y caben
+    separadas. Es la otra mitad de por qué una cartera necesita separarse: no
+    es solo la cabecera, es que si no, no cabe.
+    """
+    for i in range(6):
+        crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo=f"A{i}", importe="100")
+        crear_hallazgo(
+            cliente, cab, proyecto, catalogo, segundo_activo, titulo=f"B{i}", importe="100"
+        )
+
+    junto = cliente.get(EXPORTACION.format(proyecto), headers=cab("consultor_a"))
+    separado = cliente.get(CARTERA_ZIP.format(proyecto), headers=cab("consultor_a"))
+
+    assert junto.status_code == 409, "doce en un capítulo no caben en un libro"
+    assert separado.status_code == 200, separado.text
+    assert len([n for n in libros_del_zip(separado.content) if n.endswith(".xlsx")]) == 2
+
+
+def test_se_puede_descargar_el_libro_de_un_solo_activo(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """El caso cotidiano: el consultor manda el CAPEX de una nave, no de todas."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Solo en A", importe="100")
+    crear_hallazgo(
+        cliente, cab, proyecto, catalogo, segundo_activo, titulo="Solo en B", importe="200"
+    )
+
+    r = cliente.get(
+        f"{EXPORTACION.format(proyecto)}?asset_id={segundo_activo}", headers=cab("consultor_a")
+    )
+
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == TIPO_XLSX
+    # `asset_code` en el nombre del fichero: el equipo adjunta varios a la vez.
+    assert "NB-02" in r.headers["content-disposition"]
+    hoja = _capex(r.content)
+    descripciones = [hoja[f"G{f}"].value for f in range(14, 255) if hoja[f"G{f}"].value]
+    assert "Solo en B" in descripciones
+    assert "Solo en A" not in descripciones, "el libro de una nave lleva lo de la otra"
+
+
+def test_un_activo_de_otro_encargo_da_404(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str], activo: str
+) -> None:
+    """Y no un libro vacío ni el del encargo entero: el parámetro está mal."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A", importe="100")
+
+    r = cliente.get(
+        f"{EXPORTACION.format(proyecto)}?asset_id={uuid.uuid4()}", headers=cab("consultor_a")
+    )
+    assert r.status_code == 404
+
+
+def test_un_activo_sin_actuaciones_lo_dice_con_su_nombre(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """El mensaje nombra el activo, no «el encargo»: quien pulsa está en su ficha."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Solo A", importe="100")
+
+    r = cliente.get(
+        f"{EXPORTACION.format(proyecto)}?asset_id={segundo_activo}", headers=cab("consultor_a")
+    )
+    assert r.status_code == 409
+    assert "Nave B" in r.json()["detail"]
+
+
+def test_el_resumen_por_activo_suma_lo_de_cada_uno(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """`[REQ]` El número que entra en la negociación de cada edificio."""
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A1", importe="1000.00")
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A2", importe="500.00")
+    crear_hallazgo(cliente, cab, proyecto, catalogo, segundo_activo, titulo="B1", importe="2000.00")
+
+    r = cliente.get(POR_ACTIVO.format(proyecto), headers=cab("consultor_a"))
+
+    assert r.status_code == 200, r.text
+    por_nombre = {fila["asset_name"]: fila for fila in r.json()}
+    assert Decimal(por_nombre["Nave A"]["amount"]) == Decimal("1500.00")
+    assert Decimal(por_nombre["Nave B"]["amount"]) == Decimal("2000.00")
+    assert por_nombre["Nave A"]["findings"] == 2
+
+
+def test_un_activo_sin_hallazgos_sale_en_el_resumen_con_ceros(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    catalogo: dict[str, str],
+    activo: str,
+    segundo_activo: str,
+) -> None:
+    """No es lo mismo un edificio sin visitar que uno visitado y sin hallazgos.
+
+    Si desapareciera de la tabla, desde la pantalla se verían igual.
+    """
+    crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A1", importe="1000.00")
+
+    filas = cliente.get(POR_ACTIVO.format(proyecto), headers=cab("consultor_a")).json()
+
+    vacio = next(f for f in filas if f["asset_name"] == "Nave B")
+    assert (vacio["findings"], Decimal(vacio["amount"])) == (0, Decimal("0"))
+
+
+def test_otra_organizacion_no_ve_el_resumen_por_activo(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    filas = cliente.get(POR_ACTIVO.format(proyecto), headers=cab("admin_b")).json()
+    assert filas == []

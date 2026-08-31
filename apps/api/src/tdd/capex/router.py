@@ -14,16 +14,20 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.exports.plantilla_capex import Idioma
+
+if TYPE_CHECKING:  # `capex_desde_snapshot` arrastra `openpyxl`: se importa al usarlo.
+    from tdd.exports.capex_desde_snapshot import Parte
 
 router = APIRouter(tags=["CAPEX"])
 
@@ -143,6 +147,58 @@ def listar(project_id: uuid.UUID, s: SesionDep) -> Any:
     return [dict(f) for f in filas]
 
 
+class ResumenPorActivo(BaseModel):
+    asset_id: uuid.UUID
+    asset_name: str
+    asset_code: str | None
+    typology_name: str
+    findings: int
+    lines: int
+    amount: Decimal
+    tax_amount: Decimal
+    total_cost: Decimal
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-asset",
+    response_model=list[ResumenPorActivo],
+)
+def resumen_por_activo(project_id: uuid.UUID, s: SesionDep) -> Any:
+    """`[REQ]` El CAPEX **separado por activo**, que es como se decide.
+
+    En un encargo de cartera la pregunta que se hace el cliente no es cuánto
+    suma el proyecto, sino cuánto cuesta cada edificio: es el número que entra
+    en la negociación del precio de cada uno. Sin esta vista había que sumar a
+    mano desde la rejilla de hallazgos, y ahí es donde aparecen los descuadres.
+
+    Sale **un activo por fila aunque no tenga ninguna actuación**, con ceros.
+    Un activo que desaparece de la tabla porque todavía no se ha visitado se
+    confunde con uno que se visitó y no tenía nada, y no son lo mismo.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT a.id AS asset_id, a.name AS asset_name, a.asset_code, "
+                "t.name_es AS typology_name, "
+                "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
+                "COALESCE(sum(ci.amount), 0) AS amount, "
+                "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
+                "COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM asset a "
+                "JOIN asset_typology t ON t.id = a.typology_id "
+                "LEFT JOIN finding f ON f.asset_id = a.id AND f.deleted_at IS NULL "
+                "LEFT JOIN capex_item ci ON ci.finding_id = f.id "
+                "WHERE a.project_id = :p AND a.deleted_at IS NULL "
+                "GROUP BY a.id, a.name, a.asset_code, t.name_es ORDER BY a.name"
+            ),
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
 class ResumenPorHorizonte(BaseModel):
     time_horizon_code: str
     time_horizon_name: str
@@ -192,7 +248,12 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
         }
     },
 )
-def exportar_xlsx(project_id: uuid.UUID, s: SesionDep, idioma: Idioma = Idioma.ES) -> Response:
+def exportar_xlsx(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    idioma: Idioma = Idioma.ES,
+    asset_id: uuid.UUID | None = None,
+) -> Response:
     """`[REQ]` P-31 · El botón de **exportar el CAPEX a XLSX**.
 
     Lo pidió el cliente para poder adjuntar el fichero en el envío que el equipo
@@ -204,43 +265,188 @@ def exportar_xlsx(project_id: uuid.UUID, s: SesionDep, idioma: Idioma = Idioma.E
     construido a mano. Sale con sus gráficos, sus tablas dinámicas y sus
     fórmulas, y el equipo lo adjunta tal cual.
 
+    `asset_id` acota el libro a **un activo**: su cabecera, su tipo de edificio
+    —y por tanto sus zonas— y solo sus actuaciones. Sin él sale el encargo
+    entero en un libro, que es lo que había y sigue siendo lo que ocurre por
+    omisión. Para bajarse todos los activos de una cartera de golpe, cada uno
+    en su libro, está `export.zip`.
+
     `[LIM]` Exporta el estado **actual** del proyecto, no una versión emitida.
     Para el CAPEX congelado de un informe ya publicado está la descarga de esa
     versión, que lee de su snapshot. El nombre del fichero lo dice.
     """
     from tdd.exports import capex_desde_snapshot as puente
-    from tdd.exports.plantilla_capex import NoCabe, generar
-    from tdd.reporting import snapshot as snap
 
-    # Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
-    # mientras todavía lo construye, y un fichero que se deja fuera las líneas
-    # en borrador da un total que no cuadra con la pantalla desde la que se
-    # pulsó el botón. Lo descartado sigue fuera.
-    datos = snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
+    datos = _snapshot_de_trabajo(s, project_id)
     proyecto = datos["project"]
-    encargo, actuaciones = puente.preparar(datos, idioma=idioma.value)
-    if not actuaciones:
-        # 409 y no un libro vacío: un Excel con la cabecera y ninguna fila se
-        # adjunta a un correo sin que nadie note que no lleva nada dentro.
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "El encargo todavía no tiene ninguna actuación que exportar",
+    prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
+
+    if asset_id is None:
+        contenido = _libro(datos, idioma, quien="El encargo")
+        nombre = f"{prefijo}_actual.xlsx"
+    else:
+        partes = {p.asset_id: p for p in puente.separar_por_activo(datos)}
+        parte = partes.get(str(asset_id))
+        if parte is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "El activo no pertenece a este encargo")
+        contenido = _libro(
+            parte.snapshot, idioma, quien=f"El activo «{parte.nombre}»", del_activo=True
         )
+        nombre = parte.nombre_de_fichero(prefijo)
 
-    try:
-        contenido = generar(encargo, actuaciones, idioma=idioma.value)
-    except NoCabe as exc:
-        # 409 y no 500: no es un fallo del servidor, es que el encargo tiene
-        # más actuaciones de las que admite la plantilla. El mensaje dice qué
-        # capítulo se pasa y por cuánto, que es lo accionable.
-        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
-
-    nombre = f"CAPEX_{proyecto.get('internal_code') or project_id}_actual.xlsx"
     return Response(
         content=contenido,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
     )
+
+
+def _snapshot_de_trabajo(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
+    """El estado actual del encargo, con los borradores dentro.
+
+    Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
+    mientras todavía lo construye, y un fichero que se deja fuera las líneas en
+    borrador da un total que no cuadra con la pantalla desde la que se pulsó el
+    botón. Lo descartado sigue fuera.
+    """
+    from tdd.reporting import snapshot as snap
+
+    return snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
+
+
+def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: bool = False) -> bytes:
+    """Rellena la plantilla del cliente, o dice por qué no puede.
+
+    Está aparte porque lo llaman las tres descargas —encargo entero, un activo
+    y el ZIP de la cartera— y las tres tienen que traducir los mismos dos
+    errores al mismo código HTTP. Con el cuerpo duplicado, el día que cambie el
+    mensaje solo cambiaría en una.
+    """
+    from tdd.exports import capex_desde_snapshot as puente
+    from tdd.exports.plantilla_capex import NoCabe, generar
+
+    encargo, actuaciones = puente.preparar(
+        datos, idioma=idioma.value, activo_en_el_nombre=del_activo
+    )
+    if not actuaciones:
+        # 409 y no un libro vacío: un Excel con la cabecera y ninguna fila se
+        # adjunta a un correo sin que nadie note que no lleva nada dentro.
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"{quien} todavía no tiene ninguna actuación que exportar",
+        )
+    try:
+        return generar(encargo, actuaciones, idioma=idioma.value)
+    except NoCabe as exc:
+        # 409 y no 500: no es un fallo del servidor, es que el encargo tiene
+        # más actuaciones de las que admite la plantilla. El mensaje dice qué
+        # capítulo se pasa y por cuánto, que es lo accionable.
+        raise HTTPException(status.HTTP_409_CONFLICT, f"{quien}: {exc}") from exc
+
+
+@router.get(
+    "/projects/{project_id}/capex/export.zip",
+    tags=["CAPEX"],
+    response_class=Response,
+    responses={
+        200: {
+            "content": {"application/zip": {}},
+            "description": "Un libro CAPEX por activo, más un LEEME con lo que quedó fuera.",
+        }
+    },
+)
+def exportar_cartera_zip(
+    project_id: uuid.UUID, s: SesionDep, idioma: Idioma = Idioma.ES
+) -> Response:
+    """`[REQ]` El CAPEX de una cartera, **un libro por activo**.
+
+    La plantilla del cliente describe **un** edificio: un nombre, unas
+    superficies y un tipo que decide qué zonas ofrece el desplegable. Metidos
+    tres activos en un solo libro, la cabecera describe al primero y los otros
+    dos quedan sin identificar; si además son de tipos distintos, sus zonas se
+    vacían. Un activo por libro es lo que la plantilla admite de verdad, y de
+    paso multiplica la cabida: diez actuaciones por bloque **y por activo**.
+
+    El ZIP lleva también un `LEEME.txt` con los activos que no llevan libro
+    porque todavía no tienen ninguna actuación. Omitirlos en silencio haría que
+    un edificio sin visitar y otro visitado sin hallazgos se vieran igual desde
+    fuera, que es justo lo que no puede pasar en un envío al cliente.
+    """
+    import zipfile
+    from io import BytesIO
+
+    from tdd.exports import capex_desde_snapshot as puente
+
+    datos = _snapshot_de_trabajo(s, project_id)
+    proyecto = datos["project"]
+    prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
+    partes = puente.separar_por_activo(datos)
+
+    con_actuaciones = [p for p in partes if p.actuaciones]
+    if not con_actuaciones:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "El encargo todavía no tiene ninguna actuación que exportar",
+        )
+
+    buffer = BytesIO()
+    usados: set[str] = set()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for parte in con_actuaciones:
+            nombre = parte.nombre_de_fichero(prefijo)
+            # Dos activos pueden llamarse igual, y el segundo sobrescribiría al
+            # primero dentro del ZIP sin decir nada. El `asset_code` los separa
+            # cuando lo hay; cuando no, se desempata aquí.
+            if nombre in usados:
+                nombre = f"{nombre[:-5]}_{str(parte.asset_id)[:8]}.xlsx"
+            usados.add(nombre)
+            zf.writestr(
+                nombre,
+                _libro(
+                    parte.snapshot, idioma, quien=f"El activo «{parte.nombre}»", del_activo=True
+                ),
+            )
+        zf.writestr("LEEME.txt", _leeme(proyecto, partes, con_actuaciones))
+
+    nombre_zip = f"{prefijo}_por_activo.zip"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{nombre_zip}"'},
+    )
+
+
+def _leeme(proyecto: dict[str, Any], partes: list[Parte], con_actuaciones: list[Parte]) -> bytes:
+    """Qué lleva el ZIP y, sobre todo, **qué no lleva y por qué**."""
+    lineas = [
+        f"CAPEX de «{proyecto.get('name')}» ({proyecto.get('internal_code') or '—'})",
+        "",
+        "Un libro por activo. Cada libro es la plantilla CAPEX del cliente con la",
+        "cabecera, el tipo de edificio y las zonas de SU activo, y solo sus actuaciones.",
+        "",
+        f"Libros incluidos ({len(con_actuaciones)}):",
+    ]
+    lineas += [f"  · {p.nombre} — {p.actuaciones} actuaciones" for p in con_actuaciones]
+
+    vacios = [p for p in partes if not p.actuaciones]
+    if vacios:
+        lineas += [
+            "",
+            f"Activos SIN libro ({len(vacios)}), porque no tienen ninguna actuación",
+            "registrada todavía. No es lo mismo que no tener CAPEX: puede que aún no",
+            "se hayan visitado.",
+        ]
+        lineas += [f"  · {p.nombre}" for p in vacios]
+
+    huerfanas = [p for p in partes if p.huerfana]
+    if huerfanas:
+        lineas += [
+            "",
+            "AVISO: hay actuaciones cuyo activo ya no está en el encargo (se borró",
+            "después de registrarlas). Van en su propio libro para no perderse, pero",
+            "su cabecera está vacía y sus zonas pueden estarlo también.",
+        ]
+    return "\n".join(lineas).encode("utf-8")
 
 
 class TrasladarMedicion(BaseModel):
