@@ -316,6 +316,27 @@ select {
   white-space: nowrap;
 }
 
+/* `[REQ]` Pero en un escritorio el Total tiene que verse SIN arrastrar, y no se
+   veía a ningún ancho: `white-space: nowrap` obliga a cada título de hallazgo a
+   ir en una línea —«Cuadro general sin protección diferencial en dos líneas»—,
+   la primera columna se estiraba y el contenido medía 1232 px contra los 1160
+   que deja como mucho el `max-width` de `main`. La última columna, que lleva la
+   cifra que se busca, quedaba fuera por 72 px.
+   Se deja envolver SOLO la columna de la actuación, y solo cuando hay sitio: en
+   un móvil, ocho columnas envolviendo dan tiras ilegibles, y ahí sigue siendo
+   mejor que la tabla se desplace. Las cifras y las etiquetas no envuelven
+   nunca: partir «126.107,50 €» en dos líneas es peor que arrastrar. */
+@media (min-width: 62rem) {
+  .capex {
+    white-space: normal;
+  }
+  .capex .numerica,
+  .capex .estado,
+  .capex thead th {
+    white-space: nowrap;
+  }
+}
+
 /* `[REQ]` El CAPEX de una cartera va separado por activo: cada `tbody` es un
    edificio, y su primera fila lleva el nombre y el subtotal. El subtotal va
    ARRIBA y no abajo a propósito: es el número que se busca, y con veinte

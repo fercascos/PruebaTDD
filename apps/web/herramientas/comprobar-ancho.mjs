@@ -146,10 +146,46 @@ for (const ancho of ANCHOS) {
   await pg.close()
 }
 
+// ── Y en un escritorio, la cifra que se busca a la vista ────────────────────
+// La otra mitad de «que quepa»: en un móvil vale con que la tabla se desplace
+// ella, pero en un escritorio el TOTAL del CAPEX no puede exigir arrastrar. No
+// se veía a ningún ancho —el contenido medía 1232 px contra los 1160 que deja
+// `main`— y nadie lo notaba porque la tabla sí se desplazaba: el dato no se
+// perdía, solo había que ir a buscarlo.
+console.log('\n1280 px · escritorio')
+const esc = await nav.newPage({ viewport: { width: 1280, height: 900 } })
+await esc.goto(`${BASE}/entrar`)
+await esc.fill('input[type="email"]', CORREO)
+await esc.fill('input[type="password"]', CLAVE)
+await esc.click('button[type="submit"]')
+await esc.waitForURL('**/proyectos', { timeout: 15000 })
+await esc.goto(`${BASE}/proyectos/${PID}/capex`)
+await esc.waitForSelector('.tabla.capex tbody tr', { timeout: 20000 })
+
+const totalDelCapex = await esc.evaluate(() => {
+  const tabla = document.querySelector('.tabla.capex')
+  const celda = [...tabla.querySelectorAll('tfoot td')].pop()
+  if (!celda) return null
+  return {
+    dentro: celda.getBoundingClientRect().right <= tabla.getBoundingClientRect().right + 0.5,
+    sobra: tabla.scrollWidth - tabla.clientWidth,
+    texto: celda.textContent.trim(),
+  }
+})
+comprobar(
+  totalDelCapex !== null && totalDelCapex.dentro,
+  totalDelCapex === null
+    ? 'la tabla de CAPEX no tiene fila de totales'
+    : totalDelCapex.dentro
+      ? `el total del CAPEX se lee entero sin arrastrar (${totalDelCapex.texto})`
+      : `el total del CAPEX queda fuera por ${totalDelCapex.sobra}px`,
+)
+await esc.close()
+
 await nav.close()
 
 if (fallos.length) {
-  console.error(`\n${fallos.length} pantallas desbordan`)
+  console.error(`\n${fallos.length} comprobaciones fallan`)
   process.exit(1)
 }
-console.log('\nNinguna pantalla desborda.')
+console.log('\nTodo cabe.')

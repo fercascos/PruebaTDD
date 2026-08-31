@@ -247,6 +247,24 @@ sobre el control **no sirve**, porque el porcentaje se resuelve contra la
 etiqueta que lo envuelve y esa etiqueta se dimensiona por su contenido, o sea
 por el propio control. Es circular. Hay que acotar el contenedor.
 
+### Y que el número que se busca esté a la vista
+
+En un móvil vale con que la tabla se desplace ella. En un escritorio, no: el
+**total del CAPEX** no puede exigir arrastrar, y no se veía **a ningún ancho**.
+`white-space: nowrap` obligaba a cada título de hallazgo a ir en una sola línea
+—«Cuadro general sin protección diferencial en dos líneas»—, la primera columna
+se estiraba y el contenido medía 1232 px contra los 1160 que deja como mucho el
+`max-width` de `main`. La última columna quedaba fuera por 72 px.
+
+Nadie lo notaba porque la tabla **sí** se desplazaba: el dato no se perdía, solo
+había que ir a buscarlo. De 62 rem en adelante envuelve la columna de la
+actuación —y solo ésa: partir «126.107,50 €» en dos líneas sería peor que
+arrastrar— y la tabla entera cabe. Por debajo sigue desplazándose, porque ocho
+columnas envolviendo en un móvil dan tiras ilegibles.
+
+`test:ancho` lo comprueba con una pasada de escritorio a 1280 px, y afirma la
+cifra que lee.
+
 `[LIM]` Y la razón por la que la CI llevaba semanas en verde con esto dentro:
 `comprobar-safari.mjs` medía `scrollWidth > window.innerWidth`, y **con
 emulación de móvil `innerWidth` crece hasta abarcar lo que se sale** —se
