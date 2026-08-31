@@ -69,16 +69,31 @@ for (const [nombre, sufijo, espera] of pantallas) {
 }
 
 // 11b · El árbol de ubicaciones, dentro de la ficha del activo (§8.4)
+// Se abre el activo que TIENE árbol, no «el primero de la tabla»: el encargo de
+// demostración es de cartera y la tabla ordena por nombre, así que el primero
+// puede ser el que no tiene ubicaciones y la lámina saldría vacía.
+// El nombre sale de `tools/sembrar_demo.py`, que es quien crea las ubicaciones;
+// esta herramienta ya es solo para la base de demostración, así que el
+// acoplamiento es el que hay. Si el nombre cambia, se cae al primer activo y la
+// captura sale igual, quizá con el árbol vacío.
 await pg.goto(`${BASE}/proyectos/${PID}/activos`)
 await pg.waitForSelector('.tabla tbody tr')
-await pg.locator('.tabla tbody tr button').first().click()
+const conArbol = pg.locator('.tabla tbody tr', { hasText: 'Nave A' })
+await ((await conArbol.count()) ? conArbol : pg.locator('.tabla tbody tr'))
+  .locator('button')
+  .first()
+  .click()
 await pg.waitForSelector('.ubicaciones')
 await foto('11b-ubicaciones', { completa:true, espera:600 })
 
 // 12 · Ficha de hallazgo con el comparador abierto
 await pg.goto(`${BASE}/proyectos/${PID}/capex`)
 await pg.waitForSelector('.tabla.capex')
-await pg.locator('button.enlace').first().click()
+// `:not(.cabecera-grupo)` porque en un encargo de cartera la tabla va separada
+// por activo, y la fila de cabecera de cada grupo lleva su propio
+// `button.enlace` —«Exportar este activo»—: sin excluirla se pulsaba ése y la
+// ficha del hallazgo no llegaba a abrirse.
+await pg.locator('.tabla.capex tbody tr:not(.cabecera-grupo) button.enlace').first().click()
 await pg.waitForSelector('.linea-capex')
 await foto('12-ficha-hallazgo', { completa:true })
 await pg.click('button:has-text("Ver referencias y validar el precio")')
