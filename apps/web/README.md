@@ -9,12 +9,15 @@ abajo sin adornos.
 ```bash
 npm install
 npm run dev        # http://localhost:5173, con proxy a la API en :8000
-npm test           # 47 pruebas: cola, cola persistida, formas y estado de red
+npm test           # 52 pruebas: cola, cola persistida, formas y estado de red
 npm run build      # tipos (aplicación y service worker) + empaquetado
 
 # ¿Abre sin red? Necesita el empaquetado servido y un Chromium:
 npm run build && npx vite preview --port 4173 &
 npm run test:sin-red
+
+# ¿Cabe en un móvil? Las trece pantallas, a 320 y a 360 px:
+TDD_PROYECTO=<id> npm run test:ancho
 ```
 
 El proxy de `vite.config.ts` manda `/api` al backend, así que en desarrollo no
@@ -213,6 +216,43 @@ cabecera y el `<script crossorigin>` que genera Vite sí la manda, así que la
 búsqueda en la caché no encontraba nunca el JavaScript. Con red no se nota —se
 descarga y ya—; sin red la aplicación abría **en blanco**. Se arregló con
 `ignoreVary`.
+
+## Que quepa en un móvil
+
+`[REQ]` Ninguna pantalla puede desbordar horizontalmente. El `body` con barra de
+desplazamiento lateral no es cosa cosmética: el contenido se va hacia la derecha
+y hay que arrastrar para leer cada línea, y en campo la aplicación se usa a
+320 px, que es lo que mide un iPhone SE.
+
+Una tabla de doce columnas sí puede sobresalir: se desplaza **ella**, dentro de
+`.desbordable`. Lo que no puede sobresalir es la página.
+
+`npm run test:ancho` recorre las trece pantallas a 320 y a 360 px y, cuando algo
+desborda, **nombra al culpable**: el elemento que se sale sin que ningún
+antepasado suyo esté ya recortando. Sin esa distinción el aviso señala a la
+tabla y no al `<select>` que la empuja, y se arregla lo que no era.
+
+Se escribió porque había cuatro desbordamientos a la vez y ninguna comprobación
+los veía:
+
+| Culpable | Cuánto sacaba a 320 px | Arreglo |
+|---|---|---|
+| La barra de navegación superior | 48 px, **en las trece pantallas** | `flex-wrap: wrap`: cuatro destinos que se envuelven |
+| Las tablas de encargos y de activos | 85 px y 226 px | Envueltas en `.desbordable`, como ya lo estaban otras cuatro |
+| El filtro de activos de la matriz de riesgos | 92 px | Acotar la **etiqueta**, no el `<select>` |
+| El adjunto de la checklist de documentación | 18 px | La etiqueta pasa a bloque para que el `input` tenga contra qué medirse |
+
+Los dos últimos comparten causa y merece la pena escribirla: `max-width: 100%`
+sobre el control **no sirve**, porque el porcentaje se resuelve contra la
+etiqueta que lo envuelve y esa etiqueta se dimensiona por su contenido, o sea
+por el propio control. Es circular. Hay que acotar el contenedor.
+
+`[LIM]` Y la razón por la que la CI llevaba semanas en verde con esto dentro:
+`comprobar-safari.mjs` medía `scrollWidth > window.innerWidth`, y **con
+emulación de móvil `innerWidth` crece hasta abarcar lo que se sale** —se
+midió: con un bloque de 500 px en una página de 320, `innerWidth` pasa a valer
+500—, así que la condición no podía ser cierta nunca. Se ha cambiado a
+`clientWidth`, que se queda en el ancho del viewport CSS.
 
 ## Lo que NO está construido
 

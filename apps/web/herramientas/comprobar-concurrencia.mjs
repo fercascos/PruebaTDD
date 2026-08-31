@@ -61,12 +61,17 @@ for (const pg of [marta, luis]) {
   // Se espera a que la tabla pinte: contar antes daba siempre cero y hacía
   // parecer que el encargo no tenía hallazgos.
   await pg.waitForSelector('.tabla.capex tbody tr, .vacio', { timeout: 20000 })
-  const hay = await pg.locator('.tabla.capex tbody tr').count()
+  // `:not(.cabecera-grupo)` porque en un encargo de cartera la tabla va
+  // separada por activo, y la fila de cabecera de cada grupo lleva su propio
+  // `button.enlace` —«Exportar este activo»—. Sin excluirla, `.first()` pulsaba
+  // ese botón: se descargaba un Excel y la ficha del hallazgo no se abría nunca.
+  const hallazgos = pg.locator('.tabla.capex tbody tr:not(.cabecera-grupo) button.enlace')
+  const hay = await hallazgos.count()
   if (hay === 0) {
     console.error('El encargo de pruebas no tiene ningún hallazgo. Cree uno antes.')
     process.exit(1)
   }
-  await pg.locator('.tabla.capex tbody tr button.enlace').first().click()
+  await hallazgos.first().click()
   await pg.waitForSelector('.ficha-hallazgo', { timeout: 15000 })
 }
 comprobar(true, 'las dos personas tienen el mismo hallazgo abierto')

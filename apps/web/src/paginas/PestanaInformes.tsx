@@ -185,83 +185,85 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
       {versiones.length === 0 ? (
         <Vacio>Todavía no se ha generado ningún informe de este encargo.</Vacio>
       ) : (
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Versión</th>
-              <th>Estado</th>
-              <th>Huella del PPTX</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {versiones.map((v) => (
-              <tr key={v.id}>
-                <td>v{v.version_number}</td>
-                <td>
-                  <span className={`estado e-${v.status.toLowerCase()}`}>{v.status}</span>
-                  {v.is_locked && <span className="candado"> inmutable</span>}
-                </td>
-                <td>
-                  <code title={v.pptx_sha256 ?? ''}>{v.pptx_sha256?.slice(0, 12) ?? '—'}…</code>
-                </td>
-                <td className="acciones">
-                  {/* Mientras el worker no ha terminado no hay ningún fichero
-                      que descargar: ofrecer el botón daría un 404 y parecería
-                      un fallo cuando lo único que pasa es que aún se está
-                      generando. */}
-                  {v.status === 'GENERANDO' && (
-                    <span className="generando">Generando… se actualiza solo</span>
-                  )}
-                  {v.status === 'ERROR' && (
-                    <span className="fallo">
-                      No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.
-                    </span>
-                  )}
-                  {v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
-                    <>
-                      <button
-                        type="button"
-                        className="secundario"
-                        onClick={() =>
-                          void descargar(
-                            `/reports/${v.id}/download`,
-                            `informe-v${v.version_number}.pptx`,
-                          )
-                        }
-                      >
-                        PPTX
-                      </button>
-                      <button
-                        type="button"
-                        className="secundario"
-                        onClick={() =>
-                          void descargar(
-                            `/reports/${v.id}/download?formato=xlsx`,
-                            `capex-v${v.version_number}.xlsx`,
-                          )
-                        }
-                      >
-                        XLSX
-                      </button>
-                    </>
-                  )}
-                  {!v.is_locked && v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
-                    <select
-                      value=""
-                      onChange={(e) => e.target.value && void cambiarEstado(v, e.target.value)}
-                    >
-                      <option value="">Cambiar estado…</option>
-                      <option value="EN_REVISION">A revisión</option>
-                      <option value="APROBADO">Aprobar</option>
-                      <option value="EMITIDO">Emitir (bloquea para siempre)</option>
-                    </select>
-                  )}
-                </td>
+        <div className="desbordable">
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th>Versión</th>
+                <th>Estado</th>
+                <th>Huella del PPTX</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {versiones.map((v) => (
+                <tr key={v.id}>
+                  <td>v{v.version_number}</td>
+                  <td>
+                    <span className={`estado e-${v.status.toLowerCase()}`}>{v.status}</span>
+                    {v.is_locked && <span className="candado"> inmutable</span>}
+                  </td>
+                  <td>
+                    <code title={v.pptx_sha256 ?? ''}>{v.pptx_sha256?.slice(0, 12) ?? '—'}…</code>
+                  </td>
+                  <td className="acciones">
+                    {/* Mientras el worker no ha terminado no hay ningún fichero
+                        que descargar: ofrecer el botón daría un 404 y parecería
+                        un fallo cuando lo único que pasa es que aún se está
+                        generando. */}
+                    {v.status === 'GENERANDO' && (
+                      <span className="generando">Generando… se actualiza solo</span>
+                    )}
+                    {v.status === 'ERROR' && (
+                      <span className="fallo">
+                        No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.
+                      </span>
+                    )}
+                    {v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
+                      <>
+                        <button
+                          type="button"
+                          className="secundario"
+                          onClick={() =>
+                            void descargar(
+                              `/reports/${v.id}/download`,
+                              `informe-v${v.version_number}.pptx`,
+                            )
+                          }
+                        >
+                          PPTX
+                        </button>
+                        <button
+                          type="button"
+                          className="secundario"
+                          onClick={() =>
+                            void descargar(
+                              `/reports/${v.id}/download?formato=xlsx`,
+                              `capex-v${v.version_number}.xlsx`,
+                            )
+                          }
+                        >
+                          XLSX
+                        </button>
+                      </>
+                    )}
+                    {!v.is_locked && v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
+                      <select
+                        value=""
+                        onChange={(e) => e.target.value && void cambiarEstado(v, e.target.value)}
+                      >
+                        <option value="">Cambiar estado…</option>
+                        <option value="EN_REVISION">A revisión</option>
+                        <option value="APROBADO">Aprobar</option>
+                        <option value="EMITIDO">Emitir (bloquea para siempre)</option>
+                      </select>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   )

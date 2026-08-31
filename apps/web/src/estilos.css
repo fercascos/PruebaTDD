@@ -20,6 +20,22 @@
   box-sizing: border-box;
 }
 
+/* `[REQ]` Ningún control de formulario puede ser más ancho que su hueco.
+   Un `<select>` mide por su opción más larga y un `<input type=file>` por el
+   texto de su botón más el nombre del fichero: los dos ignoran el ancho del
+   padre y empujan la página entera hacia la derecha en un móvil. Pasaba con el
+   filtro de activos de la matriz de riesgos —«Edificio B · Getafe Sur» sacaba
+   92 px a 320— y con el adjunto de la checklist de documentación.
+   `min-width: 0` es la otra mitad: sin él, un control dentro de un flex o un
+   grid se niega a encoger por debajo de su ancho intrínseco y `max-width` no
+   llega a aplicarse. */
+input,
+select,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -58,6 +74,15 @@ code {
   display: flex;
   gap: 1rem;
   margin-right: auto;
+  /* `[REQ]` Los cuatro destinos de primer nivel **se envuelven** en un móvil
+     estrecho. Sin esto sumaban 368 px y desbordaban la página a 320: no era la
+     barra la que se desplazaba, era el `body` entero, y con él quedaba
+     inservible el resto de la pantalla en TODAS las vistas.
+     Envolver y no desplazar como `.pestanas`: aquélla tiene diez pestañas y
+     ahí desplazar es razonable; aquí son cuatro, y esconder un destino de
+     primer nivel detrás de un gesto lateral no compensa ahorrar una línea. */
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
 }
 .cabecera a {
   color: #cbd5e1;
@@ -166,6 +191,28 @@ select {
   align-items: flex-end;
   flex-wrap: wrap;
   margin-bottom: 1rem;
+}
+/* `[REQ]` Cada control del filtro se queda dentro de la fila.
+   `max-width: 100%` sobre el `<select>` NO basta y es la trampa: el porcentaje
+   se resuelve contra la etiqueta que lo envuelve, y esa etiqueta se dimensiona
+   por su contenido, o sea por el propio `<select>`. Es circular, y el control
+   sale igual de ancho. Hay que acotar la ETIQUETA, que sí es un elemento flex
+   con el ancho del filtro como referencia. Se veía en la matriz de riesgos:
+   «Edificio B · Getafe Sur» sacaba 92 px de la pantalla a 320.
+
+   `:not(.casilla)` porque una casilla va en fila con su texto al lado, y esta
+   regla —posterior en la hoja y de la misma especificidad— le ganaba: la
+   casilla de «solo las del informe» pasó a quedar ENCIMA de su etiqueta. */
+.filtro > label:not(.casilla) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 100%;
+  min-width: 0;
+}
+.filtro > label.casilla {
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* El selector de idioma de la exportación. Va pegado a su botón y no en una
@@ -1021,9 +1068,16 @@ tr.inactiva td {
   font-variant-numeric: tabular-nums;
 }
 
-/* Una tabla ancha en un móvil se desborda: se desplaza ella, no la página. */
+/* Una tabla ancha en un móvil se desborda: **se desplaza ella, no la página**.
+   El `body` con barra horizontal deja inservible el resto de la pantalla, y en
+   campo se usa a 320 px. Envuelve a la tabla; la tabla no cambia de display,
+   así que conserva su reparto de columnas.
+   `min-width: 0` para que el envoltorio pueda encoger dentro de un flex o un
+   grid: sin él hereda el ancho de la tabla y no llega a desplazar nada. */
 .desbordable {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
 }
 
 .capitulos {
@@ -1107,12 +1161,9 @@ tr.inactiva td {
   margin: 0;
 }
 
-/* Doce columnas no caben en un móvil. Se desplaza la tabla, no la página: el
-   `body` con barra horizontal deja el resto de la pantalla inservible. */
-.desbordable {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
+/* Doce columnas no caben en un móvil: por eso la tabla de referencias va
+   envuelta en `.desbordable`, declarada una sola vez más arriba. Estaba
+   declarada dos veces con reglas distintas, y la segunda ganaba por orden. */
 .tabla.referencias {
   min-width: 62rem;
   font-size: 0.85rem;
@@ -1374,8 +1425,15 @@ button.enlace {
 
 /* [REQ] El interruptor de la autorización tiene que verse de un vistazo:
    apagado es el estado normal y no debe parecer un error. */
+/* `flex-wrap` porque el botón no puede partirse —«Retirar la autorización» en
+   dos líneas se lee mal— y a 320 px no cabe al lado del texto: se salía 59 px
+   de la pantalla. Envuelto, baja debajo. Solo se veía con la autorización YA
+   concedida, que es el estado en el que el botón alarga de «Autorizar» a
+   «Retirar la autorización», y por eso no aparecía en una pantalla recién
+   sembrada. */
 .autorizacion-ia {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  flex-wrap: wrap;
   padding: 0.85rem 1rem; border-radius: 6px; border: 1px solid var(--borde);
 }
 .autorizacion-ia.inactiva { background: var(--fondo-suave, #f6f7f9); }
@@ -1399,8 +1457,13 @@ button.enlace {
 .checklist .categoria { display: block; font-size: 0.8rem; color: var(--tenue); }
 .checklist .limitacion { font-size: 0.82rem; color: #8a5a1a; margin: 0.4rem 0 0; }
 .checklist .motivo { width: 100%; margin-top: 0.4rem; }
-.checklist .subir { display: inline-block; margin-top: 0.5rem; font-size: 0.85rem; cursor: pointer; }
-.checklist .subir input { display: block; font-size: 0.8rem; }
+/* `display: block` y no `inline-block`: un `<input type=file>` mide el texto de
+   su botón más el nombre del fichero, y con la etiqueta ajustándose a él el
+   `max-width: 100%` del input se resolvía contra su propio ancho y no acotaba
+   nada. Como bloque, la etiqueta toma el ancho del padre y el input ya tiene
+   contra qué medirse. Sacaba 18 px de la pantalla a 320. */
+.checklist .subir { display: block; margin-top: 0.5rem; font-size: 0.85rem; cursor: pointer; }
+.checklist .subir input { display: block; font-size: 0.8rem; width: 100%; }
 
 .documentos { list-style: none; padding: 0; margin: 0.6rem 0 0; display: flex; flex-direction: column; gap: 0.5rem; }
 .documento { border-top: 1px dashed var(--borde); padding-top: 0.5rem; }

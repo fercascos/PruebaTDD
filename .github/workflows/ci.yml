@@ -272,6 +272,15 @@ jobs:
           TDD_WEB: http://localhost:4173
         run: cd apps/web && node herramientas/comprobar-safari.mjs
 
+      # Las TRECE pantallas, a los dos anchos, con el elemento culpable
+      # nombrado. Las cuatro que mira `comprobar-safari.mjs` no bastaban: un
+      # desbordamiento de 48 px provocado por la barra de navegación superior
+      # estuvo en todas las vistas sin que la CI dijera nada.
+      - name: Ninguna pantalla desborda a lo ancho, ni a 320 ni a 360
+        env:
+          TDD_WEB: http://localhost:4173
+        run: cd apps/web && node herramientas/comprobar-ancho.mjs
+
       - name: Y sin red, que es como se trabaja en una nave
         env:
           TDD_NAVEGADOR: webkit

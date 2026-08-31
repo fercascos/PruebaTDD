@@ -87,11 +87,23 @@ for (const [nombre, ruta] of [
 ]) {
   await pg.goto(`${BASE}${ruta}`)
   await pg.waitForTimeout(1500)
+  // `clientWidth` y NO `window.innerWidth`. Es la diferencia entre comprobar
+  // algo y no comprobar nada: con emulación de móvil, `innerWidth` **crece
+  // hasta abarcar lo que se sale** —se midió: con un bloque de 500 px metido en
+  // una página de 320, `innerWidth` pasa a valer 500 y `scrollWidth` también—,
+  // así que `scrollWidth > innerWidth` no puede ser cierto nunca y esta
+  // comprobación llevaba desde que se escribió pasando siempre.
+  // `clientWidth` se queda en el ancho del viewport CSS y sí lo caza.
   const desborda = await pg.evaluate(
-    () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   )
   comprobar(!desborda, `«${nombre}» no se sale por los lados a ${ancho} px`)
 }
+
+// `[LIM]` Estas cuatro pantallas no son todas. El recorrido completo de las
+// trece, con el elemento culpable nombrado, está en `comprobar-ancho.mjs`.
+// Este bloque se queda porque cubre lo mismo **en WebKit**, que es el motor
+// que aquélla no puede usar.
 
 // ── 4 · Los controles se pueden pulsar con el pulgar ────────────────────────
 // 44×44 puntos es el mínimo que pide la guía de interfaz de Apple, y no es

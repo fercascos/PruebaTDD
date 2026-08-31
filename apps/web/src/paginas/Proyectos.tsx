@@ -38,30 +38,32 @@ export function Proyectos() {
   return (
     <>
       {cabecera}
-      <table className="tabla">
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nombre</th>
-            <th>Estado</th>
-            <th>Moneda</th>
-          </tr>
-        </thead>
-        <tbody>
-          {proyectos.map((p) => (
-            <tr key={p.id}>
-              <td>
-                <Link to={`/proyectos/${p.id}`}>{p.internal_code}</Link>
-              </td>
-              <td>{p.name}</td>
-              <td>
-                <span className={`estado e-${p.status.toLowerCase()}`}>{p.status}</span>
-              </td>
-              <td>{p.currency}</td>
+      <div className="desbordable">
+        <table className="tabla">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Estado</th>
+              <th>Moneda</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {proyectos.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <Link to={`/proyectos/${p.id}`}>{p.internal_code}</Link>
+                </td>
+                <td>{p.name}</td>
+                <td>
+                  <span className={`estado e-${p.status.toLowerCase()}`}>{p.status}</span>
+                </td>
+                <td>{p.currency}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   )
 }

@@ -82,40 +82,42 @@ export function Plantillas() {
       {plantillas.length === 0 ? (
         <Vacio>No hay ninguna plantilla registrada todavía.</Vacio>
       ) : (
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Idioma</th>
-              <th className="numerica">Diapositivas</th>
-              <th className="numerica">Marcadores</th>
-              <th>Avisos</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {plantillas.map((p) => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>{p.language}</td>
-                <td className="numerica">{p.slide_count ?? '—'}</td>
-                <td className="numerica">{p.analysis?.placeholders.length ?? 0}</td>
-                <td>
-                  {p.analysis?.has_watermark && (
-                    <span className="marca aviso">
-                      lleva marca de agua · se retirará al generar
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <button type="button" className="secundario" onClick={() => setElegida(p)}>
-                    Mapear
-                  </button>
-                </td>
+        <div className="desbordable">
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Idioma</th>
+                <th className="numerica">Diapositivas</th>
+                <th className="numerica">Marcadores</th>
+                <th>Avisos</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {plantillas.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td>{p.language}</td>
+                  <td className="numerica">{p.slide_count ?? '—'}</td>
+                  <td className="numerica">{p.analysis?.placeholders.length ?? 0}</td>
+                  <td>
+                    {p.analysis?.has_watermark && (
+                      <span className="marca aviso">
+                        lleva marca de agua · se retirará al generar
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <button type="button" className="secundario" onClick={() => setElegida(p)}>
+                      Mapear
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {elegida && <EditorDeMapeo plantilla={elegida} alCerrar={() => setElegida(null)} />}
@@ -192,43 +194,45 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
       {guardado && <Mensaje tipo="ok">Mapeo guardado.</Mensaje>}
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
-      <table className="tabla compacta">
-        <thead>
-          <tr>
-            <th>Marcador de la plantilla</th>
-            <th>Campo del proyecto</th>
-          </tr>
-        </thead>
-        <tbody>
-          {marcadores.map((m) => (
-            <tr key={m} className={bindings[m] ? '' : 'sin-cambio'}>
-              <td>
-                <code>{`{{${m}}}`}</code>
-              </td>
-              <td>
-                <select
-                  value={bindings[m] ?? ''}
-                  onChange={(e) =>
-                    setBindings((previos) => {
-                      const nuevos = { ...previos }
-                      if (e.target.value) nuevos[m] = e.target.value
-                      else delete nuevos[m]
-                      return nuevos
-                    })
-                  }
-                >
-                  <option value="">— sin origen —</option>
-                  {CAMPOS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </td>
+      <div className="desbordable">
+        <table className="tabla compacta">
+          <thead>
+            <tr>
+              <th>Marcador de la plantilla</th>
+              <th>Campo del proyecto</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {marcadores.map((m) => (
+              <tr key={m} className={bindings[m] ? '' : 'sin-cambio'}>
+                <td>
+                  <code>{`{{${m}}}`}</code>
+                </td>
+                <td>
+                  <select
+                    value={bindings[m] ?? ''}
+                    onChange={(e) =>
+                      setBindings((previos) => {
+                        const nuevos = { ...previos }
+                        if (e.target.value) nuevos[m] = e.target.value
+                        else delete nuevos[m]
+                        return nuevos
+                      })
+                    }
+                  >
+                    <option value="">— sin origen —</option>
+                    {CAMPOS.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="acciones">
         <button type="button" onClick={() => void guardar()}>

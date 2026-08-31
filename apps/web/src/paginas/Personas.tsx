@@ -111,65 +111,67 @@ export function Personas() {
       {personas.length === 0 ? (
         <Vacio>No hay nadie más en la organización.</Vacio>
       ) : (
-        <table className="tabla">
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Rol</th>
-              <th>Estado</th>
-              {esAdmin && <th>Acciones</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {personas.map((p) => (
-              <tr key={p.id} className={p.is_active ? '' : 'inactiva'}>
-                <td>{p.full_name}</td>
-                <td>{p.email}</td>
-                <td>
-                  {esAdmin && p.id !== perfil?.id ? (
-                    <select
-                      value={p.org_role}
-                      onChange={(e) => void cambiar(p, { org_role: e.target.value })}
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r.code} value={r.code}>
-                          {r.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    (ROLES.find((r) => r.code === p.org_role)?.nombre ?? p.org_role)
-                  )}
-                </td>
-                <td>
-                  <span className={`estado e-${p.is_active ? 'validado' : 'descartado'}`}>
-                    {p.is_active ? 'Activa' : 'Desactivada'}
-                  </span>
-                </td>
-                {esAdmin && (
+        <div className="desbordable">
+          <table className="tabla">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                {esAdmin && <th>Acciones</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {personas.map((p) => (
+                <tr key={p.id} className={p.is_active ? '' : 'inactiva'}>
+                  <td>{p.full_name}</td>
+                  <td>{p.email}</td>
                   <td>
-                    {p.id === perfil?.id ? (
-                      // Desactivarse a uno mismo deja la organización
-                      // potencialmente sin administrador y al usuario fuera en
-                      // la siguiente petición. La API devuelve 422; aquí ni se
-                      // ofrece el botón.
-                      <em className="ayuda">es su propia cuenta</em>
-                    ) : (
-                      <button
-                        type="button"
-                        className="secundario"
-                        onClick={() => void cambiar(p, { is_active: !p.is_active })}
+                    {esAdmin && p.id !== perfil?.id ? (
+                      <select
+                        value={p.org_role}
+                        onChange={(e) => void cambiar(p, { org_role: e.target.value })}
                       >
-                        {p.is_active ? 'Desactivar' : 'Reactivar'}
-                      </button>
+                        {ROLES.map((r) => (
+                          <option key={r.code} value={r.code}>
+                            {r.nombre}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      (ROLES.find((r) => r.code === p.org_role)?.nombre ?? p.org_role)
                     )}
                   </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td>
+                    <span className={`estado e-${p.is_active ? 'validado' : 'descartado'}`}>
+                      {p.is_active ? 'Activa' : 'Desactivada'}
+                    </span>
+                  </td>
+                  {esAdmin && (
+                    <td>
+                      {p.id === perfil?.id ? (
+                        // Desactivarse a uno mismo deja la organización
+                        // potencialmente sin administrador y al usuario fuera en
+                        // la siguiente petición. La API devuelve 422; aquí ni se
+                        // ofrece el botón.
+                        <em className="ayuda">es su propia cuenta</em>
+                      ) : (
+                        <button
+                          type="button"
+                          className="secundario"
+                          onClick={() => void cambiar(p, { is_active: !p.is_active })}
+                        >
+                          {p.is_active ? 'Desactivar' : 'Reactivar'}
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   )

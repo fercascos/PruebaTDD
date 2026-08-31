@@ -16,6 +16,7 @@
     "test:inventario": "node herramientas/comprobar-inventario.mjs",
     "test:importacion": "node herramientas/comprobar-importacion.mjs",
     "test:exportacion": "node herramientas/comprobar-exportacion.mjs",
+    "test:ancho": "node herramientas/comprobar-ancho.mjs",
     "test:sistema-fotos": "node herramientas/comprobar-sistema-de-fotos.mjs",
     "test:recuperacion": "node herramientas/comprobar-recuperacion.mjs",
     "lint": "tsc --noEmit && tsc -p tsconfig.sw.json",

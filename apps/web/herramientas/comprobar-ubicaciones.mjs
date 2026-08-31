@@ -40,10 +40,40 @@ await pg.fill('input[type="password"]', CLAVE)
 await pg.click('button[type="submit"]')
 await pg.waitForURL('**/proyectos', { timeout: 15000 })
 
-// ── 1 · Se abre la ficha del activo y aparece el árbol ──────────────────────
+// ── 0 · ¿En qué activo están las fotografías? ───────────────────────────────
+// La cadena que se comprueba abajo —sala → foto → nombre del fichero— exige que
+// la sala y la foto sean **del mismo activo**. Antes se cogía «el primero de la
+// tabla» y funcionaba de casualidad, porque el encargo de demostración tenía
+// uno solo; en cuanto pasó a ser de cartera, la tabla ordena por nombre y el
+// primero dejó de ser el que tiene las fotos. Aquí se busca cuál es.
+await pg.goto(`${BASE}/proyectos/${PID}/fotos`)
+await pg.waitForSelector('.rejilla img, .vacio', { timeout: 25000 })
+const filtroDeActivo = pg.locator('label:has-text("Ver solo las de") select').first()
+const candidatos = await filtroDeActivo.evaluate((sel) =>
+  Array.from(sel.options)
+    .filter((o) => o.value)
+    .map((o) => ({ id: o.value, nombre: o.textContent.trim() })),
+)
+
+let activo = null
+for (const c of candidatos) {
+  await filtroDeActivo.selectOption(c.id)
+  await pg.waitForTimeout(1200)
+  if ((await pg.locator('.rejilla img').count()) > 0) {
+    activo = c
+    break
+  }
+}
+if (!activo) {
+  console.error('Ningún activo del encargo de pruebas tiene fotografías. Suba una antes.')
+  process.exit(1)
+}
+comprobar(true, `las fotografías están en «${activo.nombre}»`)
+
+// ── 1 · Se abre la ficha de ESE activo y aparece el árbol ───────────────────
 await pg.goto(`${BASE}/proyectos/${PID}/activos`)
 await pg.waitForSelector('.tabla tbody tr, .vacio', { timeout: 20000 })
-await pg.locator('.tabla tbody tr button').first().click()
+await pg.locator('.tabla tbody tr', { hasText: activo.nombre }).locator('button').first().click()
 await pg.waitForSelector('.ubicaciones', { timeout: 15000 })
 comprobar(true, 'la ficha del activo lleva el árbol de ubicaciones')
 
@@ -100,9 +130,14 @@ comprobar(
 // ── 3 · La foto se clasifica en esa sala ────────────────────────────────────
 await pg.goto(`${BASE}/proyectos/${PID}/fotos`)
 await pg.waitForSelector('.rejilla img, .vacio', { timeout: 25000 })
+// Filtrada por el activo del paso 0: en una cartera, la primera miniatura de
+// «todos los activos» puede ser de otro edificio, y su desplegable de espacios
+// no ofrecería la sala recién creada.
+await pg.locator('label:has-text("Ver solo las de") select').first().selectOption(activo.id)
+await pg.waitForTimeout(1500)
 const hayFotos = await pg.locator('.rejilla img').count()
 if (hayFotos === 0) {
-  console.error('El encargo de pruebas no tiene fotografías. Suba una antes.')
+  console.error(`«${activo.nombre}» ya no tiene fotografías. Suba una antes.`)
   process.exit(1)
 }
 await pg.locator('.rejilla .miniatura').first().click()
