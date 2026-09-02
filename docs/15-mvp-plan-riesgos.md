@@ -183,7 +183,7 @@ OpenAPI e i18n; CI con todas las puertas; observabilidad.
 #### F1 · Catálogos y taxonomías — 2 semanas `[REC]`
 
 Modelo de catálogos; semilla completa (6 tipologías, 20 zonas, 86 relaciones, 125 códigos, 4 riesgos
-con definición, 10 conceptos, 5 horizontes, 14 sistemas, 8 fases, 5 categorías de documentación);
+con definición, 10 conceptos, 5 horizontes, 14 sistemas, 8 fases, 6 categorías de documentación);
 `CatalogService`; endpoints con filtrado dependiente; validación de zona por tipología y de código
 seleccionable; retirada por `deprecated_at`; componentes de frontend (selector de árbol de 3 niveles,
 selector de zona filtrado, selector de riesgo **con definición visible**).

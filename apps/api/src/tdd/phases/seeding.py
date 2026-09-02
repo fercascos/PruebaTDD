@@ -26,6 +26,11 @@ FASES: tuple[tuple[str, str, bool, bool, bool, bool, bool], ...] = (
 
 #: `[REQ]` §3.1.5 · Categorías de la solicitud de documentación. Ampliable.
 CATEGORIAS_DOCUMENTACION: tuple[tuple[str, str], ...] = (
+    # `[REQ]` La primera de la lista, y no por orden alfabético: es el documento
+    # del que salen los datos del edificio y el esqueleto del CAPEX. Pedirla
+    # tarde retrasa todo lo demás, y el orden de la checklist es lo que le dice
+    # al consultor por dónde empezar.
+    ("MEMORIA_TECNICA", "Memoria técnica"),
     ("LICENCIAS_URBANISTICAS", "Licencias urbanísticas"),
     ("PROYECTOS", "Proyectos"),
     ("CONTRATOS_MANTENIMIENTO", "Contratos de mantenimiento"),

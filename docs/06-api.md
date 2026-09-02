@@ -135,7 +135,7 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET`/`POST` | `/project-phases/{id}/doc-requests` | Checklist. Al crear la fase se siembra con las 5 categorías de §3.1.5 |
+| `GET`/`POST` | `/project-phases/{id}/doc-requests` | Checklist. Al crear la fase se siembra con las 6 categorías de §3.1.5, y la primera es la **memoria técnica** |
 | `PATCH` | `/doc-requests/{id}` | Estado, fechas, motivo. `422` si `NO_DISPONIBLE` sin motivo |
 | `POST` | `/doc-requests/{id}/documents` | Adjunta documentos; clasifica automáticamente por categoría |
 | `POST` | `/project-phases/{id}/doc-requests/export` | Genera el XLSX de solicitud para enviar al cliente `[REC]` |
@@ -183,6 +183,10 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 | `POST` | `/assets/{id}/geocode` | Devuelve candidatos; **no fija coordenadas automáticamente** |
 | `PUT` | `/assets/{id}/main-photo` | |
 | `GET`/`POST` | `/assets/{id}/locations` | Árbol zona/planta/espacio |
+| `GET`/`PUT` | `/assets/{id}/zones` | **Zonas privadas y comunes**, por activo. El `PUT` manda la lista entera y sustituye: la memoria las declara de una vez. `422` si la tipología no admite alguna |
+| `GET`/`PUT` | `/assets/{id}/memoria` | La **memoria técnica**: la propuesta de datos del edificio y las categorías del CAPEX con sus objetos. Guardar **no toca el activo** |
+| `POST` | `/assets/{id}/memoria/validar` | **El botón.** Vuelca la propuesta al activo y firma quién y cuándo. `422` sin `confirmar: true` |
+| `POST` | `/assets/{id}/memoria/generar-capex` | El **esqueleto**: un hallazgo en BORRADOR por objeto. Idempotente: no duplica ni pisa lo ya rellenado |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
 
 ### Inventario de equipo `[REQ]` §7 / P-15

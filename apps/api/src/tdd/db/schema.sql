@@ -267,6 +267,33 @@ CREATE TABLE asset (
     floors_below        SMALLINT,
     year_built          SMALLINT,
     year_last_refurb    SMALLINT,
+    -- [REQ] Los datos que aporta la MEMORIA TÉCNICA del activo. Se separan de
+    -- los de arriba porque tienen otro origen: los de arriba los teclea quien
+    -- da de alta el encargo; éstos salen del documento que entrega la
+    -- propiedad, y por eso llevan `memoria_validada_at` como testigo de que
+    -- alguien los miró antes de darlos por buenos.
+    cadastral_reference VARCHAR(30),
+    developer           VARCHAR(200),
+    project_date        DATE,
+    secondary_use       VARCHAR(120),
+    -- La huella del edificio en la parcela. NO es `total_built_sqm`, que suma
+    -- todas las plantas: un edificio de cuatro alturas ocupa la cuarta parte.
+    footprint_area_sqm  NUMERIC(14, 2),
+    urbanised_area_sqm  NUMERIC(14, 2),
+    -- Útil, no alquilable: `lettable_area_sqm` es lo que se factura y suele
+    -- llevar repercusión de zonas comunes. Confundirlas descuadra el € / m².
+    usable_area_sqm     NUMERIC(14, 2),
+    -- Del edificio entero. `warehouse_height_m` es la del almacén, que en una
+    -- nave con oficinas en altillo no es la misma.
+    max_height_m        NUMERIC(6, 2),
+    loading_docks       SMALLINT,
+    parking_spaces      INTEGER,
+    -- Quién y cuándo dio por buenos los datos extraídos de la memoria. NULL
+    -- significa «nadie todavía», y la ficha lo dice en pantalla: un dato
+    -- extraído por una máquina y no revisado no puede parecerse a uno tecleado
+    -- por un técnico.
+    memoria_validada_at TIMESTAMPTZ,
+    memoria_validada_por UUID REFERENCES app_user(id),
     created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
     -- [REQ] Control de concurrencia optimista. Lo incrementa el disparador
@@ -297,12 +324,67 @@ CREATE TABLE asset (
                OR warehouse_area_sqm <= total_built_sqm),
     CONSTRAINT asset_superficies_no_negativas
         CHECK (COALESCE(plot_area_sqm, 0) >= 0 AND COALESCE(total_built_sqm, 0) >= 0
-               AND COALESCE(lettable_area_sqm, 0) >= 0)
+               AND COALESCE(lettable_area_sqm, 0) >= 0),
+    -- Las superficies de la memoria, con la misma vara de medir que las de
+    -- arriba. No se comprueba que la huella quepa en la parcela ni que la útil
+    -- sea menor que la construida: son ciertas casi siempre, pero una parcela
+    -- con edificación fuera de linderos o una útil mal medida existen, y un
+    -- CHECK que rechaza el dato real obliga a mentirle a la aplicación.
+    CONSTRAINT asset_superficies_memoria_no_negativas
+        CHECK (COALESCE(footprint_area_sqm, 0) >= 0 AND COALESCE(urbanised_area_sqm, 0) >= 0
+               AND COALESCE(usable_area_sqm, 0) >= 0 AND COALESCE(max_height_m, 0) >= 0),
+    CONSTRAINT asset_conteos_no_negativos
+        CHECK (COALESCE(loading_docks, 0) >= 0 AND COALESCE(parking_spaces, 0) >= 0),
+    -- La validación de la memoria es de quien la firma: o están las dos cosas
+    -- o no está ninguna. Una fecha sin persona no vale como testigo.
+    CONSTRAINT asset_memoria_validada_completa
+        CHECK ((memoria_validada_at IS NULL) = (memoria_validada_por IS NULL))
 );
 
 CREATE UNIQUE INDEX asset_codigo_uniq
     ON asset (project_id, asset_code) WHERE asset_code IS NOT NULL AND deleted_at IS NULL;
 CREATE INDEX asset_proyecto_idx ON asset (project_id) WHERE deleted_at IS NULL;
+
+-- ── Zonas del activo: privadas y comunes ────────────────────────────────────
+--
+-- [REQ] La memoria técnica declara qué zonas tiene el edificio y cuáles son
+-- privadas y cuáles comunes.
+--
+-- La marca vive AQUÍ y no en el catálogo `zone` a propósito, y es una decisión
+-- del cliente: la misma zona cambia de naturaleza según el edificio. «Aseos»
+-- es zona común en un edificio de oficinas multiinquilino y privada en una
+-- nave de un solo ocupante. Puesta en el catálogo habría un único valor para
+-- toda la organización y no admitiría excepciones.
+--
+-- [REC] Es lo que permite responder «¿cuánto del CAPEX recae sobre la
+-- propiedad y cuánto es repercutible?» sin teclearlo línea a línea: la
+-- recuperabilidad de un hallazgo puede proponerse desde la zona en la que
+-- está. Proponerse, no decidirse: `finding.tenant_recoverable` se sigue
+-- pudiendo cambiar a mano, porque el contrato de arrendamiento manda sobre
+-- cualquier regla general.
+
+CREATE TYPE zone_tenure AS ENUM ('PRIVADA', 'COMUN');
+
+CREATE TABLE asset_zone (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_id        UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    zone_id         UUID NOT NULL REFERENCES zone(id),
+    tenure          zone_tenure NOT NULL,
+    -- Opcional: la memoria a veces da la superficie de cada zona y a veces no.
+    area_sqm        NUMERIC(14, 2),
+    notes           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- Una zona se clasifica UNA vez por activo. Sin esto, dos importaciones de
+    -- la misma memoria dejarían la misma zona declarada privada y común a la
+    -- vez, y la propuesta de recuperabilidad dependería del orden de lectura.
+    UNIQUE (asset_id, zone_id),
+    CONSTRAINT asset_zone_superficie_no_negativa
+        CHECK (COALESCE(area_sqm, 0) >= 0)
+);
+
+CREATE INDEX asset_zone_activo_idx ON asset_zone (asset_id);
 
 -- ── Equipo del proyecto ─────────────────────────────────────────────────────
 --
@@ -1393,7 +1475,12 @@ ALTER TABLE asset
 
 CREATE TYPE doc_type AS ENUM (
     'LICENCIA_URBANISTICA', 'PROYECTO', 'CONTRATO_MANTENIMIENTO', 'LEGALIZACION',
-    'CERTIFICADO', 'GARANTIA', 'PLANO', 'QA', 'INFORME_PREVIO', 'FICHA_TECNICA', 'OTRO'
+    'CERTIFICADO', 'GARANTIA', 'PLANO', 'QA', 'INFORME_PREVIO', 'FICHA_TECNICA', 'OTRO',
+    -- [REQ] La MEMORIA TÉCNICA es un tipo propio y no una `FICHA_TECNICA` más:
+    -- es el único documento del que la aplicación **extrae datos** hacia la
+    -- ficha del activo y hacia la estructura del CAPEX. Distinguirlo por tipo
+    -- es lo que permite ofrecer la extracción solo donde tiene sentido.
+    'MEMORIA_TECNICA'
 );
 
 CREATE TYPE doc_confidentiality AS ENUM ('INTERNO', 'CONFIDENCIAL', 'RESTRINGIDO');
@@ -1573,6 +1660,124 @@ CREATE TABLE doc_review_finding (
         CHECK (evidence_page IS NULL OR evidence_page >= 1)
 );
 CREATE INDEX doc_finding_revision_idx ON doc_review_finding (doc_review_id, decision);
+
+-- =============================================================================
+--  La memoria técnica del activo [REQ]
+--
+--  Es el documento que entrega la propiedad con todos los datos del edificio y
+--  el listado de categorías del CAPEX con sus objetos. Sirve para dos cosas, y
+--  las dos son las que justifican que tenga tablas propias:
+--
+--   1. **Completa la ficha del activo** sin volver a teclearla.
+--   2. **Genera el esqueleto del CAPEX**: una fila por categoría presente y una
+--      subfila por objeto, que el gestor técnico va completando.
+--
+--  Lo que se guarda aquí es lo que dice LA MEMORIA, no lo que acabe siendo el
+--  CAPEX. Son cosas distintas y separarlas importa: el gestor añade objetos que
+--  la memoria no contemplaba, y descarta otros que sí venían. Fundirlas dejaría
+--  sin respuesta la pregunta que se hace en la defensa del informe: «¿esto
+--  estaba en la memoria del edificio o lo viste tú en la visita?».
+--
+--  [REQ] Nada de esto se da por bueno solo. `validada_at` / `validada_por` son
+--  el testigo de que una persona miró lo que la extracción propuso. La regla
+--  del cliente es explícita: se extrae, se previsualiza y se acepta con un
+--  botón. Un clic, no un tecleo — pero un clic de alguien.
+-- =============================================================================
+
+CREATE TYPE memoria_status AS ENUM ('SIN_DOCUMENTO', 'EXTRAIDA', 'VALIDADA');
+
+CREATE TABLE memoria_tecnica (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    -- Una por activo. Un edificio tiene una memoria técnica; si llegan dos
+    -- versiones, se sustituye el documento y se vuelve a extraer.
+    asset_id        UUID NOT NULL UNIQUE REFERENCES asset(id) ON DELETE CASCADE,
+    -- El documento del que salió. NULL cuando la memoria se está rellenando a
+    -- mano porque la propiedad no la ha entregado: el caso existe y no puede
+    -- bloquear el trabajo.
+    document_id     UUID REFERENCES document(id) ON DELETE SET NULL,
+    status          memoria_status NOT NULL DEFAULT 'SIN_DOCUMENTO',
+
+    -- Quién produjo la extracción y si fue de mentira. Igual que en la revisión
+    -- documental: una extracción simulada no puede pasar por una de verdad ni
+    -- en la base ni en la pantalla.
+    origen          VARCHAR(60),
+    es_simulada     BOOLEAN NOT NULL DEFAULT TRUE,
+    extraida_at     TIMESTAMPTZ,
+
+    -- [REQ] LA PROPUESTA, sin aplicar. Es la mitad que hace que el botón de
+    -- validación signifique algo: los datos extraídos del documento se quedan
+    -- AQUÍ y no en `asset` hasta que una persona los acepta. Escribirlos
+    -- directamente en el activo y marcarlos «sin validar» habría dejado un dato
+    -- sin revisar circulando por el CAPEX y por el informe, que es justo lo que
+    -- el botón existe para impedir.
+    --
+    -- JSONB y no columnas porque esto es un borrador, no un registro: su forma
+    -- es la de `asset` y cambiará con ella, y una propuesta a la que le falta
+    -- la mitad de los campos es normal —la memoria no siempre los trae todos—.
+    propuesta       JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    validada_at     TIMESTAMPTZ,
+    validada_por    UUID REFERENCES app_user(id),
+
+    notes           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    row_version     INTEGER NOT NULL DEFAULT 1,
+    updated_by      UUID REFERENCES app_user(id),
+
+    CONSTRAINT memoria_validada_completa
+        CHECK ((validada_at IS NULL) = (validada_por IS NULL)),
+    -- No se puede estar VALIDADA sin que conste quién la validó. El estado y el
+    -- testigo son la misma afirmación dicha dos veces, y tienen que coincidir.
+    CONSTRAINT memoria_estado_coherente
+        CHECK (status <> 'VALIDADA' OR validada_at IS NOT NULL),
+    CONSTRAINT memoria_extraida_tiene_fecha
+        CHECK (status = 'SIN_DOCUMENTO' OR extraida_at IS NOT NULL)
+);
+
+-- Las categorías del CAPEX que la memoria declara presentes en el edificio.
+-- Son los 15 capítulos de Hard Costs —`HC.H01` a `HC.H15`— aunque nada impide
+-- que la memoria declare también las de otro tipo de coste.
+CREATE TABLE memoria_categoria (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    memoria_id      UUID NOT NULL REFERENCES memoria_tecnica(id) ON DELETE CASCADE,
+    -- Un capítulo del catálogo: nivel 2. Que sea de nivel 2 lo comprueba la API
+    -- y lo cubre una prueba; un CHECK aquí exigiría un disparador que consulte
+    -- otra tabla, y eso encarece cada escritura para una regla que no cambia.
+    capex_code_id   UUID NOT NULL REFERENCES capex_code(id),
+    notes           TEXT,
+    orden           SMALLINT NOT NULL DEFAULT 0,
+    UNIQUE (memoria_id, capex_code_id)
+);
+
+CREATE INDEX memoria_categoria_memoria_idx ON memoria_categoria (memoria_id, orden);
+
+-- Los objetos que la memoria enumera dentro de cada categoría.
+CREATE TABLE memoria_objeto (
+    id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id      UUID NOT NULL REFERENCES organization(id),
+    memoria_categoria_id UUID NOT NULL REFERENCES memoria_categoria(id) ON DELETE CASCADE,
+    -- El elemento del catálogo (nivel 3) al que corresponde, SI corresponde a
+    -- alguno. Nulo a propósito: una memoria nombra cosas que el catálogo no
+    -- tiene, y perderlas por no encajar sería tirar justo la información que el
+    -- gestor necesita para no olvidarse de revisarlas.
+    capex_code_id        UUID REFERENCES capex_code(id),
+    -- Lo que dice la memoria, con sus palabras. Se conserva aunque haya código:
+    -- «Enfriadora Marca X de 450 kW» es más útil que «Producción de
+    -- climatización» cuando alguien vuelve al informe seis meses después.
+    nombre               VARCHAR(240) NOT NULL,
+    cantidad             NUMERIC(14, 2),
+    unidad               VARCHAR(20),
+    notes                TEXT,
+    orden                SMALLINT NOT NULL DEFAULT 0,
+    UNIQUE (memoria_categoria_id, nombre),
+    CONSTRAINT memoria_objeto_cantidad_no_negativa
+        CHECK (COALESCE(cantidad, 0) >= 0)
+);
+
+CREATE INDEX memoria_objeto_categoria_idx ON memoria_objeto (memoria_categoria_id, orden);
 
 -- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
@@ -2118,7 +2323,8 @@ DO $$
 DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
-        'finding', 'capex_item', 'asset', 'project', 'doc_request_item', 'equipment'
+        'finding', 'capex_item', 'asset', 'project', 'doc_request_item', 'equipment',
+        'memoria_tecnica'
     ] LOOP
         EXECUTE format($f$
             CREATE TRIGGER %1$I_version
@@ -2135,7 +2341,7 @@ DO $$
 DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
-        'app_user', 'client', 'project', 'asset', 'cost_profile',
+        'app_user', 'client', 'project', 'asset', 'asset_zone', 'cost_profile',
         'price_source', 'price_reference', 'finding', 'capex_item', 'equipment',
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
@@ -2143,7 +2349,8 @@ BEGIN
         'photo', 'photo_version', 'photo_derivative', 'photo_link', 'location_node',
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
-        'report_template', 'template_mapping', 'report_version'
+        'report_template', 'template_mapping', 'report_version',
+        'memoria_tecnica', 'memoria_categoria', 'memoria_objeto'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

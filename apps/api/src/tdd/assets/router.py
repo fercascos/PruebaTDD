@@ -17,8 +17,9 @@ que después va a rechazar.
 from __future__ import annotations
 
 import uuid
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -36,7 +37,10 @@ _CAMPOS = """
     latitude, longitude, geocode_source,
     plot_area_sqm, total_built_sqm, lettable_area_sqm, warehouse_area_sqm,
     office_area_sqm, warehouse_height_m, floors_above, floors_below,
-    year_built, year_last_refurb, description, notes, main_photo_id, row_version
+    year_built, year_last_refurb, description, notes, main_photo_id, row_version,
+    cadastral_reference, developer, project_date, secondary_use,
+    footprint_area_sqm, urbanised_area_sqm, usable_area_sqm, max_height_m,
+    loading_docks, parking_spaces, memoria_validada_at, memoria_validada_por
 """
 
 
@@ -73,6 +77,23 @@ class DatosDeActivo(BaseModel):
     year_last_refurb: int | None = Field(default=None, ge=1500, le=2100)
     description: str | None = None
     notes: str | None = None
+
+    # `[REQ]` Lo que aporta la memoria técnica del edificio. Tres de estos
+    # campos se parecen a otros de arriba y NO son lo mismo; el comentario está
+    # aquí porque es donde alguien va a teclear el valor equivocado:
+    #   · `footprint_area_sqm` es la HUELLA, no la construida total.
+    #   · `usable_area_sqm` es la ÚTIL, no la alquilable.
+    #   · `max_height_m` es la del EDIFICIO, no la del almacén.
+    cadastral_reference: str | None = Field(default=None, max_length=30)
+    developer: str | None = Field(default=None, max_length=200)
+    project_date: date | None = None
+    secondary_use: str | None = Field(default=None, max_length=120)
+    footprint_area_sqm: Decimal | None = Field(default=None, ge=0)
+    urbanised_area_sqm: Decimal | None = Field(default=None, ge=0)
+    usable_area_sqm: Decimal | None = Field(default=None, ge=0)
+    max_height_m: Decimal | None = Field(default=None, ge=0)
+    loading_docks: int | None = Field(default=None, ge=0, le=500)
+    parking_spaces: int | None = Field(default=None, ge=0, le=100_000)
 
     @model_validator(mode="after")
     def _coherencia(self) -> DatosDeActivo:
@@ -136,6 +157,23 @@ class Activo(BaseModel):
     main_photo_id: uuid.UUID | None
     #: La versión sobre la que se escribe. Va también como `ETag`.
     row_version: int = 1
+
+    #: Lo que aporta la memoria técnica.
+    cadastral_reference: str | None = None
+    developer: str | None = None
+    project_date: date | None = None
+    secondary_use: str | None = None
+    footprint_area_sqm: Decimal | None = None
+    urbanised_area_sqm: Decimal | None = None
+    usable_area_sqm: Decimal | None = None
+    max_height_m: Decimal | None = None
+    loading_docks: int | None = None
+    parking_spaces: int | None = None
+    #: `[REQ]` El testigo de la revisión humana. Mientras sea `None`, la ficha
+    #: enseña los datos de la memoria como **sin validar**: uno extraído por una
+    #: máquina no puede parecerse a uno tecleado por un técnico.
+    memoria_validada_at: datetime | None = None
+    memoria_validada_por: uuid.UUID | None = None
 
 
 def _proyecto_existe(s: Session, project_id: uuid.UUID) -> None:
@@ -302,6 +340,106 @@ def zonas_permitidas(asset_id: uuid.UUID, s: SesionDep) -> Any:
         .all()
     )
     return [dict(f) for f in filas]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Zonas del activo: privadas y comunes `[REQ]`
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class ZonaDelActivo(BaseModel):
+    zone_id: uuid.UUID
+    tenure: Literal["PRIVADA", "COMUN"]
+    area_sqm: Decimal | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+
+class ZonaDelActivoLeida(ZonaDelActivo):
+    id: uuid.UUID
+    zone_code: str
+    zone_name: str
+
+
+@router.get("/assets/{asset_id}/zones", response_model=list[ZonaDelActivoLeida])
+def zonas_del_activo(asset_id: uuid.UUID, s: SesionDep) -> Any:
+    """Qué zonas tiene este edificio y cuáles son privadas y cuáles comunes."""
+    _obtener(s, asset_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT az.id, az.zone_id, CAST(az.tenure AS text) AS tenure, az.area_sqm, "
+                "az.notes, z.code AS zone_code, z.name_es AS zone_name "
+                "FROM asset_zone az JOIN zone z ON z.id = az.zone_id "
+                "WHERE az.asset_id = :a ORDER BY z.sort_order, z.name_es"
+            ),
+            {"a": str(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+@router.put("/assets/{asset_id}/zones", response_model=list[ZonaDelActivoLeida])
+def fijar_zonas_del_activo(
+    asset_id: uuid.UUID,
+    cuerpo: list[ZonaDelActivo],
+    s: SesionDep,
+    usuario: UsuarioDep,
+) -> Any:
+    """Sustituye la clasificación entera del activo. **Idempotente.**
+
+    Se manda la lista completa y no un alta por zona porque así es como llega:
+    de una memoria técnica que declara las zonas del edificio de una vez. Un
+    `POST` por zona obligaría a la interfaz a calcular qué sobra y qué falta, y
+    ese cálculo repetido es donde aparecen las clasificaciones a medias.
+
+    `[REQ]` Se rechaza una zona que la tipología del activo no admite. La
+    plantilla del cliente ofrece una lista de zonas distinta por tipo de
+    edificio, y una zona fuera de esa lista deja la celda vacía en el Excel sin
+    que nadie se entere: mejor un `422` aquí.
+    """
+    activo = _obtener(s, asset_id)
+
+    permitidas = {
+        fila[0]
+        for fila in s.execute(
+            text(
+                "SELECT z.id FROM zone z JOIN zone_typology zt ON zt.zone_id = z.id "
+                "WHERE zt.typology_id = :t"
+            ),
+            {"t": str(activo["typology_id"])},
+        ).all()
+    }
+    pedidas = [z.zone_id for z in cuerpo]
+    if len(set(pedidas)) != len(pedidas):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Una zona no puede declararse dos veces en el mismo activo",
+        )
+    if fuera := sorted(str(z) for z in set(pedidas) - permitidas):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"La tipología de este activo no admite estas zonas: {', '.join(fuera)}",
+        )
+
+    s.execute(text("DELETE FROM asset_zone WHERE asset_id = :a"), {"a": str(asset_id)})
+    for z in cuerpo:
+        s.execute(
+            text(
+                "INSERT INTO asset_zone (organization_id, asset_id, zone_id, tenure, "
+                "area_sqm, notes) VALUES (:o, :a, :z, CAST(:t AS zone_tenure), :s, :n)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "a": str(asset_id),
+                "z": str(z.zone_id),
+                "t": z.tenure,
+                "s": z.area_sqm,
+                "n": z.notes,
+            },
+        )
+    return zonas_del_activo(asset_id, s)
 
 
 @router.put("/assets/{asset_id}/main-photo", response_model=Activo)

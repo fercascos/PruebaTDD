@@ -117,7 +117,7 @@ Cinco de las ocho tienen contenido propio:
 
 | Fase | Contenido específico |
 |---|---|
-| **Solicitud de documentación** | Lista de verificación de categorías: licencias urbanísticas, proyectos, contratos de mantenimiento, legalizaciones y certificados, garantías, y las que añada el cliente. Cada línea con estado (solicitada / recibida / parcial / no aplica / no disponible), fecha y documentos adjuntos |
+| **Solicitud de documentación** | Lista de verificación de categorías: **memoria técnica**, licencias urbanísticas, proyectos, contratos de mantenimiento, legalizaciones y certificados, garantías, y las que añada el cliente. Cada línea con estado (solicitada / recibida / parcial / no aplica / no disponible), fecha y documentos adjuntos. `[REQ]` La **memoria técnica va la primera**, y no por orden alfabético: es el documento del que salen los datos del edificio y el esqueleto del CAPEX, así que pedirla tarde retrasa todo lo demás |
 | **Generación del VDR** | **Enlace al repositorio externo** `[REQ]`, más proveedor, credenciales de acceso *no* almacenadas, fecha de alta y notas. `[SUP]` S-12: no se replica el contenido |
 | **Visita al activo** | Estado (pendiente de definir / agendado / visitado) y fecha `[REQ]`. `[SUP]` S-11: por activo, con agregado a nivel de proyecto |
 | **Q&A** | Repositorio de ficheros XLSX **versionados**, con rondas, fecha y autor `[REQ]` |

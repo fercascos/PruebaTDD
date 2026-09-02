@@ -256,6 +256,34 @@ Unión de §3.1.3 y §3.3.1 (ver P-02).
 | `search_vector` | TSVECTOR GENERATED | |
 | *auditoría · soft delete · `version`* | | |
 
+**Lo que aporta la memoria técnica** `[REQ]`. Son de otro origen que los de
+arriba —los de arriba los teclea quien da de alta el encargo; éstos salen del
+documento que entrega la propiedad— y por eso llevan su propio testigo de
+validación:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| `cadastral_reference` | VARCHAR(30) NULL | referencia catastral |
+| `developer` | VARCHAR(200) NULL | promotor |
+| `project_date` | DATE NULL | fecha del proyecto |
+| `secondary_use` | VARCHAR(120) NULL | uso secundario |
+| `footprint_area_sqm` | NUMERIC(14,2) NULL | **huella** del edificio en la parcela. **No** es `total_built_sqm`: ésta suma todas las plantas |
+| `urbanised_area_sqm` | NUMERIC(14,2) NULL | superficie urbanizada |
+| `usable_area_sqm` | NUMERIC(14,2) NULL | superficie **útil** total. **No** es `lettable_area_sqm`, que es la alquilable y suele llevar repercusión de comunes |
+| `max_height_m` | NUMERIC(6,2) NULL | altura máxima **del edificio**. **No** es `warehouse_height_m`, que es la del almacén |
+| `loading_docks` | SMALLINT NULL | muelles de carga |
+| `parking_spaces` | INTEGER NULL | plazas de aparcamiento |
+| `memoria_validada_at` · `memoria_validada_por` | TIMESTAMPTZ · UUID FK NULL | **el testigo de la revisión humana** |
+
+`[REQ]` Los tres «no es» de la tabla no son una advertencia decorativa: son la
+razón de que sean columnas nuevas y no reutilizadas. Un dato metido en el campo
+de al lado produce un €/m² que cuadra mal y nadie sabe por qué.
+
+`[REQ]` `CHECK ((memoria_validada_at IS NULL) = (memoria_validada_por IS NULL))`.
+Una fecha sin persona no vale como testigo. Mientras estén a NULL, la ficha
+enseña los datos de la memoria como **sin validar**: uno extraído de un
+documento por una máquina no puede parecerse a uno tecleado por un técnico.
+
 **Restricciones:** `CHECK (warehouse_area_sqm IS NULL OR gross_floor_area_sqm IS NULL OR warehouse_area_sqm <= gross_floor_area_sqm)` `[REC]`.
 **Índices:** `(project_id)`, `(organization_id, city)`, `(organization_id, typology_id)`,
 GIN `search_vector`.
@@ -306,6 +334,30 @@ tipología. `[REQ]` §3.3.2
 `[REC]` Se modela como N:M y no como una columna `typology_id` en `zone`, porque «Cubierta» aparece en
 las seis tipologías: duplicar la fila seis veces produciría seis identificadores distintos para la
 misma zona y rompería cualquier comparación entre activos de una cartera.
+
+#### `asset_zone` — privadas y comunes, **por activo** `[REQ]`
+`id` · `organization_id` · `asset_id` FK · `zone_id` FK · `tenure` (`PRIVADA` | `COMUN`) ·
+`area_sqm` NULL · `notes` · `UNIQUE (asset_id, zone_id)`.
+
+La memoria técnica declara qué zonas tiene el edificio y cuáles son privadas y
+cuáles comunes. **La marca vive aquí y no en el catálogo `zone`**, y es una
+decisión del cliente: la misma zona cambia de naturaleza según el edificio.
+«Aseos» es zona común en un edificio de oficinas multiinquilino y privada en
+una nave de un solo ocupante. En el catálogo habría un único valor para toda la
+organización y no admitiría excepciones.
+
+La API la fija con un `PUT` de la lista completa, no con un alta por zona: la
+memoria las declara de una vez, y releerla dos veces no puede dejar el edificio
+con las zonas repetidas. Se rechaza `422` una zona que la tipología del activo
+no admite, porque una zona fuera de la lista de su tipo deja la celda vacía en
+el Excel del cliente sin que nadie se entere.
+
+`[REC]` Es lo que permitirá responder «¿cuánto del CAPEX recae sobre la
+propiedad y cuánto es repercutible?» sin teclearlo línea a línea: la
+recuperabilidad de un hallazgo puede **proponerse** desde la zona en la que
+está. Proponerse, no decidirse — `finding.tenant_recoverable` se sigue pudiendo
+cambiar a mano, porque el contrato de arrendamiento manda sobre cualquier regla
+general. `[PDV]` Esa propuesta automática todavía no está construida.
 
 #### `capex_code` — árbol de 3 niveles `[REQ]` §3.3.4
 `id` · `organization_id` NULL · `parent_id` FK NULL · `level` SMALLINT (1 categoría, 2 capítulo,

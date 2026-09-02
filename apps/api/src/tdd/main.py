@@ -26,6 +26,7 @@ from tdd.evidence.router import router as evidence_router
 from tdd.findings.router import router as findings_router
 from tdd.identity.directorio import router as directorio_router
 from tdd.identity.router import router as identity_router
+from tdd.memoria.router import router as memoria_router
 from tdd.notificaciones import correo
 from tdd.phases.operations import router as phase_ops_router
 from tdd.phases.router import router as phases_router
@@ -213,6 +214,7 @@ def crear_app() -> FastAPI:
     app.include_router(phase_ops_router, prefix=api)
     app.include_router(assets_router, prefix=api)
     app.include_router(ubicaciones_router, prefix=api)
+    app.include_router(memoria_router, prefix=api)
     app.include_router(equipment_router, prefix=api)
     app.include_router(findings_router, prefix=api)
     app.include_router(capex_router, prefix=api)

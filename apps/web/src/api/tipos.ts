@@ -60,6 +60,25 @@ export type Activo = {
   warehouse_area_sqm: string | null
   office_area_sqm: string | null
   warehouse_height_m: string | null
+  /**
+   * `[REQ]` Lo que aporta la memoria técnica del edificio. Tres de estos campos
+   * se parecen a otros de arriba y **no son lo mismo**: `footprint_area_sqm` es
+   * la huella y no la construida total, `usable_area_sqm` es la útil y no la
+   * alquilable, y `max_height_m` es la del edificio y no la del almacén.
+   */
+  cadastral_reference: string | null
+  developer: string | null
+  project_date: string | null
+  secondary_use: string | null
+  footprint_area_sqm: string | null
+  urbanised_area_sqm: string | null
+  usable_area_sqm: string | null
+  max_height_m: string | null
+  loading_docks: number | null
+  parking_spaces: number | null
+  /** Mientras sea `null`, los datos de la memoria salen marcados «sin validar». */
+  memoria_validada_at: string | null
+  memoria_validada_por: string | null
   floors_above: number | null
   floors_below: number | null
   year_built: number | null

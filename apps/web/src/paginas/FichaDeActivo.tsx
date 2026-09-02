@@ -49,7 +49,19 @@ export function FichaDeActivo({
     warehouse_area_sqm: activo?.warehouse_area_sqm ?? '',
     office_area_sqm: activo?.office_area_sqm ?? '',
     warehouse_height_m: activo?.warehouse_height_m ?? '',
+    // `[REQ]` Lo que aporta la memoria técnica. Van con los demás porque se
+    // guardan igual; lo que cambia es de dónde salen.
+    footprint_area_sqm: activo?.footprint_area_sqm ?? '',
+    urbanised_area_sqm: activo?.urbanised_area_sqm ?? '',
+    usable_area_sqm: activo?.usable_area_sqm ?? '',
+    max_height_m: activo?.max_height_m ?? '',
   })
+  const [catastro, setCatastro] = useState(activo?.cadastral_reference ?? '')
+  const [promotor, setPromotor] = useState(activo?.developer ?? '')
+  const [fechaProyecto, setFechaProyecto] = useState(activo?.project_date ?? '')
+  const [usoSecundario, setUsoSecundario] = useState(activo?.secondary_use ?? '')
+  const [muelles, setMuelles] = useState(activo?.loading_docks?.toString() ?? '')
+  const [plazas, setPlazas] = useState(activo?.parking_spaces?.toString() ?? '')
 
   useEffect(() => {
     obtener<ElementoCatalogo[]>('/catalogs/asset-typologies')
@@ -81,6 +93,12 @@ export function FichaDeActivo({
       city: ciudad.trim() || null,
       year_built: ano ? Number(ano) : null,
       year_last_refurb: reforma ? Number(reforma) : null,
+      cadastral_reference: catastro.trim() || null,
+      developer: promotor.trim() || null,
+      project_date: fechaProyecto || null,
+      secondary_use: usoSecundario.trim() || null,
+      loading_docks: muelles ? Number(muelles) : null,
+      parking_spaces: plazas ? Number(plazas) : null,
     }
     for (const [clave, valor] of Object.entries(numericos)) {
       if (valor.trim()) cuerpo[clave] = valor.trim()
@@ -172,6 +190,71 @@ export function FichaDeActivo({
             <input type="number" step="0.01" min={0} {...numero(clave)} />
           </Campo>
         ))}
+      </Rejilla>
+
+      {/* `[REQ]` Lo que aporta la memoria técnica del edificio. Va en su propio
+          bloque porque tiene otro origen: los de arriba los teclea quien da de
+          alta el encargo, éstos salen del documento que entrega la propiedad. */}
+      <h3>
+        Datos de la memoria técnica{' '}
+        {activo?.memoria_validada_at ? (
+          <span className="candado">validada</span>
+        ) : (
+          <span className="candado">sin validar</span>
+        )}
+      </h3>
+      <p className="ayuda">
+        Salen de la memoria técnica del edificio. Mientras ponga «sin validar», nadie ha revisado
+        que sean correctos: un dato leído de un documento no es lo mismo que uno tecleado por un
+        técnico.
+      </p>
+      <Rejilla>
+        <Campo etiqueta="Referencia catastral">
+          <input value={catastro} maxLength={30} onChange={(e) => setCatastro(e.target.value)} />
+        </Campo>
+        <Campo etiqueta="Promotor">
+          <input value={promotor} maxLength={200} onChange={(e) => setPromotor(e.target.value)} />
+        </Campo>
+        <Campo etiqueta="Fecha del proyecto">
+          <input
+            type="date"
+            value={fechaProyecto}
+            onChange={(e) => setFechaProyecto(e.target.value)}
+          />
+        </Campo>
+        <Campo etiqueta="Uso secundario">
+          <input
+            value={usoSecundario}
+            maxLength={120}
+            onChange={(e) => setUsoSecundario(e.target.value)}
+          />
+        </Campo>
+        {/* Los tres que se confunden con los de arriba. La etiqueta lo dice
+            entera: «huella», «útil» y «del edificio» son lo que los distingue
+            de la construida, la alquilable y la del almacén. */}
+        <Campo etiqueta="Superficie ocupada por el edificio · huella (m²)">
+          <input type="number" step="0.01" min={0} {...numero('footprint_area_sqm')} />
+        </Campo>
+        <Campo etiqueta="Superficie urbanizada (m²)">
+          <input type="number" step="0.01" min={0} {...numero('urbanised_area_sqm')} />
+        </Campo>
+        <Campo etiqueta="Superficie útil total (m²)">
+          <input type="number" step="0.01" min={0} {...numero('usable_area_sqm')} />
+        </Campo>
+        <Campo etiqueta="Altura máxima del edificio (m)">
+          <input type="number" step="0.01" min={0} {...numero('max_height_m')} />
+        </Campo>
+        <Campo etiqueta="Muelles de carga">
+          <input
+            type="number"
+            min={0}
+            value={muelles}
+            onChange={(e) => setMuelles(e.target.value)}
+          />
+        </Campo>
+        <Campo etiqueta="Plazas de aparcamiento">
+          <input type="number" min={0} value={plazas} onChange={(e) => setPlazas(e.target.value)} />
+        </Campo>
       </Rejilla>
     </Formulario>
   )

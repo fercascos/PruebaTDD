@@ -17,6 +17,82 @@
 
 ---
 
+## 16.1bis. De dónde sale el CAPEX: la memoria técnica `[REQ]`
+
+El CAPEX no empieza en blanco. Empieza en la **memoria técnica** del edificio,
+que es el documento que entrega la propiedad con todos sus datos y con el
+listado de categorías y objetos.
+
+**Las «15 categorías» son los 15 capítulos de Hard Costs** del catálogo,
+`HC.H01 Estructura` … `HC.H15 Otros`. No hubo que inventar nada: son los mismos
+bloques que la plantilla CAPEX del cliente tiene reservados en su hoja, y los
+mismos que ya estaban sembrados. Y **«objeto» es el nivel 3** del árbol CAPEX,
+que es justo lo que rellena la columna «Objeto» de esa plantilla.
+
+### El recorrido
+
+```
+memoria técnica (documento)
+        │  extracción            [LIM] sin construir: falta el proveedor de IA
+        ▼                              y un ejemplo real de memoria
+memoria_tecnica.propuesta  ──── se PREVISUALIZA, no se aplica
+        │  POST …/memoria/validar      ← el botón
+        ▼
+ficha del activo (+ memoria_validada_at / _por)
+        │  POST …/memoria/generar-capex
+        ▼
+esqueleto: un hallazgo en BORRADOR por objeto
+        │  el gestor técnico completa, corrige y AÑADE lo que no estaba
+        ▼
+CAPEX del encargo
+```
+
+### El botón, y por qué existe `[REQ]`
+
+Volcar directamente lo extraído evita duplicar trabajo pero mete en el CAPEX
+—y de ahí en el importe que se entrega— datos que nadie ha mirado. Una
+superficie mal leída se propaga a las mediciones y no la detecta nadie.
+
+La salida acordada con el cliente: **se extrae, se previsualiza y se acepta con
+un botón**. Un clic, no un tecleo. Por eso la propuesta vive en
+`memoria_tecnica.propuesta` y **no toca el activo** hasta que alguien la acepta,
+y por eso quedan dos testigos —en la memoria y en el activo—: quien mira la
+ficha del edificio no tiene por qué saber que hay una memoria detrás.
+
+`[REQ]` Aceptar **no borra** lo que la memoria no menciona. Una memoria que no
+habla de la superficie de oficinas no es una memoria que diga que no hay.
+
+`[REQ]` Volver a leer la memoria **deshace la validación**: lo que se aceptó ya
+no es lo que hay, y dejar el testigo puesto sobre un contenido nuevo sería justo
+la mentira que el testigo existe para evitar.
+
+### El esqueleto
+
+Un hallazgo por objeto enumerado, y uno por categoría que no enumere ninguno
+—una categoría presente en el edificio y sin revisar es lo que no puede
+olvidarse—.
+
+| Decisión | Por qué |
+|---|---|
+| Nacen en **BORRADOR normal** | Lo eligió el cliente. `[LIM]` Consecuencia: **cuentan en los totales y salen en el Excel de trabajo con importe cero** desde que se generan |
+| Nacen en la zona **`GENERAL`** | La memoria enumera objetos; no dice dónde están. Poner una zona adivinada la haría pasar por sabida. `GENERAL` existe en las seis tipologías |
+| Un objeto sin código hereda el de **su capítulo** | Es lo más concreto que se sabe de él, y sin código la fila no podría existir |
+| **Regenerar no pisa trabajo hecho** | Ampliar la memoria y regenerar es lo normal; que eso borrara importes ya tecleados sería indefendible. Se cuentan como omitidas y se dice cuántas |
+
+`[REC]` La **categoría no es una fila almacenada**: es la cabecera de grupo de
+la rejilla, igual que ya lo es el activo. Guardar 15 hallazgos vacíos «de
+categoría» los metería en el Excel que se manda al cliente sin aportar nada. Lo
+que el gestor ve es la jerarquía que pidió —categoría → objetos—; lo que se
+persiste son solo las filas con contenido. `[PDV]` Si el cliente prefiere la
+fila de categoría almacenada, es un cambio pequeño y está anotado aquí.
+
+`[LIM]` La plantilla admite **diez filas por capítulo**. Quince categorías con
+varios objetos cada una se pasan enseguida; el aviso de cabida ya corta la
+descarga diciendo qué capítulo se pasa y por cuánto, así que no se pierde nada
+en silencio.
+
+---
+
 ## 16.2. Los dos niveles del importe
 
 La especificación revisada plantea el CAPEX en **dos niveles que conviven**, y distinguirlos es la
