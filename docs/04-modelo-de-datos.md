@@ -267,7 +267,7 @@ validación:
 | `developer` | VARCHAR(200) NULL | promotor |
 | `project_date` | DATE NULL | fecha del proyecto |
 | `secondary_use` | VARCHAR(120) NULL | uso secundario |
-| `footprint_area_sqm` | NUMERIC(14,2) NULL | **huella** del edificio en la parcela. **No** es `total_built_sqm`: ésta suma todas las plantas |
+| `occupied_area_sqm` | NUMERIC(14,2) NULL | **Ocupación**: lo que el edificio ocupa en la parcela, tal como lo llama la memoria técnica. **No** es `total_built_sqm`: ésta suma todas las plantas |
 | `urbanised_area_sqm` | NUMERIC(14,2) NULL | superficie urbanizada |
 | `usable_area_sqm` | NUMERIC(14,2) NULL | superficie **útil** total. **No** es `lettable_area_sqm`, que es la alquilable y suele llevar repercusión de comunes |
 | `max_height_m` | NUMERIC(6,2) NULL | altura máxima **del edificio**. **No** es `warehouse_height_m`, que es la del almacén |

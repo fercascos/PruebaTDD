@@ -51,7 +51,7 @@ export function FichaDeActivo({
     warehouse_height_m: activo?.warehouse_height_m ?? '',
     // `[REQ]` Lo que aporta la memoria técnica. Van con los demás porque se
     // guardan igual; lo que cambia es de dónde salen.
-    footprint_area_sqm: activo?.footprint_area_sqm ?? '',
+    occupied_area_sqm: activo?.occupied_area_sqm ?? '',
     urbanised_area_sqm: activo?.urbanised_area_sqm ?? '',
     usable_area_sqm: activo?.usable_area_sqm ?? '',
     max_height_m: activo?.max_height_m ?? '',
@@ -230,10 +230,10 @@ export function FichaDeActivo({
           />
         </Campo>
         {/* Los tres que se confunden con los de arriba. La etiqueta lo dice
-            entera: «huella», «útil» y «del edificio» son lo que los distingue
+            entera: «ocupación», «útil» y «del edificio» son lo que los distingue
             de la construida, la alquilable y la del almacén. */}
-        <Campo etiqueta="Superficie ocupada por el edificio · huella (m²)">
-          <input type="number" step="0.01" min={0} {...numero('footprint_area_sqm')} />
+        <Campo etiqueta="Ocupación (m²)" ayuda="Lo que el edificio ocupa en la parcela">
+          <input type="number" step="0.01" min={0} {...numero('occupied_area_sqm')} />
         </Campo>
         <Campo etiqueta="Superficie urbanizada (m²)">
           <input type="number" step="0.01" min={0} {...numero('urbanised_area_sqm')} />

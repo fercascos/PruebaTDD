@@ -32,9 +32,10 @@ que es justo lo que rellena la columna «Objeto» de esa plantilla.
 ### El recorrido
 
 ```
-memoria técnica (documento)
-        │  extracción            [LIM] sin construir: falta el proveedor de IA
-        ▼                              y un ejemplo real de memoria
+memoria técnica (PDF)
+        │  extracción determinista       datos del edificio: SIN IA
+        │  clasificación                 objetos del CAPEX: [LIM] falta proveedor
+        ▼
 memoria_tecnica.propuesta  ──── se PREVISUALIZA, no se aplica
         │  POST …/memoria/validar      ← el botón
         ▼
@@ -65,6 +66,38 @@ habla de la superficie de oficinas no es una memoria que diga que no hay.
 `[REQ]` Volver a leer la memoria **deshace la validación**: lo que se aceptó ya
 no es lo que hay, y dejar el testigo puesto sobre un contenido nuevo sería justo
 la mentira que el testigo existe para evitar.
+
+### Lo que el documento real corrigió `[REQ]`
+
+Se leyó una memoria técnica de verdad —anonimizada, de un edificio
+industrial-logístico— y corrigió dos supuestos:
+
+**1 · La memoria NO trae la lista de las 15 categorías.** Trae una memoria
+constructiva del Código Técnico, con secciones propias (`MC.0`…`MC.7`) y los
+elementos en prosa dentro de cada una. Las categorías se **deducen**, con la
+tabla de [§5.9](./05-catalogos-y-taxonomias.md), que es dato de catálogo y no
+código.
+
+**2 · Extraer se parte en dos mitades de coste muy distinto.**
+
+| Mitad | Cómo | Medido sobre la memoria real |
+|---|---|---|
+| Datos del edificio | Reglas. Sin IA, sin red, sin coste por documento | 6 campos + 2 plantas + 18 secciones, **0 etiquetas sin reconocer** |
+| Objetos del CAPEX | Clasificación semántica | Pendiente de proveedor |
+
+La segunda no se puede hacer con reglas, y el ejemplo que lo demuestra es
+`MC.6 Instalaciones`: una sola sección cuyos elementos caen en **seis**
+capítulos —Electricidad, Fontanería, HVAC, PCI activa, Telecomunicaciones y
+Transporte vertical—. Trocear por comas da doce fragmentos; saber que «tierras
+y rayo» es electricidad es semántica.
+
+`[LIM]` El adaptador que hay hoy, `PorSeccion`, **no lee prosa**: propone los
+objetos de cada sección en el primer capítulo al que ésta toca y avisa de que
+hay que repartirlos. Medido sobre la memoria real produce **208 propuestas**, y
+entre ellas «Nieve», «Viento» y «Carretillas» —que en `MC.3` son cargas
+estructurales, no partidas—. Sirve para demostrar que el puerto funciona de
+punta a punta; **no sirve para sembrar un CAPEX**. Es la medida que justifica el
+modelo, y está escrita aquí para que la decisión se tome con un número delante.
 
 ### El esqueleto
 

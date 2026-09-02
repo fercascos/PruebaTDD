@@ -474,7 +474,52 @@ hallazgo desde una foto el capítulo venga propuesto.
 
 ---
 
-## 5.9. Resumen de la semilla
+## 5.9. Secciones de memoria técnica → capítulos CAPEX `[REQ]`
+
+Una memoria técnica **no trae la lista de las 15 categorías del CAPEX**. Se
+comprobó leyendo una de verdad: lo que trae es una memoria constructiva
+redactada según el Código Técnico, organizada por sus propias secciones, con
+los elementos enumerados en prosa dentro de cada una.
+
+Las categorías **se deducen** de esas secciones, y la correspondencia **no es
+uno a uno en ninguna de las dos direcciones**:
+
+* `MC.2 Cimentación` y `MC.3 Sistema estructural` caen las dos en `H01`.
+* `MC.6 Instalaciones` reparte sus elementos entre **seis** capítulos.
+
+Por eso vive aquí, como dato de catálogo, y no como un `dict` en el código: la
+segunda memoria que llegue traerá otra numeración o secciones que ésta no
+tiene, y corregirlo tiene que ser editar una fila, no desplegar.
+
+| Sección | Nombre | Capítulos CAPEX |
+|---|---|---|
+| `MC.0` | Trabajos previos | — |
+| `MC.1` | Explanación | `H05` |
+| `MC.2` | Cimentación y contención | `H01` |
+| `MC.3` | Sistema estructural | `H01` |
+| `MC.4` | Envolvente | `H02` · `H03` |
+| `MC.5` | Compartimentación y acabados | `H04` · `H06` |
+| `MC.6` | Instalaciones | `H08` · `H09` · `H10` · `H11` · `H12` · `H13` · `H14` |
+| `MC.7` | Urbanización interior | `H05` |
+| `MD.2` | Descripción del proyecto | `H15` |
+| `MD.3` | Prestaciones del edificio | `H06` · `H07` |
+
+`[SUP]` `MC.0 Trabajos previos` no mapea a ningún capítulo a propósito: vallado,
+implantación y replanteo son coste de obra, no del activo que se compra. Sale
+en la tabla con la casilla vacía para que se vea que **se ha decidido**, no que
+se ha olvidado.
+
+`[PDV]` `MD.2` → `H15 Otros` es la asignación menos segura de la tabla: esa
+sección describe el programa funcional, y lo que de ahí es CAPEX depende del
+edificio. Está sin validar con el cliente.
+
+`[LIM]` La tabla sale de **una** memoria. Que las secciones se llamen `MC.n` es
+la convención del CTE y debería repetirse; que los contenidos caigan siempre en
+los mismos capítulos, no está demostrado.
+
+---
+
+## 5.10. Resumen de la semilla
 
 Lo que se carga en la migración `seed_catalogs`:
 
@@ -491,7 +536,8 @@ Lo que se carga en la migración `seed_catalogs`:
 | `time_horizon` | **5** | §3.3.4 · mutuamente excluyentes (decisión P-05) |
 | `technical_system` | 14 | §3.2 |
 | `*_i18n` (10 catálogos × 2 idiomas) | ~380 | Traducciones ES/EN, extraídas de las plantillas reales |
-| `doc_request_category` | 5 | §3.1.5 |
+| `doc_request_category` | 6 | §3.1.5 · la primera es la memoria técnica |
+| `memoria_seccion` | 10 | §5.9 · secciones de memoria → capítulos CAPEX |
 | `phase_definition` | 8 | §3.1.5 |
 | `specialty` | 10 | §3.1.4 |
 

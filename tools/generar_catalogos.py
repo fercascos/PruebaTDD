@@ -307,6 +307,42 @@ def sistemas_tecnicos(doc: str) -> list[dict[str, str]]:
     return filas
 
 
+def secciones_de_memoria(doc: str) -> list[dict[str, str]]:
+    """§5.9 · Qué capítulos del CAPEX toca cada sección de una memoria técnica.
+
+    `[REQ]` Vive en el documento y no en el código porque la correspondencia
+    **no es uno a uno en ninguna dirección** —`MC.2` y `MC.3` caen las dos en
+    `H01`; `MC.6` reparte entre seis capítulos— y porque la segunda memoria que
+    llegue traerá otra numeración. Corregirlo tiene que ser editar una fila.
+
+    Una sección sin capítulos —`MC.0 Trabajos previos`— sale igual, con la
+    casilla vacía: así se ve que se ha DECIDIDO que no mapea, no que se olvidó.
+    """
+    cuerpo = _seccion(doc, "5.9.")
+    filas: list[dict[str, str]] = []
+    for linea in cuerpo.splitlines():
+        if not linea.startswith("|") or "---" in linea:
+            continue
+        c = _celdas(linea)
+        if len(c) < 3 or c[0].startswith("Secci"):
+            continue
+        codigo = c[0].strip("`")
+        if not re.fullmatch(r"M[A-Z](?:\.\d+)?", codigo):
+            continue
+        capitulos = [x.strip().strip("`") for x in c[2].split("·")]
+        capitulos = [x for x in capitulos if re.fullmatch(r"H\d{2}", x)]
+        if not capitulos:
+            filas.append({"seccion_code": codigo, "name_es": c[1], "capex_code": ""})
+            continue
+        for capitulo in capitulos:
+            filas.append(
+                {"seccion_code": codigo, "name_es": c[1], "capex_code": f"HC.{capitulo}"}
+            )
+    if not filas:
+        raise SystemExit("No se ha extraído la correspondencia de secciones de §5.9")
+    return filas
+
+
 def _escribir(nombre: str, campos: list[str], filas: list[dict[str, str]], comprobar: bool) -> bool:
     buf = io.StringIO()
     w = csv.DictWriter(buf, fieldnames=campos, lineterminator="\n")
@@ -340,6 +376,7 @@ def main() -> int:
     conc = conceptos(doc)
     hor = horizontes(doc)
     sis = sistemas_tecnicos(doc)
+    secciones = secciones_de_memoria(doc)
 
     ok = all(
         [
@@ -368,6 +405,12 @@ def main() -> int:
                 "sistemas_tecnicos.csv",
                 ["code", "name_es", "capex_chapter", "sort_order"],
                 sis,
+                args.check,
+            ),
+            _escribir(
+                "secciones_memoria.csv",
+                ["seccion_code", "name_es", "capex_code"],
+                secciones,
                 args.check,
             ),
         ]

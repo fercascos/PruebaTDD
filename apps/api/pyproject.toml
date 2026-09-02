@@ -29,6 +29,12 @@ dependencies = [
     # PPTX y XLSX.
     "python-pptx>=1.0",
     "openpyxl>=3.1",
+    # Lectura de memorias técnicas en PDF. `pdfplumber` saca las tablas con sus
+    # columnas emparejadas —sin él, la tabla de superficies llega como dos
+    # listas sueltas y hay que adivinar el orden— y `pdfminer.six`, que ya
+    # arrastra, da el texto corrido para los epígrafes. Ninguna de las dos sale
+    # a la red ni ejecuta nada del documento.
+    "pdfplumber>=0.11",
     # Métrica tipográfica: `reporting/fonts.py` lee la tabla `hmtx` del fichero
     # OTF para saber si un texto cabe en su marco. NO era transitiva de
     # `python-pptx` —se creyó que sí—, así que en una instalación limpia el

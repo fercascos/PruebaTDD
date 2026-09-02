@@ -39,7 +39,7 @@ _CAMPOS = """
     office_area_sqm, warehouse_height_m, floors_above, floors_below,
     year_built, year_last_refurb, description, notes, main_photo_id, row_version,
     cadastral_reference, developer, project_date, secondary_use,
-    footprint_area_sqm, urbanised_area_sqm, usable_area_sqm, max_height_m,
+    occupied_area_sqm, urbanised_area_sqm, usable_area_sqm, max_height_m,
     loading_docks, parking_spaces, memoria_validada_at, memoria_validada_por
 """
 
@@ -81,14 +81,14 @@ class DatosDeActivo(BaseModel):
     # `[REQ]` Lo que aporta la memoria técnica del edificio. Tres de estos
     # campos se parecen a otros de arriba y NO son lo mismo; el comentario está
     # aquí porque es donde alguien va a teclear el valor equivocado:
-    #   · `footprint_area_sqm` es la HUELLA, no la construida total.
+    #   · `occupied_area_sqm` es la OCUPACIÓN, no la construida total.
     #   · `usable_area_sqm` es la ÚTIL, no la alquilable.
     #   · `max_height_m` es la del EDIFICIO, no la del almacén.
     cadastral_reference: str | None = Field(default=None, max_length=30)
     developer: str | None = Field(default=None, max_length=200)
     project_date: date | None = None
     secondary_use: str | None = Field(default=None, max_length=120)
-    footprint_area_sqm: Decimal | None = Field(default=None, ge=0)
+    occupied_area_sqm: Decimal | None = Field(default=None, ge=0)
     urbanised_area_sqm: Decimal | None = Field(default=None, ge=0)
     usable_area_sqm: Decimal | None = Field(default=None, ge=0)
     max_height_m: Decimal | None = Field(default=None, ge=0)
@@ -163,7 +163,7 @@ class Activo(BaseModel):
     developer: str | None = None
     project_date: date | None = None
     secondary_use: str | None = None
-    footprint_area_sqm: Decimal | None = None
+    occupied_area_sqm: Decimal | None = None
     urbanised_area_sqm: Decimal | None = None
     usable_area_sqm: Decimal | None = None
     max_height_m: Decimal | None = None
@@ -440,6 +440,91 @@ def fijar_zonas_del_activo(
             },
         )
     return zonas_del_activo(asset_id, s)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Superficie útil por planta `[REQ]`
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PlantaDelActivo(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    #: Con las palabras de la memoria: «Planta baja», «Altillo», «Sótano -1».
+    label: str = Field(min_length=1, max_length=60)
+    #: 0 baja, 1 primera, -1 sótano. Nulo cuando no se deduce —«Altillo» no
+    #: lleva número— y entonces manda el orden en el que llega la lista.
+    level: int | None = Field(default=None, ge=-20, le=200)
+    usable_area_sqm: Decimal | None = Field(default=None, ge=0)
+    built_area_sqm: Decimal | None = Field(default=None, ge=0)
+    notes: str | None = None
+
+
+class PlantaLeida(PlantaDelActivo):
+    id: uuid.UUID
+
+
+@router.get("/assets/{asset_id}/floors", response_model=list[PlantaLeida])
+def plantas_del_activo(asset_id: uuid.UUID, s: SesionDep) -> Any:
+    """La superficie útil **dividida por planta**, tal como la da la memoria."""
+    _obtener(s, asset_id)
+    filas = (
+        s.execute(
+            text(
+                "SELECT id, label, level, usable_area_sqm, built_area_sqm, notes "
+                "FROM asset_floor WHERE asset_id = :a ORDER BY orden, label"
+            ),
+            {"a": str(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+@router.put("/assets/{asset_id}/floors", response_model=list[PlantaLeida])
+def fijar_plantas_del_activo(
+    asset_id: uuid.UUID,
+    cuerpo: list[PlantaDelActivo],
+    s: SesionDep,
+    usuario: UsuarioDep,
+) -> Any:
+    """Sustituye el desglose entero. **Idempotente**, como las zonas.
+
+    `[REC]` Esto **no toca** `asset.usable_area_sqm`. La memoria da el total
+    aparte, y las dos cifras pueden no cuadrar legítimamente: una puede
+    itemizar solo las plantas de oficinas y dar un total que incluye el altillo.
+    Recalcular el total desde aquí haría que la aplicación contradijera al
+    documento del que salió sin decírselo a nadie.
+    """
+    _obtener(s, asset_id)
+    etiquetas = [p.label for p in cuerpo]
+    if len(set(etiquetas)) != len(etiquetas):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Una planta no puede aparecer dos veces en el mismo activo",
+        )
+
+    s.execute(text("DELETE FROM asset_floor WHERE asset_id = :a"), {"a": str(asset_id)})
+    for orden, planta in enumerate(cuerpo):
+        s.execute(
+            text(
+                "INSERT INTO asset_floor (organization_id, asset_id, label, level, "
+                "usable_area_sqm, built_area_sqm, notes, orden) "
+                "VALUES (:o, :a, :l, :n, :u, :c, :nt, :ord)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "a": str(asset_id),
+                "l": planta.label,
+                "n": planta.level,
+                "u": planta.usable_area_sqm,
+                "c": planta.built_area_sqm,
+                "nt": planta.notes,
+                "ord": orden,
+            },
+        )
+    return plantas_del_activo(asset_id, s)
 
 
 @router.put("/assets/{asset_id}/main-photo", response_model=Activo)

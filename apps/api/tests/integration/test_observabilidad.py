@@ -134,24 +134,33 @@ def test_la_traza_de_la_peticion_llega_al_worker(
     assert respuesta.status_code == 202
 
     with motor_admin.begin() as conn:
+        # Se busca la tarea **por la traza de esta petición**, no «la más
+        # reciente». Antes era `ORDER BY created_at DESC LIMIT 1`, que se lleva
+        # la última tarea de correo de TODA la tabla: la cola es estado
+        # compartido por la suite, y cualquier prueba que encolara un correo
+        # justo después dejaba a ésta comprobando una fila ajena. Falló una vez
+        # de cada tres ejecuciones completas y pasaba siempre en solitario, que
+        # es la peor forma de fallar.
+        #
+        # Buscar por `request_id` no es circular: lo que se afirma es que
+        # **existe** una tarea de correo que recuerda esta petición. Si
+        # `encolar` dejara de guardar la traza, no habría ninguna y la prueba
+        # fallaría igual, que es justo lo que se quiere detectar.
         fila = conn.execute(
-            text(
-                "SELECT id, request_id FROM job WHERE kind = 'ENVIAR_CORREO' "
-                "ORDER BY created_at DESC LIMIT 1"
-            )
+            text("SELECT id, request_id FROM job WHERE kind = 'ENVIAR_CORREO' AND request_id = :r"),
+            {"r": mio},
         ).first()
-        assert fila is not None
-        # Se retira la tarea antes de comprobar nada. La cola es estado
-        # compartido por toda la suite: dejarla pendiente hacía que la prueba
-        # de recuperación de contraseña —que vacía el worker— se llevara dos
-        # correos en vez de uno y fallara. La prueba pasaba sola y fallaba en
-        # la suite, que es la peor forma de fallar.
-        conn.execute(text("DELETE FROM job WHERE id = :i"), {"i": fila[0]})
+        # Se retira antes de comprobar nada: dejarla pendiente hacía que la
+        # prueba de recuperación de contraseña —que vacía el worker— se llevara
+        # dos correos en vez de uno.
+        if fila is not None:
+            conn.execute(text("DELETE FROM job WHERE id = :i"), {"i": fila[0]})
 
-    assert fila[1] == mio, (
-        "La tarea no recuerda de qué petición vino: un informe que falla no se "
-        "puede atar a la petición que lo pidió."
+    assert fila is not None, (
+        "Ninguna tarea de correo recuerda de qué petición vino: un informe que "
+        "falla no se puede atar a la petición que lo pidió."
     )
+    assert fila[1] == mio
 
 
 def test_el_registro_en_json_lleva_la_traza_y_lo_que_se_le_ponga() -> None:

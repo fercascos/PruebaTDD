@@ -31,6 +31,8 @@ class ResumenSemilla:
     concepts: int
     horizons: int
     technical_systems: int
+    #: `[REQ]` §5.9 · secciones de memoria → capítulos CAPEX.
+    memoria_sections: int = 0
 
     def __str__(self) -> str:
         return (
@@ -38,7 +40,8 @@ class ResumenSemilla:
             f"{self.zone_typology} relaciones zona×tipología · "
             f"{self.capex_codes} códigos CAPEX · {self.risk_levels} riesgos · "
             f"{self.concepts} conceptos · {self.horizons} horizontes · "
-            f"{self.technical_systems} sistemas técnicos"
+            f"{self.technical_systems} sistemas técnicos · "
+            f"{self.memoria_sections} secciones de memoria"
         )
 
 
@@ -169,6 +172,23 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
             fila,
         )
 
+    # `[REQ]` §5.9 · Qué capítulos del CAPEX toca cada sección de una memoria
+    # técnica. Una fila sin `capex_code` significa «no mapea, y está decidido»:
+    # `MC.0 Trabajos previos` es coste de obra, no del activo que se compra.
+    secciones = _leer("secciones_memoria.csv", base)
+    for fila in secciones:
+        conn.execute(
+            text(
+                "INSERT INTO memoria_seccion (organization_id, seccion_code, name_es, "
+                "capex_code_id, is_system) SELECT NULL, :seccion_code, :name_es, "
+                "cc.id, TRUE FROM (SELECT 1) AS _ "
+                "LEFT JOIN capex_code cc ON cc.code = NULLIF(:capex_code, '') "
+                "  AND cc.organization_id IS NULL "
+                "ON CONFLICT (organization_id, seccion_code, capex_code_id) DO NOTHING"
+            ),
+            fila,
+        )
+
     return ResumenSemilla(
         typologies=n_tip,
         zones=n_zon,
@@ -178,4 +198,5 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
         concepts=len(conceptos),
         horizons=len(horizontes),
         technical_systems=len(sistemas),
+        memoria_sections=len(secciones),
     )

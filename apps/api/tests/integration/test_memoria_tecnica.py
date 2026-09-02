@@ -92,7 +92,7 @@ def test_el_alta_acepta_los_datos_de_la_memoria(
             "developer": "Promotora Ficticia S.L.",
             "project_date": "2003-06-30",
             "secondary_use": "Oficinas",
-            "footprint_area_sqm": "9800.00",
+            "occupied_area_sqm": "9800.00",
             "urbanised_area_sqm": "14700.00",
             "usable_area_sqm": "17550.00",
             "max_height_m": "12.40",
@@ -124,7 +124,7 @@ def test_la_huella_la_util_y_la_altura_maxima_son_columnas_propias(
         headers={**cab("consultor_a"), "If-Match": "1"},
         json={
             "total_built_sqm": "18200.00",
-            "footprint_area_sqm": "4550.00",
+            "occupied_area_sqm": "4550.00",
             "lettable_area_sqm": "17000.00",
             "usable_area_sqm": "16100.00",
             "warehouse_height_m": "11.50",
@@ -134,7 +134,7 @@ def test_la_huella_la_util_y_la_altura_maxima_son_columnas_propias(
     assert r.status_code == 200, r.text
     a = r.json()
     assert Decimal(a["total_built_sqm"]) == Decimal("18200.00")
-    assert Decimal(a["footprint_area_sqm"]) == Decimal("4550.00")
+    assert Decimal(a["occupied_area_sqm"]) == Decimal("4550.00")
     assert Decimal(a["lettable_area_sqm"]) == Decimal("17000.00")
     assert Decimal(a["usable_area_sqm"]) == Decimal("16100.00")
     assert Decimal(a["warehouse_height_m"]) == Decimal("11.50")

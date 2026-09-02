@@ -413,6 +413,12 @@ def test_las_categorias_de_solicitud_se_sirven_por_api(cliente, cab) -> None:
     `category_id` de memoria, y la pantalla no podía ofrecer un desplegable."""
     r = cliente.get("/api/v1/catalogs/doc-request-categories", headers=cab("consultor_a"))
     assert r.status_code == 200
-    codigos = {c["code"] for c in r.json()}
+    categorias = r.json()
+    codigos = {c["code"] for c in categorias}
     assert "LICENCIAS_URBANISTICAS" in codigos
-    assert len(r.json()) == 5
+    assert len(categorias) == 6
+    # `[REQ]` La memoria técnica va la PRIMERA, y no por orden alfabético: es el
+    # documento del que salen los datos del edificio y el esqueleto del CAPEX,
+    # así que pedirla tarde retrasa todo lo demás. El orden de la checklist es
+    # lo que le dice al consultor por dónde empezar.
+    assert categorias[0]["code"] == "MEMORIA_TECNICA"

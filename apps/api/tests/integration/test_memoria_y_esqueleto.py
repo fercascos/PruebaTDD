@@ -94,7 +94,7 @@ def memoria_de_ejemplo(catalogo: dict[str, Any]) -> dict[str, Any]:
             "cadastral_reference": "0000000XX0000X0000XX",
             "developer": "Promotora Ficticia S.L.",
             "year_built": 2004,
-            "footprint_area_sqm": "9800.00",
+            "occupied_area_sqm": "9800.00",
             "loading_docks": 18,
         },
         "categorias": [
@@ -247,7 +247,7 @@ def test_validar_vuelca_la_propuesta_al_activo_y_firma_quien_fue(
     assert a["cadastral_reference"] == "0000000XX0000X0000XX"
     assert a["developer"] == "Promotora Ficticia S.L."
     assert a["year_built"] == 2004
-    assert Decimal(a["footprint_area_sqm"]) == Decimal("9800.00")
+    assert Decimal(a["occupied_area_sqm"]) == Decimal("9800.00")
     assert a["loading_docks"] == 18
     # Los dos testigos: quien mira la ficha del edificio no tiene por qué saber
     # que hay una memoria detrás.

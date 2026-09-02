@@ -37,7 +37,7 @@ CAMPOS_PROPONIBLES = (
     "total_built_sqm",
     "lettable_area_sqm",
     "usable_area_sqm",
-    "footprint_area_sqm",
+    "occupied_area_sqm",
     "urbanised_area_sqm",
     "warehouse_area_sqm",
     "office_area_sqm",

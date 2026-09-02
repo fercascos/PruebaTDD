@@ -1,0 +1,20 @@
+seccion_code,name_es,capex_code
+MC.0,Trabajos previos,
+MC.1,Explanación,HC.H05
+MC.2,Cimentación y contención,HC.H01
+MC.3,Sistema estructural,HC.H01
+MC.4,Envolvente,HC.H02
+MC.4,Envolvente,HC.H03
+MC.5,Compartimentación y acabados,HC.H04
+MC.5,Compartimentación y acabados,HC.H06
+MC.6,Instalaciones,HC.H08
+MC.6,Instalaciones,HC.H09
+MC.6,Instalaciones,HC.H10
+MC.6,Instalaciones,HC.H11
+MC.6,Instalaciones,HC.H12
+MC.6,Instalaciones,HC.H13
+MC.6,Instalaciones,HC.H14
+MC.7,Urbanización interior,HC.H05
+MD.2,Descripción del proyecto,HC.H15
+MD.3,Prestaciones del edificio,HC.H06
+MD.3,Prestaciones del edificio,HC.H07

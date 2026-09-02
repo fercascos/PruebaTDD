@@ -276,9 +276,10 @@ CREATE TABLE asset (
     developer           VARCHAR(200),
     project_date        DATE,
     secondary_use       VARCHAR(120),
-    -- La huella del edificio en la parcela. NO es `total_built_sqm`, que suma
+    -- La OCUPACIÓN: lo que el edificio ocupa en la parcela, que es como lo
+    -- llama la memoria técnica. NO es `total_built_sqm`, que suma
     -- todas las plantas: un edificio de cuatro alturas ocupa la cuarta parte.
-    footprint_area_sqm  NUMERIC(14, 2),
+    occupied_area_sqm  NUMERIC(14, 2),
     urbanised_area_sqm  NUMERIC(14, 2),
     -- Útil, no alquilable: `lettable_area_sqm` es lo que se factura y suele
     -- llevar repercusión de zonas comunes. Confundirlas descuadra el € / m².
@@ -326,12 +327,12 @@ CREATE TABLE asset (
         CHECK (COALESCE(plot_area_sqm, 0) >= 0 AND COALESCE(total_built_sqm, 0) >= 0
                AND COALESCE(lettable_area_sqm, 0) >= 0),
     -- Las superficies de la memoria, con la misma vara de medir que las de
-    -- arriba. No se comprueba que la huella quepa en la parcela ni que la útil
+    -- arriba. No se comprueba que la ocupación quepa en la parcela ni que la útil
     -- sea menor que la construida: son ciertas casi siempre, pero una parcela
     -- con edificación fuera de linderos o una útil mal medida existen, y un
     -- CHECK que rechaza el dato real obliga a mentirle a la aplicación.
     CONSTRAINT asset_superficies_memoria_no_negativas
-        CHECK (COALESCE(footprint_area_sqm, 0) >= 0 AND COALESCE(urbanised_area_sqm, 0) >= 0
+        CHECK (COALESCE(occupied_area_sqm, 0) >= 0 AND COALESCE(urbanised_area_sqm, 0) >= 0
                AND COALESCE(usable_area_sqm, 0) >= 0 AND COALESCE(max_height_m, 0) >= 0),
     CONSTRAINT asset_conteos_no_negativos
         CHECK (COALESCE(loading_docks, 0) >= 0 AND COALESCE(parking_spaces, 0) >= 0),
@@ -385,6 +386,43 @@ CREATE TABLE asset_zone (
 );
 
 CREATE INDEX asset_zone_activo_idx ON asset_zone (asset_id);
+
+-- ── Superficie útil por planta ──────────────────────────────────────────────
+--
+-- [REQ] La memoria técnica no da solo la útil total: la da DIVIDIDA por planta
+-- —«Útil planta baja 6.023 m², Útil planta primera 1.234 m², Útil total
+-- 7.257 m²»—. Guardar solo el total tiraba ese desglose, que es justo lo que
+-- hace falta para repartir un CAPEX de oficinas entre plantas.
+--
+-- [REC] El total se queda en `asset.usable_area_sqm` y NO se calcula sumando
+-- esta tabla. La memoria lo da explícito, y las dos cifras pueden no cuadrar:
+-- una memoria puede itemizar solo las plantas de oficinas y dar un total que
+-- incluye el altillo. Derivar el total de la suma haría que la aplicación
+-- contradijera al documento del que salió, sin decírselo a nadie.
+
+CREATE TABLE asset_floor (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_id        UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    -- Con las palabras de la memoria: «Planta baja», «Altillo», «Sótano -1».
+    -- No se normaliza a un catálogo porque cada edificio las llama a su modo y
+    -- forzar un vocabulario común perdería el nombre que usa el documento.
+    label           VARCHAR(60) NOT NULL,
+    -- Para ordenarlas: 0 baja, 1 primera, -1 sótano. Nulo cuando la memoria no
+    -- deja deducirlo —«Altillo» no tiene número— y entonces manda `orden`.
+    level           SMALLINT,
+    usable_area_sqm NUMERIC(14, 2),
+    built_area_sqm  NUMERIC(14, 2),
+    notes           TEXT,
+    orden           SMALLINT NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (asset_id, label),
+    CONSTRAINT asset_floor_superficies_no_negativas
+        CHECK (COALESCE(usable_area_sqm, 0) >= 0 AND COALESCE(built_area_sqm, 0) >= 0)
+);
+
+CREATE INDEX asset_floor_activo_idx ON asset_floor (asset_id, orden);
 
 -- ── Equipo del proyecto ─────────────────────────────────────────────────────
 --
@@ -1779,6 +1817,35 @@ CREATE TABLE memoria_objeto (
 
 CREATE INDEX memoria_objeto_categoria_idx ON memoria_objeto (memoria_categoria_id, orden);
 
+-- ── Secciones de memoria técnica → capítulos CAPEX [REQ] §5.9 ──────────────
+--
+-- Una memoria técnica NO trae la lista de las 15 categorías del CAPEX. Se
+-- comprobó leyendo una de verdad: trae una memoria constructiva del Código
+-- Técnico, con sus propias secciones y los elementos en prosa dentro de cada
+-- una. Las categorías se DEDUCEN de esas secciones.
+--
+-- La correspondencia no es uno a uno en ninguna dirección: `MC.2 Cimentación`
+-- y `MC.3 Sistema estructural` caen las dos en `H01`, y `MC.6 Instalaciones`
+-- reparte sus elementos entre seis capítulos. Por eso es una tabla y no un
+-- diccionario en el código: la segunda memoria traerá otra numeración, y
+-- corregirlo tiene que ser editar una fila, no desplegar.
+--
+-- `capex_code_id` nulo significa «esta sección no mapea a ningún capítulo, y
+-- está decidido». `MC.0 Trabajos previos` es coste de obra, no del activo que
+-- se compra. Sin la fila, no se distinguiría de una sección olvidada.
+
+CREATE TABLE memoria_seccion (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organization(id),
+    seccion_code    VARCHAR(10) NOT NULL,
+    name_es         VARCHAR(160) NOT NULL,
+    capex_code_id   UUID REFERENCES capex_code(id),
+    is_system       BOOLEAN NOT NULL DEFAULT TRUE,
+    UNIQUE NULLS NOT DISTINCT (organization_id, seccion_code, capex_code_id)
+);
+
+CREATE INDEX memoria_seccion_codigo_idx ON memoria_seccion (seccion_code);
+
 -- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
 --
@@ -2341,7 +2408,8 @@ DO $$
 DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
-        'app_user', 'client', 'project', 'asset', 'asset_zone', 'cost_profile',
+        'app_user', 'client', 'project', 'asset', 'asset_zone', 'asset_floor',
+        'cost_profile',
         'price_source', 'price_reference', 'finding', 'capex_item', 'equipment',
         'stored_object', 'audit_log', 'suggestion_comment',
         'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
@@ -2370,7 +2438,7 @@ BEGIN
     FOREACH t IN ARRAY ARRAY[
         'asset_typology', 'zone', 'capex_code', 'risk_level',
         'capex_concept', 'time_horizon', 'doc_request_category', 'technical_system',
-        'doc_check_type'
+        'doc_check_type', 'memoria_seccion'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
