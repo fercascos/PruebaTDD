@@ -42,10 +42,11 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
+| **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |
 | **Informes** | Avisos previos, generación, descarga PPTX/XLSX y ciclo hasta emitir |
 | **Plantillas** | Subida, análisis y mapeo de marcadores |
 | **Sugerencias** | Proponer cambios; la bandeja solo la ve quien atiende el buzón |
-| **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante. Al final, **lo que la documentación dice sobre sí misma**: las limitaciones que aporta cada documento, con su motivo y su epígrafe, y solo las aceptadas entran en el informe |
+| **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante. Al final, **lo que la documentación dice sobre sí misma**: las limitaciones que aporta cada documento, con su motivo y su epígrafe, y solo las aceptadas entran en el informe. Y **los medios que declara**: aceptar uno crea su ficha de equipo, eligiendo el activo |
 
 ## Los tres orígenes de fotografía
 
@@ -287,6 +288,10 @@ midió: con un bloque de 500 px en una página de 320, `innerWidth` pasa a valer
   y las líneas; mover una actuación a otro activo sigue siendo un `PATCH`.
 - **Pruebas de componente.** Solo la lógica pura está probada; las pantallas se
   han verificado a mano contra la API real.
+- **Las periodicidades de mantenimiento se teclean.** Ningún documento dice cuál
+  le toca a cada equipo: un plan de autoprotección declara revisiones
+  «trimestrales, semestrales, anuales y quinquenales según el tipo de equipo» sin
+  repartirlas. La pantalla las pide; no las adivina.
 - **El editor de la memoria técnica.** La extracción por documento sí está en
   la pantalla de documentación —botón, propuestas y decisión—, pero **solo
   propone campos del activo**. Las categorías del CAPEX y sus objetos, el botón

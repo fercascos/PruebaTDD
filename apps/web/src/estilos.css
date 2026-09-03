@@ -1692,3 +1692,28 @@ button.enlace {
 .limitaciones-doc .decididas summary { cursor: pointer; color: var(--tenue); }
 .limitaciones-doc .decididas ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
 .limitaciones-doc .decididas li { margin-bottom: 0.3rem; overflow-wrap: anywhere; }
+
+/* `[REQ]` Los medios que declara la documentación, camino del inventario.
+   Misma caja que las propuestas de dato y las limitaciones: es la misma
+   conversación —una máquina propone, una persona decide—. Lo que cambia es que
+   ésta pide dos datos antes de aceptar, porque crea una ficha nueva. */
+.equipos-propuestos { margin-top: 1.2rem; border-top: 2px solid var(--borde); padding-top: 0.9rem; }
+.equipos-propuestos h3 { margin: 0 0 0.25rem; }
+.equipos-propuestos .ayuda { margin: 0 0 0.7rem; }
+.propuesta.equipo .detalle { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--tenue); }
+
+/* Los dos campos que hay que rellenar antes de aceptar. Envuelven en un móvil:
+   sin `flex-wrap`, «Activo» y «Revisión cada» suman más de 320 px y se llevan
+   por delante la página entera, no solo esta caja. */
+.propuesta.equipo .destino {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.2rem;
+}
+.propuesta.equipo .destino label { max-width: 100%; min-width: 0; }
+
+/* El mantenimiento en la tabla del inventario. «Vencido» va ESCRITO y el color
+   solo acompaña: uno de cada doce hombres es daltónico y esta tabla se imprime
+   en blanco y negro para reuniones. */
+.tabla .mantenimiento .fuera-de-plazo { color: var(--error); }

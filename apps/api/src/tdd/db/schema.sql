@@ -1021,6 +1021,31 @@ CREATE TABLE equipment (
     has_documentation   BOOLEAN NOT NULL DEFAULT FALSE,
     notes               TEXT,
 
+    -- [REQ] MANTENIMIENTO PREVENTIVO. Faltaba, y es lo primero que pregunta un
+    -- inversor de una instalación de protección contra incendios: no «cuántos
+    -- extintores hay» sino «cuándo se revisaron por última vez».
+    --
+    -- En MESES y no un enumerado de periodicidades: un plan de autoprotección
+    -- habla de revisiones trimestrales, semestrales, anuales y quinquenales
+    -- —3, 6, 12 y 60—, pero un contrato de mantenimiento puede decir «cada
+    -- cuatro meses», y un enumerado obligaría a redondear al de al lado o a
+    -- añadir un valor cada vez que aparezca uno nuevo. Un entero ordena solo y
+    -- admite cualquiera.
+    maintenance_months  SMALLINT CHECK (maintenance_months IS NULL OR maintenance_months > 0),
+    last_maintenance_date DATE CHECK (last_maintenance_date IS NULL
+                                      OR last_maintenance_date <= CURRENT_DATE + 1),
+
+    -- Cuándo toca la siguiente. Se GENERA, igual que `end_of_life_year` y por
+    -- la misma razón: lo que se guarda no caduca y lo derivado no se teclea.
+    -- `make_interval` es IMMUTABLE, así que aquí sí se puede.
+    --
+    -- Lo que NO se genera es «está vencido»: eso depende del día de hoy, que
+    -- cambia, y una columna así valdría el día que se escribe. Se compara con
+    -- `current_date` en la consulta.
+    next_maintenance_due DATE GENERATED ALWAYS AS (
+        (last_maintenance_date + make_interval(months => maintenance_months))::date
+    ) STORED,
+
     -- Búsqueda por texto sobre lo que de verdad se busca: «la enfriadora
     -- Carrier», «el ascensor con el número de serie que empieza por 4J». La
     -- forma de dos argumentos de `to_tsvector` es IMMUTABLE, así que aquí sí
@@ -2001,6 +2026,70 @@ CREATE TABLE limitacion_de_documento (
 CREATE INDEX limitacion_encargo_idx ON limitacion_de_documento (project_id, estado);
 CREATE INDEX limitacion_documento_idx ON limitacion_de_documento (document_id);
 
+-- ── Los medios que un documento dice que existen [REQ] ─────────────────────
+--
+-- El capítulo 4 de la Norma Básica de Autoprotección enumera los medios de
+-- protección contra incendios del edificio: hidrantes, rociadores, BIE,
+-- detección, exutorios, alumbrado de emergencia. Tecleárlos a mano después de
+-- que un documento los liste es trabajo repetido y una fuente de errores, que
+-- es exactamente lo que el cliente pidió evitar.
+--
+-- Dos cosas que esta tabla NO lleva, y es deliberado:
+--
+--  1. **No lleva activo.** Un plan cubre un complejo de seis naves y dice
+--     «dieciséis hidrantes distribuidos por el perímetro» sin decir de cuál
+--     son. El activo lo elige quien ACEPTA la propuesta: adivinarlo lo haría
+--     pasar por sabido. Por eso cuelga del encargo, como las limitaciones.
+--  2. **La cantidad puede ser NULL.** «Dieciséis hidrantes» son dieciséis;
+--     «rociadores sobre la superficie de almacenamiento» son rociadores sin
+--     número. Poner un 1 por omisión metería un uno en un inventario que
+--     alguien va a leer como cierto. `equipment.quantity` es NOT NULL con
+--     DEFAULT 1; aquí es opcional a propósito, y quien acepta lo completa.
+
+CREATE TABLE propuesta_de_equipo (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    project_id      UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+
+    technical_system_id UUID REFERENCES technical_system(id),
+    equipment_type  VARCHAR(120) NOT NULL CHECK (length(trim(equipment_type)) > 0),
+    quantity        NUMERIC(12, 2) CHECK (quantity IS NULL OR quantity > 0),
+    unit            VARCHAR(20) NOT NULL DEFAULT 'ud',
+    descripcion     TEXT,
+
+    document_id     UUID REFERENCES document(id) ON DELETE SET NULL,
+    doc_type        doc_type NOT NULL,
+    seccion         VARCHAR(160),
+    evidencia       TEXT,
+    extractor       VARCHAR(60) NOT NULL,
+    es_simulada     BOOLEAN NOT NULL DEFAULT TRUE,
+
+    estado          propuesta_estado NOT NULL DEFAULT 'PENDIENTE',
+    decidida_at     TIMESTAMPTZ,
+    decidida_por    UUID REFERENCES app_user(id),
+    -- El equipo que se creó al aceptarla. Es la trazabilidad al revés: desde la
+    -- ficha del equipo se puede llegar al documento que lo declaró.
+    equipment_id    UUID REFERENCES equipment(id) ON DELETE SET NULL,
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Un documento no propone dos veces el mismo tipo de equipo. Volver a
+    -- extraerlo sustituye sus propuestas; no las acumula.
+    UNIQUE NULLS NOT DISTINCT (document_id, equipment_type),
+
+    CONSTRAINT propuesta_equipo_decidida_completa
+        CHECK ((decidida_at IS NULL) = (decidida_por IS NULL)),
+    CONSTRAINT propuesta_equipo_resuelta_tiene_testigo
+        CHECK (estado = 'PENDIENTE' OR decidida_at IS NOT NULL),
+    -- Aceptada tiene equipo; pendiente o descartada, no. Sin esto, «aceptada
+    -- pero no se creó nada» sería un estado posible y silencioso.
+    CONSTRAINT propuesta_equipo_aceptada_tiene_equipo
+        CHECK ((estado = 'ACEPTADA') = (equipment_id IS NOT NULL))
+);
+
+CREATE INDEX propuesta_equipo_encargo_idx ON propuesta_de_equipo (project_id, estado);
+CREATE INDEX propuesta_equipo_documento_idx ON propuesta_de_equipo (document_id);
+
 -- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
 --
@@ -2574,7 +2663,7 @@ BEGIN
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version',
         'memoria_tecnica', 'memoria_categoria', 'memoria_objeto',
-        'propuesta_de_dato', 'limitacion_de_documento'
+        'propuesta_de_dato', 'limitacion_de_documento', 'propuesta_de_equipo'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

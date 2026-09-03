@@ -281,16 +281,86 @@ no se cuenta con ella. Hay tope —25— y al pasarse **se avisa**: un documento
 produce cincuenta limitaciones no tiene cincuenta, significa que el corte por
 epígrafes ha fallado.
 
-`[LIM]` El **capítulo 4 del plan es el inventario de medios contra incendios y
-no se lee**. Emparejar cada medio con el catálogo de sistemas técnicos y con la
-ficha de equipo es otro trabajo. Se avisa **en cada lectura**, no solo aquí: un
-plan leído sin errores dejaría creer que ya se ha aprovechado todo lo que traía.
+##### Los medios del capítulo 4, al inventario de equipo `[REQ]`
 
-`[REQ]` Un `PLAN_AUTOPROTECCION` nace con confidencialidad **`RESTRINGIDO`** y
-no `INTERNO` —lo pone `CONFIDENCIALIDAD_POR_OMISION`—: lleva procedimientos de
+El capítulo 4 de la Norma Básica enumera los medios de protección contra
+incendios del edificio. Teclearlos a mano después de que un documento los liste
+es el trabajo repetido que el cliente pidió evitar.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/projects/{id}/propuestas-de-equipo?estado=` | Los medios que la documentación declara, con su sistema técnico y su procedencia |
+| `POST` | `/projects/{id}/propuestas-de-equipo/decidir` | `{aceptar: [{id, asset_id, zone_id?, quantity?, maintenance_months?}], descartar: [...]}`. **Aceptar crea la ficha de equipo** |
+
+Es la **única de las tres decisiones que escribe una fila nueva** en vez de
+actualizar una existente, y por eso pide el activo: el documento no lo dice. Un
+plan cubre un complejo de seis naves y habla de «dieciséis hidrantes
+distribuidos por el perímetro»; adivinar la nave lo haría pasar por sabido, y un
+equipo en la nave equivocada es una visita perdida. La propuesta aceptada guarda
+`equipment_id`, que cierra la trazabilidad al revés: desde la ficha del equipo
+se llega al documento que lo declaró.
+
+`[REQ]` **La cantidad puede venir vacía.** «Dieciséis hidrantes» son dieciséis;
+«rociadores sobre la superficie de almacenamiento» son rociadores sin número.
+Poner un 1 por omisión metería un uno en un inventario que alguien lee después
+como cierto, así que se deja vacío y se dice cuántos vienen así.
+
+`[REQ]` **La periodicidad de mantenimiento no se propone.** El plan declara
+revisiones «trimestrales, semestrales, anuales y quinquenales **según el tipo de
+equipo**» y no dice cuál le toca a cuál; repartirlas por analogía sería
+inventarse el plan de mantenimiento del edificio. La pone quien acepta, o queda
+vacía. `[PDV]` El RIPCI (RD 513/2017) fija periodicidades por tipo y podría
+sembrar valores por omisión: exigiría transcribir una tabla reglamentaria que
+nadie de este proyecto ha validado.
+
+##### El mantenimiento preventivo en la ficha de equipo `[REQ]`
+
+Faltaba, y de una instalación de protección contra incendios es lo primero que
+se pregunta: no «cuántos extintores hay» sino «cuándo se revisaron».
+
+`equipment` gana `maintenance_months` y `last_maintenance_date`, y
+`next_maintenance_due` **se genera** a partir de las dos —igual que
+`end_of_life_year`, y por lo mismo: lo que se guarda no caduca y lo derivado no
+se teclea—. En **meses** y no un enumerado de periodicidades, porque un contrato
+de mantenimiento puede decir «cada cuatro meses» y un enumerado obligaría a
+redondear al valor de al lado.
+
+`GET /projects/{id}/equipment` gana `solo_mantenimiento_vencido`, que es **otra
+pregunta** que `solo_vencidos`: un extintor de dos años sin revisar desde hace
+dieciocho meses no está al final de su vida útil y sí está fuera de norma. Son
+dos hallazgos con presupuestos distintos —uno se sustituye, el otro se revisa—,
+y un filtro único escondería justo el caso que se busca. Se compara con
+`current_date` en SQL, no contra un valor guardado.
+
+#### Confidencialidad por tipo de documento `[REQ]`
+
+Un `PLAN_AUTOPROTECCION` nace con confidencialidad **`RESTRINGIDO`** y no
+`INTERNO` —lo pone `CONFIDENCIALIDAD_POR_OMISION`—: lleva procedimientos de
 emergencia, puntos de reunión, ubicaciones de medios y datos de las personas con
 responsabilidad en una emergencia. Es un valor por omisión, no una imposición:
 quien sube puede mandar otro.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/documents/confidencialidad-por-tipo` | Qué tipos nacen por encima de `INTERNO`, **con el motivo escrito** |
+
+Se expone para que la pantalla de subida lo diga **antes** de subir. Un nivel que
+aparece solo en la ficha, ya guardado, no informa la decisión de quien sube:
+informa la sorpresa de quien intenta descargarlo. Y solo salen las excepciones:
+enumerar catorce tipos para decir lo mismo de trece haría que la excepción no se
+viera.
+
+`[REQ]` **Un documento `RESTRINGIDO` no se envía a ningún proveedor de IA**, ni
+con la revisión del encargo activada. Esto faltaba: la comprobación de
+confidencialidad estaba en `descargar()` y no en la revisión, así que un
+documento que un consultor del equipo no puede ni abrir sí se podía mandar a un
+tercero con solo el interruptor del encargo encendido. `POST
+/documents/{id}/ai-review` responde `403` diciendo qué hacer.
+
+`[REC]` **No hay un segundo interruptor.** Si en un encargo concreto hay que
+revisarlo, se baja su clasificación a mano —lo cual queda en `audit_log` con
+quién y cuándo— y entonces se revisa. Una decisión así tiene que dejar rastro; un
+interruptor más lo convertiría en un clic sin memoria.
 
 ### Inventario de equipo `[REQ]` §7 / P-15
 

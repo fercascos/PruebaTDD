@@ -175,6 +175,10 @@ def revisar(
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
     except servicio.RevisionNoAutorizada as exc:
         raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
+    except servicio.DocumentoDemasiadoSensible as exc:
+        # 403 y no 422: no es que la petición esté mal formada, es que no se
+        # puede hacer. El mensaje dice qué hacer si de verdad hace falta.
+        raise HTTPException(status.HTTP_403_FORBIDDEN, str(exc)) from exc
     return _revision(s, revision_id)
 
 

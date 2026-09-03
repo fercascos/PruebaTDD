@@ -4,10 +4,18 @@ Y es el primer extractor cuyo trabajo principal no es rellenar campos. Un plan
 de autoprotección no trae superficies —eso está en la memoria técnica— ni un
 CAPEX. Trae dos cosas que a una due diligence le importan mucho:
 
-* **las limitaciones del informe**, que es lo que se construye aquí;
-* y el inventario de medios de protección contra incendios, que es el capítulo 4
-  y que **no se lee todavía**: cada medio hay que emparejarlo con el catálogo de
-  sistemas técnicos y con la ficha de equipo, y eso es otro trabajo.
+* **las limitaciones del informe**: lo que el propio documento dice sobre su
+  fiabilidad, más lo que se deduce de su fecha y de sus huecos;
+* y **el inventario de medios de protección contra incendios**, que es el
+  capítulo 4 de la Norma Básica: hidrantes, rociadores, BIE, detección,
+  exutorios, alumbrado de emergencia. Cada medio va con el sistema técnico del
+  catálogo al que pertenece.
+
+De los medios sale **presencia**, y cantidad solo cuando el plan la dice sin
+ambigüedad. Ni activo ni periodicidad de mantenimiento: el activo lo elige quien
+acepta —un plan cubre un complejo de seis naves—, y la periodicidad el plan la
+declara en bloque («trimestrales, semestrales, anuales y quinquenales según el
+tipo de equipo») **sin decir cuál le toca a cuál**.
 
 ## Por qué las reglas son éstas y no las de un documento concreto
 
@@ -51,9 +59,11 @@ from __future__ import annotations
 import datetime as dt
 import re
 from dataclasses import dataclass, field, replace
+from decimal import Decimal, InvalidOperation
 
 from tdd.extraccion.puerto import (
     Aportacion,
+    EquipoPropuesto,
     LimitacionPropuesta,
     Procedencia,
     registrar,
@@ -159,6 +169,72 @@ _ADMINISTRATIVOS = (
 #: Un hueco: `[FECHA_DOCUMENTO]`, `[CONTACTO]`, o una casilla en blanco.
 _HUECO = re.compile(r"\[[A-ZÁÉÍÓÚÑ_0-9]{3,40}\]")
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los medios de autoprotección: el capítulo 4 de la Norma Básica `[REQ]`
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Los medios que se saben reconocer, con el sistema técnico al que van.
+#:
+#: `[REQ]` Es **una tabla de datos y no expresiones repartidas por el código**,
+#: por la misma razón que el vocabulario de la memoria: el segundo plan que
+#: llegue va a nombrarlos de otra forma, y corregirlo tiene que ser cambiar una
+#: línea de aquí y no salir a buscar por dónde.
+#:
+#: El `sistema_code` sale de `data/catalogos/sistemas_tecnicos.csv`. Casi todo
+#: es `PCI` porque es lo que enumera este capítulo; el alumbrado de emergencia
+#: es `ELEC` y la videovigilancia `SEG`, y ésa es la razón de que el sistema no
+#: se deduzca del epígrafe: un mismo epígrafe —«Control de humos y alumbrado»—
+#: mezcla dos sistemas.
+#:
+#: `[LIM]` Cerrada a propósito. Un medio que no esté aquí **no se propone y se
+#: declara** en los avisos: es como se descubre el que falta, y es lo que
+#: separa «el plan no lo menciona» de «no lo supe leer».
+MEDIOS: tuple[tuple[str, str, str], ...] = (
+    # (expresión sobre el texto normalizado, sistema, cómo se llama el equipo)
+    # `[REQ]` Ojo con el plural: `centrales?` significa «centrale» con una `s`
+    # opcional, NO «central». Escrito así, la central de incendios no se
+    # reconocía —y en este documento no se veía, porque venía en plural—. Lo
+    # mismo le pasaba a rociador, extintor, detector y pulsador: solo cazaban el
+    # plural. La forma correcta es `raíz(?:es)?`.
+    (r"hidrantes?", "PCI", "Hidrante"),
+    (r"rociador(?:es)?", "PCI", "Rociador automático"),
+    (r"extintor(?:es)?", "PCI", "Extintor"),
+    (r"\bbie\b|bocas? de incendio equipadas?", "PCI", "Boca de incendio equipada (BIE)"),
+    (r"detector(?:es)?(?:\s+[oó]pticos?)?", "PCI", "Detector de incendios"),
+    (r"pulsador(?:es)?(?:\s+manuales?)?", "PCI", "Pulsador manual de alarma"),
+    (r"sirenas?", "PCI", "Sirena de alarma"),
+    (r"central(?:es)?(?:\s+general(?:es)?)?\s+de\s+incendios?", "PCI", "Central de incendios"),
+    (r"exutorios?", "PCI", "Exutorio de control de humos"),
+    (r"dep[oó]sitos?(?:\s+a[eé]reos?)?", "PCI", "Depósito de agua contra incendios"),
+    (r"grupos?\s+de\s+presi[oó]n", "PCI", "Grupo de presión contra incendios"),
+    (r"puertas?\s+cortafuegos?", "PCI", "Puerta cortafuego"),
+    (r"se[nñ]alizaci[oó]n\s+fotoluminiscente", "PCI", "Señalización fotoluminiscente"),
+    (r"alumbrado(?:\s+aut[oó]nomo)?\s+de\s+emergencia", "ELEC", "Alumbrado de emergencia"),
+    (r"\bcctv\b|c[aá]maras?\s+de\s+videovigilancia", "SEG", "Videovigilancia (CCTV)"),
+)
+
+#: El epígrafe del capítulo 4. Se localiza para **acotar dónde se buscan los
+#: medios**: la palabra «extintor» aparece también en el capítulo 6, dentro de
+#: un procedimiento de actuación —«utilizar el extintor más próximo»—, y ahí no
+#: es un inventario, es una instrucción.
+_CAPITULO_DE_MEDIOS = re.compile(
+    r"cap[ií]tulo\s+4\b|medios\s+de\s+autoprotecci[oó]n|medios\s+(?:materiales|t[eé]cnicos)",
+    re.I,
+)
+
+#: «Medios humanos» está DENTRO del capítulo 4 y no es un inventario de equipos:
+#: es la estructura de personas —Jefe de Emergencia, equipos de intervención—.
+#: Sin cortar aquí, «equipos de primera intervención» se propondría como equipo.
+_FIN_DE_MEDIOS = re.compile(r"medios\s+humanos|cap[ií]tulo\s+5\b", re.I)
+
+#: Los números que un plan escribe con letra. «Dieciséis hidrantes privados».
+_CARDINALES_LARGOS = {
+    "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5,
+    "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10, "once": 11,
+    "doce": 12, "trece": 13, "catorce": 14, "quince": 15, "dieciseis": 16,
+    "diecisiete": 17, "dieciocho": 18, "diecinueve": 19, "veinte": 20,
+}  # fmt: skip
+
 
 def _fecha(texto: str) -> dt.date | None:
     """La fecha del plan, si se puede leer de las primeras líneas.
@@ -240,6 +316,61 @@ def _reservas_declaradas(texto: str) -> tuple[list[tuple[str, str]], bool]:
     return candidatos[:TOPE_DECLARADAS], len(candidatos) > TOPE_DECLARADAS
 
 
+def _capitulo_de_medios(texto: str) -> str | None:
+    """El trozo del documento donde están los medios, o `None`.
+
+    `[REQ]` Acotar importa por los dos lados:
+
+    * **Por delante**, porque «extintor» aparece también en el capítulo 6,
+      dentro de un procedimiento de actuación —«utilizar el extintor más
+      próximo»—, y ahí no es un inventario, es una instrucción.
+    * **Por detrás**, porque «Medios humanos» está DENTRO del capítulo 4 y no
+      son equipos: son el Jefe de Emergencia y los equipos de intervención. Sin
+      ese corte, «equipos de primera intervención» entraría al inventario.
+
+    `[REQ]` Y se coge **la ocurrencia con más cuerpo**, no la primera. El
+    epígrafe del capítulo aparece dos veces: en el sumario y como encabezado
+    real. Cogiendo la primera, el trozo era la línea del índice y salían **cero
+    medios de un capítulo que enumera doce**. Es el mismo error que ya costó una
+    medición con la sección de salvedades, y por eso aquí no se resuelve por
+    numeración —un plan completo no numera sus capítulos como este resumen— sino
+    por tamaño: una entrada de índice no tiene cuerpo.
+    """
+    mejor: str | None = None
+    for inicio in _CAPITULO_DE_MEDIOS.finditer(texto):
+        resto = texto[inicio.end() :]
+        fin = _FIN_DE_MEDIOS.search(resto)
+        trozo = resto[: fin.start()] if fin else resto
+        if mejor is None or len(trozo) > len(mejor):
+            mejor = trozo
+    # Menos de doscientos caracteres es una entrada de índice, no un capítulo.
+    if mejor is None or len(mejor.strip()) < 200:
+        return None
+    return mejor
+
+
+def _cantidad_antes_de(plano: str, posicion: int) -> Decimal | None:
+    """El número que precede al medio, si lo hay y si es suyo.
+
+    Se mira **solo lo inmediatamente anterior**: «dieciséis hidrantes» sí;
+    «un depósito aéreo de 529 m³ y a un grupo de presión con bomba eléctrica
+    principal y dos bombas diésel» no puede atribuirle el 529 al grupo de
+    presión. Una ventana amplia convertiría cualquier cifra cercana en una
+    cantidad, y una cantidad equivocada en un inventario no se ve.
+    """
+    antes = plano[max(0, posicion - 24) : posicion]
+    if (m := re.search(r"(\d[\d.]*)\s*$", antes)) is not None:
+        try:
+            return Decimal(m.group(1).replace(".", ""))
+        except InvalidOperation:  # pragma: no cover - la expresión ya lo acota
+            return None
+    if (m := re.search(r"\b([a-z]+)\s*$", antes)) is not None and (
+        valor := _CARDINALES_LARGOS.get(m.group(1))
+    ) is not None:
+        return Decimal(valor)
+    return None
+
+
 @dataclass(frozen=True, slots=True)
 class PlanDeAutoproteccion:
     """Lee un plan de autoprotección. Determinista, sin IA y sin red."""
@@ -284,16 +415,7 @@ class PlanDeAutoproteccion:
         self._por_declararse_no_vigente(texto, aportacion, procedencia)
         self._por_casillas_vacias(texto, aportacion, procedencia)
         self._declaradas(texto, aportacion, procedencia)
-
-        # `[LIM]` Se dice en cada lectura, no una vez en la documentación: el
-        # capítulo 4 del plan es el inventario de PCI, y aquí no se lee. Sin
-        # este aviso, un plan leído sin errores dejaría creer que ya se ha
-        # aprovechado todo lo que traía.
-        aportacion.avisos.append(
-            "Los medios de protección contra incendios que enumera el plan (capítulo 4 "
-            "de la Norma Básica) NO se han inventariado: emparejarlos con el catálogo "
-            "de sistemas y con la ficha de equipo todavía no está construido."
-        )
+        self._medios(texto, aportacion, procedencia)
         return aportacion
 
     # ── Las reglas, una por método para que se lean sueltas ─────────────────
@@ -399,6 +521,90 @@ class PlanDeAutoproteccion:
             )
         )
         _ = plano  # la muestra sale del texto original, no del normalizado
+
+    def _medios(self, texto: str, a: Aportacion, p: Procedencia) -> None:
+        """`[REQ]` El capítulo 4: los medios de autoprotección, al inventario.
+
+        Lo que sale de aquí es **presencia**, y cantidad solo cuando el plan la
+        dice sin ambigüedad. «Dieciséis hidrantes privados» son dieciséis;
+        «rociadores automáticos sobre la superficie industrial» son rociadores
+        sin número, y proponer un 1 por omisión pondría un uno en un inventario
+        que después alguien lee como cierto.
+
+        `[REQ]` No se propone **periodicidad de mantenimiento**. El plan declara
+        revisiones «trimestrales, semestrales, anuales y quinquenales según el
+        tipo de equipo» y **no dice cuál le toca a cuál**. Repartirlas por
+        analogía sería inventarse el plan de mantenimiento del edificio. La
+        columna existe y la rellena una persona; aquí se avisa de que el plan
+        habla de periodicidades para que nadie dé por hecho que ya están.
+        """
+        capitulo = _capitulo_de_medios(texto)
+        if capitulo is None:
+            a.avisos.append(
+                "No se ha encontrado el capítulo de medios de autoprotección (capítulo 4 "
+                "de la Norma Básica), así que no se ha propuesto ningún equipo. El "
+                "inventario de protección contra incendios hay que hacerlo a mano."
+            )
+            return
+
+        plano = normalizar(capitulo)
+        vistos: set[str] = set()
+        for patron, sistema, como_se_llama in MEDIOS:
+            # `[REQ]` Todas las apariciones, no la primera. En este capítulo cada
+            # medio sale dos veces: como subtítulo —«Hidrantes»— y en la frase
+            # que lo describe —«Dieciséis hidrantes privados»—. La cantidad está
+            # en la segunda, así que quedándose con la primera se perdía: el
+            # inventario salía entero sin números.
+            apariciones = list(re.finditer(patron, plano))
+            if not apariciones or como_se_llama in vistos:
+                continue
+            vistos.add(como_se_llama)
+            m = next(
+                (a for a in apariciones if _cantidad_antes_de(plano, a.start()) is not None),
+                apariciones[0],
+            )
+            # La frase de alrededor: es lo que va a las notas del equipo y lo
+            # que permite comprobar de dónde salió.
+            frase = " ".join(plano[max(0, m.start() - 90) : m.end() + 110].split())
+            a.equipos.append(
+                EquipoPropuesto(
+                    sistema_code=sistema,
+                    equipment_type=como_se_llama,
+                    cantidad=_cantidad_antes_de(plano, m.start()),
+                    descripcion=f"…{frase}…",
+                    procedencia=replace(
+                        p,
+                        seccion="Capítulo 4 · Medios de autoprotección",
+                        evidencia=f"(texto normalizado) …{frase}…",
+                    ),
+                )
+            )
+
+        if not a.equipos:
+            a.avisos.append(
+                "Se ha encontrado el capítulo de medios pero no se ha reconocido ninguno "
+                "de los que la aplicación sabe leer. Puede que el plan los nombre de otra "
+                "forma: el inventario hay que revisarlo a mano."
+            )
+            return
+
+        sin_cantidad = sum(1 for e in a.equipos if e.cantidad is None)
+        if sin_cantidad:
+            a.avisos.append(
+                f"{sin_cantidad} de los {len(a.equipos)} medios propuestos vienen SIN "
+                "cantidad porque el plan no la dice. Se dejan sin número en vez de "
+                "poner un 1: un uno en un inventario se lee después como cierto."
+            )
+        # `[PDV]` El RIPCI (RD 513/2017) fija periodicidades por tipo de equipo y
+        # podría sembrar valores por omisión. No se hace: exigiría transcribir
+        # una tabla reglamentaria que nadie de este proyecto ha validado, y un
+        # plan de mantenimiento equivocado es peor que uno vacío.
+        if re.search(r"trimestral|semestral|anual|quinquenal", plano or normalizar(texto)):
+            a.avisos.append(
+                "El plan declara periodicidades de revisión (trimestral, semestral, anual "
+                "o quinquenal) pero NO dice cuál corresponde a cada equipo. La "
+                "periodicidad de los equipos propuestos queda vacía: hay que ponerla."
+            )
 
     def _declaradas(self, texto: str, a: Aportacion, p: Procedencia) -> None:
         """Las reservas que el propio documento redacta, tal cual.

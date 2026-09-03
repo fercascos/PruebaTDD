@@ -128,6 +128,38 @@ class LimitacionPropuesta:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class EquipoPropuesto:
+    """`[REQ]` Un medio o equipo que el documento dice que existe en el edificio.
+
+    Sale del capítulo 4 de un plan de autoprotección —los medios de
+    autoprotección— y de cualquier documento que enumere instalaciones.
+
+    Dos cosas que **no** trae, y es deliberado:
+
+    * **No trae activo.** Un plan cubre un complejo de seis naves y dice
+      «dieciséis hidrantes distribuidos por el perímetro» sin decir de cuál son.
+      El activo lo elige quien acepta la propuesta; adivinarlo lo haría pasar
+      por sabido.
+    * **No trae periodicidad de mantenimiento.** El plan declara que hay
+      revisiones «trimestrales, semestrales, anuales y quinquenales según el
+      tipo de equipo», y **no dice cuál le toca a cuál**. Rellenarla por
+      analogía sería inventarse un plan de mantenimiento.
+    """
+
+    #: Código del sistema técnico del catálogo: `PCI`, `ELEC`, `SEG`…
+    sistema_code: str
+    #: Lo que va en `equipment.equipment_type`: «Hidrante», «Rociador».
+    equipment_type: str
+    #: Solo si el documento la dice sin ambigüedad. «Dieciséis hidrantes» sí;
+    #: «rociadores sobre la superficie de almacenamiento» no.
+    cantidad: Decimal | None = None
+    unidad: str = "ud"
+    #: La frase del documento, para el campo de notas del equipo.
+    descripcion: str | None = None
+    procedencia: Procedencia | None = None
+
+
 @dataclass
 class Aportacion:
     """Lo que un documento aporta al expediente. Todo propuesto, nada escrito.
@@ -152,6 +184,8 @@ class Aportacion:
     #: puede no aportar ni un dato y aportar la limitación más importante del
     #: encargo, así que esto **no** cuenta como aportación vacía.
     limitaciones: list[LimitacionPropuesta] = field(default_factory=list)
+    #: `[REQ]` Los medios e instalaciones que el documento dice que existen.
+    equipos: list[EquipoPropuesto] = field(default_factory=list)
 
     #: Etiquetas del documento que el extractor leyó y no supo encajar. Se
     #: declaran en vez de descartarse: es como se descubre el sinónimo que
@@ -161,7 +195,9 @@ class Aportacion:
     avisos: list[str] = field(default_factory=list)
 
     def vacia(self) -> bool:
-        return not (self.campos or self.plantas or self.objetos or self.limitaciones)
+        return not (
+            self.campos or self.plantas or self.objetos or self.limitaciones or self.equipos
+        )
 
 
 class Extractor(Protocol):
@@ -242,6 +278,7 @@ __all__ = [
     "MOTIVOS",
     "Aportacion",
     "CampoPropuesto",
+    "EquipoPropuesto",
     "Extractor",
     "LimitacionPropuesta",
     "ObjetoPropuesto",

@@ -207,9 +207,42 @@ de las personas con responsabilidad en una emergencia. El propio documento marca
 varios de esos datos como «cuya divulgación puede comprometer seguridad u
 operación».
 
-`[LIM]` El **capítulo 4 del plan es el inventario de medios contra incendios y
-no se lee todavía**: emparejar cada medio con el catálogo de sistemas técnicos y
-con la ficha de equipo es otro trabajo. Se avisa en cada lectura.
+#### Del capítulo 4 al inventario de equipo `[REQ]`
+
+El capítulo 4 de la Norma Básica enumera los medios de protección contra
+incendios del edificio, y de ahí salen fichas de equipo. Tres decisiones:
+
+| Decisión | Por qué |
+|---|---|
+| **Aceptar exige decir el activo** | Un plan cubre un complejo de seis naves y dice «dieciséis hidrantes distribuidos por el perímetro» sin decir de cuál son. Un equipo en la nave equivocada es una visita perdida |
+| **La cantidad puede quedar vacía** | «Dieciséis hidrantes» son dieciséis; «rociadores sobre la superficie de almacenamiento» son rociadores sin número. Un 1 por omisión mete un uno en un inventario que después se lee como cierto |
+| **La periodicidad no se propone** | El plan declara revisiones «trimestrales, semestrales, anuales y quinquenales **según el tipo de equipo**» y no dice cuál le toca a cuál. Repartirlas sería inventarse el plan de mantenimiento del edificio |
+
+Y **a `equipment` le faltaba el mantenimiento preventivo**. La ficha llevaba año
+de instalación, vida esperada, estado, obsolescencia y criticidad; no llevaba
+cada cuánto se revisa ni cuándo se revisó. De una instalación de protección
+contra incendios es lo primero que se pregunta: no «cuántos extintores hay» sino
+«cuándo se revisaron». Ahora está, en meses, y la próxima revisión se genera.
+
+`[REQ]` **El mantenimiento vencido es otra pregunta que la vida agotada.** Un
+extintor de dos años sin revisar desde hace dieciocho meses no está al final de
+su vida útil y sí está fuera de norma; son dos hallazgos con presupuestos
+distintos —uno se sustituye, el otro se revisa— y por eso son dos filtros.
+
+##### Dos errores que costó medir
+
+**1 · El índice, otra vez.** El epígrafe del capítulo 4 aparece en el sumario y
+como encabezado real. Cogiendo el primero, el trozo era una línea de índice y
+salían **cero medios de un capítulo que enumera doce**. Es el mismo error que ya
+había costado 112 limitaciones falsas, y aquí no se podía resolver por numeración
+—un plan completo no numera sus capítulos como un resumen—: se resuelve por
+tamaño, porque una entrada de índice no tiene cuerpo.
+
+**2 · El plural mal escrito.** `centrales?` significa «centrale» con una `s`
+opcional, **no** «central». Escrito así, cinco medios —central, rociador,
+extintor, detector, pulsador— solo se reconocían en plural. En el documento con
+el que se escribió esto todos venían en plural, así que no se veía. Hay una
+prueba que recorre la tabla entera buscando ese patrón.
 
 Qué extractor se usa lo decide **el tipo del documento**, en un registro con un
 lector por tipo. `[LIM]` Hoy hay **dos** —memoria técnica y plan de

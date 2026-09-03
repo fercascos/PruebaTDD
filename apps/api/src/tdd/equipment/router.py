@@ -63,6 +63,12 @@ class Equipo(BaseModel):
     unit: str
     has_documentation: bool
     notes: str | None
+    #: `[REQ]` Mantenimiento preventivo. `next_maintenance_due` la GENERA la
+    #: base a partir de las dos anteriores; «está vencido» no, porque depende
+    #: del día de hoy y se pregunta con `solo_mantenimiento_vencido`.
+    maintenance_months: int | None = None
+    last_maintenance_date: date | None = None
+    next_maintenance_due: date | None = None
     #: La versión sobre la que se escribe. Va también como `ETag`.
     row_version: int = 1
 
@@ -97,6 +103,11 @@ class DatosDeEquipo(BaseModel):
     unit: str = Field(default="ud", min_length=1, max_length=20)
     has_documentation: bool = False
     notes: str | None = None
+    #: En meses y no un enumerado de periodicidades: un plan habla de revisiones
+    #: trimestrales, semestrales, anuales y quinquenales, pero un contrato de
+    #: mantenimiento puede decir «cada cuatro meses».
+    maintenance_months: int | None = Field(default=None, gt=0, le=600)
+    last_maintenance_date: date | None = None
 
 
 class CambioDeEquipo(BaseModel):
@@ -120,6 +131,8 @@ class CambioDeEquipo(BaseModel):
     unit: str | None = Field(default=None, min_length=1, max_length=20)
     has_documentation: bool | None = None
     notes: str | None = None
+    maintenance_months: int | None = Field(default=None, gt=0, le=600)
+    last_maintenance_date: date | None = None
 
 
 _CAMPOS = """
@@ -130,6 +143,7 @@ _CAMPOS = """
     CAST(e.obsolescence AS text) AS obsolescence,
     CAST(e.criticality AS text) AS criticality,
     e.quantity, e.unit, e.has_documentation, e.notes, e.row_version,
+    e.maintenance_months, e.last_maintenance_date, e.next_maintenance_due,
     ts.name_es AS technical_system_name, z.name_es AS zone_name
 """
 
@@ -208,12 +222,18 @@ def listar(
     technical_system_id: uuid.UUID | None = None,
     q: str | None = None,
     solo_vencidos: bool = False,
+    solo_mantenimiento_vencido: bool = False,
 ) -> Any:
     """El inventario del encargo, con filtros.
 
     `solo_vencidos` compara contra el año en curso en SQL y no contra un valor
     guardado: un inventario cargado en 2025 tiene que seguir diciendo la verdad
     en 2027 sin que nadie lo recalcule.
+
+    `[REQ]` `solo_mantenimiento_vencido` es **otra pregunta**: un extintor de dos
+    años sin revisar desde hace dieciocho meses no está al final de su vida útil
+    y sí está fuera de norma. Son dos filtros y no uno porque son dos hallazgos
+    distintos y con presupuestos distintos: uno se sustituye, el otro se revisa.
     """
     filas = (
         s.execute(
@@ -226,6 +246,15 @@ def listar(
                 "       OR e.search_vector @@ plainto_tsquery('spanish', CAST(:q AS text))) "
                 "  AND (NOT :v OR (e.end_of_life_year IS NOT NULL "
                 "                  AND e.end_of_life_year < EXTRACT(YEAR FROM current_date))) "
+                # `[REQ]` El mantenimiento vencido es OTRA pregunta que la vida
+                # agotada. Un extintor de dos años sin revisar desde hace
+                # dieciocho meses no está al final de su vida útil y sí está
+                # fuera de norma; mezclar los dos filtros escondería justo el
+                # caso que se busca. Se compara con `current_date` en SQL, no
+                # con un valor guardado: un inventario cargado hoy tiene que
+                # seguir diciendo la verdad dentro de dos años.
+                "  AND (NOT :mv OR (e.next_maintenance_due IS NOT NULL "
+                "                   AND e.next_maintenance_due < current_date)) "
                 "ORDER BY ts.sort_order NULLS LAST, e.tag NULLS LAST, e.equipment_type"
             ),
             {
@@ -234,6 +263,7 @@ def listar(
                 "ts": str(technical_system_id) if technical_system_id else None,
                 "q": q,
                 "v": solo_vencidos,
+                "mv": solo_mantenimiento_vencido,
             },
         )
         .mappings()
@@ -270,10 +300,10 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
             "INSERT INTO equipment (organization_id, project_id, asset_id, technical_system_id, "
             "zone_id, tag, equipment_type, manufacturer, model, serial_number, install_year, "
             "expected_life_years, condition, obsolescence, criticality, quantity, unit, "
-            "has_documentation, notes, created_by) "
+            "has_documentation, notes, maintenance_months, last_maintenance_date, created_by) "
             "VALUES (:o, :p, :a, :ts, :z, :tag, :et, :man, :mod, :sn, :iy, :el, "
             "  CAST(:cond AS equipment_condition), CAST(:obs AS equipment_obsolescence), "
-            "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :cb) "
+            "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :mm, :lmd, :cb) "
             "RETURNING id"
         ),
         {
@@ -296,6 +326,8 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
             "u": cuerpo.unit,
             "hd": cuerpo.has_documentation,
             "n": cuerpo.notes,
+            "mm": cuerpo.maintenance_months,
+            "lmd": cuerpo.last_maintenance_date,
             "cb": str(usuario.id),
         },
     ).scalar_one()

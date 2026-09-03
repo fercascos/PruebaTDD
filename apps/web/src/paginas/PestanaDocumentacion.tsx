@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener, subirFichero } from '../api/cliente'
 import type {
+  Activo,
   CategoriaDeSolicitud,
   Documento,
   EstadoSolicitud,
@@ -9,6 +10,7 @@ import type {
   ObservacionIa,
   PermisoDeRevision,
   PropuestaDeDato,
+  PropuestaDeEquipo,
   ResultadoDeExtraccion,
   RevisionIa,
   Solicitud,
@@ -186,6 +188,15 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
           entero; enterrarlas en la ficha del PDF las dejaría fuera de la vista
           de quien redacta el apartado de limitaciones. */}
       <Limitaciones projectId={projectId} clave={extraccionesHechas} alFallar={setError} />
+
+      {/* Igual que las limitaciones: los medios son del ENCARGO hasta que
+          alguien dice de qué activo son, así que van fuera de la ficha del
+          documento que los declaró. */}
+      <EquiposPropuestos
+        projectId={projectId}
+        clave={extraccionesHechas}
+        alFallar={setError}
+      />
 
       {sinLinea.length > 0 && (
         <details className="sueltos">
@@ -966,6 +977,181 @@ function Limitaciones({
             {descartadas.map((l) => (
               <li key={l.id}>
                 <strong>{MOTIVO[l.motivo].etiqueta}</strong> · {l.texto}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  )
+}
+
+/**
+ * `[REQ]` Los medios que la documentación dice que existen, al inventario.
+ *
+ * El capítulo 4 de la Norma Básica de Autoprotección enumera los medios de
+ * protección contra incendios del edificio: hidrantes, rociadores, BIE,
+ * detección, exutorios. Teclearlos a mano después de que un documento los liste
+ * es el trabajo repetido que esta aplicación viene a evitar.
+ *
+ * Es la **única** de las tres decisiones que crea una ficha nueva en vez de
+ * actualizar una que ya existía, y por eso pide el activo: el documento no lo
+ * dice. Un plan cubre un complejo de seis naves y habla de «dieciséis hidrantes
+ * distribuidos por el perímetro»; adivinar la nave lo haría pasar por sabido, y
+ * un equipo en la nave equivocada es una visita perdida.
+ */
+function EquiposPropuestos({
+  projectId,
+  clave,
+  alFallar,
+}: {
+  projectId: string
+  clave: number
+  alFallar: (m: string) => void
+}) {
+  const [todos, setTodos] = useState<PropuestaDeEquipo[] | null>(null)
+  const [activos, setActivos] = useState<Activo[]>([])
+  const [destino, setDestino] = useState<Record<string, string>>({})
+  const [meses, setMeses] = useState<Record<string, string>>({})
+  const [ocupado, setOcupado] = useState(false)
+
+  const cargar = useCallback(async () => {
+    try {
+      setTodos(
+        await obtener<PropuestaDeEquipo[]>(`/projects/${projectId}/propuestas-de-equipo`),
+      )
+    } catch (e) {
+      alFallar((e as Error).message)
+    }
+  }, [projectId, alFallar])
+
+  useEffect(() => {
+    void cargar()
+    obtener<Activo[]>(`/projects/${projectId}/assets`)
+      .then(setActivos)
+      .catch(() => setActivos([]))
+  }, [cargar, clave, projectId])
+
+  async function decidir(propuesta: PropuestaDeEquipo, aceptar: boolean) {
+    setOcupado(true)
+    try {
+      const cuerpo = aceptar
+        ? {
+            aceptar: [
+              {
+                id: propuesta.id,
+                asset_id: destino[propuesta.id] ?? activos[0]?.id,
+                ...(meses[propuesta.id]
+                  ? { maintenance_months: Number(meses[propuesta.id]) }
+                  : {}),
+              },
+            ],
+          }
+        : { descartar: [propuesta.id] }
+      await enviar(`/projects/${projectId}/propuestas-de-equipo/decidir`, cuerpo)
+      await cargar()
+    } catch (e) {
+      alFallar((e as Error).message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  if (!todos || todos.length === 0) return null
+
+  const pendientes = todos.filter((e) => e.estado === 'PENDIENTE')
+  const aceptados = todos.filter((e) => e.estado === 'ACEPTADA')
+
+  return (
+    <section className="equipos-propuestos">
+      <h3>Medios que declara la documentación</h3>
+      <p className="ayuda">
+        Salen del capítulo de medios de autoprotección. <strong>Aceptar crea la ficha de
+        equipo</strong>, así que hay que decir en qué activo va: el documento no lo dice.
+      </p>
+
+      {activos.length === 0 && pendientes.length > 0 && (
+        <Mensaje tipo="aviso">
+          Este encargo no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer
+          en alguno. Créalo antes de aceptar estas propuestas.
+        </Mensaje>
+      )}
+
+      {pendientes.length > 0 && (
+        <ul className="propuestas">
+          {pendientes.map((e) => (
+            <li key={e.id} className="propuesta equipo">
+              <div className="cabecera">
+                <span className="criterio">{e.equipment_type}</span>
+                <span className="valor">
+                  {/* Sin cantidad se dice «sin cantidad», no «1». Un uno en un
+                      inventario se lee después como cierto. */}
+                  {e.quantity === null ? (
+                    <span className="ayuda">sin cantidad</span>
+                  ) : (
+                    `${Number(e.quantity)} ${e.unit}`
+                  )}
+                </span>
+              </div>
+              <p className="detalle">
+                {e.technical_system_name ?? 'sin sistema técnico'}
+                {e.documento && <> · Sale de «{e.documento}»</>}
+                {e.seccion && <> · {e.seccion}</>}
+              </p>
+              {e.evidencia && <blockquote className="evidencia">{e.evidencia}</blockquote>}
+
+              <div className="destino">
+                <label>
+                  Activo
+                  <select
+                    value={destino[e.id] ?? activos[0]?.id ?? ''}
+                    onChange={(ev) => setDestino((d) => ({ ...d, [e.id]: ev.target.value }))}
+                  >
+                    {activos.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Revisión cada (meses)
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    placeholder="opcional"
+                    value={meses[e.id] ?? ''}
+                    onChange={(ev) => setMeses((m) => ({ ...m, [e.id]: ev.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <div className="decidir">
+                <button
+                  type="button"
+                  onClick={() => void decidir(e, true)}
+                  disabled={ocupado || activos.length === 0}
+                >
+                  Añadir al inventario
+                </button>
+                <button type="button" onClick={() => void decidir(e, false)} disabled={ocupado}>
+                  Descartar
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {aceptados.length > 0 && (
+        <details className="decididas" open>
+          <summary>{aceptados.length} añadido(s) al inventario</summary>
+          <ul>
+            {aceptados.map((e) => (
+              <li key={e.id}>
+                <strong>{e.equipment_type}</strong>
+                {e.quantity !== null && ` × ${Number(e.quantity)} ${e.unit}`}
               </li>
             ))}
           </ul>

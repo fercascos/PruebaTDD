@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.227 pruebas
+make test        # 1.256 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -81,6 +81,9 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Esqueleto del CAPEX** desde la memoria | ✅ Completo | `tests/integration/test_memoria_y_esqueleto.py` · 14 |
 | **Extracción por tipo de documento** · propuesta con procedencia | ⚠️ Dos lectores | `tests/integration/test_extraccion_por_documento.py` · 12 |
 | **Limitaciones que aporta la documentación** · la tercera clase | ✅ Completo | `test_limitaciones_del_plan.py` · 19 + `test_limitaciones_documentales.py` · 16 |
+| **Medios del plan al inventario** · capítulo 4 de la Norma Básica | ✅ Completo | `test_medios_del_plan.py` · 14 + `test_equipos_y_confidencialidad.py` · 15 |
+| **Mantenimiento preventivo** · periodicidad y próxima revisión | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
+| **Confidencialidad por tipo** · un RESTRINGIDO no va a ninguna IA | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
 
 ## El esquema se versiona con Alembic
 
@@ -235,11 +238,13 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
   `es_simulado` y sirve para demostrar que el puerto encaja, no para sembrar un
   CAPEX. Y **solo hay dos lectores** —memoria técnica y plan de
   autoprotección—: los demás tipos responden `422` diciendo que aún no se leen.
-- **El inventario de PCI del plan de autoprotección.** El capítulo 4 de la Norma
-  Básica enumera hidrantes, BIE, rociadores, detección y alumbrado; emparejar
-  cada medio con el catálogo de sistemas técnicos y con la ficha de equipo no
-  está construido. El extractor lo dice **en cada lectura**, no solo aquí: un
-  plan leído sin errores dejaría creer que se ha aprovechado todo lo que traía.
+- **Las periodicidades de mantenimiento no se deducen de ningún documento.** La
+  columna existe y la rellena una persona. Un plan de autoprotección declara
+  revisiones «trimestrales, semestrales, anuales y quinquenales según el tipo de
+  equipo» **sin decir cuál le toca a cuál**, y repartirlas por analogía sería
+  inventarse el plan de mantenimiento del edificio. `[PDV]` El RIPCI (RD
+  513/2017) fija una tabla por tipo de equipo que podría sembrarlas: exigiría
+  transcribir una norma que nadie de este proyecto ha validado.
 - **Los dos extractores están escritos contra UN documento cada uno**, y el del
   plan contra un *resumen* de uno. Que leen ésos está medido; que generalicen,
   no. Hace falta un segundo ejemplar de cada tipo para poder afirmarlo.

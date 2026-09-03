@@ -63,6 +63,17 @@ CONFIDENCIALIDAD_POR_OMISION: dict[str, str] = {"PLAN_AUTOPROTECCION": "RESTRING
 #: Para el resto de tipos, y para un documento sin tipo.
 CONFIDENCIALIDAD_HABITUAL = "INTERNO"
 
+#: Por qué, en palabras, para poder enseñarlo en la pantalla de subida. Un nivel
+#: sin motivo se lee como una traba administrativa y se cambia sin pensar.
+MOTIVO_DE_CONFIDENCIALIDAD: dict[str, str] = {
+    "PLAN_AUTOPROTECCION": (
+        "Lleva procedimientos de emergencia, puntos de reunión, ubicación de los medios "
+        "contra incendios y datos de las personas con responsabilidad en una emergencia. "
+        "Un documento RESTRINGIDO solo lo descarga quien administra o dirige, y no se "
+        "envía a ningún proveedor de IA."
+    ),
+}
+
 #: Extensiones admitidas `[REQ]` §15.11.
 EXTENSIONES_ADMITIDAS = frozenset(
     {"pdf", "docx", "doc", "xlsx", "xls", "dwg", "dxf", "jpg", "jpeg", "png", "tif", "tiff", "txt"}
@@ -390,6 +401,37 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             {"i": str(doc_request_item_id)},
         )
     return _leer(s, document_id)
+
+
+class ConfidencialidadPorTipo(BaseModel):
+    """Qué nivel le toca por omisión a un tipo de documento, y por qué."""
+
+    doc_type: str
+    confidentiality: str
+    motivo: str
+
+
+@router.get("/documents/confidencialidad-por-tipo", response_model=list[ConfidencialidadPorTipo])
+def confidencialidad_por_tipo() -> Any:
+    """`[REQ]` Qué tipos nacen por encima de `INTERNO`, y por qué.
+
+    Se expone para que la pantalla de subida lo **diga antes de subir**, no
+    después. Un nivel de confidencialidad que aparece solo en la ficha, ya
+    guardado, no informa la decisión de quien sube: informa la sorpresa de quien
+    intenta descargarlo.
+
+    Solo salen las excepciones. Todo lo demás nace `INTERNO`, y enumerar
+    catorce tipos para decir lo mismo de trece haría que la excepción no se
+    viera.
+    """
+    return [
+        {
+            "doc_type": tipo,
+            "confidentiality": nivel,
+            "motivo": MOTIVO_DE_CONFIDENCIALIDAD.get(tipo, ""),
+        }
+        for tipo, nivel in sorted(CONFIDENCIALIDAD_POR_OMISION.items())
+    ]
 
 
 @router.get("/projects/{project_id}/documents", response_model=list[Documento])

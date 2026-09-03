@@ -37,6 +37,26 @@ class RevisionNoAutorizada(PermissionError):
     """
 
 
+class DocumentoDemasiadoSensible(PermissionError):
+    """`[REQ]` Un documento `RESTRINGIDO` no se manda a un proveedor de IA.
+
+    El interruptor del encargo es la autorización expresa que el cliente exige,
+    y no basta para éste. `RESTRINGIDO` es el nivel que la propia aplicación
+    define como «solo lo descarga quien administra o dirige»: mandárselo a un
+    tercero mientras un consultor del equipo no puede ni abrirlo es incoherente,
+    y la incoherencia se resolvería siempre por el lado malo.
+
+    Es el caso del **plan de autoprotección**, que nace `RESTRINGIDO`: lleva
+    procedimientos de emergencia, puntos de reunión y datos de las personas con
+    responsabilidad en una emergencia.
+
+    `[REC]` No hay un segundo interruptor. Si en un encargo concreto hay que
+    revisarlo, se baja su clasificación a mano —lo cual queda en `audit_log` con
+    quién y cuándo— y entonces se revisa. Una decisión así tiene que dejar
+    rastro; un interruptor más lo convertiría en un clic sin memoria.
+    """
+
+
 class DecisionInvalida(ValueError):
     """Se ha intentado decidir sobre una propuesta que ya estaba decidida."""
 
@@ -124,7 +144,8 @@ def _documento_para_revisar(s: Session, document_id: uuid.UUID) -> dict[str, Any
             text(
                 "SELECT d.id, d.project_id, d.organization_id, d.doc_request_item_id, "
                 "d.display_name, d.original_filename, d.file_extension, d.mime_type, "
-                "d.sha256, d.status, o.storage_key, i.title AS solicitado, "
+                "d.sha256, d.status, CAST(d.confidentiality AS text) AS confidentiality, "
+                "o.storage_key, i.title AS solicitado, "
                 "c.name_es AS categoria "
                 "FROM document d "
                 "JOIN stored_object o ON o.id = d.stored_object_id "
@@ -164,6 +185,19 @@ def revisar_documento(  # noqa: PLR0913 — cada uno es una dependencia distinta
         raise RevisionNoAutorizada(
             "Este encargo no tiene activada la revisión de documentación con IA. "
             "La activa quien dirige el proyecto, y queda registrado quién lo hizo."
+        )
+    # `[REQ]` Y el interruptor del encargo NO basta para un documento
+    # RESTRINGIDO. Esto faltaba: la comprobación de confidencialidad estaba en
+    # `descargar()` y no aquí, así que un documento que un consultor del equipo
+    # no puede ni abrir sí se podía mandar a un proveedor externo con solo el
+    # interruptor del encargo encendido. Se descubrió al clasificar el plan de
+    # autoprotección como RESTRINGIDO.
+    if doc["confidentiality"] == "RESTRINGIDO":
+        raise DocumentoDemasiadoSensible(
+            f"«{doc['display_name']}» está clasificado como RESTRINGIDO y no se envía a "
+            "ningún proveedor de IA, ni con la revisión del encargo activada. Es el nivel "
+            "que solo puede descargar quien administra o dirige. Si hay que revisarlo, "
+            "baje su clasificación primero: quedará registrado quién lo hizo."
         )
 
     criterios = comprobaciones_vigentes(s)

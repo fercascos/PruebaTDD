@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, status
@@ -52,6 +53,8 @@ class ResultadoDeExtraccion(BaseModel):
     #: importante del encargo, así que `propuestas: 0` no significa que la
     #: lectura no haya servido para nada.
     limitaciones: int = 0
+    #: `[REQ]` Cuántos medios del edificio ha propuesto al inventario.
+    equipos: int = 0
     desconocidos: dict[str, str]
     avisos: list[str]
 
@@ -167,6 +170,10 @@ def extraer(
         text("DELETE FROM limitacion_de_documento WHERE document_id = :d AND estado = 'PENDIENTE'"),
         {"d": str(document_id)},
     )
+    s.execute(
+        text("DELETE FROM propuesta_de_equipo WHERE document_id = :d AND estado = 'PENDIENTE'"),
+        {"d": str(document_id)},
+    )
     decididos = {
         fila[0]
         for fila in s.execute(
@@ -247,7 +254,67 @@ def extraer(
         )
         limitaciones += 1
 
+    # Los medios que el documento enumera. El sistema técnico se resuelve por
+    # su código de catálogo: el extractor no conoce identificadores de la base,
+    # y no debe.
+    equipos_decididos = {
+        fila[0]
+        for fila in s.execute(
+            text(
+                "SELECT equipment_type FROM propuesta_de_equipo "
+                "WHERE document_id = :d AND estado <> 'PENDIENTE'"
+            ),
+            {"d": str(document_id)},
+        ).all()
+    }
+    equipos = 0
+    sistemas_desconocidos: set[str] = set()
+    for equipo in aportacion.equipos:
+        if equipo.equipment_type in equipos_decididos:
+            continue
+        sistema_id = s.execute(
+            text("SELECT id FROM technical_system WHERE code = :c"),
+            {"c": equipo.sistema_code},
+        ).scalar()
+        if sistema_id is None:
+            # No se descarta el equipo: se guarda sin sistema y se declara. Un
+            # medio real perdido por un código de catálogo que no cuadra sería
+            # peor que uno sin clasificar.
+            sistemas_desconocidos.add(equipo.sistema_code)
+        procedencia_eq = equipo.procedencia
+        s.execute(
+            text(
+                "INSERT INTO propuesta_de_equipo (organization_id, project_id, "
+                "technical_system_id, equipment_type, quantity, unit, descripcion, "
+                "document_id, doc_type, seccion, evidencia, extractor, es_simulada) "
+                "VALUES (:o, :p, :ts, :tipo, :cant, :u, :desc, :d, CAST(:t AS doc_type), "
+                ":s, :e, :x, :sim)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "p": str(documento["project_id"]),
+                "ts": None if sistema_id is None else str(sistema_id),
+                "tipo": equipo.equipment_type,
+                "cant": equipo.cantidad,
+                "u": equipo.unidad,
+                "desc": equipo.descripcion,
+                "d": str(document_id),
+                "t": documento["doc_type"],
+                "s": None if procedencia_eq is None else procedencia_eq.seccion,
+                "e": None if procedencia_eq is None else procedencia_eq.evidencia,
+                "x": aportacion.extractor,
+                "sim": aportacion.es_simulada,
+            },
+        )
+        equipos += 1
+
     avisos = list(aportacion.avisos)
+    if sistemas_desconocidos:
+        avisos.append(
+            f"Estos códigos de sistema técnico no están en el catálogo: "
+            f"{', '.join(sorted(sistemas_desconocidos))}. Los equipos se han propuesto "
+            "igual, sin sistema: hay que asignárselo a mano."
+        )
     if omitidas := len(decididos & {c.campo for c in aportacion.campos}):
         avisos.append(
             f"{omitidas} campos no se han vuelto a proponer porque alguien ya decidió "
@@ -268,6 +335,7 @@ def extraer(
         "plantas": len(aportacion.plantas),
         "objetos": len(aportacion.objetos),
         "limitaciones": limitaciones,
+        "equipos": equipos,
         "desconocidos": aportacion.desconocidos,
         "avisos": avisos,
     }
@@ -546,3 +614,230 @@ def decidir_limitaciones(
         )
 
     return {"aceptadas": len(cuerpo.aceptar), "descartadas": len(cuerpo.descartar)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los medios que un documento dice que existen `[REQ]`
+#
+#  El capítulo 4 de la Norma Básica de Autoprotección los enumera. Teclearlos a
+#  mano después es el trabajo repetido que el cliente pidió evitar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class EquipoLeido(BaseModel):
+    id: uuid.UUID
+    equipment_type: str
+    #: Puede venir vacía: «rociadores sobre la superficie de almacenamiento» no
+    #: trae número, y poner un 1 metería un uno en un inventario.
+    quantity: str | None
+    unit: str
+    descripcion: str | None
+    estado: str
+    technical_system_id: uuid.UUID | None
+    technical_system_name: str | None
+    document_id: uuid.UUID | None
+    doc_type: str
+    seccion: str | None
+    evidencia: str | None
+    extractor: str
+    es_simulada: bool
+    decidida_por: uuid.UUID | None = None
+    #: El equipo creado al aceptarla. Cierra la trazabilidad al revés: desde la
+    #: ficha del equipo se llega al documento que lo declaró.
+    equipment_id: uuid.UUID | None = None
+    documento: str | None = None
+
+
+@router.get("/projects/{project_id}/propuestas-de-equipo", response_model=list[EquipoLeido])
+def listar_equipos_propuestos(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    estado: str | None = None,
+) -> Any:
+    """Los medios que la documentación del encargo dice que existen."""
+    filas = (
+        s.execute(
+            text(
+                "SELECT e.id, e.equipment_type, CAST(e.quantity AS text) AS quantity, e.unit, "
+                "e.descripcion, CAST(e.estado AS text) AS estado, e.technical_system_id, "
+                "ts.name_es AS technical_system_name, e.document_id, "
+                "CAST(e.doc_type AS text) AS doc_type, e.seccion, e.evidencia, e.extractor, "
+                "e.es_simulada, e.decidida_por, e.equipment_id, d.display_name AS documento "
+                "FROM propuesta_de_equipo e "
+                "LEFT JOIN technical_system ts ON ts.id = e.technical_system_id "
+                "LEFT JOIN document d ON d.id = e.document_id "
+                "WHERE e.project_id = :p AND (CAST(:e AS text) IS NULL "
+                "OR CAST(e.estado AS text) = CAST(:e AS text)) "
+                "ORDER BY ts.sort_order NULLS LAST, e.equipment_type"
+            ),
+            {"p": str(project_id), "e": estado},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class Aceptacion(BaseModel):
+    """`[REQ]` Aceptar un equipo exige decir **a qué activo va**.
+
+    El documento no lo dice: un plan cubre un complejo de seis naves y habla de
+    «dieciséis hidrantes distribuidos por el perímetro». Adivinar el activo lo
+    haría pasar por sabido, y el inventario es lo que después se recorre en una
+    visita: un equipo en la nave equivocada es una visita perdida.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: uuid.UUID
+    asset_id: uuid.UUID
+    zone_id: uuid.UUID | None = None
+    #: La cantidad, cuando el documento no la traía o hay que corregirla.
+    quantity: Decimal | None = None
+    #: `[REQ]` Cada cuántos meses se revisa. El plan declara periodicidades en
+    #: bloque —trimestral, semestral, anual, quinquenal— y **no dice cuál le
+    #: toca a cuál**, así que esto lo pone una persona o queda vacío.
+    maintenance_months: int | None = Field(default=None, gt=0)
+
+
+class DecisionDeEquipos(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    aceptar: list[Aceptacion] = Field(default_factory=list)
+    descartar: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ResultadoDeEquipos(BaseModel):
+    aceptadas: int
+    descartadas: int
+    #: Los equipos creados, para que la pantalla pueda enlazarlos.
+    equipment_ids: list[uuid.UUID]
+
+
+@router.post(
+    "/projects/{project_id}/propuestas-de-equipo/decidir",
+    response_model=ResultadoDeEquipos,
+)
+def decidir_equipos(
+    project_id: uuid.UUID,
+    cuerpo: DecisionDeEquipos,
+    s: SesionDep,
+    usuario: UsuarioDep,
+) -> Any:
+    """`[REQ]` Aceptar crea la ficha de equipo; descartar deja constancia.
+
+    Es la única de las tres decisiones que **escribe una fila nueva** en vez de
+    actualizar una que ya existía, y por eso pide el activo: el equipo tiene que
+    nacer en algún sitio y el documento no lo dice.
+    """
+    if not cuerpo.aceptar and not cuerpo.descartar:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "No se ha indicado ninguna propuesta"
+        )
+
+    ids = [a.id for a in cuerpo.aceptar] + list(cuerpo.descartar)
+    if len(set(ids)) != len(ids):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Hay una propuesta repetida entre las dos listas: aceptarla y descartarla en "
+            "la misma llamada dejaría ganando al orden de ejecución, que no lo ha "
+            "decidido nadie.",
+        )
+
+    pendientes = {
+        str(fila["id"]): dict(fila)
+        for fila in s.execute(
+            text(
+                "SELECT id, technical_system_id, equipment_type, quantity, unit, descripcion "
+                "FROM propuesta_de_equipo "
+                "WHERE project_id = :p AND id = ANY(:ids) AND estado = 'PENDIENTE'"
+            ),
+            {"p": str(project_id), "ids": [str(i) for i in ids]},
+        )
+        .mappings()
+        .all()
+    }
+    if len(pendientes) != len(ids):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Alguna propuesta no existe, no es de este encargo o ya estaba decidida. "
+            "Vuelva a cargar la lista: puede que otra persona la haya resuelto.",
+        )
+
+    creados: list[uuid.UUID] = []
+    for aceptada in cuerpo.aceptar:
+        propuesta = pendientes[str(aceptada.id)]
+        # El activo tiene que ser del encargo. Sin esto, un identificador de otro
+        # proyecto crearía un equipo cruzado que la RLS no ve como error porque
+        # las dos filas son de la misma organización.
+        del_encargo = s.execute(
+            text("SELECT 1 FROM asset WHERE id = :a AND project_id = :p AND deleted_at IS NULL"),
+            {"a": str(aceptada.asset_id), "p": str(project_id)},
+        ).first()
+        if del_encargo is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"El activo {aceptada.asset_id} no es de este encargo.",
+            )
+
+        equipment_id = s.execute(
+            text(
+                "INSERT INTO equipment (organization_id, project_id, asset_id, "
+                "technical_system_id, zone_id, equipment_type, quantity, unit, notes, "
+                "maintenance_months, created_by) "
+                "VALUES (:o, :p, :a, :ts, :z, :tipo, COALESCE(:cant, 1), :u, :notas, :mm, :by) "
+                "RETURNING id"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "p": str(project_id),
+                "a": str(aceptada.asset_id),
+                "z": None if aceptada.zone_id is None else str(aceptada.zone_id),
+                "ts": (
+                    None
+                    if propuesta["technical_system_id"] is None
+                    else str(propuesta["technical_system_id"])
+                ),
+                "tipo": propuesta["equipment_type"],
+                # La que corrija quien acepta manda sobre la del documento. Y si
+                # ninguna de las dos hay, `equipment.quantity` es NOT NULL con
+                # DEFAULT 1: el COALESCE lo pone explícito en vez de dejarlo al
+                # azar de la columna.
+                "cant": aceptada.quantity
+                if aceptada.quantity is not None
+                else propuesta["quantity"],
+                "u": propuesta["unit"],
+                "notas": propuesta["descripcion"],
+                "mm": aceptada.maintenance_months,
+                "by": str(usuario.id),
+            },
+        ).scalar_one()
+        creados.append(uuid.UUID(str(equipment_id)))
+
+        s.execute(
+            text(
+                "UPDATE propuesta_de_equipo SET estado = 'ACEPTADA', decidida_at = now(), "
+                "decidida_por = :u, equipment_id = :eq WHERE id = :i"
+            ),
+            {"u": str(usuario.id), "eq": str(equipment_id), "i": str(aceptada.id)},
+        )
+
+    if cuerpo.descartar:
+        s.execute(
+            text(
+                "UPDATE propuesta_de_equipo SET estado = 'DESCARTADA', decidida_at = now(), "
+                "decidida_por = :u WHERE project_id = :p AND id = ANY(:ids) "
+                "AND estado = 'PENDIENTE'"
+            ),
+            {
+                "u": str(usuario.id),
+                "p": str(project_id),
+                "ids": [str(i) for i in cuerpo.descartar],
+            },
+        )
+
+    return {
+        "aceptadas": len(cuerpo.aceptar),
+        "descartadas": len(cuerpo.descartar),
+        "equipment_ids": creados,
+    }

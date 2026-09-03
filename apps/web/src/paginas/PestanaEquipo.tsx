@@ -56,10 +56,24 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
   const [sistema, setSistema] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [soloVencidos, setSoloVencidos] = useState(false)
+  /**
+   * `[REQ]` Es OTRA pregunta que la vida agotada, no un matiz de la misma.
+   *
+   * Un extintor de dos años sin revisar desde hace dieciocho meses no está al
+   * final de su vida útil y sí está fuera de norma. Y son dos hallazgos con
+   * presupuestos distintos: uno se sustituye, el otro se revisa. Un filtro
+   * único escondería justo el caso que se busca.
+   */
+  const [soloMantenimiento, setSoloMantenimiento] = useState(false)
   const [creando, setCreando] = useState(false)
   const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<Equipo | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // En ISO, que es como llega `next_maintenance_due`: comparar dos cadenas
+  // `AAAA-MM-DD` ordena igual que comparar dos fechas, y no arrastra el desfase
+  // de zona horaria que aparece al construir un `Date` desde una fecha suelta.
+  const hoy = new Date().toISOString().slice(0, 10)
 
   const recargar = useCallback(() => {
     const p = new URLSearchParams()
@@ -67,10 +81,11 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
     if (sistema) p.set('technical_system_id', sistema)
     if (busqueda.trim()) p.set('q', busqueda.trim())
     if (soloVencidos) p.set('solo_vencidos', 'true')
+    if (soloMantenimiento) p.set('solo_mantenimiento_vencido', 'true')
     obtener<Equipo[]>(`/projects/${projectId}/equipment?${p}`)
       .then(setEquipos)
       .catch((e: Error) => setError(e.message))
-  }, [projectId, activo, sistema, busqueda, soloVencidos])
+  }, [projectId, activo, sistema, busqueda, soloVencidos, soloMantenimiento])
 
   useEffect(recargar, [recargar])
 
@@ -165,6 +180,14 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
           />
           Solo los que han agotado su vida útil
         </label>
+        <label className="casilla">
+          <input
+            type="checkbox"
+            checked={soloMantenimiento}
+            onChange={(e) => setSoloMantenimiento(e.target.checked)}
+          />
+          Solo los que tienen el mantenimiento vencido
+        </label>
         <button
           type="button"
           className="secundario"
@@ -218,6 +241,7 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
                     Vida útil
                   </th>
                   <th scope="col">Vida residual</th>
+                  <th scope="col">Mantenimiento</th>
                   <th scope="col">Estado</th>
                   <th scope="col">Obsolescencia</th>
                   <th scope="col">Criticidad</th>
@@ -261,6 +285,27 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
                               : `${e.remaining_life_years} años`}
                           </strong>
                           {e.horizonte_name && <div className="ayuda">{e.horizonte_name}</div>}
+                        </>
+                      )}
+                    </td>
+                    {/* `[REQ]` El mantenimiento preventivo, que faltaba. De una
+                        instalación de PCI no se pregunta cuántos extintores hay
+                        sino cuándo se revisaron. «Vencido» se escribe, no se
+                        pinta: el color acompaña y no informa por sí solo. */}
+                    <td className="mantenimiento">
+                      {e.next_maintenance_due === null ? (
+                        <span className="ayuda">
+                          {e.maintenance_months ? 'sin última revisión' : 'sin plan'}
+                        </span>
+                      ) : (
+                        <>
+                          <strong className={e.next_maintenance_due < hoy ? 'fuera-de-plazo' : ''}>
+                            {e.next_maintenance_due < hoy ? 'vencido' : 'al día'}
+                          </strong>
+                          <div className="ayuda">
+                            toca el {e.next_maintenance_due}
+                            {e.maintenance_months ? ` · cada ${e.maintenance_months} meses` : ''}
+                          </div>
                         </>
                       )}
                     </td>
@@ -308,6 +353,8 @@ type Formulario = {
   unit: string
   has_documentation: boolean
   notes: string
+  maintenance_months: string
+  last_maintenance_date: string
 }
 
 function desde(equipo: Equipo | null, activoPorDefecto: string, activos: Activo[]): Formulario {
@@ -332,6 +379,8 @@ function desde(equipo: Equipo | null, activoPorDefecto: string, activos: Activo[
     criticality: equipo?.criticality ?? '',
     quantity: equipo?.quantity ?? '1',
     unit: equipo?.unit ?? 'ud',
+    maintenance_months: equipo?.maintenance_months?.toString() ?? '',
+    last_maintenance_date: equipo?.last_maintenance_date ?? '',
     has_documentation: equipo?.has_documentation ?? false,
     notes: equipo?.notes ?? '',
   }
@@ -393,6 +442,8 @@ function FichaDeEquipo({
       unit: f.unit.trim() || 'ud',
       has_documentation: f.has_documentation,
       notes: f.notes.trim() || null,
+      maintenance_months: f.maintenance_months ? Number(f.maintenance_months) : null,
+      last_maintenance_date: f.last_maintenance_date || null,
     }
     try {
       if (equipo) {
@@ -527,6 +578,39 @@ function FichaDeEquipo({
             />
           </Campo>
         </Rejilla>
+
+        {/* `[REQ]` Mantenimiento preventivo. Faltaba, y de una instalación de
+            protección contra incendios es lo primero que se pregunta: no
+            cuántos extintores hay, sino cuándo se revisaron. */}
+        <h3>Mantenimiento preventivo</h3>
+        <Rejilla>
+          <Campo
+            etiqueta="Cada cuántos meses"
+            ayuda="Trimestral 3, semestral 6, anual 12, quinquenal 60"
+          >
+            <input
+              type="number"
+              min={1}
+              max={600}
+              value={f.maintenance_months}
+              onChange={(e) => cambiar('maintenance_months', e.target.value)}
+            />
+          </Campo>
+          <Campo etiqueta="Última revisión">
+            <input
+              type="date"
+              value={f.last_maintenance_date}
+              onChange={(e) => cambiar('last_maintenance_date', e.target.value)}
+            />
+          </Campo>
+        </Rejilla>
+        {/* No hay campo de «próxima revisión» y no es un descuido: la calcula la
+            base a partir de los dos de arriba, igual que la vida residual. */}
+        <p className="ayuda">
+          La próxima revisión se calcula: no se teclea. Un documento puede declarar que hay
+          revisiones «anuales o quinquenales según el tipo de equipo» sin decir cuál le toca a
+          cuál, y en ese caso esto se queda vacío hasta que alguien lo sepa.
+        </p>
 
         {mediaVida && (
           <Mensaje tipo="aviso">

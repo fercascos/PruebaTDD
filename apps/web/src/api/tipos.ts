@@ -253,6 +253,14 @@ export type Equipo = {
   unit: string
   has_documentation: boolean
   notes: string | null
+  /** `[REQ]` Mantenimiento preventivo. En meses y no un enumerado: un plan habla
+   *  de revisiones trimestrales, semestrales, anuales y quinquenales, pero un
+   *  contrato puede decir «cada cuatro meses». */
+  maintenance_months: number | null
+  last_maintenance_date: string | null
+  /** La calcula la base a partir de las dos anteriores. «Está vencido» no: eso
+   *  depende del día de hoy y se pregunta con `solo_mantenimiento_vencido`. */
+  next_maintenance_due: string | null
   /** `[REQ]` P-15 · Todo lo de abajo lo CALCULA el servidor al leer. No se guarda
    *  ni se teclea: una vida residual almacenada mentiría a partir del 1 de enero. */
   end_of_life_year: number | null
@@ -478,5 +486,39 @@ export type LimitacionDocumental = {
   es_simulada: boolean
   decidida_por: string | null
   /** Cómo se llama el documento del que salió. */
+  documento: string | null
+}
+
+/**
+ * `[REQ]` Un medio o instalación que un documento dice que existe.
+ *
+ * Sale del capítulo 4 de un plan de autoprotección. Dos cosas que **no** trae,
+ * y quien acepta las pone:
+ *
+ * * **el activo** — un plan cubre un complejo de seis naves y dice «dieciséis
+ *   hidrantes distribuidos por el perímetro» sin decir de cuál son;
+ * * **la periodicidad de mantenimiento** — el plan declara revisiones
+ *   trimestrales, semestrales, anuales y quinquenales «según el tipo de
+ *   equipo», y no dice cuál le toca a cuál.
+ */
+export type PropuestaDeEquipo = {
+  id: string
+  equipment_type: string
+  /** Puede venir vacía: «rociadores sobre la superficie» no trae número. */
+  quantity: string | null
+  unit: string
+  descripcion: string | null
+  estado: 'PENDIENTE' | 'ACEPTADA' | 'DESCARTADA'
+  technical_system_id: string | null
+  technical_system_name: string | null
+  document_id: string | null
+  doc_type: string
+  seccion: string | null
+  evidencia: string | null
+  extractor: string
+  es_simulada: boolean
+  decidida_por: string | null
+  /** El equipo creado al aceptarla. Cierra la trazabilidad al revés. */
+  equipment_id: string | null
   documento: string | null
 }
