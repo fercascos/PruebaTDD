@@ -176,6 +176,17 @@ class Extraccion:
     #: descartarse en silencio: es como se descubre el sinónimo que falta.
     desconocidos: dict[str, str] = field(default_factory=dict)
     avisos: list[str] = field(default_factory=list)
+    #: Campo del activo → la celda **tal y como está escrita en el documento**.
+    #:
+    #: `[REQ]` Literal, no reconstruida. Quien valida tiene que poder comparar
+    #: con el PDF; «`plot_area_sqm` = 12410» es lo que la máquina creyó leer, y
+    #: si la máquina se equivocó, repetir su lectura no lo delata. «Parcela |
+    #: 12.410 m²» sí.
+    #:
+    #: `[LIM]` Lo de las tablas es literal. Lo que sale de la prosa —muelles,
+    #: plazas— viene del texto normalizado y va marcado como tal: localiza el
+    #: párrafo, no lo cita.
+    evidencias: dict[str, str] = field(default_factory=dict)
 
 
 def _anonimizado(valor: str) -> bool:
@@ -198,12 +209,15 @@ def _leer_tabla(filas: list[list[str | None]], destino: Extraccion) -> None:
         if clave in {"concepto", "superficie aproximada"}:
             continue  # la cabecera de la tabla
 
+        literal = f"{etiqueta.strip()} | {valor.strip()}"
+
         if planta := _PLANTA.match(clave):
             nombre = planta.group(1)
             nivel = next((n for p, n in _NIVELES.items() if p in nombre), None)
             destino.plantas.append(
                 Planta(label=etiqueta.strip(), level=nivel, usable_area_sqm=_decimal(valor))
             )
+            destino.evidencias[f"planta:{etiqueta.strip()}"] = literal
             continue
 
         if _anonimizado(valor):
@@ -216,6 +230,7 @@ def _leer_tabla(filas: list[list[str | None]], destino: Extraccion) -> None:
         if campo := VOCABULARIO.get(clave):
             numero = _decimal(valor)
             destino.propuesta[campo] = str(numero) if numero is not None else valor.strip()
+            destino.evidencias[campo] = literal
         elif clave in PORTADA_INFORMATIVA:
             destino.informativos[etiqueta.strip()] = valor.strip()
         else:
@@ -241,6 +256,17 @@ def _leer_prosa(texto: str, destino: Extraccion) -> None:
             continue
         bruto = m.group(1)
         destino.propuesta[campo] = int(bruto) if bruto.isdigit() else _CARDINALES[bruto]
+        # La frase con contexto alrededor: es lo que hay que releer para decidir
+        # si «siete muelles de carga» hablaba de este edificio o de otro.
+        #
+        # `[LIM]` Sale del texto **normalizado** —minúsculas y sin tildes—, no
+        # del original. La expresión se aplica sobre él y las posiciones no se
+        # corresponden carácter a carácter con el PDF. Sirve para localizar el
+        # párrafo, que es para lo que se usa; no es una cita literal, y por eso
+        # no se presenta como tal.
+        destino.evidencias[campo] = (
+            "(texto normalizado) …" + plano[max(0, m.start() - 60) : m.end() + 60].strip() + "…"
+        )
 
 
 def _leer_secciones(texto: str, destino: Extraccion) -> None:

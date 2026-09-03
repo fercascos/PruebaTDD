@@ -62,6 +62,12 @@ dev = [
     # rechace borrar una versión retenida— sin credenciales ni red. [LIM] Es un
     # simulador: no demuestra que un bucket concreto esté bien creado.
     "moto[s3]>=5.0",
+    # Fabrica los PDF de prueba. [REQ] No hay ninguna memoria de cliente en el
+    # repositorio —el documento contra el que se escribió el extractor es
+    # confidencial—, así que las pruebas de extremo a extremo construyen uno con
+    # las mismas etiquetas y la misma forma de tabla. Solo de pruebas: la
+    # aplicación lee PDF, no los escribe.
+    "reportlab>=4.2",
 ]
 
 [build-system]

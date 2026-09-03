@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.179 pruebas
+make test        # 1.192 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -77,6 +77,9 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Trabajo de las fases** · checklist, VDR, visitas, Q&A | ✅ Completo | `tests/integration/test_trabajo_de_fases.py` · 30 |
 | **Documentos** (§15.11) | ✅ Completo | `tests/integration/test_documentos.py` · 28 |
 | **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |
+| **Memoria técnica** · lectura determinista del PDF | ✅ Completo | `test_extraccion_de_memoria.py` · 16 + `test_memoria_tecnica.py` · 12 |
+| **Esqueleto del CAPEX** desde la memoria | ✅ Completo | `tests/integration/test_memoria_y_esqueleto.py` · 14 |
+| **Extracción por tipo de documento** · propuesta con procedencia | ⚠️ Un solo lector | `tests/integration/test_extraccion_por_documento.py` · 12 |
 
 ## El esquema se versiona con Alembic
 
@@ -223,6 +226,14 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
   cierre de sesión y cambio de contraseña; falta el flujo de «he olvidado mi
   contraseña», que necesita SMTP.
 - **Inventario de equipos** desde la API.
+- **Los objetos del CAPEX no se extraen de la memoria.** Los datos del edificio
+  sí, con reglas y sin red. Los objetos no: la memoria los enumera en prosa
+  dentro de sus secciones constructivas, y una sola —`MC.6 Instalaciones`—
+  reparte los suyos entre seis capítulos. Eso es clasificación semántica y
+  **falta elegir proveedor**; el adaptador que hay hoy (`PorSeccion`) declara
+  `es_simulado` y sirve para demostrar que el puerto encaja, no para sembrar un
+  CAPEX. Y **solo hay un lector**, el de la memoria técnica: los demás tipos de
+  documento responden `422` diciendo que todavía no se leen.
 - **Frontend:** lo construido y lo que falta, en
   [`apps/web/README.md`](../web/README.md).
 

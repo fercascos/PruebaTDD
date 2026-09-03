@@ -1525,6 +1525,42 @@ button.enlace {
 .observacion.d-aceptada { border-color: #b7d5b7; }
 .observacion.d-rechazada { opacity: 0.65; }
 
+/* Lo que un documento propone para la ficha del activo. Reutiliza la caja de
+   la observación: es la misma conversación —una máquina propone, una persona
+   decide— y darle otro aspecto haría creer que se decide de otra forma. */
+.extraccion { margin-top: 0.6rem; border-top: 1px solid var(--borde); padding-top: 0.6rem; }
+.extraccion > .cabecera { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.extraccion .detalle { margin: 0; font-size: 0.8rem; color: var(--tenue); }
+.extraccion .desconocidos { margin-top: 0.5rem; font-size: 0.84rem; }
+.extraccion .desconocidos ul { margin: 0.35rem 0 0; padding-left: 1.1rem; }
+
+.propuestas { list-style: none; padding: 0; margin: 0.6rem 0 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.propuesta {
+  border: 1px solid var(--borde); border-radius: 5px; padding: 0.6rem 0.75rem;
+  font-size: 0.88rem;
+}
+/* Envuelve en vez de desbordar: la etiqueta de un campo y su valor caben
+   holgados en escritorio y no en 320 px, y ahí el desbordamiento horizontal se
+   lleva por delante la página entera, no solo esta caja. */
+.propuesta .cabecera { display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.propuesta .criterio { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+/* El valor propuesto, en cifras tabulares: es lo que se compara con el actual,
+   y con dígitos de anchura variable la comparación cuesta más de lo que debe. */
+.propuesta .valor { font-variant-numeric: tabular-nums; font-weight: 600; }
+.propuesta .resumen { margin: 0.35rem 0; }
+/* Sustituir un valor existente no es un error, pero tampoco es rellenar un
+   hueco: se marca para que la diferencia se vea antes de pulsar. */
+.propuesta.contradice { border-color: #e0c07a; background: #fdfaf3; }
+.propuesta .evidencia {
+  margin: 0.4rem 0; padding: 0.4rem 0.6rem; border-left: 3px solid var(--borde);
+  background: var(--fondo-suave, #f6f7f9); font-size: 0.84rem; font-style: italic;
+  /* El texto es literal del PDF y puede traer una referencia catastral de
+     veinte caracteres sin un espacio donde partir. */
+  overflow-wrap: anywhere;
+}
+.propuesta .evidencia cite { display: block; margin-top: 0.25rem; font-size: 0.76rem; color: var(--tenue); }
+.propuesta .decidir { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+
 .sueltos { border: 1px dashed var(--borde); border-radius: 6px; padding: 0.6rem 0.9rem; }
 .sueltos ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
 

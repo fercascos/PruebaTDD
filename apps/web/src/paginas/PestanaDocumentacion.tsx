@@ -6,6 +6,8 @@ import type {
   EstadoSolicitud,
   ObservacionIa,
   PermisoDeRevision,
+  PropuestaDeDato,
+  ResultadoDeExtraccion,
   RevisionIa,
   Solicitud,
 } from '../api/tipos'
@@ -42,12 +44,58 @@ const VEREDICTO: Record<string, string> = {
   DUDOSO: 'Dudoso',
 }
 
+/**
+ * El nombre en castellano de cada campo del activo que un documento puede
+ * proponer.
+ *
+ * Las etiquetas son **las mismas que en la ficha del activo**, a propósito. Si
+ * aquí pusiera «Superficie ocupada» y allí «Ocupación», quien valida no sabría
+ * a qué casilla va a parar lo que acepta. Cuando falta una entrada se enseña el
+ * nombre técnico en vez de ocultar la fila: una propuesta sin etiqueta sigue
+ * siendo una propuesta que hay que decidir.
+ */
+const CAMPO: Record<string, string> = {
+  main_use: 'Uso principal',
+  secondary_use: 'Uso secundario',
+  address_line: 'Dirección',
+  city: 'Ciudad',
+  province: 'Provincia',
+  postal_code: 'Código postal',
+  cadastral_reference: 'Referencia catastral',
+  developer: 'Promotor',
+  project_date: 'Fecha del proyecto',
+  year_built: 'Año de construcción',
+  year_last_refurb: 'Año de última reforma',
+  plot_area_sqm: 'Superficie de parcela (m²)',
+  total_built_sqm: 'Superficie construida total (m²)',
+  lettable_area_sqm: 'Superficie alquilable (m²)',
+  usable_area_sqm: 'Superficie útil total (m²)',
+  occupied_area_sqm: 'Ocupación (m²)',
+  urbanised_area_sqm: 'Superficie urbanizada (m²)',
+  warehouse_area_sqm: 'Superficie de almacén (m²)',
+  office_area_sqm: 'Superficie de oficinas (m²)',
+  warehouse_height_m: 'Altura libre de almacén (m)',
+  max_height_m: 'Altura máxima del edificio (m)',
+  floors_above: 'Plantas sobre rasante',
+  floors_below: 'Plantas bajo rasante',
+  loading_docks: 'Muelles de carga',
+  parking_spaces: 'Plazas de aparcamiento',
+}
+
 export function PestanaDocumentacion({ projectId }: { projectId: string }) {
   const [lineas, setLineas] = useState<Solicitud[] | null>(null)
   const [categorias, setCategorias] = useState<CategoriaDeSolicitud[]>([])
   const [documentos, setDocumentos] = useState<Documento[]>([])
   const [permiso, setPermiso] = useState<PermisoDeRevision | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * Los tipos de documento que la aplicación sabe leer hoy.
+   *
+   * `[REQ]` Se piden para ofrecer el botón de extraer **solo** donde va a
+   * funcionar. Ofrecerlo en todos y que falle en la mayoría enseña a la gente a
+   * no pulsarlo, y entonces la extracción no sirve de nada aunque funcione.
+   */
+  const [extraibles, setExtraibles] = useState<string[]>([])
 
   const recargar = useCallback(async () => {
     try {
@@ -73,6 +121,12 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
     obtener<CategoriaDeSolicitud[]>('/catalogs/doc-request-categories')
       .then(setCategorias)
       .catch((e: Error) => setError(e.message))
+    // Que esto falle no rompe la pantalla: sin la lista no se ofrece extraer,
+    // que es lo mismo que pasaba antes de que la extracción existiera. Por eso
+    // no se enseña como error, a diferencia de las categorías.
+    obtener<string[]>('/extraccion/tipos-soportados')
+      .then(setExtraibles)
+      .catch(() => setExtraibles([]))
   }, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
@@ -105,6 +159,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
               documentos={documentos.filter((d) => d.doc_request_item_id === l.id)}
               projectId={projectId}
               revisionActiva={permiso.activo}
+              extraibles={extraibles}
               alCambiar={recargar}
               alFallar={setError}
             />
@@ -125,6 +180,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
                 key={d.id}
                 documento={d}
                 revisionActiva={permiso.activo}
+                extraibles={extraibles}
                 alFallar={setError}
               />
             ))}
@@ -255,6 +311,7 @@ function Linea({
   documentos,
   projectId,
   revisionActiva,
+  extraibles,
   alCambiar,
   alFallar,
 }: {
@@ -262,6 +319,7 @@ function Linea({
   documentos: Documento[]
   projectId: string
   revisionActiva: boolean
+  extraibles: string[]
   alCambiar: () => Promise<void>
   alFallar: (m: string) => void
 }) {
@@ -345,6 +403,7 @@ function Linea({
             key={d.id}
             documento={d}
             revisionActiva={revisionActiva}
+            extraibles={extraibles}
             alFallar={alFallar}
           />
         ))}
@@ -368,10 +427,12 @@ function Linea({
 function FichaDocumento({
   documento,
   revisionActiva,
+  extraibles,
   alFallar,
 }: {
   documento: Documento
   revisionActiva: boolean
+  extraibles: string[]
   alFallar: (m: string) => void
 }) {
   const [revisiones, setRevisiones] = useState<RevisionIa[] | null>(null)
@@ -403,6 +464,10 @@ function FichaDocumento({
 
   const ultima = revisiones?.[0]
 
+  // Solo donde va a funcionar: un tipo que no se lee, o un documento que no se
+  // asignó a ningún activo, no tienen a quién proponerle nada.
+  const puedeExtraerse = extraibles.includes(documento.doc_type) && documento.asset_id !== null
+
   return (
     <li className="documento">
       <div className="cabecera">
@@ -428,6 +493,200 @@ function FichaDocumento({
           Hay {revisiones.length} revisiones de este documento. Se muestra la más reciente.
         </p>
       )}
+
+      {puedeExtraerse && <Extraccion documento={documento} alFallar={alFallar} />}
+    </li>
+  )
+}
+
+/**
+ * `[REQ]` De lo que dice el documento a lo que dice el activo, con un botón
+ * en medio.
+ *
+ * Lo que hace explícito, y por lo que existe la pantalla:
+ *
+ * * **Nada se aplica solo.** Extraer deja propuestas; aplicarlas es otro clic.
+ * * **Cada propuesta trae la celda literal del PDF** y **lo que el activo tiene
+ *   hoy** en ese campo. Con las dos delante se distingue «esto completa un
+ *   hueco» de «esto contradice lo que había», que son decisiones distintas.
+ * * **Se decide una a una.** Un botón de «aceptar todo» invita a aceptar sin
+ *   mirar, que es exactamente lo que la validación viene a evitar.
+ */
+function Extraccion({
+  documento,
+  alFallar,
+}: {
+  documento: Documento
+  alFallar: (m: string) => void
+}) {
+  const [propuestas, setPropuestas] = useState<PropuestaDeDato[] | null>(null)
+  const [resultado, setResultado] = useState<ResultadoDeExtraccion | null>(null)
+  const [extrayendo, setExtrayendo] = useState(false)
+
+  const cargar = useCallback(async () => {
+    if (!documento.asset_id) return
+    try {
+      const todas = await obtener<PropuestaDeDato[]>(`/assets/${documento.asset_id}/propuestas`)
+      setPropuestas(todas.filter((p) => p.document_id === documento.id))
+    } catch (e) {
+      alFallar((e as Error).message)
+    }
+  }, [documento.asset_id, documento.id, alFallar])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar])
+
+  async function extraer() {
+    setExtrayendo(true)
+    try {
+      setResultado(await enviar<ResultadoDeExtraccion>(`/documents/${documento.id}/extraer`, {}))
+      await cargar()
+    } catch (e) {
+      alFallar((e as Error).message)
+    } finally {
+      setExtrayendo(false)
+    }
+  }
+
+  const pendientes = propuestas?.filter((p) => p.estado === 'PENDIENTE') ?? []
+  const decididas = (propuestas?.length ?? 0) - pendientes.length
+
+  return (
+    <div className="extraccion">
+      <div className="cabecera">
+        <button type="button" onClick={() => void extraer()} disabled={extrayendo}>
+          {extrayendo ? 'Leyendo…' : propuestas?.length ? 'Volver a extraer' : 'Extraer datos'}
+        </button>
+        {/* Volver a extraer no reabre lo ya resuelto. Decirlo antes de pulsar
+            evita la duda de si se va a perder lo decidido. */}
+        {decididas > 0 && (
+          <span className="detalle">
+            {decididas} ya decidida(s): volver a extraer no las reabre
+          </span>
+        )}
+      </div>
+
+      {resultado?.es_simulada && (
+        <Mensaje tipo="aviso">
+          Lectura <strong>simulada</strong>: nadie ha leído este documento. Lo de abajo ocupa el
+          sitio de lo que vendrá y no dice nada sobre su contenido.
+        </Mensaje>
+      )}
+
+      {resultado?.avisos.map((a) => (
+        <Mensaje key={a} tipo="aviso">
+          {a}
+        </Mensaje>
+      ))}
+
+      {resultado && Object.keys(resultado.desconocidos).length > 0 && (
+        <details className="desconocidos">
+          <summary>
+            {Object.keys(resultado.desconocidos).length} etiqueta(s) leídas que no se han sabido
+            encajar
+          </summary>
+          {/* No se pierden. Es como se descubre el sinónimo que falta, y es lo
+              que separa «no venía el dato» de «no lo supe leer». */}
+          <ul>
+            {Object.entries(resultado.desconocidos).map(([etiqueta, valor]) => (
+              <li key={etiqueta}>
+                <strong>{etiqueta}</strong>: {valor}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {propuestas !== null && propuestas.length === 0 && resultado && (
+        <p className="detalle">
+          El documento no ha propuesto ningún dato del edificio. Los avisos de arriba dicen por qué.
+        </p>
+      )}
+
+      {pendientes.length > 0 && (
+        <ul className="propuestas">
+          {pendientes.map((p) => (
+            <Propuesta
+              key={p.id}
+              propuesta={p}
+              assetId={documento.asset_id!}
+              alDecidir={cargar}
+              alFallar={alFallar}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Propuesta({
+  propuesta,
+  assetId,
+  alDecidir,
+  alFallar,
+}: {
+  propuesta: PropuestaDeDato
+  assetId: string
+  alDecidir: () => Promise<void>
+  alFallar: (m: string) => void
+}) {
+  const [ocupado, setOcupado] = useState(false)
+
+  async function decidir(aceptar: boolean) {
+    setOcupado(true)
+    try {
+      await enviar(`/assets/${assetId}/propuestas/decidir`, {
+        [aceptar ? 'aceptar' : 'descartar']: [propuesta.id],
+      })
+      await alDecidir()
+    } catch (e) {
+      alFallar((e as Error).message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  // Que el campo ya tenga valor no lo convierte en un error, pero sí en otra
+  // decisión: aceptar aquí sustituye algo, no rellena un hueco.
+  const contradice = propuesta.valor_actual !== null && propuesta.valor_actual !== propuesta.valor
+
+  return (
+    <li className={`propuesta${contradice ? ' contradice' : ''}`}>
+      <div className="cabecera">
+        <span className="criterio">{CAMPO[propuesta.campo] ?? propuesta.campo}</span>
+        <span className="valor">{propuesta.valor}</span>
+      </div>
+
+      <p className="resumen">
+        {propuesta.valor_actual === null ? (
+          <>Hoy está vacío: aceptarlo lo rellena.</>
+        ) : contradice ? (
+          <>
+            Hoy pone <strong>{propuesta.valor_actual}</strong>. Aceptarlo lo{' '}
+            <strong>sustituye</strong>.
+          </>
+        ) : (
+          <>Coincide con lo que ya hay. Aceptarlo no cambia nada.</>
+        )}
+      </p>
+
+      {propuesta.evidencia && (
+        <blockquote className="evidencia">
+          {propuesta.evidencia}
+          {propuesta.seccion && <cite>{propuesta.seccion}</cite>}
+        </blockquote>
+      )}
+
+      <div className="decidir">
+        <button type="button" onClick={() => void decidir(true)} disabled={ocupado}>
+          Aceptar
+        </button>
+        <button type="button" onClick={() => void decidir(false)} disabled={ocupado}>
+          Descartar
+        </button>
+      </div>
     </li>
   )
 }

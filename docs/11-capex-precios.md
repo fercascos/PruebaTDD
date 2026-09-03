@@ -99,6 +99,55 @@ estructurales, no partidas—. Sirve para demostrar que el puerto funciona de
 punta a punta; **no sirve para sembrar un CAPEX**. Es la medida que justifica el
 modelo, y está escrita aquí para que la decisión se tome con un número delante.
 
+### De un documento a muchos: la propuesta con procedencia `[REQ]`
+
+Lo anterior está escrito para **la** memoria técnica. El cliente pidió otra
+cosa: *«dependiendo de la documentación que se suba se pueda ir completando el
+cuadro de CAPEX automáticamente»*. En cuanto hay un segundo documento, guardar
+la propuesta en `memoria_tecnica.propuesta` —un JSONB por activo— se rompe de
+dos formas a la vez:
+
+* el segundo documento **pisa** al primero, sin dejar rastro de que hubo otro;
+* y una vez pisado, nadie puede saber **de qué documento salió cada cifra**.
+
+Un número huérfano en la ficha de un activo no se defiende ante el cliente: el
+gestor tendría que volver a comprobarlo todo contra los PDF, que es justo el
+trabajo que la extracción venía a ahorrar.
+
+Así que una propuesta pasa a ser **una fila** —`propuesta_de_dato`— con:
+
+| Lleva | Para qué |
+|---|---|
+| Documento, tipo, sección y el fragmento **literal** | Quien valida va al PDF y lo comprueba. Un resumen escrito por la máquina de lo que la máquina creyó leer no sirve para saber si la máquina se equivocó |
+| Quién la produjo, y si era **simulado** | Un lector de mentira no puede pasar por uno de verdad, ni en la base ni en la pantalla. La misma regla que la revisión documental y la clasificación |
+| Estado —pendiente, aceptada, descartada— con su testigo | Descartar también lo firma alguien: es una decisión, no un silencio |
+
+**Dos documentos pueden proponer valores distintos para el mismo campo, y los
+dos se ven.** Una memoria de proyecto y un plan de autoprotección redactados con
+años de diferencia dan superficies que no coinciden: el desacuerdo es
+información, no un error que resolver en silencio. Por eso se decide propuesta a
+propuesta y aceptar dos del mismo campo a la vez se rechaza —aplicarlas en orden
+dejaría ganando a la última por el orden de una lista, que no lo ha decidido
+nadie—.
+
+**Volver a extraer no reabre lo ya decidido.** Sustituye las pendientes de ese
+documento y deja intactas las que una persona aceptó o descartó, diciendo
+cuántas se ha saltado. Reabrir sin avisar algo ya resuelto es la forma más
+rápida de que el gestor deje de fiarse de la pantalla.
+
+`[REQ]` Y aceptar una propuesta **no marca la memoria como validada**. La
+tentación es obvia —el gestor acaba de validar algo— y sería falso: ese testigo
+significa «alguien ha revisado la memoria de este edificio», y la ficha del
+activo lo enseña con esas palabras. Lo que queda registrado es más fino y es
+cierto: quién aceptó qué campo, cuándo, y de qué documento salió.
+
+Qué extractor se usa lo decide **el tipo del documento**, en un registro con un
+lector por tipo. `[LIM]` Hoy solo hay uno, el de la memoria técnica; un tipo sin
+lector responde `422` diciendo cuáles se leen, que es un caso normal y no una
+avería. `[LIM]` Esta revisión **no migra** lo que hubiera en
+`memoria_tecnica.propuesta`: la ruta antigua sigue funcionando, y vaciarlo
+exigiría inventarle una procedencia a datos guardados sin ella.
+
 ### El esqueleto
 
 Un hallazgo por objeto enumerado, y uno por categoría que no enumere ninguno

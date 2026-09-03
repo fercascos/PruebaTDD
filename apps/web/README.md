@@ -45,6 +45,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Informes** | Avisos previos, generación, descarga PPTX/XLSX y ciclo hasta emitir |
 | **Plantillas** | Subida, análisis y mapeo de marcadores |
 | **Sugerencias** | Proponer cambios; la bandeja solo la ve quien atiende el buzón |
+| **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante |
 
 ## Los tres orígenes de fotografía
 
@@ -286,3 +287,9 @@ midió: con un bloque de 500 px en una página de 320, `innerWidth` pasa a valer
   y las líneas; mover una actuación a otro activo sigue siendo un `PATCH`.
 - **Pruebas de componente.** Solo la lógica pura está probada; las pantallas se
   han verificado a mano contra la API real.
+- **El editor de la memoria técnica.** La extracción por documento sí está en
+  la pantalla de documentación —botón, propuestas y decisión—, pero **solo
+  propone campos del activo**. Las categorías del CAPEX y sus objetos, el botón
+  de validar la memoria y el de generar el esqueleto tienen API y no tienen
+  pantalla: hoy se ejercitan contra la API. Y la extracción alcanza a un solo
+  tipo de documento, la memoria técnica; en los demás el botón no aparece.

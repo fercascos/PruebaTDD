@@ -1846,6 +1846,71 @@ CREATE TABLE memoria_seccion (
 
 CREATE INDEX memoria_seccion_codigo_idx ON memoria_seccion (seccion_code);
 
+-- ── Lo que la documentación PROPONE sobre el activo [REQ] ───────────────────
+--
+-- «Según se va subiendo documentación, el cuadro se va completando solo, y el
+-- gestor de la due diligence valida después». Eso obliga a que una propuesta
+-- no sea un valor suelto sino un valor CON SU PROCEDENCIA, y a que dos
+-- documentos puedan proponer cosas distintas para el mismo campo sin que el
+-- segundo borre al primero.
+--
+-- Antes esto vivía en `memoria_tecnica.propuesta`, un JSONB plano. Con un solo
+-- documento bastaba; con dos, el segundo pisaba al primero y nadie podía saber
+-- de cuál salió cada cifra. Un número huérfano en una ficha de activo no se
+-- puede defender ante el cliente, así que el gestor tendría que volver a
+-- comprobarlo todo: justo el trabajo que la extracción venía a ahorrar.
+--
+-- `evidencia` es el fragmento LITERAL del documento. Que sea literal es la
+-- diferencia entre poder comprobar si la máquina se equivocó y tener que
+-- creerle: un resumen de lo que la máquina creyó leer no sirve para eso.
+
+CREATE TYPE propuesta_estado AS ENUM ('PENDIENTE', 'ACEPTADA', 'DESCARTADA');
+
+CREATE TABLE propuesta_de_dato (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_id        UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+
+    campo           VARCHAR(60) NOT NULL,
+    -- Como texto. El tipo lo pone el destino al aceptarla: aquí no se sabe si
+    -- «8134» acabará en un NUMERIC o en un VARCHAR, y convertirlo antes
+    -- obligaría al extractor a conocer el esquema del activo.
+    valor           TEXT NOT NULL,
+
+    -- La procedencia. `document_id` se pone a NULL si el documento se borra,
+    -- pero el resto sobrevive: una propuesta ya aceptada tiene que poder
+    -- explicarse aunque el fichero original ya no esté.
+    document_id     UUID REFERENCES document(id) ON DELETE SET NULL,
+    doc_type        doc_type NOT NULL,
+    seccion         VARCHAR(160),
+    evidencia       TEXT,
+    extractor       VARCHAR(60) NOT NULL,
+    es_simulada     BOOLEAN NOT NULL DEFAULT TRUE,
+
+    estado          propuesta_estado NOT NULL DEFAULT 'PENDIENTE',
+    decidida_at     TIMESTAMPTZ,
+    decidida_por    UUID REFERENCES app_user(id),
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Un documento propone un valor por campo. Volver a extraer el mismo
+    -- documento sustituye su propuesta; no acumula duplicados.
+    -- NULLS NOT DISTINCT para que dos propuestas manuales del mismo campo
+    -- —ambas sin documento— choquen en vez de multiplicarse.
+    UNIQUE NULLS NOT DISTINCT (asset_id, campo, document_id),
+
+    CONSTRAINT propuesta_decidida_completa
+        CHECK ((decidida_at IS NULL) = (decidida_por IS NULL)),
+    -- Una propuesta resuelta lleva quién la resolvió. Sin esto, «aceptada por
+    -- nadie» sería un estado posible, y el testigo de la revisión humana
+    -- dejaría de significar nada.
+    CONSTRAINT propuesta_resuelta_tiene_testigo
+        CHECK (estado = 'PENDIENTE' OR decidida_at IS NOT NULL)
+);
+
+CREATE INDEX propuesta_activo_idx ON propuesta_de_dato (asset_id, estado);
+CREATE INDEX propuesta_documento_idx ON propuesta_de_dato (document_id);
+
 -- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
 --
@@ -2418,7 +2483,8 @@ BEGIN
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version',
-        'memoria_tecnica', 'memoria_categoria', 'memoria_objeto'
+        'memoria_tecnica', 'memoria_categoria', 'memoria_objeto',
+        'propuesta_de_dato'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

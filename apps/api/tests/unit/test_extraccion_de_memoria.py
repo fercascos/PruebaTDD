@@ -108,6 +108,23 @@ def test_la_cabecera_de_la_tabla_no_se_toma_por_un_dato() -> None:
     assert "Concepto" not in e.desconocidos
 
 
+def test_cada_dato_guarda_la_celda_tal_y_como_estaba_escrita() -> None:
+    """`[REQ]` La evidencia es lo que hace comprobable una propuesta.
+
+    Y tiene que ser **literal**. «`plot_area_sqm` = 12410» es la lectura de la
+    máquina repetida: si la máquina confundió el separador de millares, ese
+    texto no lo delata. «Parcela | 12.410 m²» sí, porque quien valida lo compara
+    con el PDF y ve la misma cadena o no la ve.
+    """
+    e = Extraccion()
+    _leer_tabla(SUPERFICIES, e)
+
+    assert e.evidencias["plot_area_sqm"] == "Parcela | 12.410 m²"
+    assert e.evidencias["occupied_area_sqm"] == "Ocupación | 6.766 m²"
+    # También las plantas, que no son campos del activo y van por su nombre.
+    assert e.evidencias["planta:Útil planta baja"] == "Útil planta baja | 6.023 m²"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Lo que no se sabe
 # ─────────────────────────────────────────────────────────────────────────────

@@ -404,3 +404,43 @@ export type NodoDeUbicacion = {
   /** «Cubierta › Sala Máquinas 2», ya armada por la API. */
   ruta_legible: string
 }
+
+/**
+ * Un dato que un documento **propone** para el activo. `[REQ]`
+ *
+ * No es un dato del activo: es una lectura de un PDF esperando a que alguien la
+ * acepte. Lo que la hace comprobable es la procedencia —`document_id`, `seccion`
+ * y sobre todo `evidencia`, que es la celda tal y como está escrita— y lo que la
+ * hace decidible es `valor_actual`, que dice qué hay hoy en ese campo: sin él no
+ * se distingue «esto completa un hueco» de «esto contradice lo que había».
+ */
+export type PropuestaDeDato = {
+  id: string
+  campo: string
+  valor: string
+  estado: 'PENDIENTE' | 'ACEPTADA' | 'DESCARTADA'
+  document_id: string | null
+  doc_type: string
+  seccion: string | null
+  evidencia: string | null
+  extractor: string
+  /** `[REQ]` Si es cierto, nadie ha leído nada: no puede pasar por una lectura. */
+  es_simulada: boolean
+  decidida_por: string | null
+  /** Lo que el activo tiene HOY en ese campo. `null` si está vacío. */
+  valor_actual: string | null
+}
+
+/** Lo que devuelve extraer un documento. */
+export type ResultadoDeExtraccion = {
+  document_id: string
+  doc_type: string
+  extractor: string
+  es_simulada: boolean
+  propuestas: number
+  plantas: number
+  objetos: number
+  /** Etiquetas del documento que el lector no supo encajar. */
+  desconocidos: Record<string, string>
+  avisos: string[]
+}

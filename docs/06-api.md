@@ -189,6 +189,45 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 | `POST` | `/assets/{id}/memoria/generar-capex` | El **esqueleto**: un hallazgo en BORRADOR por objeto. Idempotente: no duplica ni pisa lo ya rellenado |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
 
+### Extracción documental `[REQ]`
+
+Con las palabras del cliente: *«dependiendo de la documentación que se suba se
+pueda ir completando el cuadro de CAPEX automáticamente para que después el
+gestor de la due diligence valide la información»*.
+
+El extractor lo elige **el tipo del documento**, no el que llama. Hoy solo se
+lee `MEMORIA_TECNICA`; `/extraccion/tipos-soportados` dice cuáles, para que la
+pantalla ofrezca el botón únicamente donde va a funcionar.
+
+**Nada se aplica solo.** Extraer deja **propuestas pendientes**, cada una con
+el documento, la sección y el fragmento **literal** del que salió. Entre la
+propuesta y el dato hay siempre una persona pulsando `…/propuestas/decidir`.
+Por eso una propuesta es una fila con procedencia y no un JSON plano: dos
+documentos —una memoria de proyecto y una de reforma redactadas con años de
+diferencia— pueden dar superficies distintas para el mismo campo, y **el
+desacuerdo es información**; el segundo no puede pisar al primero.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/extraccion/tipos-soportados` | Los `doc_type` que hay lector para leer hoy |
+| `POST` | `/documents/{id}/extraer` | Lee el documento con el extractor de su tipo y **propone**. `409` si el documento no está asignado a un activo; `422` si su tipo todavía no se lee, con la lista de los que sí. Volver a extraer **sustituye las pendientes** de ese documento y **no reabre las ya decididas** |
+| `GET` | `/assets/{id}/propuestas?estado=` | Lo propuesto sobre el activo, sin aplicar. Cada fila trae `valor_actual` —lo que el activo tiene hoy— al lado: sin eso no se distingue «completa un hueco» de «contradice lo que había» |
+| `POST` | `/assets/{id}/propuestas/decidir` | **El botón.** `{aceptar: [...], descartar: [...]}`. Se decide propuesta a propuesta: aceptar dos del **mismo campo** en la misma llamada es `422`, porque aplicarlas en orden dejaría ganando a la última por azar |
+
+`[REQ]` Aceptar aquí **no toca `memoria_validada_at`**. Ese testigo dice «alguien
+ha revisado la memoria de este edificio» y la ficha del activo lo enseña como
+«validada»; aceptar una superficie suelta —que mañana puede salir de un plan de
+autoprotección— no es eso. Quién aceptó qué, y de qué documento, queda en cada
+fila de `propuesta_de_dato`, que es más fino y además es cierto. Para validar la
+memoria entera sigue estando `POST /assets/{id}/memoria/validar`.
+
+`[LIM]` La extracción de la memoria técnica es **determinista y sin red**: lee
+las dos tablas y el esqueleto de epígrafes. Los **objetos del CAPEX no salen de
+aquí** —la memoria los enumera en prosa y una sola sección reparte sus
+elementos entre seis capítulos—: eso es clasificación semántica y sigue
+pendiente de proveedor. Cada propuesta declara en `es_simulada` si la produjo
+un lector de verdad o un simulacro.
+
 ### Inventario de equipo `[REQ]` §7 / P-15
 
 | Método | Ruta | Descripción |
