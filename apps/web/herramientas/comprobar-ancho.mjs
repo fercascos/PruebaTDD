@@ -142,6 +142,32 @@ for (const ancho of ANCHOS) {
         comprobar(false, 'la autorización de IA no ha vuelto a su estado inicial')
       }
     }
+
+    // El resumen del CAPEX vive DETRÁS de un botón, dentro de la misma ruta que
+    // la rejilla de hallazgos. Sin pulsarlo, esta comprobación mide la rejilla
+    // dos veces y da por buena una vista que nunca ha visitado — que es justo
+    // lo que le pasaba al comodín del enrutador y por lo que existe la nota de
+    // arriba. Los gráficos son lo más fácil de desbordar: un SVG de ancho fijo
+    // y una leyenda con importes largos no caben en 320 px por defecto.
+    if (nombre === 'capex') {
+      const resumen = pg.getByRole('tab', { name: 'Resumen' })
+      if (await resumen.count()) {
+        await resumen.click()
+        await pg.waitForTimeout(1200)
+        const otro = await pg.evaluate(medir)
+        comprobar(
+          otro.sobra <= 0,
+          otro.sobra <= 0
+            ? 'capex · resumen cabe'
+            : `capex · resumen desborda ${otro.sobra}px — ${otro.culpables.join(', ')}`,
+        )
+        // Y que de verdad se ha llegado al resumen, no a una rejilla vacía.
+        comprobar(
+          (await pg.locator('.resumen-capex, .vacio').count()) > 0,
+          'capex · resumen se ha pintado',
+        )
+      }
+    }
   }
   await pg.close()
 }

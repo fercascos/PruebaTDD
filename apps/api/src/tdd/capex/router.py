@@ -217,6 +217,18 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
 
     Con cinco columnas editables serían cinco sumas independientes que podrían
     descuadrar entre sí; así es imposible.
+
+    `[REQ]` **Excluye los hallazgos borrados**, y no lo hacía. El borrado de un
+    hallazgo es lógico —`deleted_at`, porque borrar del informe algo que se
+    llegó a valorar deja a nadie sabiendo que existió—, así que sus líneas de
+    CAPEX siguen en la tabla. Esta consulta unía `capex_item` con `time_horizon`
+    sin pasar por `finding`, de modo que las contaba: el mismo encargo sumaba
+    una cosa por horizonte y otra por activo, que sí lo excluía.
+
+    No se veía porque nada ponía los dos cortes en la misma pantalla. La vista
+    de resumen los pone uno debajo del otro, y ahí el descuadre lo encuentra el
+    cliente con la calculadora. Hay una prueba que compara los cuatro cortes
+    entre sí.
     """
     filas = (
         s.execute(
@@ -225,9 +237,112 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
                 "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
-                "FROM time_horizon th LEFT JOIN capex_item ci "
+                "FROM time_horizon th "
+                "LEFT JOIN finding f ON f.deleted_at IS NULL "
+                "LEFT JOIN capex_item ci "
                 "  ON ci.time_horizon_id = th.id AND ci.project_id = :p "
+                "  AND ci.finding_id = f.id "
                 "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
+            ),
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class ResumenPorConcepto(BaseModel):
+    capex_concept_code: str
+    capex_concept_name: str
+    findings: int
+    lines: int
+    amount: Decimal
+    total_cost: Decimal
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-concept",
+    response_model=list[ResumenPorConcepto],
+)
+def resumen_por_concepto(project_id: uuid.UUID, s: SesionDep) -> Any:
+    """`[REQ]` El CAPEX por **concepto de gasto**: en qué se va el dinero.
+
+    Es la pregunta que separa un edificio caro de uno mal mantenido. Doscientos
+    mil euros de «Normativa» y doscientos mil de «Mejora» valen lo mismo en la
+    hoja y significan cosas opuestas: lo primero hay que pagarlo, lo segundo se
+    puede decidir. Sin este corte, el total del encargo no distingue una cosa
+    de la otra.
+
+    **Solo salen los conceptos con importe.** Los diez del catálogo con ceros
+    llenarían el gráfico de porciones invisibles; los que faltan es que no hay.
+    Y las líneas de un hallazgo **sin concepto** no se pierden: salen agrupadas
+    como «Sin concepto», que es un dato —alguien no lo clasificó— y no un hueco.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT COALESCE(cc.code, 'SIN_CONCEPTO') AS capex_concept_code, "
+                "COALESCE(cc.name_es, 'Sin concepto') AS capex_concept_name, "
+                "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
+                "COALESCE(sum(ci.amount), 0) AS amount, "
+                "COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM capex_item ci "
+                "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "LEFT JOIN capex_concept cc ON cc.id = f.capex_concept_id "
+                "WHERE ci.project_id = :p "
+                "GROUP BY cc.code, cc.name_es "
+                # De mayor a menor: es el orden en el que se lee un reparto, y
+                # el que permite doblar la cola en «Otros» sin recalcular nada.
+                "ORDER BY sum(ci.amount) DESC"
+            ),
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class ResumenPorCapitulo(BaseModel):
+    chapter_code: str
+    chapter_name: str
+    findings: int
+    lines: int
+    amount: Decimal
+    total_cost: Decimal
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-chapter",
+    response_model=list[ResumenPorCapitulo],
+)
+def resumen_por_capitulo(project_id: uuid.UUID, s: SesionDep) -> Any:
+    """El CAPEX por **capítulo** del árbol: qué parte del edificio se lleva el
+    dinero.
+
+    El capítulo es el **nivel 2** y un hallazgo puede estar codificado en el
+    nivel 3, así que se sube por el árbol hasta el capítulo en vez de agrupar
+    por el código del hallazgo: agrupando por el código directo, un encargo con
+    hallazgos a distintos niveles saldría partido en trozos que no suman nada
+    reconocible.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
+                "COALESCE(sum(ci.amount), 0) AS amount, "
+                "COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM capex_item ci "
+                "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "JOIN capex_code cod ON cod.id = f.capex_code_id "
+                # Si el hallazgo está en el nivel 3, su padre es el capítulo; si
+                # ya está en el 2, es él mismo.
+                "JOIN capex_code cap ON cap.id = CASE WHEN cod.level = 3 "
+                "                                     THEN cod.parent_id ELSE cod.id END "
+                "WHERE ci.project_id = :p "
+                "GROUP BY cap.code, cap.name_es ORDER BY sum(ci.amount) DESC"
             ),
             {"p": project_id},
         )

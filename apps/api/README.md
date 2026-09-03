@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.256 pruebas
+make test        # 1.264 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -84,6 +84,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Medios del plan al inventario** · capítulo 4 de la Norma Básica | ✅ Completo | `test_medios_del_plan.py` · 14 + `test_equipos_y_confidencialidad.py` · 15 |
 | **Mantenimiento preventivo** · periodicidad y próxima revisión | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
 | **Confidencialidad por tipo** · un RESTRINGIDO no va a ninguna IA | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
+| **Resumen del CAPEX** · los cuatro cortes, y que cuadren entre sí | ✅ Completo | `tests/integration/test_resumen_capex.py` · 8 |
 
 ## El esquema se versiona con Alembic
 

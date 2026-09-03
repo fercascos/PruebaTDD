@@ -522,3 +522,51 @@ export type PropuestaDeEquipo = {
   equipment_id: string | null
   documento: string | null
 }
+
+/**
+ * `[REQ]` Los cortes del CAPEX del encargo, para el resumen.
+ *
+ * Los cuatro responden preguntas distintas y por eso son cuatro consultas y no
+ * una tabla que el cliente reagrupa: **en qué se va el dinero** (concepto),
+ * **cuándo hay que pagarlo** (horizonte), **qué parte del edificio** (capítulo)
+ * y **qué edificio** (activo). Los importes vienen como cadena porque son
+ * `NUMERIC` y pasar por `number` en la API perdería céntimos.
+ */
+export type ResumenPorConcepto = {
+  capex_concept_code: string
+  capex_concept_name: string
+  findings: number
+  lines: number
+  amount: string
+  total_cost: string
+}
+
+export type ResumenPorHorizonte = {
+  time_horizon_code: string
+  time_horizon_name: string
+  lines: number
+  amount: string
+  tax_amount: string
+  total_cost: string
+}
+
+export type ResumenPorCapitulo = {
+  chapter_code: string
+  chapter_name: string
+  findings: number
+  lines: number
+  amount: string
+  total_cost: string
+}
+
+export type ResumenPorActivo = {
+  asset_id: string
+  asset_name: string
+  asset_code: string | null
+  typology_name: string
+  findings: number
+  lines: number
+  amount: string
+  tax_amount: string
+  total_cost: string
+}

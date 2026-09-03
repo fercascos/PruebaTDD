@@ -1717,3 +1717,205 @@ button.enlace {
    solo acompaña: uno de cada doce hombres es daltónico y esta tabla se imprime
    en blanco y negro para reuniones. */
 .tabla .mantenimiento .fuera-de-plazo { color: var(--error); }
+
+/* ── Resumen del CAPEX ─────────────────────────────────────────────────────
+   Los gráficos siguen la guía de visualización del proyecto: forma elegida por
+   el trabajo del dato, color validado con el script y NUNCA como única fuente
+   de identidad. Ver `src/graficos/paleta.ts`, que lleva las mediciones. */
+
+/* Los titulares. Son cifras, no gráficos: un número solo no es un gráfico de
+   una barra. */
+.cifras-clave {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+.cifras-clave li {
+  background: var(--papel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.cifras-clave .valor {
+  font-size: 1.35rem;
+  font-weight: 600;
+  /* Cifras de ancho fijo: cuatro tarjetas en fila con dígitos de anchura
+     variable bailan al recargar. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.cifras-clave .rotulo {
+  font-size: 0.78rem;
+  color: var(--tinta-suave);
+}
+.cifras-clave .ayuda {
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+/* La tarta y su leyenda, en dos columnas que se apilan en un móvil. */
+.tarta {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tarta .lienzo {
+  width: 13rem;
+  height: 13rem;
+  flex: 0 0 auto;
+}
+/* El hueco entre porciones lo pinta el propio fondo: sin él, dos tonos
+   parecidos se leen como una sola porción. */
+.tarta .lienzo path {
+  stroke: var(--papel);
+  stroke-width: 2;
+  transition: opacity 0.12s;
+}
+.tarta .apagada {
+  opacity: 0.35;
+}
+
+.tarta .leyenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 18rem;
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+.tarta .leyenda li {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: baseline;
+  gap: 0.55rem;
+  transition: opacity 0.12s;
+}
+.tarta .leyenda .marca {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  align-self: center;
+}
+.tarta .leyenda .nombre {
+  min-width: 0;
+}
+/* `[REQ]` El importe y el porcentaje van ESCRITOS al lado de cada porción, no
+   solo en el color: es lo que hace legible el gráfico impreso en blanco y
+   negro y para quien no distingue dos tonos. */
+.tarta .leyenda .porcentaje,
+.tarta .leyenda .importe {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tarta .leyenda .porcentaje {
+  color: var(--tinta-suave);
+}
+.tarta .leyenda .importe {
+  font-weight: 600;
+}
+
+/* La tabla con los mismos números. No es redundancia: la guía la exige cuando
+   algún tono no llega a 3:1 contra el fondo, y además es donde se leen los
+   conceptos que la tarta agrupa en «Otros». */
+.detalle-tabla {
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+}
+.detalle-tabla summary {
+  cursor: pointer;
+  color: var(--tinta-suave);
+}
+.detalle-tabla .desbordable {
+  margin-top: 0.5rem;
+}
+
+/* El conmutador entre la rejilla de hallazgos y el resumen. */
+.vistas {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+.vistas button {
+  background: var(--papel);
+  color: var(--tinta-suave);
+  border: 1px solid var(--borde);
+}
+.vistas button.activa {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: #fff;
+}
+
+/* Las barras del resumen respiran más que las de riesgos: los nombres de
+   capítulo son largos y a 11rem se cortaban. */
+.resumen-capex .barras li {
+  grid-template-columns: 14rem 1fr auto auto;
+}
+.resumen-capex .barras .etiqueta {
+  border-left: none;
+  padding-left: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+  /* A 320 px, «Mantenimiento» y su importe no caben en la misma fila, y con la
+     rotura por cualquier sitio se leía «Mantenim / iento». La cifra baja a su
+     propia línea antes que partir una palabra: un nombre partido a la mitad se
+     lee peor que una línea de más. */
+  .tarta .leyenda li {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'marca nombre'
+      '.     cifras';
+    row-gap: 0.1rem;
+  }
+  .tarta .leyenda .marca {
+    grid-area: marca;
+  }
+  .tarta .leyenda .nombre {
+    grid-area: nombre;
+  }
+  .tarta .leyenda .porcentaje {
+    grid-area: cifras;
+  }
+  .tarta .leyenda .importe {
+    grid-area: cifras;
+    justify-self: end;
+  }
+}
+
+@media (max-width: 640px) {
+  /* En un móvil la etiqueta va encima de su barra: a 320 px, catorce caracteres
+     de nombre y una barra en la misma fila no caben, y lo que se pierde es la
+     barra. */
+  .resumen-capex .barras li {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'etiqueta importe'
+      'barra    barra'
+      'cifra    cifra';
+    gap: 0.2rem 0.6rem;
+  }
+  .resumen-capex .barras .etiqueta {
+    grid-area: etiqueta;
+  }
+  .resumen-capex .barras .barra {
+    grid-area: barra;
+  }
+  .resumen-capex .barras .cifra:not(.importe) {
+    grid-area: cifra;
+  }
+  .resumen-capex .barras .cifra.importe {
+    grid-area: importe;
+    min-width: 0;
+  }
+}

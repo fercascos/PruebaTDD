@@ -66,7 +66,7 @@ Un grupo propio, porque en esta aplicación los catálogos son estructura, no co
 | `GET` | `/catalogs/asset-typologies` | Con los indicadores de qué campos muestra cada una |
 | `GET` | `/catalogs/zones?typology_id=` | **Zonas filtradas por tipología** `[REQ]` §3.3.2. Sin el parámetro, devuelve todas con su matriz de disponibilidad |
 | `GET` | `/catalogs/capex-codes?level=&parent_id=&q=` | Árbol de códigos. Con `q`, búsqueda por texto sobre todo el árbol |
-| `GET` | `/catalogs/capex-codes/tree` | Árbol completo en una llamada, para precargar el selector en cliente |
+| `GET` | `/catalogs/capex-codes/tree` | `[LIM]` **No está construido.** Se diseñó para precargar el selector en una llamada; hoy `/capex-codes` devuelve la lista plana con `level` y `parent_id`, y el cliente arma el árbol. Pedir esta ruta da un `404`, y se dice aquí en vez de dejar la fila como si existiera |
 | `GET` | `/catalogs/risk-levels` | **Incluye la definición íntegra de cada grado** `[REQ]` |
 | `GET` | `/catalogs/capex-concepts` · `/time-horizons` · `/specialties` · `/doc-request-categories` | `time-horizons` devuelve los cinco valores con su rango de años |
 | `GET` | `/catalogs/technical-systems` | Los 14 sistemas de §3.2, en el orden de una visita. `capex_chapter` es **texto**: «Protección contra incendios» mapea a `H06 + H10`, dos capítulos (§5.8) |
@@ -362,11 +362,40 @@ revisarlo, se baja su clasificación a mano —lo cual queda en `audit_log` con
 quién y cuándo— y entonces se revisa. Una decisión así tiene que dejar rastro; un
 interruptor más lo convertiría en un clic sin memoria.
 
+### Resumen del CAPEX `[REQ]`
+
+Cuatro preguntas distintas, cuatro consultas. La rejilla de hallazgos contesta
+«qué hay que hacer»; estos cortes contestan lo que se pregunta en la reunión y
+que hasta ahora se sumaba a mano.
+
+| Método | Ruta | Pregunta que contesta |
+|---|---|---|
+| `GET` | `/projects/{id}/capex/summary/by-concept` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
+| `GET` | `/projects/{id}/capex/summary/by-horizon` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe |
+| `GET` | `/projects/{id}/capex/summary/by-chapter` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
+| `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros |
+
+`[REQ]` **Los cuatro suman lo mismo, y hay una prueba que lo impone.** Cuatro
+gráficos en la misma pantalla que no cuadran destruyen la confianza en los
+cuatro, y el descuadre no lo ve nadie hasta que el cliente suma con la
+calculadora.
+
+Esa prueba encontró uno: `by-horizon` **no excluía los hallazgos borrados**. El
+borrado es lógico —`deleted_at`, porque borrar del informe algo que se llegó a
+valorar deja a nadie sabiendo que existió—, así que sus líneas siguen en la
+tabla; la consulta unía `capex_item` con `time_horizon` sin pasar por `finding`
+y las contaba. El mismo encargo sumaba una cosa por horizonte y otra por activo.
+No se veía porque nada ponía los dos cortes en la misma pantalla.
+
+`[LIM]` `SIN_CONCEPTO` **no es un código del catálogo**: es la etiqueta con la
+que se agrupa lo que nadie clasificó. Que nadie lo haya clasificado es un dato,
+no un hueco, y si desapareciera del reparto la suma no cuadraría con el total.
+
 ### Inventario de equipo `[REQ]` §7 / P-15
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
+| `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=&solo_mantenimiento_vencido=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
 | `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al encargo: si no, `404` |
 | `GET`/`PATCH`/`DELETE` | `/equipment/{id}` | `DELETE` es lógico: la ficha se escribió en una visita a la que no se vuelve |
 | `GET` | `/projects/{id}/equipment/import/plantilla.xlsx` | Libro vacío **con los activos del encargo y los 14 sistemas dentro**, en una hoja aparte |

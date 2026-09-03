@@ -39,7 +39,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Riesgos** | Distribución por grado, matriz riesgo × horizonte y desglose por capítulo |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
-| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
+| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos y tres gráficos de barras |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |
@@ -120,6 +120,45 @@ El lienzo (`src/fotos/Anotador.tsx`) y el rasterizado del servidor
 código entre Canvas y Pillow—, pero **comparten el formato**, y eso es lo que
 garantiza que dibujen en el mismo sitio. Se comprueba arrastrando el ratón de
 verdad: `npm run test:anotador`.
+
+## Los gráficos, y por qué la paleta está medida
+
+`src/graficos/`. Dos reglas gobiernan todo lo que se pinta aquí, y ninguna es de
+gusto:
+
+**1 · La forma la elige el trabajo del dato, no la variedad.** Solo hay una
+tarta —el reparto del CAPEX por concepto— porque solo hay una pregunta de tipo
+parte-todo. Todo lo demás son comparaciones de magnitud, y ahí una barra se lee
+mejor que un ángulo. Las barras van todas **del mismo tono**: el color distinto
+significa «esto es otra cosa», y siete magnitudes de lo mismo pintadas de siete
+colores añaden un significado que no existe.
+
+**2 · La paleta se comprueba con un script, no a ojo.** Un consultor imprime
+estas pantallas en blanco y negro para una reunión, y uno de cada doce hombres
+es daltónico. Que dos porciones se distingan es medible, y está medido. Una
+tarta es una forma «de todos contra todos» —el lector compara cualquier porción
+con cualquier otra—, que es el criterio exigente:
+
+| Tonos | Resultado |
+|---|---|
+| 3 | pasa · peor par ΔE 9,2 con daltonismo · 24,0 con visión normal |
+| 4 | **pasa** · ΔE 9,2 · 16,3 |
+| 5 | **falla**: magenta ↔ naranja ΔE 12,9 con visión normal, bajo el suelo de 15 |
+
+Por eso la tarta admite **cuatro conceptos y el resto agrupado en «Otros»**, y
+no los diez del catálogo. El quinto tono no se «añade con cuidado»: no existe
+uno que pase, y generar uno nuevo rompe todas las comprobaciones. Las
+mediciones, con sus dos excepciones declaradas, están en `src/graficos/paleta.ts`.
+
+`[REQ]` **Ningún gráfico se identifica solo por color.** Cada porción lleva su
+nombre, su importe y su porcentaje escritos; cada barra, su nombre y su cifra; y
+bajo la tarta hay una tabla con los mismos números. El color acompaña; no
+informa por sí solo.
+
+`[LIM]` **Solo hay paleta clara.** La aplicación no tiene modo oscuro —no hay
+una sola regla `prefers-color-scheme` en la hoja de estilos—, así que no se
+inventa una segunda paleta que nadie ha medido contra un fondo oscuro. Estos
+tonos **no valen invertidos**: en oscuro el violeta y el azul caen a ΔE 9,8.
 
 ## La matriz de riesgos
 

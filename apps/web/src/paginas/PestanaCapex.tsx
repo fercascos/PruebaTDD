@@ -4,6 +4,7 @@ import type { Activo, Hallazgo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeHallazgo } from './FichaDeHallazgo'
 import { NuevoHallazgo } from './NuevoHallazgo'
+import { ResumenCapex } from './ResumenCapex'
 
 const PLAZOS = ['CORTO', 'MEDIO', 'LARGO', 'MEJORAS', 'OTRO'] as const
 
@@ -36,6 +37,17 @@ type Idioma = 'es' | 'en'
  */
 type Alcance = 'conjunto' | 'por-activo'
 
+/**
+ * Las dos vistas del CAPEX.
+ *
+ * `[REC]` Van aquí dentro y **no como una décima pestaña de proyecto**. Son dos
+ * lecturas del mismo dato —lo que hay que hacer y cuánto suma—, y separarlas al
+ * primer nivel de navegación las alejaría entre sí justo cuando se consultan
+ * una detrás de otra: se mira el reparto, se ve que «Normativa» pesa demasiado
+ * y se va a la rejilla a comprobar de qué hallazgos sale.
+ */
+type Vista = 'hallazgos' | 'resumen'
+
 export function PestanaCapex({ projectId }: { projectId: string }) {
   const [hallazgos, setHallazgos] = useState<Hallazgo[] | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
@@ -45,6 +57,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   const [exportando, setExportando] = useState(false)
   const [idioma, setIdioma] = useState<Idioma>('es')
   const [alcance, setAlcance] = useState<Alcance>('por-activo')
+  const [vista, setVista] = useState<Vista>('hallazgos')
   // Aparte del error de carga: que falle la exportación no debe dejar la
   // pestaña en blanco y hacer perder de vista la tabla.
   const [errorExport, setErrorExport] = useState<string | null>(null)
@@ -189,10 +202,45 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
 
   const avisoExport = errorExport ? <Mensaje tipo="error">{errorExport}</Mensaje> : null
 
+  /* Dos botones y no un desplegable: son dos, se alternan constantemente, y un
+     desplegable esconde la mitad de la pantalla detrás de un clic. */
+  const conmutador = (
+    <div className="vistas" role="tablist" aria-label="Vista del CAPEX">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={vista === 'hallazgos'}
+        className={vista === 'hallazgos' ? 'activa' : ''}
+        onClick={() => setVista('hallazgos')}
+      >
+        Hallazgos
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={vista === 'resumen'}
+        className={vista === 'resumen' ? 'activa' : ''}
+        onClick={() => setVista('resumen')}
+      >
+        Resumen
+      </button>
+    </div>
+  )
+
+  if (vista === 'resumen') {
+    return (
+      <>
+        {conmutador}
+        <ResumenCapex projectId={projectId} />
+      </>
+    )
+  }
+
   if (!hallazgos) return <p className="cargando">Cargando hallazgos…</p>
   if (hallazgos.length === 0) {
     return (
       <>
+        {conmutador}
         {alta}
         {avisoExport}
         <Vacio>
@@ -276,6 +324,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
 
   return (
     <>
+      {conmutador}
       {alta}
       {avisoExport}
       {sinValidar.length > 0 && (
