@@ -1518,7 +1518,20 @@ CREATE TYPE doc_type AS ENUM (
     -- es el único documento del que la aplicación **extrae datos** hacia la
     -- ficha del activo y hacia la estructura del CAPEX. Distinguirlo por tipo
     -- es lo que permite ofrecer la extracción solo donde tiene sentido.
-    'MEMORIA_TECNICA'
+    'MEMORIA_TECNICA',
+    -- [REQ] El PLAN DE AUTOPROTECCIÓN, igual, y por dos razones propias:
+    --
+    --  1. Es el documento del que salen las LIMITACIONES del informe. Un plan
+    --     redactado con las naves vacías describe recorridos de evacuación que
+    --     dejaron de ser ciertos en cuanto entró el primer inquilino, y eso no
+    --     se ve marcando la casilla de «recibido».
+    --  2. Lleva procedimientos de emergencia, puntos de reunión y datos de
+    --     personas. Su confidencialidad por omisión es RESTRINGIDO y no
+    --     INTERNO, que es lo que se aplica al resto: se decide al subirlo, en
+    --     `CONFIDENCIALIDAD_POR_OMISION` (`evidence/documents.py`), porque la
+    --     subida manda siempre un valor explícito y un `DEFAULT` de columna
+    --     nunca llegaría a aplicarse.
+    'PLAN_AUTOPROTECCION'
 );
 
 CREATE TYPE doc_confidentiality AS ENUM ('INTERNO', 'CONFIDENCIAL', 'RESTRINGIDO');
@@ -1910,6 +1923,83 @@ CREATE TABLE propuesta_de_dato (
 
 CREATE INDEX propuesta_activo_idx ON propuesta_de_dato (asset_id, estado);
 CREATE INDEX propuesta_documento_idx ON propuesta_de_dato (document_id);
+
+-- ── Lo que un documento dice sobre su propia fiabilidad [REQ] ───────────────
+--
+-- La TERCERA clase de limitación del informe, y la que faltaba. Las dos que ya
+-- había salen de lo que NO llegó: una línea de la checklist sin recibir
+-- (`doc_request_item.affects_report_limitations`) y una pregunta sin respuesta
+-- (`qa_question.affects_report_limitations`). Ésta es lo contrario: el
+-- documento llegó, la casilla está marcada, y el documento dice que no se
+-- puede confiar en él.
+--
+-- El caso que lo hizo evidente: un plan de autoprotección redactado con las
+-- naves vacías define recorridos de evacuación suponiendo espacios diáfanos.
+-- En cuanto entra un inquilino con estanterías, esos recorridos ya no son los
+-- que dice el plan. El documento está entregado y completo; la limitación solo
+-- la ve quien se lo lee entero, y en un encargo con doscientos documentos eso
+-- no ocurre.
+--
+-- Va por documento y NO por activo: un plan cubre un complejo entero, y una
+-- limitación sobre la evacuación no es de una nave concreta. Se cuelga del
+-- encargo, que es el alcance del informe.
+
+CREATE TYPE limitacion_motivo AS ENUM (
+    -- El documento existe pero está fuera de su plazo de vigencia o revisión.
+    -- La más frecuente y la que más se pasa por alto: está en la carpeta.
+    'CADUCADO',
+    -- Le faltan datos que él mismo reserva un sitio para llevar.
+    'INCOMPLETO',
+    -- Se declara borrador, resumen o copia sin valor.
+    'NO_VIGENTE',
+    -- El documento declara sus propias reservas y se recogen tal cual.
+    'DECLARADA',
+    -- El documento se contradice consigo mismo.
+    'INCONSISTENTE'
+);
+
+CREATE TABLE limitacion_de_documento (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    project_id      UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    -- Opcional: el plan de un complejo no es de ninguna nave en concreto.
+    asset_id        UUID REFERENCES asset(id) ON DELETE SET NULL,
+
+    texto           TEXT NOT NULL,
+    motivo          limitacion_motivo NOT NULL,
+
+    -- La procedencia, igual que en `propuesta_de_dato` y por lo mismo: una
+    -- limitación que aparece en un informe sin decir de dónde sale es
+    -- indefendible ante el cliente que la lee.
+    document_id     UUID REFERENCES document(id) ON DELETE SET NULL,
+    doc_type        doc_type NOT NULL,
+    seccion         VARCHAR(160),
+    evidencia       TEXT,
+    extractor       VARCHAR(60) NOT NULL,
+    es_simulada     BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Mismo ciclo que una propuesta de dato, y por la misma razón: NADA llega
+    -- al informe sin que una persona lo acepte. Una limitación inventada por
+    -- una máquina y colada en un entregable es peor que una limitación que
+    -- falte: la que falta se echa en falta, la inventada se firma.
+    estado          propuesta_estado NOT NULL DEFAULT 'PENDIENTE',
+    decidida_at     TIMESTAMPTZ,
+    decidida_por    UUID REFERENCES app_user(id),
+
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Un documento no repite la misma limitación. Volver a extraerlo sustituye
+    -- las suyas; no las acumula.
+    UNIQUE NULLS NOT DISTINCT (document_id, texto),
+
+    CONSTRAINT limitacion_decidida_completa
+        CHECK ((decidida_at IS NULL) = (decidida_por IS NULL)),
+    CONSTRAINT limitacion_resuelta_tiene_testigo
+        CHECK (estado = 'PENDIENTE' OR decidida_at IS NOT NULL)
+);
+
+CREATE INDEX limitacion_encargo_idx ON limitacion_de_documento (project_id, estado);
+CREATE INDEX limitacion_documento_idx ON limitacion_de_documento (document_id);
 
 -- =============================================================================
 --  Bloque 4 · Informes PPTX [REQ] §17
@@ -2484,7 +2574,7 @@ BEGIN
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version',
         'memoria_tecnica', 'memoria_categoria', 'memoria_objeto',
-        'propuesta_de_dato'
+        'propuesta_de_dato', 'limitacion_de_documento'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
         EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);

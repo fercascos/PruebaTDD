@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.evidence.router import AlmacenDep
-from tdd.extraccion import memoria_tecnica as _registra_memoria  # noqa: F401 — registra al importar
+
+# Importar registra. Cada extractor nuevo se añade aquí y en ningún otro sitio:
+# es lo que permite que añadir un lector no obligue a tocar los que ya hay.
+from tdd.extraccion import memoria_tecnica as _registra_memoria  # noqa: F401
+from tdd.extraccion import plan_autoproteccion as _registra_plan  # noqa: F401
 from tdd.extraccion.puerto import Procedencia, SinExtractor, para, tipos_soportados
 
 router = APIRouter(tags=["Extracción documental"])
@@ -43,15 +47,38 @@ class ResultadoDeExtraccion(BaseModel):
     propuestas: int
     plantas: int
     objetos: int
+    #: `[REQ]` Cuántas limitaciones del informe ha aportado. Un plan de
+    #: autoprotección puede no proponer ni un dato y aportar aquí la reserva más
+    #: importante del encargo, así que `propuestas: 0` no significa que la
+    #: lectura no haya servido para nada.
+    limitaciones: int = 0
     desconocidos: dict[str, str]
     avisos: list[str]
+
+
+class LimitacionLeida(BaseModel):
+    """Una limitación que un documento propone para el informe."""
+
+    id: uuid.UUID
+    texto: str
+    motivo: str
+    estado: str
+    document_id: uuid.UUID | None
+    doc_type: str
+    seccion: str | None
+    evidencia: str | None
+    extractor: str
+    es_simulada: bool
+    decidida_por: uuid.UUID | None = None
+    #: Cómo se llama el documento del que salió, para no obligar a otra petición.
+    documento: str | None = None
 
 
 def _documento(s: Session, document_id: uuid.UUID) -> dict[str, Any]:
     fila = (
         s.execute(
             text(
-                "SELECT d.id, d.asset_id, CAST(d.doc_type AS text) AS doc_type, "
+                "SELECT d.id, d.asset_id, d.project_id, CAST(d.doc_type AS text) AS doc_type, "
                 "d.stored_object_id, so.storage_key "
                 "FROM document d JOIN stored_object so ON so.id = d.stored_object_id "
                 "WHERE d.id = :d AND d.deleted_at IS NULL"
@@ -100,12 +127,6 @@ def extraer(
     forma más rápida de que deje de fiarse de la pantalla.
     """
     documento = _documento(s, document_id)
-    if documento["asset_id"] is None:
-        raise HTTPException(
-            status.HTTP_409_CONFLICT,
-            "El documento no está asignado a ningún activo: no hay a quién proponerle "
-            "los datos. Asígnelo primero.",
-        )
 
     try:
         extractor = para(documento["doc_type"])
@@ -120,9 +141,30 @@ def extraer(
         Procedencia(doc_type=documento["doc_type"], document_id=document_id),
     )
 
+    # `[REQ]` El activo hace falta para los CAMPOS, no para extraer.
+    #
+    # Esto era un 409 incondicional al principio del endpoint, y estaba mal: un
+    # plan de autoprotección cubre un complejo entero y sus limitaciones son del
+    # encargo, no de una nave. Con la comprobación delante, el documento que más
+    # limitaciones aporta era justo el que no se podía leer.
+    #
+    # Ahora solo se exige si el documento propone campos y no hay a quién
+    # proponérselos. Se comprueba **después de leer** porque hasta entonces no
+    # se sabe si los propone.
+    if documento["asset_id"] is None and aportacion.campos:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"El documento propone {len(aportacion.campos)} datos del edificio y no está "
+            "asignado a ningún activo: no hay a quién proponérselos. Asígnelo primero.",
+        )
+
     # Se retiran solo las PENDIENTES de este documento. Las decididas se quedan.
     s.execute(
         text("DELETE FROM propuesta_de_dato WHERE document_id = :d AND estado = 'PENDIENTE'"),
+        {"d": str(document_id)},
+    )
+    s.execute(
+        text("DELETE FROM limitacion_de_documento WHERE document_id = :d AND estado = 'PENDIENTE'"),
         {"d": str(document_id)},
     )
     decididos = {
@@ -161,11 +203,60 @@ def extraer(
         )
         guardadas += 1
 
+    # Las limitaciones ya decididas tampoco se reabren. Se comparan por texto
+    # porque es lo que las identifica: la misma salvedad releída del mismo
+    # documento es la misma salvedad, y la clave única de la tabla dice eso.
+    ya_decididas = {
+        fila[0]
+        for fila in s.execute(
+            text(
+                "SELECT texto FROM limitacion_de_documento "
+                "WHERE document_id = :d AND estado <> 'PENDIENTE'"
+            ),
+            {"d": str(document_id)},
+        ).all()
+    }
+    limitaciones = 0
+    for limitacion in aportacion.limitaciones:
+        if limitacion.texto in ya_decididas:
+            continue
+        procedencia = limitacion.procedencia
+        s.execute(
+            text(
+                "INSERT INTO limitacion_de_documento (organization_id, project_id, asset_id, "
+                "texto, motivo, document_id, doc_type, seccion, evidencia, extractor, "
+                "es_simulada) VALUES (:o, :p, :a, :txt, CAST(:m AS limitacion_motivo), :d, "
+                "CAST(:t AS doc_type), :s, :e, :x, :sim)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "p": str(documento["project_id"]),
+                # Se hereda del documento si lo tiene. Un plan de complejo no lo
+                # tiene, y entonces la limitación es del encargo, que es lo
+                # correcto: el alcance del informe es el encargo.
+                "a": None if documento["asset_id"] is None else str(documento["asset_id"]),
+                "txt": limitacion.texto,
+                "m": limitacion.motivo,
+                "d": str(document_id),
+                "t": documento["doc_type"],
+                "s": None if procedencia is None else procedencia.seccion,
+                "e": None if procedencia is None else procedencia.evidencia,
+                "x": aportacion.extractor,
+                "sim": aportacion.es_simulada,
+            },
+        )
+        limitaciones += 1
+
     avisos = list(aportacion.avisos)
     if omitidas := len(decididos & {c.campo for c in aportacion.campos}):
         avisos.append(
             f"{omitidas} campos no se han vuelto a proponer porque alguien ya decidió "
             "sobre ellos desde este mismo documento."
+        )
+    if saltadas := len(ya_decididas & {lim.texto for lim in aportacion.limitaciones}):
+        avisos.append(
+            f"{saltadas} limitaciones no se han vuelto a proponer porque alguien ya "
+            "decidió sobre ellas."
         )
 
     return {
@@ -176,6 +267,7 @@ def extraer(
         "propuestas": guardadas,
         "plantas": len(aportacion.plantas),
         "objetos": len(aportacion.objetos),
+        "limitaciones": limitaciones,
         "desconocidos": aportacion.desconocidos,
         "avisos": avisos,
     }
@@ -331,3 +423,126 @@ def decidir(
         "descartadas": len(cuerpo.descartar),
         "campos": sorted(campos),
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Limitaciones que aporta la documentación `[REQ]`
+#
+#  La tercera clase de limitación del informe. Las dos que ya había salen de lo
+#  que NO llegó —una línea de la checklist sin recibir, una pregunta sin
+#  respuesta— y se calculan solas. Ésta es lo contrario: el documento llegó, la
+#  casilla está marcada, y el documento dice que no se puede confiar en él.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/projects/{project_id}/limitaciones-documentales", response_model=list[LimitacionLeida]
+)
+def listar_limitaciones(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    estado: str | None = None,
+) -> Any:
+    """Lo que la documentación del encargo dice sobre su propia fiabilidad.
+
+    Sin filtro salen todas, con su estado. La pantalla pide las pendientes para
+    que alguien decida y las aceptadas para enseñar qué va a ir al informe.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT l.id, l.texto, CAST(l.motivo AS text) AS motivo, "
+                "CAST(l.estado AS text) AS estado, l.document_id, "
+                "CAST(l.doc_type AS text) AS doc_type, l.seccion, l.evidencia, l.extractor, "
+                "l.es_simulada, l.decidida_por, d.display_name AS documento "
+                "FROM limitacion_de_documento l "
+                "LEFT JOIN document d ON d.id = l.document_id "
+                "WHERE l.project_id = :p AND (CAST(:e AS text) IS NULL "
+                "OR CAST(l.estado AS text) = CAST(:e AS text)) "
+                "ORDER BY l.motivo, l.created_at"
+            ),
+            {"p": str(project_id), "e": estado},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class DecisionDeLimitaciones(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    aceptar: list[uuid.UUID] = Field(default_factory=list)
+    descartar: list[uuid.UUID] = Field(default_factory=list)
+
+
+class ResultadoDeLimitaciones(BaseModel):
+    aceptadas: int
+    descartadas: int
+
+
+@router.post(
+    "/projects/{project_id}/limitaciones-documentales/decidir",
+    response_model=ResultadoDeLimitaciones,
+)
+def decidir_limitaciones(
+    project_id: uuid.UUID,
+    cuerpo: DecisionDeLimitaciones,
+    s: SesionDep,
+    usuario: UsuarioDep,
+) -> Any:
+    """`[REQ]` Qué limitaciones entran en el informe. Las acepta una persona.
+
+    Aceptar aquí **no redacta nada**: el texto ya está escrito y sale del
+    documento. Lo que hace es decidir que esa reserva forma parte del alcance
+    declarado del informe, que es una firma profesional y no un detalle.
+
+    Descartar tampoco es borrar. La fila se queda con su testigo: si el cliente
+    pregunta por qué el informe no menciona que el plan se redactó con las naves
+    vacías, la respuesta está en la base y no en la memoria de nadie.
+    """
+    if not cuerpo.aceptar and not cuerpo.descartar:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "No se ha indicado ninguna limitación"
+        )
+
+    todas = [*cuerpo.aceptar, *cuerpo.descartar]
+    if len(set(todas)) != len(todas):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Hay una limitación en las dos listas a la vez: aceptarla y descartarla en la "
+            "misma llamada dejaría ganando al orden de ejecución, que no lo ha decidido nadie.",
+        )
+
+    existentes = s.execute(
+        text(
+            "SELECT count(*) FROM limitacion_de_documento "
+            "WHERE project_id = :p AND id = ANY(:ids) AND estado = 'PENDIENTE'"
+        ),
+        {"p": str(project_id), "ids": [str(i) for i in todas]},
+    ).scalar_one()
+    if existentes != len(todas):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Alguna limitación no existe, no es de este encargo o ya estaba decidida. "
+            "Vuelva a cargar la lista: puede que otra persona la haya resuelto.",
+        )
+
+    for estado, ids in (("ACEPTADA", cuerpo.aceptar), ("DESCARTADA", cuerpo.descartar)):
+        if not ids:
+            continue
+        s.execute(
+            text(
+                "UPDATE limitacion_de_documento SET estado = CAST(:e AS propuesta_estado), "
+                "decidida_at = now(), decidida_por = :u "
+                "WHERE project_id = :p AND id = ANY(:ids) AND estado = 'PENDIENTE'"
+            ),
+            {
+                "e": estado,
+                "u": str(usuario.id),
+                "p": str(project_id),
+                "ids": [str(i) for i in ids],
+            },
+        )
+
+    return {"aceptadas": len(cuerpo.aceptar), "descartadas": len(cuerpo.descartar)}

@@ -4,6 +4,8 @@ import type {
   CategoriaDeSolicitud,
   Documento,
   EstadoSolicitud,
+  LimitacionDocumental,
+  MotivoDeLimitacion,
   ObservacionIa,
   PermisoDeRevision,
   PropuestaDeDato,
@@ -96,6 +98,16 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
    * no pulsarlo, y entonces la extracción no sirve de nada aunque funcione.
    */
   const [extraibles, setExtraibles] = useState<string[]>([])
+  /**
+   * Cuántas extracciones se han hecho en esta sesión de pantalla.
+   *
+   * No se usa el número: se usa que **cambie**. Extraer un documento puede
+   * aportar limitaciones al encargo, y el panel de limitaciones está fuera de
+   * la ficha de ese documento, así que necesita saber que hay algo nuevo. Un
+   * contador es la forma más simple de decírselo sin subir su estado aquí.
+   */
+  const [extraccionesHechas, setExtraccionesHechas] = useState(0)
+  const alExtraer = useCallback(() => setExtraccionesHechas((n) => n + 1), [])
 
   const recargar = useCallback(async () => {
     try {
@@ -161,11 +173,19 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
               revisionActiva={permiso.activo}
               extraibles={extraibles}
               alCambiar={recargar}
+              alExtraer={alExtraer}
               alFallar={setError}
             />
           ))}
         </ul>
       )}
+
+      {/* `[REQ]` Va al final y no dentro de cada documento a propósito: una
+          limitación es del ENCARGO, no del fichero. Un plan de autoprotección
+          cubre un complejo de seis naves y sus reservas afectan al informe
+          entero; enterrarlas en la ficha del PDF las dejaría fuera de la vista
+          de quien redacta el apartado de limitaciones. */}
+      <Limitaciones projectId={projectId} clave={extraccionesHechas} alFallar={setError} />
 
       {sinLinea.length > 0 && (
         <details className="sueltos">
@@ -181,6 +201,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
                 documento={d}
                 revisionActiva={permiso.activo}
                 extraibles={extraibles}
+                alExtraer={alExtraer}
                 alFallar={setError}
               />
             ))}
@@ -313,6 +334,7 @@ function Linea({
   revisionActiva,
   extraibles,
   alCambiar,
+  alExtraer,
   alFallar,
 }: {
   linea: Solicitud
@@ -321,6 +343,7 @@ function Linea({
   revisionActiva: boolean
   extraibles: string[]
   alCambiar: () => Promise<void>
+  alExtraer: () => void
   alFallar: (m: string) => void
 }) {
   const [subiendo, setSubiendo] = useState(false)
@@ -404,6 +427,7 @@ function Linea({
             documento={d}
             revisionActiva={revisionActiva}
             extraibles={extraibles}
+            alExtraer={alExtraer}
             alFallar={alFallar}
           />
         ))}
@@ -428,11 +452,13 @@ function FichaDocumento({
   documento,
   revisionActiva,
   extraibles,
+  alExtraer,
   alFallar,
 }: {
   documento: Documento
   revisionActiva: boolean
   extraibles: string[]
+  alExtraer: () => void
   alFallar: (m: string) => void
 }) {
   const [revisiones, setRevisiones] = useState<RevisionIa[] | null>(null)
@@ -494,7 +520,9 @@ function FichaDocumento({
         </p>
       )}
 
-      {puedeExtraerse && <Extraccion documento={documento} alFallar={alFallar} />}
+      {puedeExtraerse && (
+        <Extraccion documento={documento} alExtraer={alExtraer} alFallar={alFallar} />
+      )}
     </li>
   )
 }
@@ -514,9 +542,11 @@ function FichaDocumento({
  */
 function Extraccion({
   documento,
+  alExtraer,
   alFallar,
 }: {
   documento: Documento
+  alExtraer: () => void
   alFallar: (m: string) => void
 }) {
   const [propuestas, setPropuestas] = useState<PropuestaDeDato[] | null>(null)
@@ -542,6 +572,9 @@ function Extraccion({
     try {
       setResultado(await enviar<ResultadoDeExtraccion>(`/documents/${documento.id}/extraer`, {}))
       await cargar()
+      // Puede haber aportado limitaciones al encargo, y ésas se pintan fuera
+      // de esta ficha.
+      alExtraer()
     } catch (e) {
       alFallar((e as Error).message)
     } finally {
@@ -780,5 +813,164 @@ function Observacion({
         </p>
       )}
     </li>
+  )
+}
+
+/**
+ * `[REQ]` Lo que la documentación dice sobre su propia fiabilidad.
+ *
+ * La **tercera clase** de limitación del informe, y la que faltaba. Las dos que
+ * ya había salen de lo que *no* llegó —una línea del checklist sin recibir, una
+ * pregunta sin respuesta— y se calculan solas. Ésta es lo contrario: el
+ * documento llegó, la casilla está marcada, el expediente parece completo, y el
+ * documento dice que no se puede confiar en él.
+ *
+ * El caso que lo hizo evidente, leyendo uno de verdad: un plan de
+ * autoprotección redactado con las naves vacías define los recorridos de
+ * evacuación suponiendo espacios diáfanos. En cuanto entra un inquilino con
+ * estanterías, esas longitudes dejan de ser las que dice el plan. Sin esta
+ * pantalla, la limitación solo la ve quien se lo lea entero.
+ *
+ * **Solo las aceptadas van al informe.** Es lo que separa una salvedad
+ * profesional de un párrafo que puso una máquina y nadie leyó.
+ */
+const MOTIVO: Record<MotivoDeLimitacion, { etiqueta: string; explica: string }> = {
+  CADUCADO: {
+    etiqueta: 'Fuera de plazo',
+    explica: 'El documento existe pero está fuera de su plazo de vigencia o de revisión.',
+  },
+  INCOMPLETO: {
+    etiqueta: 'Incompleto',
+    explica: 'Le faltan datos que el propio documento reserva un sitio para llevar.',
+  },
+  NO_VIGENTE: {
+    etiqueta: 'No vigente',
+    explica: 'El documento se declara borrador, resumen o copia sin valor.',
+  },
+  DECLARADA: {
+    etiqueta: 'La declara el documento',
+    explica: 'La escribió quien redactó el documento. Se recoge literal, sin reescribirla.',
+  },
+  INCONSISTENTE: {
+    etiqueta: 'Se contradice',
+    explica: 'El documento no concuerda consigo mismo.',
+  },
+}
+
+function Limitaciones({
+  projectId,
+  clave,
+  alFallar,
+}: {
+  projectId: string
+  /** Cambia cuando se extrae algo. No se lee: solo dispara la recarga. */
+  clave: number
+  alFallar: (m: string) => void
+}) {
+  const [todas, setTodas] = useState<LimitacionDocumental[] | null>(null)
+  const [ocupado, setOcupado] = useState(false)
+
+  const cargar = useCallback(async () => {
+    try {
+      setTodas(
+        await obtener<LimitacionDocumental[]>(`/projects/${projectId}/limitaciones-documentales`),
+      )
+    } catch (e) {
+      alFallar((e as Error).message)
+    }
+  }, [projectId, alFallar])
+
+  useEffect(() => {
+    void cargar()
+  }, [cargar, clave])
+
+  async function decidir(id: string, aceptar: boolean) {
+    setOcupado(true)
+    try {
+      await enviar(`/projects/${projectId}/limitaciones-documentales/decidir`, {
+        [aceptar ? 'aceptar' : 'descartar']: [id],
+      })
+      await cargar()
+    } catch (e) {
+      alFallar((e as Error).message)
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  // Nada extraído todavía: la sección no aparece. Una caja vacía en cada
+  // encargo enseña a no mirarla.
+  if (!todas || todas.length === 0) return null
+
+  const pendientes = todas.filter((l) => l.estado === 'PENDIENTE')
+  const aceptadas = todas.filter((l) => l.estado === 'ACEPTADA')
+  const descartadas = todas.filter((l) => l.estado === 'DESCARTADA')
+
+  return (
+    <section className="limitaciones-doc">
+      <h3>Lo que la documentación dice sobre sí misma</h3>
+      <p className="ayuda">
+        Salen de leer los documentos, no de lo que falta. <strong>Solo las aceptadas entran en
+        el apartado de limitaciones del informe</strong>: entre la propuesta y el entregable hay
+        una persona decidiendo.
+      </p>
+
+      {pendientes.length > 0 && (
+        <ul className="propuestas">
+          {pendientes.map((l) => (
+            <li key={l.id} className={`propuesta limitacion m-${l.motivo.toLowerCase()}`}>
+              <div className="cabecera">
+                <span className="criterio">{MOTIVO[l.motivo].etiqueta}</span>
+                {l.es_simulada && <span className="veredicto">simulada</span>}
+              </div>
+              <p className="resumen">{l.texto}</p>
+              <p className="detalle">
+                {MOTIVO[l.motivo].explica}
+                {l.documento && <> · Sale de «{l.documento}»</>}
+                {l.seccion && <> · {l.seccion}</>}
+              </p>
+              {l.evidencia && <blockquote className="evidencia">{l.evidencia}</blockquote>}
+              <div className="decidir">
+                <button type="button" onClick={() => void decidir(l.id, true)} disabled={ocupado}>
+                  Incluir en el informe
+                </button>
+                <button type="button" onClick={() => void decidir(l.id, false)} disabled={ocupado}>
+                  Descartar
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {aceptadas.length > 0 && (
+        <details className="decididas" open>
+          <summary>{aceptadas.length} van al informe</summary>
+          <ul>
+            {aceptadas.map((l) => (
+              <li key={l.id}>
+                <strong>{MOTIVO[l.motivo].etiqueta}</strong> · {l.texto}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {descartadas.length > 0 && (
+        <details className="decididas">
+          {/* Descartar no es borrar: si el cliente pregunta por qué el informe
+              no menciona algo, la respuesta tiene que estar aquí y no en la
+              memoria de nadie. */}
+          <summary>{descartadas.length} descartada(s), con constancia de quién fue</summary>
+          <ul>
+            {descartadas.map((l) => (
+              <li key={l.id}>
+                <strong>{MOTIVO[l.motivo].etiqueta}</strong> · {l.texto}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   )
 }

@@ -210,7 +210,7 @@ desacuerdo es información**; el segundo no puede pisar al primero.
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/extraccion/tipos-soportados` | Los `doc_type` que hay lector para leer hoy |
-| `POST` | `/documents/{id}/extraer` | Lee el documento con el extractor de su tipo y **propone**. `409` si el documento no está asignado a un activo; `422` si su tipo todavía no se lee, con la lista de los que sí. Volver a extraer **sustituye las pendientes** de ese documento y **no reabre las ya decididas** |
+| `POST` | `/documents/{id}/extraer` | Lee el documento con el extractor de su tipo y **propone**. `422` si su tipo todavía no se lee, con la lista de los que sí. `409` solo si el documento propone **campos del edificio** y no está asignado a ningún activo. Volver a extraer **sustituye las pendientes** de ese documento y **no reabre las ya decididas** |
 | `GET` | `/assets/{id}/propuestas?estado=` | Lo propuesto sobre el activo, sin aplicar. Cada fila trae `valor_actual` —lo que el activo tiene hoy— al lado: sin eso no se distingue «completa un hueco» de «contradice lo que había» |
 | `POST` | `/assets/{id}/propuestas/decidir` | **El botón.** `{aceptar: [...], descartar: [...]}`. Se decide propuesta a propuesta: aceptar dos del **mismo campo** en la misma llamada es `422`, porque aplicarlas en orden dejaría ganando a la última por azar |
 
@@ -227,6 +227,70 @@ aquí** —la memoria los enumera en prosa y una sola sección reparte sus
 elementos entre seis capítulos—: eso es clasificación semántica y sigue
 pendiente de proveedor. Cada propuesta declara en `es_simulada` si la produjo
 un lector de verdad o un simulacro.
+
+#### Limitaciones que aporta la documentación `[REQ]`
+
+La **tercera clase** de limitación del informe. Las dos que ya había salen de lo
+que **no llegó** —una línea del checklist sin recibir, una pregunta sin
+respuesta— y se calculan solas. Ésta es lo contrario: **el documento llegó, la
+casilla está marcada, el expediente parece completo, y el documento dice que no
+se puede confiar en él.**
+
+El caso que lo hizo evidente: un plan de autoprotección redactado con las naves
+vacías define los recorridos de evacuación suponiendo espacios diáfanos. En
+cuanto entra un inquilino con estanterías, esas longitudes, salidas y
+capacidades dejan de ser las que dice el plan. El documento está entregado y
+completo; sin esto, la limitación solo la ve quien se lo lea entero, y en un
+encargo con doscientos documentos eso no ocurre.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/projects/{id}/limitaciones-documentales?estado=` | Lo que la documentación del encargo dice sobre su propia fiabilidad, con su motivo, su documento y su epígrafe |
+| `POST` | `/projects/{id}/limitaciones-documentales/decidir` | `{aceptar: [...], descartar: [...]}`. **Solo las aceptadas llegan al informe**; descartar deja la fila con su testigo, no la borra |
+
+`motivo` es un enumerado cerrado —`CADUCADO`, `INCOMPLETO`, `NO_VIGENTE`,
+`DECLARADA`, `INCONSISTENTE`—. Una lista abierta acabaría con quince
+redacciones del mismo motivo y sin forma de agruparlas en el informe.
+
+**Cuelgan del encargo, no del activo.** Un plan cubre un complejo de seis naves
+y una reserva sobre la evacuación no es de una nave concreta; el alcance del
+informe es el encargo. `asset_id` queda opcional para cuando sí se sepa.
+
+`GET /projects/{id}/report-limitations` devuelve **las tres clases juntas**, con
+un campo `origen` (`CHECKLIST`, `PREGUNTA`, `DOCUMENTO`) que las distingue: «no
+nos lo dieron» y «nos lo dieron y dice que no vale» no se redactan igual. El
+snapshot del informe congela las tres, y de la tercera **solo las aceptadas**.
+
+##### El lector de planes de autoprotección
+
+Su trabajo principal **no es rellenar campos**: es producir limitaciones. Sus
+reglas son las que se sostienen sobre cualquier plan y no las de un documento
+concreto:
+
+| Regla | Motivo | Por qué se puede sin IA |
+|---|---|---|
+| Fecha del plan + 3 años < hoy | `CADUCADO` | El RD 393/2007 obliga a revisar el plan al menos cada tres años. Es aritmética de fechas |
+| No se lee la fecha | `INCOMPLETO` | Sin ella no se puede comprobar lo anterior, y «no consta» no es «está vigente» |
+| El documento se declara resumen, borrador o copia | `NO_VIGENTE` | Un puñado de fórmulas cerradas que un redactor escribe cuando el documento no es el bueno |
+| Casillas vacías o anonimizadas | `INCOMPLETO` | Se cuentan y se nombran las primeras; una limitación por etiqueta llenaría el informe de párrafos iguales |
+| Una sección de salvedades, **si la trae** | `DECLARADA` | Se recoge **literal**. Parafrasearla cambiaría el alcance de una salvedad técnica por el de un resumen automático |
+
+`[LIM]` La última regla no se puede dar por hecha: la Norma Básica fija
+capítulos 1 a 9 y anexos, y **ninguno es «limitaciones»**. Se lee cuando está y
+no se cuenta con ella. Hay tope —25— y al pasarse **se avisa**: un documento que
+produce cincuenta limitaciones no tiene cincuenta, significa que el corte por
+epígrafes ha fallado.
+
+`[LIM]` El **capítulo 4 del plan es el inventario de medios contra incendios y
+no se lee**. Emparejar cada medio con el catálogo de sistemas técnicos y con la
+ficha de equipo es otro trabajo. Se avisa **en cada lectura**, no solo aquí: un
+plan leído sin errores dejaría creer que ya se ha aprovechado todo lo que traía.
+
+`[REQ]` Un `PLAN_AUTOPROTECCION` nace con confidencialidad **`RESTRINGIDO`** y
+no `INTERNO` —lo pone `CONFIDENCIALIDAD_POR_OMISION`—: lleva procedimientos de
+emergencia, puntos de reunión, ubicaciones de medios y datos de las personas con
+responsabilidad en una emergencia. Es un valor por omisión, no una imposición:
+quien sube puede mandar otro.
 
 ### Inventario de equipo `[REQ]` §7 / P-15
 

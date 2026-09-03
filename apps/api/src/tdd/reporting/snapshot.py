@@ -197,20 +197,42 @@ def construir(
         {"p": str(project_id)},
     )
 
-    limitaciones = _filas(
-        s,
-        "SELECT d.title, CAST(d.status AS text) AS status, d.unavailable_reason "
-        "FROM doc_request_item d JOIN project_phase ph ON ph.id = d.project_phase_id "
-        "WHERE ph.project_id = :p AND d.affects_report_limitations ORDER BY d.display_order",
-        {"p": str(project_id)},
-    ) + _filas(
-        s,
-        "SELECT q.question AS title, 'SIN_RESPUESTA' AS status, "
-        "  'Pregunta sin respuesta del cliente' AS unavailable_reason "
-        "FROM qa_question q JOIN qa_round r ON r.id = q.qa_round_id "
-        "JOIN project_phase ph ON ph.id = r.project_phase_id "
-        "WHERE ph.project_id = :p AND q.affects_report_limitations ORDER BY q.number",
-        {"p": str(project_id)},
+    # `[REQ]` Las TRES clases de limitación, congeladas juntas. `origen` las
+    # distingue: «no nos lo dieron», «no nos lo contestaron» y «nos lo dieron y
+    # dice que no vale» no se redactan igual en un informe.
+    limitaciones = (
+        _filas(
+            s,
+            "SELECT d.title, CAST(d.status AS text) AS status, d.unavailable_reason, "
+            "'CHECKLIST' AS origen, NULL::text AS documento "
+            "FROM doc_request_item d JOIN project_phase ph ON ph.id = d.project_phase_id "
+            "WHERE ph.project_id = :p AND d.affects_report_limitations ORDER BY d.display_order",
+            {"p": str(project_id)},
+        )
+        + _filas(
+            s,
+            "SELECT q.question AS title, 'SIN_RESPUESTA' AS status, "
+            "  'Pregunta sin respuesta del cliente' AS unavailable_reason, "
+            "'PREGUNTA' AS origen, NULL::text AS documento "
+            "FROM qa_question q JOIN qa_round r ON r.id = q.qa_round_id "
+            "JOIN project_phase ph ON ph.id = r.project_phase_id "
+            "WHERE ph.project_id = :p AND q.affects_report_limitations ORDER BY q.number",
+            {"p": str(project_id)},
+        )
+        # `[REQ]` Solo las ACEPTADAS. Una limitación que una máquina propuso y
+        # nadie miró no puede acabar en un entregable firmado, y el snapshot es
+        # justo el punto en el que deja de poder corregirse.
+        + _filas(
+            s,
+            "SELECT l.texto AS title, CAST(l.motivo AS text) AS status, "
+            "l.seccion AS unavailable_reason, 'DOCUMENTO' AS origen, "
+            "doc.display_name AS documento "
+            "FROM limitacion_de_documento l "
+            "LEFT JOIN document doc ON doc.id = l.document_id "
+            "WHERE l.project_id = :p AND l.estado = 'ACEPTADA' "
+            "ORDER BY l.motivo, l.created_at",
+            {"p": str(project_id)},
+        )
     )
 
     visitas = _filas(

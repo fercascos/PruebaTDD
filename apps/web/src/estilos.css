@@ -1670,3 +1670,25 @@ button.enlace {
     flex: none;
   }
 }
+
+/* `[REQ]` Lo que la documentación dice sobre su propia fiabilidad: la tercera
+   clase de limitación del informe. Reutiliza la caja de la propuesta porque es
+   la misma conversación —una máquina propone, una persona decide— y darle otro
+   aspecto haría creer que se decide de otra forma. */
+.limitaciones-doc { margin-top: 1.2rem; border-top: 2px solid var(--borde); padding-top: 0.9rem; }
+.limitaciones-doc h3 { margin: 0 0 0.25rem; }
+.limitaciones-doc .ayuda { margin: 0 0 0.7rem; }
+.limitaciones-doc .propuesta .detalle { margin: 0.3rem 0 0; font-size: 0.8rem; color: var(--tenue); }
+
+/* El motivo tiñe el borde, no el fondo: son varias en columna y cinco fondos
+   de color distinto convierten la lista en un semáforo ilegible. */
+.limitacion.m-caducado { border-left: 3px solid #c46a2e; }
+.limitacion.m-no_vigente { border-left: 3px solid #a33a3a; }
+.limitacion.m-incompleto { border-left: 3px solid #b8912e; }
+.limitacion.m-declarada { border-left: 3px solid #4a6fa5; }
+.limitacion.m-inconsistente { border-left: 3px solid #7a4a9c; }
+
+.limitaciones-doc .decididas { margin-top: 0.6rem; font-size: 0.85rem; }
+.limitaciones-doc .decididas summary { cursor: pointer; color: var(--tenue); }
+.limitaciones-doc .decididas ul { margin: 0.4rem 0 0; padding-left: 1.1rem; }
+.limitaciones-doc .decididas li { margin-bottom: 0.3rem; overflow-wrap: anywhere; }

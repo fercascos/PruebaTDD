@@ -176,6 +176,13 @@ class Limitacion(BaseModel):
     title: str
     status: str
     unavailable_reason: str | None
+    #: `[REQ]` De cuál de las clases de limitación sale ésta. Sin esto, las tres
+    #: se leen como la misma cosa, y no lo son: «no nos lo dieron» y «nos lo
+    #: dieron y dice que no vale» se redactan distinto en un informe.
+    origen: str = "CHECKLIST"
+    #: Solo para las documentales: de qué documento salen y por qué.
+    document_id: uuid.UUID | None = None
+    documento: str | None = None
 
 
 @router.get("/projects/{project_id}/report-limitations", response_model=list[Limitacion])
@@ -183,13 +190,27 @@ def limitaciones_del_informe(project_id: uuid.UUID, s: SesionDep) -> Any:
     """`[REC]` Lo que no se ha podido revisar, listo para volcar al informe.
 
     Declarar las limitaciones es una obligación profesional en una TDD, y hoy
-    suele reconstruirse de memoria al final del encargo. Aquí sale de la propia
-    checklist: la columna `affects_report_limitations` se calcula sola.
+    suele reconstruirse de memoria al final del encargo.
+
+    Son **tres clases** y las tres salen de aquí:
+
+    1. **Lo que no llegó**: una línea del checklist sin recibir. Se calcula sola
+       desde `affects_report_limitations`.
+    2. **Lo que no se contestó**: una pregunta sin respuesta del cliente.
+    3. `[REQ]` **Lo que llegó y dice que no vale**: un plan de autoprotección
+       redactado con las naves vacías describe recorridos de evacuación que
+       dejaron de ser ciertos en cuanto entró el primer inquilino. El documento
+       está entregado y la casilla marcada; sin esto, la limitación solo la ve
+       quien se lo lea entero.
+
+    De la tercera salen **solo las aceptadas**. Una limitación que una máquina
+    propuso y nadie miró no puede aparecer en un entregable firmado.
     """
     filas = (
         s.execute(
             text(
-                "SELECT d.title, CAST(d.status AS text) AS status, d.unavailable_reason "
+                "SELECT d.title, CAST(d.status AS text) AS status, d.unavailable_reason, "
+                "'CHECKLIST' AS origen, NULL::uuid AS document_id, NULL::text AS documento "
                 "FROM doc_request_item d JOIN project_phase ph ON ph.id = d.project_phase_id "
                 "WHERE ph.project_id = :p AND d.affects_report_limitations "
                 "ORDER BY d.display_order"
@@ -199,4 +220,20 @@ def limitaciones_del_informe(project_id: uuid.UUID, s: SesionDep) -> Any:
         .mappings()
         .all()
     )
-    return [dict(f) for f in filas]
+    documentales = (
+        s.execute(
+            text(
+                "SELECT l.texto AS title, CAST(l.motivo AS text) AS status, "
+                "l.seccion AS unavailable_reason, 'DOCUMENTO' AS origen, "
+                "l.document_id, doc.display_name AS documento "
+                "FROM limitacion_de_documento l "
+                "LEFT JOIN document doc ON doc.id = l.document_id "
+                "WHERE l.project_id = :p AND l.estado = 'ACEPTADA' "
+                "ORDER BY l.motivo, l.created_at"
+            ),
+            {"p": project_id},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in [*filas, *documentales]]

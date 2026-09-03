@@ -141,8 +141,79 @@ significa «alguien ha revisado la memoria de este edificio», y la ficha del
 activo lo enseña con esas palabras. Lo que queda registrado es más fino y es
 cierto: quién aceptó qué campo, cuándo, y de qué documento salió.
 
+### La tercera clase de limitación del informe `[REQ]`
+
+Un documento no solo aporta datos: aporta **lo que dice sobre su propia
+fiabilidad**, y eso va al apartado de limitaciones.
+
+Las dos clases que ya había salen de lo que **no llegó** —una línea del
+checklist sin recibir, una pregunta sin respuesta del cliente— y se calculaban
+solas. Ésta es lo contrario, y por eso no cabía en aquéllas: **el documento
+llegó, la casilla está marcada, el expediente parece completo, y el documento
+dice que no se puede confiar en él.**
+
+El caso que lo hizo evidente, leyendo un plan de autoprotección de verdad: el
+plan se redactó **con las naves vacías**, así que define los recorridos de
+evacuación suponiendo espacios diáfanos. En cuanto entra un inquilino con
+estanterías, esas longitudes, salidas y capacidades dejan de ser las que dice el
+plan. El documento está entregado y completo; sin esto, la limitación solo la ve
+quien se lo lea entero, y en un encargo con doscientos documentos eso no ocurre.
+
+| Decisión | Por qué |
+|---|---|
+| **Cuelgan del encargo**, no del activo | Un plan cubre un complejo de seis naves; una reserva sobre la evacuación no es de una nave concreta. El alcance del informe es el encargo |
+| **Nada llega al informe sin que alguien lo acepte** | Mismo ciclo que una propuesta de dato. Una limitación inventada por una máquina y colada en un entregable es peor que una que falte: la que falta se echa en falta; la inventada se firma |
+| **Descartar no borra** | La fila se queda con su testigo. Si el cliente pregunta por qué el informe no menciona que el plan se redactó con las naves vacías, la respuesta está en la base y no en la memoria de nadie |
+| El motivo es un **enumerado cerrado** | `CADUCADO`, `INCOMPLETO`, `NO_VIGENTE`, `DECLARADA`, `INCONSISTENTE`. Una lista abierta daría quince redacciones del mismo motivo sin forma de agruparlas |
+| El informe lleva el **origen** de cada una | «No nos lo dieron» y «nos lo dieron y dice que no vale» no se redactan igual. Sin el origen las dos se leen como la misma cosa |
+
+#### Lo que corrigió leer el documento real
+
+**1 · El PDF que se leyó no es un plan de autoprotección: es un resumen de uno.**
+Lo dice él mismo —«resumen de trabajo», «no sustituye al Plan de Autoprotección
+completo»— y su «capítulo 15 · Alertas, vacíos e inconsistencias» lo escribió
+quien preparó el resumen. Un PAU real, según el RD 393/2007 (Norma Básica de
+Autoprotección), tiene **capítulos 1 a 9 y anexos**: no hay capítulo 15. Un
+extractor colgado de ese epígrafe habría funcionado con ese PDF y con ninguno
+más, pareciendo que funcionaba en general.
+
+Así que las reglas son las que se sostienen sobre cualquier plan —el plazo de
+tres años del RD 393/2007, la fecha que no se lee, el documento que se declara
+no vigente, las casillas vacías— y la sección de salvedades se recoge **si está**,
+declarada como tal.
+
+**2 · El índice también trae el epígrafe, y eso costó una medición.** «15.
+Alertas, vacíos e inconsistencias» aparece dos veces: en el sumario de la página
+2 y como encabezado real ocho páginas después. Cortando desde el primero hasta
+el siguiente epígrafe *de reservas*, el cuerpo abarcaba el documento entero:
+**112 limitaciones de un documento que tiene doce.** Con el corte por epígrafe
+—cualquier epígrafe numerado cierra la sección anterior— y el descarte de
+sumarios, salen **14**, y las doce viñetas reales están entre ellas.
+
+**3 · `pdfminer` devuelve `(cid:127)` cuando la fuente no trae la tabla de
+glifos.** Es lo que pasa con las viñetas de muchos PDF. En un texto que se
+recoge literal y va a un informe firmado, eso aparece tal cual delante de cada
+salvedad. Se limpia antes de aplicar ninguna regla.
+
+**4 · Exigir un activo para extraer estaba mal.** La comprobación estaba al
+principio del endpoint, antes de leer: con ella, el documento que más
+limitaciones aporta —un plan que cubre seis naves y no es de ninguna— era justo
+el que no se podía leer. El activo hace falta para los **campos**, no para
+extraer, y ahora solo se exige si el documento propone alguno.
+
+`[REQ]` Y un plan de autoprotección nace **`RESTRINGIDO`**: lleva procedimientos
+de emergencia, puntos de reunión, ubicaciones de medios contra incendios y datos
+de las personas con responsabilidad en una emergencia. El propio documento marca
+varios de esos datos como «cuya divulgación puede comprometer seguridad u
+operación».
+
+`[LIM]` El **capítulo 4 del plan es el inventario de medios contra incendios y
+no se lee todavía**: emparejar cada medio con el catálogo de sistemas técnicos y
+con la ficha de equipo es otro trabajo. Se avisa en cada lectura.
+
 Qué extractor se usa lo decide **el tipo del documento**, en un registro con un
-lector por tipo. `[LIM]` Hoy solo hay uno, el de la memoria técnica; un tipo sin
+lector por tipo. `[LIM]` Hoy hay **dos** —memoria técnica y plan de
+autoprotección—, y cada uno está escrito contra **un** documento; un tipo sin
 lector responde `422` diciendo cuáles se leen, que es un caso normal y no una
 avería. `[LIM]` Esta revisión **no migra** lo que hubiera en
 `memoria_tecnica.propuesta`: la ruta antigua sigue funcionando, y vaciarlo

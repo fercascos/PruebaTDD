@@ -444,3 +444,39 @@ export type ResultadoDeExtraccion = {
   desconocidos: Record<string, string>
   avisos: string[]
 }
+
+/** Por qué un documento no se puede dar por bueno tal cual. */
+export type MotivoDeLimitacion =
+  | 'CADUCADO'
+  | 'INCOMPLETO'
+  | 'NO_VIGENTE'
+  | 'DECLARADA'
+  | 'INCONSISTENTE'
+
+/**
+ * `[REQ]` Una razón por la que lo revisado no se puede dar por cerrado.
+ *
+ * La **tercera clase** de limitación del informe. Las dos que ya había salen de
+ * lo que no llegó —una línea del checklist sin recibir, una pregunta sin
+ * respuesta—; ésta es lo contrario: el documento llegó, la casilla está
+ * marcada, y el documento dice que no se puede confiar en él.
+ *
+ * Solo las `ACEPTADA` llegan al informe. Una limitación que una máquina
+ * propuso y nadie miró no puede aparecer en un entregable firmado.
+ */
+export type LimitacionDocumental = {
+  id: string
+  texto: string
+  motivo: MotivoDeLimitacion
+  estado: 'PENDIENTE' | 'ACEPTADA' | 'DESCARTADA'
+  document_id: string | null
+  doc_type: string
+  /** El epígrafe del que salió, o la parte del documento que la produjo. */
+  seccion: string | null
+  evidencia: string | null
+  extractor: string
+  es_simulada: boolean
+  decidida_por: string | null
+  /** Cómo se llama el documento del que salió. */
+  documento: string | null
+}

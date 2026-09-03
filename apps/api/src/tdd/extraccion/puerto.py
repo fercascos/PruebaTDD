@@ -80,6 +80,54 @@ class ObjetoPropuesto:
     procedencia: Procedencia | None = None
 
 
+#: Por qué un documento no se puede dar por bueno tal cual. Cerrado a propósito:
+#: una lista abierta acabaría con quince redacciones del mismo motivo y sin
+#: forma de agruparlas en el informe.
+#:
+#: * `CADUCADO` — el documento existe pero está fuera de su plazo de vigencia o
+#:   de revisión. Es la limitación más frecuente y la más fácil de pasar por
+#:   alto: el documento está en la carpeta, así que la casilla se marca.
+#: * `INCOMPLETO` — le faltan datos que el propio documento reserva un sitio
+#:   para llevar: casillas en blanco, anexos que referencia y no adjunta.
+#: * `NO_VIGENTE` — el documento se declara a sí mismo borrador, resumen o
+#:   copia sin valor: dice que no sustituye al bueno.
+#: * `DECLARADA` — el documento declara sus propias reservas y aquí se recogen
+#:   tal cual. No las escribe la aplicación: las escribió quien lo redactó.
+#: * `INCONSISTENTE` — el documento se contradice consigo mismo.
+MOTIVOS: tuple[str, ...] = ("CADUCADO", "INCOMPLETO", "NO_VIGENTE", "DECLARADA", "INCONSISTENTE")
+
+
+@dataclass(frozen=True, slots=True)
+class LimitacionPropuesta:
+    """`[REQ]` Una razón por la que lo revisado no se puede dar por cerrado.
+
+    Declarar las limitaciones es una obligación profesional en una due
+    diligence, y hoy se reconstruyen de memoria al final del encargo. Las que ya
+    había salían de **lo que no llegó**: una línea de la checklist sin recibir,
+    una pregunta sin respuesta. Ésta es de otra clase y por eso no cabía en
+    aquéllas: **el documento llegó, y dice que no se puede confiar en él**.
+
+    Un plan de autoprotección redactado con las naves vacías describe unos
+    recorridos de evacuación que dejaron de ser ciertos en cuanto entró el
+    primer inquilino. El documento está en la carpeta y la casilla está marcada;
+    la limitación no la ve nadie salvo quien lo lea entero.
+    """
+
+    #: Qué es lo que no se puede dar por bueno. Va en la voz del informe.
+    texto: str
+    #: Uno de `MOTIVOS`.
+    motivo: str
+    procedencia: Procedencia | None = None
+
+    def __post_init__(self) -> None:
+        if self.motivo not in MOTIVOS:
+            raise ValueError(
+                f"«{self.motivo}» no es un motivo de limitación. Los que hay: "
+                f"{', '.join(MOTIVOS)}. Inventar uno nuevo aquí lo dejaría fuera de "
+                "los recuentos del informe sin que nadie se entere."
+            )
+
+
 @dataclass
 class Aportacion:
     """Lo que un documento aporta al expediente. Todo propuesto, nada escrito.
@@ -100,6 +148,10 @@ class Aportacion:
     campos: list[CampoPropuesto] = field(default_factory=list)
     plantas: list[PlantaPropuesta] = field(default_factory=list)
     objetos: list[ObjetoPropuesto] = field(default_factory=list)
+    #: `[REQ]` Lo que el documento dice sobre su propia fiabilidad. Un documento
+    #: puede no aportar ni un dato y aportar la limitación más importante del
+    #: encargo, así que esto **no** cuenta como aportación vacía.
+    limitaciones: list[LimitacionPropuesta] = field(default_factory=list)
 
     #: Etiquetas del documento que el extractor leyó y no supo encajar. Se
     #: declaran en vez de descartarse: es como se descubre el sinónimo que
@@ -109,7 +161,7 @@ class Aportacion:
     avisos: list[str] = field(default_factory=list)
 
     def vacia(self) -> bool:
-        return not (self.campos or self.plantas or self.objetos)
+        return not (self.campos or self.plantas or self.objetos or self.limitaciones)
 
 
 class Extractor(Protocol):
@@ -187,9 +239,11 @@ def _olvidar_todo() -> None:
 
 
 __all__ = [
+    "MOTIVOS",
     "Aportacion",
     "CampoPropuesto",
     "Extractor",
+    "LimitacionPropuesta",
     "ObjetoPropuesto",
     "PlantaPropuesta",
     "Procedencia",

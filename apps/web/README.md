@@ -45,7 +45,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Informes** | Avisos previos, generación, descarga PPTX/XLSX y ciclo hasta emitir |
 | **Plantillas** | Subida, análisis y mapeo de marcadores |
 | **Sugerencias** | Proponer cambios; la bandeja solo la ve quien atiende el buzón |
-| **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante |
+| **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante. Al final, **lo que la documentación dice sobre sí misma**: las limitaciones que aporta cada documento, con su motivo y su epígrafe, y solo las aceptadas entran en el informe |
 
 ## Los tres orígenes de fotografía
 

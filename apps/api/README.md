@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.192 pruebas
+make test        # 1.227 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -79,7 +79,8 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |
 | **Memoria técnica** · lectura determinista del PDF | ✅ Completo | `test_extraccion_de_memoria.py` · 16 + `test_memoria_tecnica.py` · 12 |
 | **Esqueleto del CAPEX** desde la memoria | ✅ Completo | `tests/integration/test_memoria_y_esqueleto.py` · 14 |
-| **Extracción por tipo de documento** · propuesta con procedencia | ⚠️ Un solo lector | `tests/integration/test_extraccion_por_documento.py` · 12 |
+| **Extracción por tipo de documento** · propuesta con procedencia | ⚠️ Dos lectores | `tests/integration/test_extraccion_por_documento.py` · 12 |
+| **Limitaciones que aporta la documentación** · la tercera clase | ✅ Completo | `test_limitaciones_del_plan.py` · 19 + `test_limitaciones_documentales.py` · 16 |
 
 ## El esquema se versiona con Alembic
 
@@ -232,8 +233,16 @@ Se dice aquí, y no enterrado en una nota, porque condiciona expectativas:
   reparte los suyos entre seis capítulos. Eso es clasificación semántica y
   **falta elegir proveedor**; el adaptador que hay hoy (`PorSeccion`) declara
   `es_simulado` y sirve para demostrar que el puerto encaja, no para sembrar un
-  CAPEX. Y **solo hay un lector**, el de la memoria técnica: los demás tipos de
-  documento responden `422` diciendo que todavía no se leen.
+  CAPEX. Y **solo hay dos lectores** —memoria técnica y plan de
+  autoprotección—: los demás tipos responden `422` diciendo que aún no se leen.
+- **El inventario de PCI del plan de autoprotección.** El capítulo 4 de la Norma
+  Básica enumera hidrantes, BIE, rociadores, detección y alumbrado; emparejar
+  cada medio con el catálogo de sistemas técnicos y con la ficha de equipo no
+  está construido. El extractor lo dice **en cada lectura**, no solo aquí: un
+  plan leído sin errores dejaría creer que se ha aprovechado todo lo que traía.
+- **Los dos extractores están escritos contra UN documento cada uno**, y el del
+  plan contra un *resumen* de uno. Que leen ésos está medido; que generalicen,
+  no. Hace falta un segundo ejemplar de cada tipo para poder afirmarlo.
 - **Frontend:** lo construido y lo que falta, en
   [`apps/web/README.md`](../web/README.md).
 

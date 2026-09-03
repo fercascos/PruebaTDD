@@ -42,6 +42,27 @@ router = APIRouter(tags=["Documentos"])
 #: puerta a subir una copia de seguridad entera.
 MAX_BYTES_DOCUMENTO = 100 * 1024 * 1024
 
+#: `[REQ]` Confidencialidad por omisión **según el tipo de documento**.
+#:
+#: Casi todo es `INTERNO`, que es lo razonable para la documentación de un
+#: encargo. La excepción es el **plan de autoprotección**: lleva procedimientos
+#: de emergencia, puntos de reunión, ubicaciones de medios contra incendios y
+#: datos de las personas con responsabilidad en una emergencia. Publicarlo es
+#: dar el mapa a quien quiera aprovecharlo, y el propio documento que se leyó
+#: marca varios de esos datos como «cuya divulgación puede comprometer
+#: seguridad u operación».
+#:
+#: `RESTRINGIDO` no es decorativo: `descargar()` ya comprueba el rol de la
+#: organización antes de servir un documento restringido.
+#:
+#: `[REC]` Es un **valor por omisión**, no una imposición. Quien sube puede
+#: mandar otro, y a veces hará falta. Lo que evita es el caso frecuente: subirlo
+#: sin pensar en la confidencialidad y que se quede en el nivel más abierto.
+CONFIDENCIALIDAD_POR_OMISION: dict[str, str] = {"PLAN_AUTOPROTECCION": "RESTRINGIDO"}
+
+#: Para el resto de tipos, y para un documento sin tipo.
+CONFIDENCIALIDAD_HABITUAL = "INTERNO"
+
 #: Extensiones admitidas `[REQ]` §15.11.
 EXTENSIONES_ADMITIDAS = frozenset(
     {"pdf", "docx", "doc", "xlsx", "xls", "dwg", "dxf", "jpg", "jpeg", "png", "tif", "tiff", "txt"}
@@ -206,7 +227,11 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     av: AntivirusDep,
     archivo: Annotated[UploadFile, File(alias="file")],
     doc_type: Annotated[str | None, Form()] = None,
-    confidentiality: Annotated[str, Form()] = "INTERNO",
+    # `[REQ]` Sin valor por omisión aquí: lo pone `CONFIDENCIALIDAD_POR_OMISION`
+    # según el tipo. Con `"INTERNO"` clavado, un plan de autoprotección subido
+    # sin marcar nada quedaba como interno, y lleva procedimientos de
+    # emergencia, puntos de reunión y datos de personas.
+    confidentiality: Annotated[str | None, Form()] = None,
     asset_id: Annotated[uuid.UUID | None, Form()] = None,
     doc_request_item_id: Annotated[uuid.UUID | None, Form()] = None,
     qa_round_id: Annotated[uuid.UUID | None, Form()] = None,
@@ -267,6 +292,12 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     if tipo is None and qa_round_id is not None:
         tipo = "QA"
     tipo = tipo or "OTRO"
+
+    # `[REQ]` La confidencialidad se decide **después** de resolver el tipo: si
+    # el tipo lo hereda de la línea del checklist, el nivel tiene que salir de
+    # ese tipo heredado y no del que no se mandó.
+    if confidentiality is None:
+        confidentiality = CONFIDENCIALIDAD_POR_OMISION.get(tipo, CONFIDENCIALIDAD_HABITUAL)
 
     version = 1
     if supersedes_document_id is not None:
