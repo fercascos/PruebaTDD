@@ -39,7 +39,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Riesgos** | Distribución por grado, matriz riesgo × horizonte y desglose por capítulo |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
-| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos —**agrupada o de un solo activo**— y tres gráficos de barras |
+| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos y tres gráficos de barras, todo ello **agrupado o de un solo activo** con un mismo selector |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |
@@ -154,6 +154,42 @@ mediciones, con sus dos excepciones declaradas, están en `src/graficos/paleta.t
 nombre, su importe y su porcentaje escritos; cada barra, su nombre y su cifra; y
 bajo la tarta hay una tabla con los mismos números. El color acompaña; no
 informa por sí solo.
+
+### El filtro alcanza los cuatro bloques a la vez
+
+`[REQ]` El selector de activo está **una sola vez, arriba**, junto a la frase
+que dice qué se está mirando, y manda sobre los titulares y sobre los cuatro
+gráficos. La razón es que en la reunión las cuatro preguntas se hacen del mismo
+edificio: saber en qué se va el dinero de una nave no sirve de nada si el
+«cuándo hay que pagarlo» de al lado sigue siendo el del parque entero. Un filtro
+por gráfico permitiría justo esa pantalla —cuatro alcances distintos, ninguno
+escrito— y sería un error de lectura imposible de detectar mirándola.
+
+Dos consecuencias, las dos deliberadas:
+
+* **«Qué edificio» desaparece cuando hay un activo elegido.** Filtrado se
+  quedaría en una sola barra al 100 %, que no es un reparto: es un dato que ya
+  está en el titular.
+* **Ese corte se sigue pidiendo sin filtrar**, porque es el índice del
+  desplegable y da el total del encargo. Con un activo elegido, la cuarta
+  tarjeta deja de contar activos y pasa a decir **qué parte del CAPEX del
+  encargo es este edificio**.
+
+Los tres cortes filtrados suman lo mismo entre sí, y hay una prueba en la suite
+del API que lo impone; en el navegador se lee comparando el titular con las tres
+sumas.
+
+### Los números se escriben en castellano, y eso hay que forzarlo
+
+`src/graficos/formato.ts`, en un sitio y no en cada componente, porque el fallo
+que arregla es exactamente el de repetirlo. Dos trampas, las dos encontradas
+mirando la pantalla y ninguna detectable con una prueba de datos:
+
+* `toFixed(1)` devuelve **siempre** un punto decimal: «83.4 %». En castellano el
+  separador decimal es la coma. Estaba en tres sitios escritos el mismo día.
+* `Intl` **omite el separador de millares** en los números de cuatro cifras:
+  «4300,00 €». Es correcto en prosa y malo en una columna de importes, al lado
+  de «22.400,00 €». De ahí `useGrouping: true`.
 
 `[LIM]` **Solo hay paleta clara.** La aplicación no tiene modo oscuro —no hay
 una sola regla `prefers-color-scheme` en la hoja de estilos—, así que no se

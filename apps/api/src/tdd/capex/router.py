@@ -212,7 +212,12 @@ class ResumenPorHorizonte(BaseModel):
     "/projects/{project_id}/capex/summary/by-horizon",
     response_model=list[ResumenPorHorizonte],
 )
-def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
+def resumen_por_horizonte(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    #: El perfil temporal del gasto de un solo edificio. Ver `by-concept`.
+    asset_id: uuid.UUID | None = None,
+) -> Any:
     """P-05 · Con un horizonte por línea, esto es un `GROUP BY`.
 
     Con cinco columnas editables serían cinco sumas independientes que podrían
@@ -237,14 +242,24 @@ def resumen_por_horizonte(project_id: uuid.UUID, s: SesionDep) -> Any:
                 "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
-                "FROM time_horizon th "
-                "LEFT JOIN finding f ON f.deleted_at IS NULL "
-                "LEFT JOIN capex_item ci "
-                "  ON ci.time_horizon_id = th.id AND ci.project_id = :p "
-                "  AND ci.finding_id = f.id "
+                # Las líneas vivas del encargo, en una subconsulta, y el
+                # `LEFT JOIN` contra los cinco plazos. Antes eran dos `LEFT
+                # JOIN` encadenados que cruzaban cada plazo con TODOS los
+                # hallazgos antes de filtrar; con el activo dentro habría que
+                # repetir la condición en dos sitios y es donde se cuela un
+                # descuadre. Así el filtro está escrito una vez.
+                "FROM time_horizon th LEFT JOIN ( "
+                "  SELECT ci.time_horizon_id, ci.id, ci.amount, ci.tax_amount, ci.total_cost "
+                "  FROM capex_item ci "
+                "  JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "  WHERE ci.project_id = :p "
+                "    AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
+                ") ci ON ci.time_horizon_id = th.id "
+                # Los cinco plazos salen siempre, con ceros: un plazo que
+                # desaparece de la lista se confunde con uno que no toca.
                 "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
             ),
-            {"p": project_id},
+            {"p": project_id, "a": str(asset_id) if asset_id else None},
         )
         .mappings()
         .all()
@@ -340,7 +355,12 @@ class ResumenPorCapitulo(BaseModel):
     "/projects/{project_id}/capex/summary/by-chapter",
     response_model=list[ResumenPorCapitulo],
 )
-def resumen_por_capitulo(project_id: uuid.UUID, s: SesionDep) -> Any:
+def resumen_por_capitulo(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    #: Qué parte de UN edificio se lleva el dinero. Ver `by-concept`.
+    asset_id: uuid.UUID | None = None,
+) -> Any:
     """El CAPEX por **capítulo** del árbol: qué parte del edificio se lleva el
     dinero.
 
@@ -365,9 +385,10 @@ def resumen_por_capitulo(project_id: uuid.UUID, s: SesionDep) -> Any:
                 "JOIN capex_code cap ON cap.id = CASE WHEN cod.level = 3 "
                 "                                     THEN cod.parent_id ELSE cod.id END "
                 "WHERE ci.project_id = :p "
+                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
                 "GROUP BY cap.code, cap.name_es ORDER BY sum(ci.amount) DESC"
             ),
-            {"p": project_id},
+            {"p": project_id, "a": str(asset_id) if asset_id else None},
         )
         .mappings()
         .all()

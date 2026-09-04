@@ -7,6 +7,7 @@ import type {
   ResumenPorHorizonte,
 } from '../api/tipos'
 import { Tarta, type Porcion } from '../graficos/Tarta'
+import { euros, eurosExactos, porcentaje } from '../graficos/formato'
 import { agrupar } from '../graficos/paleta'
 import { Mensaje, Vacio } from '../ui/Marco'
 
@@ -21,7 +22,22 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * | ¿En qué se va el dinero? | concepto | **tarta** — es un reparto parte-todo |
  * | ¿Cuándo hay que pagarlo? | horizonte | barras, en orden de plazo |
  * | ¿Qué parte del edificio? | capítulo | barras, de mayor a menor |
- * | ¿Qué edificio? | activo | barras, solo si hay más de uno |
+ * | ¿Qué edificio? | activo | barras, solo si hay más de uno y sin filtrar |
+ *
+ * ## El filtro alcanza a toda la vista
+ *
+ * `[REQ]` Un selector de activo arriba, y **los tres primeros cortes se piden
+ * filtrados**. Las tarjetas de titulares se mueven con él: una que dijera
+ * «CAPEX del encargo» encima de unos gráficos de una sola nave se contradice
+ * con ellos, y quien mire por encima se lleva la cifra equivocada.
+ *
+ * «Qué edificio» **desaparece** al elegir uno, y no por ahorrar sitio: con el
+ * filtro puesto sería una sola barra con el total otra vez, que es lo que ya
+ * dicen las tarjetas. Un gráfico de una barra no es un gráfico.
+ *
+ * Y `by-asset` **no se filtra nunca**: es la lista de activos, hace de índice
+ * para el desplegable y da el total del encargo, que es lo que permite decir
+ * qué parte representa el activo elegido sin volver a pedirlo.
  *
  * ## Por qué solo una es una tarta
  *
@@ -42,41 +58,21 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * blanco y negro en cada reunión, y uno de cada doce hombres es daltónico.
  */
 
-/**
- * `useGrouping` no es un capricho.
- *
- * En español, `Intl` omite el separador de millares en los números de cuatro
- * cifras —«4300,00 €»—, que es correcto en prosa y **malo en una columna de
- * importes**: al lado de «22.400,00 €» se lee peor y rompe la alineación de las
- * cifras. En una tabla de dinero manda la comparación, no la tipografía de un
- * párrafo.
- */
-const euros = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 0,
-  useGrouping: true,
-})
+/** Lo que no depende del filtro: la lista de activos con sus totales. */
+type Datos = { activo: ResumenPorActivo[] }
 
-const eurosExactos = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 2,
-  useGrouping: true,
-})
-
-type Datos = {
+/** Los tres cortes que sí lo hacen. */
+type Filtrado = {
   concepto: ResumenPorConcepto[]
   horizonte: ResumenPorHorizonte[]
   capitulo: ResumenPorCapitulo[]
-  activo: ResumenPorActivo[]
 }
 
 export function ResumenCapex({ projectId }: { projectId: string }) {
   const [datos, setDatos] = useState<Datos | null>(null)
   const [error, setError] = useState<string | null>(null)
   /**
-   * `[REQ]` Sobre qué activo se lee el reparto por concepto. Vacío = todos.
+   * `[REQ]` Sobre qué activo se lee **toda la vista**. Vacío = todos, agrupados.
    *
    * Son dos preguntas y las dos se hacen en la misma reunión: agregado dice
    * cómo se comporta el parque —si es mantenimiento diferido o normativa—, y
@@ -84,19 +80,20 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
    * el precio. Un parque con un 40 % de normativa puede tenerlo concentrado en
    * una sola nave, y agregado eso no se ve.
    */
-  const [activoDelReparto, setActivoDelReparto] = useState('')
-  /** El reparto filtrado. Nulo mientras llega, para no enseñar el anterior. */
-  const [reparto, setReparto] = useState<ResumenPorConcepto[] | null>(null)
+  const [activo, setActivo] = useState('')
+  /**
+   * Los tres cortes filtrados. Nulo mientras llegan, para no enseñar los del
+   * activo anterior con el selector diciendo otra cosa.
+   */
+  const [filtrado, setFiltrado] = useState<Filtrado | null>(null)
 
   const recargar = useCallback(async () => {
     try {
-      const [concepto, horizonte, capitulo, activo] = await Promise.all([
-        obtener<ResumenPorConcepto[]>(`/projects/${projectId}/capex/summary/by-concept`),
-        obtener<ResumenPorHorizonte[]>(`/projects/${projectId}/capex/summary/by-horizon`),
-        obtener<ResumenPorCapitulo[]>(`/projects/${projectId}/capex/summary/by-chapter`),
-        obtener<ResumenPorActivo[]>(`/projects/${projectId}/capex/summary/by-asset`),
-      ])
-      setDatos({ concepto, horizonte, capitulo, activo })
+      setDatos({
+        activo: await obtener<ResumenPorActivo[]>(
+          `/projects/${projectId}/capex/summary/by-asset`,
+        ),
+      })
       setError(null)
     } catch (e) {
       setError((e as Error).message)
@@ -107,31 +104,44 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
     void recargar()
   }, [recargar])
 
-  // El reparto se pide aparte porque es el único corte que se filtra. Pedirlo
-  // con los otros tres obligaría a recargar la pantalla entera al cambiar de
-  // activo, y los otros tres no cambian.
+  // Los tres cortes filtrables se piden juntos y aparte del resto: `by-asset`
+  // no se filtra —es la lista de activos, y con el filtro puesto sería una sola
+  // fila— y hace de índice para el desplegable.
   useEffect(() => {
-    const sufijo = activoDelReparto ? `?asset_id=${activoDelReparto}` : ''
+    const sufijo = activo ? `?asset_id=${activo}` : ''
+    const base = `/projects/${projectId}/capex/summary`
     let vigente = true
-    setReparto(null)
-    obtener<ResumenPorConcepto[]>(`/projects/${projectId}/capex/summary/by-concept${sufijo}`)
-      .then((r) => {
-        // Si el usuario ha cambiado de activo mientras llegaba esta respuesta,
-        // se descarta: sin esto, la más lenta pisa a la más reciente y el
-        // gráfico acaba enseñando un activo distinto del que dice el selector.
-        if (vigente) setReparto(r)
+    setFiltrado(null)
+    Promise.all([
+      obtener<ResumenPorConcepto[]>(`${base}/by-concept${sufijo}`),
+      obtener<ResumenPorHorizonte[]>(`${base}/by-horizon${sufijo}`),
+      obtener<ResumenPorCapitulo[]>(`${base}/by-chapter${sufijo}`),
+    ])
+      .then(([concepto, horizonte, capitulo]) => {
+        // Si se ha cambiado de activo mientras llegaba esta respuesta, se
+        // descarta: sin esto, la más lenta pisa a la más reciente y los
+        // gráficos acaban enseñando un activo distinto del que dice el
+        // selector. Con tres peticiones en vuelo la ventana es más ancha.
+        if (vigente) setFiltrado({ concepto, horizonte, capitulo })
       })
       .catch((e: Error) => setError(e.message))
     return () => {
       vigente = false
     }
-  }, [projectId, activoDelReparto])
+  }, [projectId, activo])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
   if (!datos) return <p className="cargando">Cargando el resumen…</p>
 
-  const total = datos.concepto.reduce((s, c) => s + Number(c.amount), 0)
-  if (total <= 0) {
+  // El total del ENCARGO sale de `by-asset`, que no se filtra. Es lo que
+  // permite decir qué parte del encargo representa el activo elegido sin
+  // pedirlo otra vez, y lo que evita que la pantalla se quede en blanco
+  // mientras llegan los tres cortes.
+  const totalDelEncargo = datos.activo.reduce((s, a) => s + Number(a.amount), 0)
+  const cartera = datos.activo.length > 1
+  const elegido = datos.activo.find((a) => a.asset_id === activo)
+
+  if (totalDelEncargo <= 0) {
     return (
       <Vacio>
         Todavía no hay ninguna línea de CAPEX valorada. Este resumen se rellena solo a medida que
@@ -140,15 +150,47 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
     )
   }
 
-  const hallazgos = datos.activo.reduce((s, a) => s + a.findings, 0)
-  const lineas = datos.concepto.reduce((s, c) => s + c.lines, 0)
-  const conActuaciones = datos.activo.filter((a) => a.findings > 0).length
+  const selector = cartera ? (
+    <label className="filtro-del-resumen">
+      Activo
+      <select value={activo} onChange={(e) => setActivo(e.target.value)}>
+        <option value="">Todos los activos, agrupados</option>
+        {datos.activo.map((a) => (
+          <option key={a.asset_id} value={a.asset_id}>
+            {a.asset_code ? `${a.asset_code} · ${a.asset_name}` : a.asset_name}
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : null
+
+  // Mientras llegan los tres cortes se enseña el marco —titulares y selector—
+  // y no una pantalla en blanco: cambiar de activo no puede hacer desaparecer
+  // el propio selector con el que se acaba de elegir.
+  if (!filtrado) {
+    return (
+      <div className="resumen-capex">
+        <Cabecera
+          selector={selector}
+          elegido={elegido}
+          totalDelEncargo={totalDelEncargo}
+          activos={datos.activo}
+          alQuitarFiltro={() => setActivo('')}
+        />
+        <p className="cargando">Cargando los gráficos…</p>
+      </div>
+    )
+  }
+
+  const total = filtrado.concepto.reduce((s, c) => s + Number(c.amount), 0)
+  const lineas = filtrado.concepto.reduce((s, c) => s + c.lines, 0)
+  const hallazgos = elegido
+    ? elegido.findings
+    : datos.activo.reduce((s, a) => s + a.findings, 0)
 
   // `[REQ]` Cuatro conceptos y el resto agrupado: es lo que la paleta admite
   // medido, no una preferencia. Ver `graficos/paleta.ts`.
-  const conceptos = reparto ?? datos.concepto
-  const totalDelReparto = conceptos.reduce((s, c) => s + Number(c.amount), 0)
-  const { propias, resto } = agrupar(conceptos, (c) => Number(c.amount))
+  const { propias, resto } = agrupar(filtrado.concepto, (c) => Number(c.amount))
   const porciones: Porcion[] = [
     ...propias.map((c) => ({
       clave: c.capex_concept_code,
@@ -166,16 +208,28 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
         ]
       : []),
   ]
-  const nombreDelActivo = datos.activo.find((a) => a.asset_id === activoDelReparto)?.asset_name
 
   return (
     <div className="resumen-capex">
+      <Cabecera
+        selector={selector}
+        elegido={elegido}
+        totalDelEncargo={totalDelEncargo}
+        activos={datos.activo}
+        alQuitarFiltro={() => setActivo('')}
+      />
+
       {/* `[REC]` Los titulares primero, y como cifras y no como gráficos. Un
-          número solo no es un gráfico de una barra: es un número. */}
+          número solo no es un gráfico de una barra: es un número.
+          Y **se mueven con el filtro**: una tarjeta que dijera «CAPEX del
+          encargo» encima de unos gráficos de una sola nave se contradice con
+          ellos, y quien mire por encima se lleva la cifra equivocada. */}
       <ul className="cifras-clave">
         <li>
           <span className="valor">{eurosExactos.format(total)}</span>
-          <span className="rotulo">CAPEX del encargo</span>
+          <span className="rotulo">
+            {elegido ? `CAPEX de ${elegido.asset_name}` : 'CAPEX del encargo'}
+          </span>
         </li>
         <li>
           <span className="valor">{hallazgos}</span>
@@ -187,154 +241,170 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
             {lineas === 1 ? 'línea de CAPEX' : 'líneas de CAPEX'}
           </span>
         </li>
-        <li>
-          <span className="valor">
-            {conActuaciones}
-            <span className="ayuda"> / {datos.activo.length}</span>
-          </span>
-          <span className="rotulo">activos con actuaciones</span>
-        </li>
+        {elegido ? (
+          /* Con un activo elegido, «activos con actuaciones» no dice nada: la
+             pregunta pasa a ser cuánto pesa ESTE dentro del encargo, que es lo
+             que se lleva a la negociación. */
+          <li>
+            <span className="valor">{porcentaje(total, totalDelEncargo)}</span>
+            <span className="rotulo">del CAPEX del encargo</span>
+          </li>
+        ) : (
+          <li>
+            <span className="valor">
+              {datos.activo.filter((a) => a.findings > 0).length}
+              <span className="ayuda"> / {datos.activo.length}</span>
+            </span>
+            <span className="rotulo">activos con actuaciones</span>
+          </li>
+        )}
       </ul>
 
-      <section className="bloque">
-        <div className="titulo-con-filtro">
-          <h3>En qué se va el dinero</h3>
-          {/* `[REQ]` El selector va PEGADO al gráfico que filtra, no en una
-              barra de filtros arriba: los otros tres cortes siguen siendo del
-              encargo entero, y un filtro suelto en lo alto de la pantalla se
-              lee como si los afectara a todos. */}
-          {datos.activo.length > 1 && (
-            <label className="filtro-del-bloque">
-              Activo
-              <select
-                value={activoDelReparto}
-                onChange={(e) => setActivoDelReparto(e.target.value)}
-              >
-                <option value="">Todos los activos, agrupados</option>
-                {datos.activo.map((a) => (
-                  <option key={a.asset_id} value={a.asset_id}>
-                    {a.asset_code ? `${a.asset_code} · ${a.asset_name}` : a.asset_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
-        <p className="ayuda">
-          Por concepto de gasto. Es la distinción que separa un edificio caro de uno mal
-          mantenido: <strong>«Normativa» hay que pagarlo y «Mejora» se puede decidir</strong>,
-          y en el total valen lo mismo.
-        </p>
-        {/* `[REQ]` El alcance, ESCRITO y con su total. Los otros bloques son
-            del encargo entero, así que un reparto de una sola nave tiene que
-            decir de cuál es: sin esto, la tarta se lee como el encargo y no
-            cuadra con la cifra de arriba. */}
-        <p className="alcance-del-bloque">
-          {nombreDelActivo ? (
-            <>
-              Solo <strong>{nombreDelActivo}</strong> ·{' '}
-              {eurosExactos.format(totalDelReparto)}
-              <button type="button" className="enlace" onClick={() => setActivoDelReparto('')}>
-                ver todos agrupados
-              </button>
-            </>
-          ) : (
-            <>
-              Los <strong>{datos.activo.length}</strong> activos del encargo, agrupados ·{' '}
-              {eurosExactos.format(totalDelReparto)}
-            </>
-          )}
-        </p>
-
-        {reparto === null ? (
-          <p className="cargando">Cargando el reparto…</p>
-        ) : totalDelReparto <= 0 ? (
-          <Vacio>
-            {nombreDelActivo
-              ? `«${nombreDelActivo}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.`
-              : 'Todavía no hay ninguna línea de CAPEX valorada.'}
-          </Vacio>
-        ) : (
-          <>
+      {total <= 0 ? (
+        <Vacio>
+          {elegido
+            ? `«${elegido.asset_name}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.`
+            : 'Todavía no hay ninguna línea de CAPEX valorada.'}
+        </Vacio>
+      ) : (
+        <>
+          <section className="bloque">
+            <h3>En qué se va el dinero</h3>
+            <p className="ayuda">
+              Por concepto de gasto. Es la distinción que separa un edificio caro de uno mal
+              mantenido: <strong>«Normativa» hay que pagarlo y «Mejora» se puede
+              decidir</strong>, y en el total valen lo mismo.
+            </p>
             <Tarta
               porciones={porciones}
               titulo={
-                nombreDelActivo
-                  ? `Reparto del CAPEX de ${nombreDelActivo} por concepto de gasto`
+                elegido
+                  ? `Reparto del CAPEX de ${elegido.asset_name} por concepto de gasto`
                   : 'Reparto del CAPEX del encargo por concepto de gasto'
               }
               formatear={(v) => eurosExactos.format(v)}
             />
             <Tabla
               columna="Concepto"
-              filas={conceptos.map((c) => ({
+              filas={filtrado.concepto.map((c) => ({
                 clave: c.capex_concept_code,
                 nombre: c.capex_concept_name,
                 importe: Number(c.amount),
                 detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
               }))}
-              total={totalDelReparto}
+              total={total}
             />
-          </>
-        )}
-      </section>
+          </section>
 
-      <section className="bloque">
-        <h3>Cuándo hay que pagarlo</h3>
-        <p className="ayuda">
-          En orden de plazo, no de importe: aquí lo que se lee es el perfil temporal del gasto,
-          y reordenarlo por cuantía lo destruiría.
-        </p>
-        <Barras
-          filas={datos.horizonte.map((h) => ({
-            clave: h.time_horizon_code,
-            nombre: h.time_horizon_name,
-            importe: Number(h.amount),
-            detalle: `${h.lines} ${h.lines === 1 ? 'línea' : 'líneas'}`,
-          }))}
-        />
-      </section>
-
-      <section className="bloque">
-        <h3>Qué parte del edificio</h3>
-        <p className="ayuda">
-          Por capítulo del árbol de CAPEX. Un hallazgo codificado en un objeto suma en su
-          capítulo: si no, el reparto saldría partido en trozos que no suman nada reconocible.
-        </p>
-        <Barras
-          filas={datos.capitulo.map((c) => ({
-            clave: c.chapter_code,
-            nombre: `${c.chapter_code} · ${c.chapter_name}`,
-            importe: Number(c.amount),
-            detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
-          }))}
-        />
-      </section>
-
-      {/* Con un solo activo, un gráfico de una barra es el total otra vez. */}
-      {datos.activo.length > 1 && (
-        <section className="bloque">
-          <h3>Qué edificio</h3>
-          <p className="ayuda">
-            En un encargo de cartera es el número que entra en la negociación de cada edificio.
-            Los activos sin actuaciones salen con cero: un activo que desaparece de la lista se
-            confunde con uno que se visitó y no tenía nada.
-          </p>
-          {/* De mayor a menor: es una comparación de magnitudes y la API los
-              devuelve por nombre, que aquí no significa nada. En «cuándo hay
-              que pagarlo» es al revés y por eso allí NO se reordena. */}
-          <Barras
-            filas={[...datos.activo]
-              .sort((a, b) => Number(b.amount) - Number(a.amount))
-              .map((a) => ({
-                clave: a.asset_id,
-                nombre: a.asset_name,
-                importe: Number(a.amount),
-                detalle: `${a.findings} ${a.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+          <section className="bloque">
+            <h3>Cuándo hay que pagarlo</h3>
+            <p className="ayuda">
+              En orden de plazo, no de importe: aquí lo que se lee es el perfil temporal del
+              gasto, y reordenarlo por cuantía lo destruiría.
+            </p>
+            <Barras
+              filas={filtrado.horizonte.map((h) => ({
+                clave: h.time_horizon_code,
+                nombre: h.time_horizon_name,
+                importe: Number(h.amount),
+                detalle: `${h.lines} ${h.lines === 1 ? 'línea' : 'líneas'}`,
               }))}
-          />
-        </section>
+            />
+          </section>
+
+          <section className="bloque">
+            <h3>Qué parte del edificio</h3>
+            <p className="ayuda">
+              Por capítulo del árbol de CAPEX. Un hallazgo codificado en un objeto suma en su
+              capítulo: si no, el reparto saldría partido en trozos que no suman nada
+              reconocible.
+            </p>
+            <Barras
+              filas={filtrado.capitulo.map((c) => ({
+                clave: c.chapter_code,
+                nombre: `${c.chapter_code} · ${c.chapter_name}`,
+                importe: Number(c.amount),
+                detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+              }))}
+            />
+          </section>
+
+          {/* `[REQ]` Desaparece al elegir un activo, y no por ahorrar sitio:
+              con el filtro puesto sería **una sola barra con el total otra
+              vez**, que es lo que ya dicen las tarjetas de arriba. Un gráfico
+              de una barra no es un gráfico. Con un solo activo en el encargo,
+              lo mismo. */}
+          {cartera && !elegido && (
+            <section className="bloque">
+              <h3>Qué edificio</h3>
+              <p className="ayuda">
+                En un encargo de cartera es el número que entra en la negociación de cada
+                edificio. Los activos sin actuaciones salen con cero: un activo que desaparece
+                de la lista se confunde con uno que se visitó y no tenía nada.
+              </p>
+              {/* De mayor a menor: es una comparación de magnitudes y la API los
+                  devuelve por nombre, que aquí no significa nada. En «cuándo hay
+                  que pagarlo» es al revés y por eso allí NO se reordena. */}
+              <Barras
+                filas={[...datos.activo]
+                  .sort((a, b) => Number(b.amount) - Number(a.amount))
+                  .map((a) => ({
+                    clave: a.asset_id,
+                    nombre: a.asset_name,
+                    importe: Number(a.amount),
+                    detalle: `${a.findings} ${a.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+                  }))}
+              />
+            </section>
+          )}
+        </>
       )}
+    </div>
+  )
+}
+
+/**
+ * El selector y el alcance de la vista, escrito.
+ *
+ * `[REQ]` **El alcance va en palabras y no solo en el desplegable.** Los cuatro
+ * gráficos cambian a la vez, así que una pantalla filtrada sin decirlo se lee
+ * como el encargo entero y las cifras no cuadran con nada. Se saca a su propio
+ * componente porque se pinta también mientras cargan los gráficos: quitarlo en
+ * ese momento haría desaparecer el selector con el que se acaba de elegir.
+ */
+function Cabecera({
+  selector,
+  elegido,
+  totalDelEncargo,
+  activos,
+  alQuitarFiltro,
+}: {
+  selector: React.ReactNode
+  elegido: ResumenPorActivo | undefined
+  totalDelEncargo: number
+  activos: ResumenPorActivo[]
+  alQuitarFiltro: () => void
+}) {
+  return (
+    <div className="alcance-del-resumen">
+      <p className="alcance">
+        {elegido ? (
+          <>
+            Todo el resumen, <strong>solo de {elegido.asset_name}</strong>
+            <button type="button" className="enlace" onClick={alQuitarFiltro}>
+              ver los {activos.length} agrupados
+            </button>
+          </>
+        ) : activos.length > 1 ? (
+          <>
+            Todo el resumen, con los <strong>{activos.length} activos</strong> del encargo
+            agrupados · {eurosExactos.format(totalDelEncargo)}
+          </>
+        ) : (
+          <>Un solo activo en el encargo · {eurosExactos.format(totalDelEncargo)}</>
+        )}
+      </p>
+      {selector}
     </div>
   )
 }
@@ -413,7 +483,7 @@ function Tabla({
                 <th scope="row">{f.nombre}</th>
                 <td>{f.detalle}</td>
                 <td className="numerica">{eurosExactos.format(f.importe)}</td>
-                <td className="numerica">{((f.importe / total) * 100).toFixed(1)} %</td>
+                <td className="numerica">{porcentaje(f.importe, total)}</td>
               </tr>
             ))}
           </tbody>
@@ -422,7 +492,7 @@ function Tabla({
               <td>Total</td>
               <td />
               <td className="numerica">{eurosExactos.format(total)}</td>
-              <td className="numerica">100,0 %</td>
+              <td className="numerica">{porcentaje(total, total)}</td>
             </tr>
           </tfoot>
         </table>

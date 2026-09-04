@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { porcentaje } from './formato'
 import { colorDePorcion } from './paleta'
 
 /**
@@ -81,7 +82,7 @@ export function Tarta({
       ...p,
       desde,
       hasta: desde + barrido,
-      porcentaje: (p.valor / total) * 100,
+      parte: porcentaje(p.valor, total),
       color: colorDePorcion(i, p.agrupa !== undefined),
     }
   })
@@ -111,7 +112,7 @@ export function Tarta({
               {/* El navegador lo enseña al pasar por encima. No sustituye a la
                   leyenda: la complementa para quien usa ratón. */}
               <title>
-                {t.nombre}: {formatear(t.valor)} ({t.porcentaje.toFixed(1)} %)
+                {t.nombre}: {formatear(t.valor)} ({t.parte})
               </title>
             </path>
           )
@@ -137,7 +138,7 @@ export function Tarta({
                 <span className="ayuda"> · {t.agrupa} conceptos</span>
               )}
             </span>
-            <span className="porcentaje">{t.porcentaje.toFixed(1)} %</span>
+            <span className="porcentaje">{t.parte}</span>
             <span className="importe">{formatear(t.valor)}</span>
           </li>
         ))}

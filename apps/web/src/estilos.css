@@ -1920,20 +1920,33 @@ button.enlace {
   }
 }
 
-/* El filtro de un bloque va pegado a su título, no en una barra arriba: los
-   demás bloques del resumen no se filtran, y un filtro suelto en lo alto de la
-   pantalla se lee como si los afectara a todos. */
-.titulo-con-filtro {
+/* El alcance de TODA la vista, arriba del todo: los cuatro gráficos cambian a
+   la vez, así que el filtro no puede vivir dentro de uno de ellos. */
+.alcance-del-resumen {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--borde);
 }
-.titulo-con-filtro h3 {
+/* `[REQ]` El alcance ESCRITO, no solo en el desplegable. Una pantalla filtrada
+   que no lo diga se lee como el encargo entero y sus cifras no cuadran con
+   nada. */
+.alcance-del-resumen .alcance {
   margin: 0;
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
-.filtro-del-bloque {
+.alcance-del-resumen .enlace {
+  margin-left: 0.6rem;
+}
+.filtro-del-resumen {
   flex-direction: row;
   align-items: center;
   gap: 0.45rem;
@@ -1942,18 +1955,6 @@ button.enlace {
   max-width: 100%;
   min-width: 0;
 }
-.filtro-del-bloque select {
+.filtro-del-resumen select {
   min-width: 0;
-}
-
-/* El alcance del reparto, escrito. Sin esto la tarta de una sola nave se lee
-   como el encargo entero y no cuadra con la cifra de las tarjetas. */
-.alcance-del-bloque {
-  margin: 0.1rem 0 0.8rem;
-  font-size: 0.85rem;
-  color: var(--tinta-suave);
-  font-variant-numeric: tabular-nums;
-}
-.alcance-del-bloque .enlace {
-  margin-left: 0.6rem;
 }

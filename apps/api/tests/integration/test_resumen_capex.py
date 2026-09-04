@@ -548,6 +548,95 @@ def test_un_activo_de_otro_encargo_no_trae_nada(
     assert resumen(cliente, cab, proyecto, "concept", asset_id=str(ajeno)) == []
 
 
+def test_los_tres_cortes_filtrados_cuadran_entre_si(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str
+) -> None:
+    """`[REQ]` **Lo que hace usable el filtro en toda la pantalla.**
+
+    Con el filtro puesto, concepto, horizonte y capítulo se leen uno debajo del
+    otro. Si no sumaran lo mismo, el descuadre lo encontraría el cliente con la
+    calculadora delante —que es exactamente como se descubrió que `by-horizon`
+    contaba los hallazgos borrados—.
+    """
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06",
+        concepto="NORMATIVA",
+        importe="12345.67",
+        horizonte="CORTO",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H02",
+        concepto=None,
+        importe="8000.00",
+        horizonte="LARGO",
+    )
+    # Ruido en el otro activo: si el filtro no llegara a alguno de los tres
+    # cortes, ese corte saldría más grande que los demás.
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        otro_activo,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="99999.00",
+        horizonte="MEDIO",
+    )
+
+    totales = {
+        corte: sum(
+            (Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, corte, asset_id=activo)),
+            Decimal("0"),
+        )
+        for corte in ("concept", "horizon", "chapter")
+    }
+
+    assert len(set(totales.values())) == 1, totales
+    assert totales["concept"] == Decimal("20345.67")
+
+
+def test_el_horizonte_filtrado_conserva_los_cinco_plazos(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str
+) -> None:
+    """Un plazo que desaparece de la lista se confunde con uno que no toca."""
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06",
+        concepto="NORMATIVA",
+        importe="1000.00",
+        horizonte="CORTO",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        otro_activo,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="500.00",
+        horizonte="LARGO",
+    )
+
+    filas = resumen(cliente, cab, proyecto, "horizon", asset_id=activo)
+
+    assert len(filas) == 5, "los cinco plazos, con ceros"
+    corto = next(f for f in filas if f["time_horizon_code"] == "CORTO")
+    largo = next(f for f in filas if f["time_horizon_code"] == "LARGO")
+    assert Decimal(corto["amount"]) == Decimal("1000.00")
+    assert Decimal(largo["amount"]) == Decimal("0"), "el del otro activo no cuenta"
+
+
 def test_un_hallazgo_recurrente_cuenta_una_vez_en_su_activo(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:

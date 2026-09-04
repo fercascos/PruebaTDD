@@ -370,10 +370,10 @@ que hasta ahora se sumaba a mano.
 
 | Método | Ruta | Pregunta que contesta |
 |---|---|---|
-| `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO`. **Con `asset_id`, el reparto de un solo edificio** |
-| `GET` | `/projects/{id}/capex/summary/by-horizon` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe |
-| `GET` | `/projects/{id}/capex/summary/by-chapter` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
-| `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros |
+| `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
+| `GET` | `/projects/{id}/capex/summary/by-horizon?asset_id=` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe. Los cinco plazos salen siempre, con ceros |
+| `GET` | `/projects/{id}/capex/summary/by-chapter?asset_id=` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
+| `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros. **Sin `asset_id`: es el índice, no un corte** |
 
 `[REQ]` **Los cuatro suman lo mismo, y hay una prueba que lo impone.** Cuatro
 gráficos en la misma pantalla que no cuadran destruyen la confianza en los
@@ -387,13 +387,25 @@ tabla; la consulta unía `capex_item` con `time_horizon` sin pasar por `finding`
 y las contaba. El mismo encargo sumaba una cosa por horizonte y otra por activo.
 No se veía porque nada ponía los dos cortes en la misma pantalla.
 
-`[REQ]` `asset_id` está **solo en este corte**, y es deliberado: son dos
-preguntas que se hacen en la misma reunión. Agregado dice cómo se comporta el
-parque —si el problema es mantenimiento diferido o normativa—; por activo dice
-qué le pasa a **ese** edificio, que es sobre el que se negocia el precio. Un
-parque con un 40 % de normativa puede tenerlo concentrado en una sola nave, y
-agregado eso no se ve. Los repartos por activo **suman el del encargo**, y hay
+`[REQ]` `asset_id` está **en los tres cortes que reparten, y no en el cuarto**.
+Son dos preguntas que se hacen en la misma reunión: agregado dice cómo se
+comporta el parque —si el problema es mantenimiento diferido o normativa—; por
+activo dice qué le pasa a **ese** edificio, que es sobre el que se negocia el
+precio. Un parque con un 40 % de normativa puede tenerlo concentrado en una sola
+nave, y agregado eso no se ve. El filtro alcanza los tres a la vez porque las
+tres preguntas se hacen del mismo edificio: no sirve de nada saber en qué se va
+el dinero de una nave si el «cuándo hay que pagarlo» de al lado sigue siendo el
+del parque entero. Los tres cortes filtrados **suman lo mismo entre sí**, y hay
 una prueba que lo impone.
+
+`[REQ]` **`by-asset` no acepta `asset_id`, a propósito.** Es el corte que
+contesta «qué edificio», y filtrarlo por un edificio lo dejaría con una fila:
+deja de ser un reparto. Además es el que da la lista con la que la pantalla
+construye el desplegable y el total del encargo contra el que se calcula «qué
+parte del CAPEX es este activo», de modo que tiene que seguir viéndose entero
+mientras los otros tres están filtrados. En la pantalla, el bloque «Qué
+edificio» **desaparece** cuando hay un activo elegido, en vez de quedarse con
+una sola barra al 100 %.
 
 El activo se filtra por el **hallazgo**, no por la línea: `[REQ]` P-44, una
 actuación recurrente tiene varias líneas y un solo edificio.
