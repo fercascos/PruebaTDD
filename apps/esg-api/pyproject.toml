@@ -1,0 +1,71 @@
+[project]
+name = "esg-api"
+version = "0.1.0"
+description = "API del dashboard ESG de activos inmobiliarios"
+requires-python = ">=3.11"
+dependencies = [
+    # `Depends(..., scope="function")` confirma la transacción ANTES de enviar
+    # la respuesta. Es la misma razón que en apps/api: sin ese ámbito, quien
+    # recibe un 201 y pide el identificador acto seguido puede no encontrarlo.
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy>=2.0.30",
+    "pydantic[email]>=2.9",
+    "pydantic-settings>=2.4",
+    "psycopg[binary]>=3.2",
+    # Verificación de los tokens de Entra ID: RS256 contra el JWKS del tenant.
+    "pyjwt>=2.9",
+    # PyJWT no trae RSA por su cuenta: sin `cryptography` la verificación de
+    # RS256 falla con «Algorithm not supported» en el primer inicio de sesión
+    # real, y no en las pruebas, que firman con HS256.
+    "cryptography>=43.0",
+    "python-multipart>=0.0.9",
+    # Lectura de los XLSX de consumos. El CSV va con la biblioteca estándar.
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "db: prueba que necesita PostgreSQL real (RLS, CHECK, EXCLUDE de solape)",
+]
+filterwarnings = ["error::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+# Igual que en apps/api: el dominio está escrito en español y
+# `PeriodoInvalidoError` sería un híbrido peor que cualquiera de los dos.
+ignore = ["N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["SIM117"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+mypy_path = "src"
+packages = ["esg"]
+
+[[tool.mypy.overrides]]
+module = ["openpyxl.*"]
+ignore_missing_imports = true
