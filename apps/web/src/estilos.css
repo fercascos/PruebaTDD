@@ -1919,3 +1919,41 @@ button.enlace {
     min-width: 0;
   }
 }
+
+/* El filtro de un bloque va pegado a su título, no en una barra arriba: los
+   demás bloques del resumen no se filtran, y un filtro suelto en lo alto de la
+   pantalla se lee como si los afectara a todos. */
+.titulo-con-filtro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.titulo-con-filtro h3 {
+  margin: 0;
+}
+.filtro-del-bloque {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+  /* Que el nombre del activo no empuje la página: un `<select>` mide por su
+     opción más larga y «Todos los activos, agrupados» son 26 caracteres. */
+  max-width: 100%;
+  min-width: 0;
+}
+.filtro-del-bloque select {
+  min-width: 0;
+}
+
+/* El alcance del reparto, escrito. Sin esto la tarta de una sola nave se lee
+   como el encargo entero y no cuadra con la cifra de las tarjetas. */
+.alcance-del-bloque {
+  margin: 0.1rem 0 0.8rem;
+  font-size: 0.85rem;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+.alcance-del-bloque .enlace {
+  margin-left: 0.6rem;
+}

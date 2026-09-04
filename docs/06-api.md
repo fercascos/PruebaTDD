@@ -370,7 +370,7 @@ que hasta ahora se sumaba a mano.
 
 | Método | Ruta | Pregunta que contesta |
 |---|---|---|
-| `GET` | `/projects/{id}/capex/summary/by-concept` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
+| `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO`. **Con `asset_id`, el reparto de un solo edificio** |
 | `GET` | `/projects/{id}/capex/summary/by-horizon` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe |
 | `GET` | `/projects/{id}/capex/summary/by-chapter` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
 | `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros |
@@ -386,6 +386,22 @@ valorar deja a nadie sabiendo que existió—, así que sus líneas siguen en la
 tabla; la consulta unía `capex_item` con `time_horizon` sin pasar por `finding`
 y las contaba. El mismo encargo sumaba una cosa por horizonte y otra por activo.
 No se veía porque nada ponía los dos cortes en la misma pantalla.
+
+`[REQ]` `asset_id` está **solo en este corte**, y es deliberado: son dos
+preguntas que se hacen en la misma reunión. Agregado dice cómo se comporta el
+parque —si el problema es mantenimiento diferido o normativa—; por activo dice
+qué le pasa a **ese** edificio, que es sobre el que se negocia el precio. Un
+parque con un 40 % de normativa puede tenerlo concentrado en una sola nave, y
+agregado eso no se ve. Los repartos por activo **suman el del encargo**, y hay
+una prueba que lo impone.
+
+El activo se filtra por el **hallazgo**, no por la línea: `[REQ]` P-44, una
+actuación recurrente tiene varias líneas y un solo edificio.
+
+`[REC]` `asset_id` **solo filtra**, como en la matriz de riesgos: un activo de
+otro encargo devuelve una lista vacía, no un `404`. Es la convención de la casa
+para los filtros de lectura, y la pantalla construye el desplegable con los
+activos del propio encargo.
 
 `[LIM]` `SIN_CONCEPTO` **no es un código del catálogo**: es la etiqueta con la
 que se agrupa lo que nadie clasificó. Que nadie lo haya clasificado es un dato,

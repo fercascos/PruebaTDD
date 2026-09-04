@@ -39,7 +39,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Riesgos** | Distribución por grado, matriz riesgo × horizonte y desglose por capítulo |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
-| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos y tres gráficos de barras |
+| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos —**agrupada o de un solo activo**— y tres gráficos de barras |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |

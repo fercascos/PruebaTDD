@@ -42,16 +42,27 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * blanco y negro en cada reunión, y uno de cada doce hombres es daltónico.
  */
 
+/**
+ * `useGrouping` no es un capricho.
+ *
+ * En español, `Intl` omite el separador de millares en los números de cuatro
+ * cifras —«4300,00 €»—, que es correcto en prosa y **malo en una columna de
+ * importes**: al lado de «22.400,00 €» se lee peor y rompe la alineación de las
+ * cifras. En una tabla de dinero manda la comparación, no la tipografía de un
+ * párrafo.
+ */
 const euros = new Intl.NumberFormat('es-ES', {
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
+  useGrouping: true,
 })
 
 const eurosExactos = new Intl.NumberFormat('es-ES', {
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,
+  useGrouping: true,
 })
 
 type Datos = {
@@ -64,6 +75,18 @@ type Datos = {
 export function ResumenCapex({ projectId }: { projectId: string }) {
   const [datos, setDatos] = useState<Datos | null>(null)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * `[REQ]` Sobre qué activo se lee el reparto por concepto. Vacío = todos.
+   *
+   * Son dos preguntas y las dos se hacen en la misma reunión: agregado dice
+   * cómo se comporta el parque —si es mantenimiento diferido o normativa—, y
+   * por activo dice qué le pasa a ESE edificio, que es sobre el que se negocia
+   * el precio. Un parque con un 40 % de normativa puede tenerlo concentrado en
+   * una sola nave, y agregado eso no se ve.
+   */
+  const [activoDelReparto, setActivoDelReparto] = useState('')
+  /** El reparto filtrado. Nulo mientras llega, para no enseñar el anterior. */
+  const [reparto, setReparto] = useState<ResumenPorConcepto[] | null>(null)
 
   const recargar = useCallback(async () => {
     try {
@@ -84,6 +107,26 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
     void recargar()
   }, [recargar])
 
+  // El reparto se pide aparte porque es el único corte que se filtra. Pedirlo
+  // con los otros tres obligaría a recargar la pantalla entera al cambiar de
+  // activo, y los otros tres no cambian.
+  useEffect(() => {
+    const sufijo = activoDelReparto ? `?asset_id=${activoDelReparto}` : ''
+    let vigente = true
+    setReparto(null)
+    obtener<ResumenPorConcepto[]>(`/projects/${projectId}/capex/summary/by-concept${sufijo}`)
+      .then((r) => {
+        // Si el usuario ha cambiado de activo mientras llegaba esta respuesta,
+        // se descarta: sin esto, la más lenta pisa a la más reciente y el
+        // gráfico acaba enseñando un activo distinto del que dice el selector.
+        if (vigente) setReparto(r)
+      })
+      .catch((e: Error) => setError(e.message))
+    return () => {
+      vigente = false
+    }
+  }, [projectId, activoDelReparto])
+
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
   if (!datos) return <p className="cargando">Cargando el resumen…</p>
 
@@ -103,7 +146,9 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
 
   // `[REQ]` Cuatro conceptos y el resto agrupado: es lo que la paleta admite
   // medido, no una preferencia. Ver `graficos/paleta.ts`.
-  const { propias, resto } = agrupar(datos.concepto, (c) => Number(c.amount))
+  const conceptos = reparto ?? datos.concepto
+  const totalDelReparto = conceptos.reduce((s, c) => s + Number(c.amount), 0)
+  const { propias, resto } = agrupar(conceptos, (c) => Number(c.amount))
   const porciones: Porcion[] = [
     ...propias.map((c) => ({
       clave: c.capex_concept_code,
@@ -121,6 +166,7 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
         ]
       : []),
   ]
+  const nombreDelActivo = datos.activo.find((a) => a.asset_id === activoDelReparto)?.asset_name
 
   return (
     <div className="resumen-capex">
@@ -151,27 +197,86 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
       </ul>
 
       <section className="bloque">
-        <h3>En qué se va el dinero</h3>
+        <div className="titulo-con-filtro">
+          <h3>En qué se va el dinero</h3>
+          {/* `[REQ]` El selector va PEGADO al gráfico que filtra, no en una
+              barra de filtros arriba: los otros tres cortes siguen siendo del
+              encargo entero, y un filtro suelto en lo alto de la pantalla se
+              lee como si los afectara a todos. */}
+          {datos.activo.length > 1 && (
+            <label className="filtro-del-bloque">
+              Activo
+              <select
+                value={activoDelReparto}
+                onChange={(e) => setActivoDelReparto(e.target.value)}
+              >
+                <option value="">Todos los activos, agrupados</option>
+                {datos.activo.map((a) => (
+                  <option key={a.asset_id} value={a.asset_id}>
+                    {a.asset_code ? `${a.asset_code} · ${a.asset_name}` : a.asset_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
         <p className="ayuda">
           Por concepto de gasto. Es la distinción que separa un edificio caro de uno mal
           mantenido: <strong>«Normativa» hay que pagarlo y «Mejora» se puede decidir</strong>,
           y en el total valen lo mismo.
         </p>
-        <Tarta
-          porciones={porciones}
-          titulo="Reparto del CAPEX por concepto de gasto"
-          formatear={(v) => eurosExactos.format(v)}
-        />
-        <Tabla
-          columna="Concepto"
-          filas={datos.concepto.map((c) => ({
-            clave: c.capex_concept_code,
-            nombre: c.capex_concept_name,
-            importe: Number(c.amount),
-            detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
-          }))}
-          total={total}
-        />
+        {/* `[REQ]` El alcance, ESCRITO y con su total. Los otros bloques son
+            del encargo entero, así que un reparto de una sola nave tiene que
+            decir de cuál es: sin esto, la tarta se lee como el encargo y no
+            cuadra con la cifra de arriba. */}
+        <p className="alcance-del-bloque">
+          {nombreDelActivo ? (
+            <>
+              Solo <strong>{nombreDelActivo}</strong> ·{' '}
+              {eurosExactos.format(totalDelReparto)}
+              <button type="button" className="enlace" onClick={() => setActivoDelReparto('')}>
+                ver todos agrupados
+              </button>
+            </>
+          ) : (
+            <>
+              Los <strong>{datos.activo.length}</strong> activos del encargo, agrupados ·{' '}
+              {eurosExactos.format(totalDelReparto)}
+            </>
+          )}
+        </p>
+
+        {reparto === null ? (
+          <p className="cargando">Cargando el reparto…</p>
+        ) : totalDelReparto <= 0 ? (
+          <Vacio>
+            {nombreDelActivo
+              ? `«${nombreDelActivo}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.`
+              : 'Todavía no hay ninguna línea de CAPEX valorada.'}
+          </Vacio>
+        ) : (
+          <>
+            <Tarta
+              porciones={porciones}
+              titulo={
+                nombreDelActivo
+                  ? `Reparto del CAPEX de ${nombreDelActivo} por concepto de gasto`
+                  : 'Reparto del CAPEX del encargo por concepto de gasto'
+              }
+              formatear={(v) => eurosExactos.format(v)}
+            />
+            <Tabla
+              columna="Concepto"
+              filas={conceptos.map((c) => ({
+                clave: c.capex_concept_code,
+                nombre: c.capex_concept_name,
+                importe: Number(c.amount),
+                detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+              }))}
+              total={totalDelReparto}
+            />
+          </>
+        )}
       </section>
 
       <section className="bloque">

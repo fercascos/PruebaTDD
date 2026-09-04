@@ -265,7 +265,20 @@ class ResumenPorConcepto(BaseModel):
     "/projects/{project_id}/capex/summary/by-concept",
     response_model=list[ResumenPorConcepto],
 )
-def resumen_por_concepto(project_id: uuid.UUID, s: SesionDep) -> Any:
+def resumen_por_concepto(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    #: `[REQ]` Sin él, el reparto es el del **encargo entero**; con él, el de un
+    #: solo edificio.
+    #:
+    #: Son dos preguntas distintas y las dos se hacen en la misma reunión. En
+    #: una cartera, «en qué se va el dinero» agregado dice cómo se comporta el
+    #: parque —si es un problema de mantenimiento diferido o de normativa—;
+    #: por activo dice qué le pasa a ESE edificio, que es sobre el que se
+    #: negocia el precio. Un parque con un 40 % de normativa puede tener ese
+    #: 40 % concentrado en una sola nave, y agregado eso no se ve.
+    asset_id: uuid.UUID | None = None,
+) -> Any:
     """`[REQ]` El CAPEX por **concepto de gasto**: en qué se va el dinero.
 
     Es la pregunta que separa un edificio caro de uno mal mantenido. Doscientos
@@ -278,6 +291,13 @@ def resumen_por_concepto(project_id: uuid.UUID, s: SesionDep) -> Any:
     llenarían el gráfico de porciones invisibles; los que faltan es que no hay.
     Y las líneas de un hallazgo **sin concepto** no se pierden: salen agrupadas
     como «Sin concepto», que es un dato —alguien no lo clasificó— y no un hueco.
+
+    `[REC]` `asset_id` **solo filtra**, como en la matriz de riesgos: un activo
+    de otro encargo devuelve una lista vacía en vez de un error. Es la
+    convención de la casa para los filtros de lectura, y aquí además es lo
+    correcto: la pantalla construye el desplegable con los activos del propio
+    encargo, así que un identificador ajeno solo llega escribiendo la URL a
+    mano.
     """
     filas = (
         s.execute(
@@ -291,12 +311,15 @@ def resumen_por_concepto(project_id: uuid.UUID, s: SesionDep) -> Any:
                 "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
                 "LEFT JOIN capex_concept cc ON cc.id = f.capex_concept_id "
                 "WHERE ci.project_id = :p "
+                # El activo está en el HALLAZGO, no en la línea: una actuación
+                # recurrente (P-44) tiene varias líneas y un solo edificio.
+                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
                 "GROUP BY cc.code, cc.name_es "
                 # De mayor a menor: es el orden en el que se lee un reparto, y
                 # el que permite doblar la cola en «Otros» sin recalcular nada.
                 "ORDER BY sum(ci.amount) DESC"
             ),
-            {"p": project_id},
+            {"p": project_id, "a": str(asset_id) if asset_id else None},
         )
         .mappings()
         .all()
