@@ -33,6 +33,26 @@ TEST_DATABASE_URL ?= postgresql+psycopg://postgres@/$(TEST_DB)?host=$(PGSOCK)&po
 PGHOST_TCP ?= localhost
 APP_DATABASE_URL ?= postgresql+psycopg://$(APP_ROLE):$(APP_PASS)@$(PGHOST_TCP):$(PGPORT)/$(DB)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Dashboard ESG (apps/esg-api + apps/esg-web)
+#
+#  Producto aparte, base de datos aparte y órdenes aparte, todas con prefijo
+#  `esg-`. Comparte el servidor de PostgreSQL local y nada más: mezclar las dos
+#  bases haría que `make esg-test` —que hace DROP SCHEMA— se llevara por delante
+#  la de la due diligence, que es exactamente el accidente que ya costó una vez
+#  la base de desarrollo entera.
+# ─────────────────────────────────────────────────────────────────────────────
+ESG_DB      ?= esg
+ESG_TEST_DB ?= esg_test
+ESG_ROLE    ?= esg_app
+ESG_PASS    ?= prueba-local-sin-valor-real
+ESG_PUERTO_API ?= 8001
+
+ESG_ADMIN_URL ?= postgresql+psycopg://postgres@/$(ESG_DB)?host=$(PGSOCK)&port=$(PGPORT)
+ESG_TEST_URL  ?= postgresql+psycopg://postgres@/$(ESG_TEST_DB)?host=$(PGSOCK)&port=$(PGPORT)
+ESG_APP_URL   ?= postgresql+psycopg://$(ESG_ROLE):$(ESG_PASS)@$(PGHOST_TCP):$(PGPORT)/$(ESG_DB)
+
 help:  ## Muestra esta ayuda
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -208,5 +228,97 @@ up-admin:  ## Primera organización y su administrador, dentro del contenedor
 	  'python -m tdd.db.arranque --dsn "$$DATABASE_MIGRATION_URL" \
 	     --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"'
 
+# ─────────────────────────────────────────────────────────────────────────────
+#  Dashboard ESG
+# ─────────────────────────────────────────────────────────────────────────────
+
+esg-install:  ## Instala las dependencias del backend ESG
+	pip install -e "apps/esg-api[dev]"
+	cd apps/esg-web && npm install
+
+esg-db-init:  ## Crea las bases del ESG y aplica el esquema (DESTRUCTIVO)
+	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q \
+	  -c "DROP DATABASE IF EXISTS $(ESG_DB);" -c "CREATE DATABASE $(ESG_DB);" \
+	  -c "DROP DATABASE IF EXISTS $(ESG_TEST_DB);" -c "CREATE DATABASE $(ESG_TEST_DB);"
+	psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(ESG_DB) -v ON_ERROR_STOP=1 \
+	  -c "DROP ROLE IF EXISTS $(ESG_ROLE);" \
+	  -c "CREATE ROLE $(ESG_ROLE) LOGIN PASSWORD '$(ESG_PASS)';"
+	@cd apps/esg-api && PYTHONPATH=src python3 -m esg.db.preparar --dsn "$(ESG_ADMIN_URL)"
+	@$(MAKE) --no-print-directory esg-db-grant
+	@echo "Base $(ESG_DB) lista. El rol $(ESG_ROLE) NO tiene BYPASSRLS: es lo que hace que la RLS sirva."
+	@echo "Siguiente paso: make esg-demo   (datos de ejemplo)  o  make esg-admin ..."
+
+esg-db-grant:  ## Da al rol de aplicación permisos sobre lo que exista ahora
+	@psql -h $(PGSOCK) -p $(PGPORT) -U postgres -q -d $(ESG_DB) -v ON_ERROR_STOP=1 \
+	  -c "GRANT USAGE ON SCHEMA public TO $(ESG_ROLE);" \
+	  -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO $(ESG_ROLE);" \
+	  -c "GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO $(ESG_ROLE);"
+
+esg-admin:  ## Primera organización y su administrador: make esg-admin ORG=... SLUG=... EMAIL=... NOMBRE=...
+	@cd apps/esg-api && PYTHONPATH=src python3 -m esg.db.arranque --dsn "$(ESG_ADMIN_URL)" \
+	  --org "$(ORG)" --slug "$(SLUG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"
+
+esg-demo:  ## Siembra una cartera con tres activos y dos años de consumo
+	@cd apps/esg-api && PYTHONPATH=src python3 -m esg.db.demo --dsn "$(ESG_ADMIN_URL)"
+	@$(MAKE) --no-print-directory esg-db-grant
+
+esg-test:  ## Suite del ESG (necesita PostgreSQL en marcha)
+	cd apps/esg-api && TEST_DATABASE_URL="$(ESG_TEST_URL)" python3 -m pytest -q
+
+esg-test-unit:  ## Solo las unitarias del ESG: no necesitan base de datos
+	cd apps/esg-api && python3 -m pytest tests/unit -q
+
+esg-lint:  ## Formato y reglas del ESG (ruff + tsc)
+	cd apps/esg-api && python3 -m ruff check src tests && python3 -m ruff format --check src tests
+	cd apps/esg-web && npm run lint
+
+esg-typecheck:  ## Tipado estricto del ESG (mypy)
+	cd apps/esg-api && python3 -m mypy
+
+esg-fmt:  ## Formatea el backend ESG
+	cd apps/esg-api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
+
+esg-run:  ## Arranca la API del ESG (como esg_app: con la RLS en vigor)
+	cd apps/esg-api && PYTHONPATH=src DATABASE_URL="$(ESG_APP_URL)" APP_ENV=local \
+	  AUTH_MODE=local APP_SECRET_KEY="secreto-local-de-desarrollo-0123456789" \
+	  python3 -m uvicorn esg.main:app --reload --port $(ESG_PUERTO_API)
+
+esg-web:  ## Arranca la interfaz del ESG (http://localhost:5174)
+	cd apps/esg-web && npm run dev
+
+esg-capturas:  ## Recorre la aplicación en un navegador de verdad y guarda capturas
+	cd apps/esg-web && CHROMIUM_PATH=$${CHROMIUM_PATH:-/opt/pw-browsers/chromium} \
+	  node herramientas/capturar.mjs $${CARPETA:-/tmp/esg-capturas}
+
+esg-ci: esg-lint esg-typecheck esg-test  ## Lo que debe pasar antes de un push del ESG
+
+ESG_COMPOSE ?= $(COMPOSE) -f compose.esg.yml
+
+esg-up:  ## Levanta el ESG en contenedores (base, API e interfaz)
+	$(ESG_COMPOSE) up -d --build
+	@echo "Esperando a que la API del ESG responda…"
+	@for i in $$(seq 1 60); do \
+	  if curl -fsS http://localhost:$${ESG_PUERTO_API:-8001}/health >/dev/null 2>&1; then \
+	    echo "API viva."; break; \
+	  fi; \
+	  if [ $$i = 60 ]; then echo "La API no respondió en 60 s."; $(ESG_COMPOSE) ps; exit 1; fi; \
+	  sleep 1; \
+	done
+	@echo
+	@echo "  Panel ESG   http://localhost:$${ESG_PUERTO_WEB:-8081}"
+	@echo "  API         http://localhost:$${ESG_PUERTO_API:-8001}/docs"
+
+esg-down:  ## Para el ESG. Los datos siguen ahí
+	$(ESG_COMPOSE) down
+
+esg-destroy:  ## Para el ESG Y BORRA su volumen de base de datos
+	$(ESG_COMPOSE) down --volumes
+
+esg-logs:  ## Sigue los registros del ESG
+	$(ESG_COMPOSE) logs -f
+
 .PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
-        test-catalogs lint typecheck fmt no-fonts run ci certificados up down destroy logs ps up-admin
+        test-catalogs lint typecheck fmt no-fonts run ci certificados up down destroy logs ps up-admin \
+        esg-install esg-db-init esg-db-grant esg-admin esg-demo esg-test esg-test-unit esg-lint \
+        esg-typecheck esg-fmt esg-run esg-web esg-capturas esg-ci esg-up esg-down \
+        esg-destroy esg-logs

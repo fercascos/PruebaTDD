@@ -30,6 +30,65 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 ---
 
+## En este repositorio hay dos productos
+
+| | Qué es | Dónde |
+|---|---|---|
+| **Due diligence técnica (TDD)** | Lo que documenta el resto de este README: encargos, fases, fotografías, CAPEX e informes PPTX | `apps/api` · `apps/web` · `docs/` |
+| **Dashboard ESG** | Consumos de agua, electricidad, gas y residuos por activo y por cartera, con carga de ficheros y conector con el lector de facturas por IA de Azure | `apps/esg-api` · `apps/esg-web` · [`docs/esg/`](docs/esg/) |
+
+**No comparten base de datos ni ciclo de vida.** Comparten el repositorio, el
+`Makefile`, los patrones ya probados —RLS por organización, ingesta con
+procedencia, simular antes de aplicar— y las lecciones que costaron caro. El día
+que haga falta, el ESG se saca a su propio repositorio sin tocar una línea de la
+TDD.
+
+### El ESG, en cuatro órdenes
+
+```bash
+make esg-install                        # dependencias
+make db-up && make esg-db-init          # PostgreSQL local y las bases del ESG
+make esg-demo                           # una cartera, tres activos, dos años de consumo
+make esg-run    # API  → http://localhost:8001/docs
+make esg-web    # panel → http://localhost:5174
+```
+
+O entero en contenedores: `make esg-up` (panel en `http://localhost:8081`),
+`make esg-down`, `make esg-destroy`.
+
+En modo local se entra con un correo. `demo@ejemplo.example` es la
+administradora; `cliente@ejemplo.example` es un cliente externo que **solo ve una
+de las dos carteras**, que es la forma más rápida de ver funcionando el ámbito de
+visibilidad —la pieza que permitirá abrir esto a clientes sin reescribir una sola
+consulta—.
+
+**Las cinco decisiones del ESG**, cada una pagada por un fallo concreto de este
+dominio:
+
+1. **La lectura es un intervalo, no un mes.** Una factura va del 14 de marzo al
+   16 de abril; el reparto a meses se hace al consultar, así que el dato
+   guardado sigue siendo el de la factura y el criterio se puede cambiar.
+2. **Dos lecturas del mismo suministro no pueden solaparse**, y lo impide un
+   `EXCLUDE` de PostgreSQL, no una comprobación de la aplicación. Cargar dos
+   veces el mismo Excel es el fallo más caro de este dominio y el más
+   silencioso.
+3. **Lo que no se sabe convertir no se convierte.** El gas en m³ sin el poder
+   calorífico del periodo se guarda y no suma, y sale en la cobertura. Un
+   11,63 kWh/m³ para toda España mete un 5 % de error.
+4. **Ningún hueco se rellena solo.** El consumo viaja siempre con su cobertura,
+   en la misma tarjeta. Un consumo con el 40 % de cobertura no es un consumo
+   bajo: es un consumo que falta.
+5. **La visibilidad es un dato, no una pantalla.** El ámbito por cartera y por
+   activo está en la RLS desde el primer día: un `CLIENTE` sin ámbito ve un
+   panel vacío, nunca los datos de otro.
+
+`make esg-ci` es lo que tiene que pasar antes de un push del ESG: ruff, mypy en
+estricto y **104 pruebas** contra PostgreSQL real. Qué está construido y qué no,
+sin adornos, en [`apps/esg-api/README.md`](apps/esg-api/README.md) y
+[`apps/esg-web/README.md`](apps/esg-web/README.md).
+
+---
+
 ## Las seis decisiones que sostienen el diseño
 
 | # | Decisión | Por qué importa |

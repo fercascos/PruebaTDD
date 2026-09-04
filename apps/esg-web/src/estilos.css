@@ -1,0 +1,185 @@
+/*
+ * Los colores de serie están definidos como variables y **solo aquí**: el modo
+ * oscuro no es una inversión automática, son los mismos cuatro tonos escalados
+ * para el fondo oscuro, y los dos juegos están comprobados con el validador de
+ * la paleta (separación para daltonismo y para visión normal, y contraste).
+ */
+:root {
+  color-scheme: light;
+  --fondo: #fcfcfb;
+  --fondo-2: #f3f3f1;
+  --borde: #dedcd6;
+  --tinta: #0b0b0b;
+  --tinta-2: #52514e;
+  --tinta-3: #7c7a74;
+  --serie-1: #2a78d6; /* agua */
+  --serie-2: #eb6834; /* electricidad */
+  --serie-3: #1baf7a; /* gas */
+  --serie-4: #eda100; /* residuos */
+  --aviso: #b3541e;
+  --sube: #b3241e;
+  --baja: #1b7a4b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --fondo: #1a1a19;
+    --fondo-2: #232322;
+    --borde: #3a3a37;
+    --tinta: #ffffff;
+    --tinta-2: #c3c2b7;
+    --tinta-3: #98968c;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --serie-3: #199e70;
+    --serie-4: #c98500;
+    --aviso: #e0a56a;
+    --sube: #e66767;
+    --baja: #4cb98a;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --fondo: #1a1a19;
+  --fondo-2: #232322;
+  --borde: #3a3a37;
+  --tinta: #ffffff;
+  --tinta-2: #c3c2b7;
+  --tinta-3: #98968c;
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --serie-3: #199e70;
+  --serie-4: #c98500;
+  --aviso: #e0a56a;
+  --sube: #e66767;
+  --baja: #4cb98a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main { padding: 20px 24px 60px; max-width: 1280px; margin: 0 auto; }
+
+.barra {
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  padding: 12px 24px; border-bottom: 1px solid var(--borde); background: var(--fondo-2);
+}
+.barra h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+.barra nav { display: flex; gap: 4px; }
+.barra .quien { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.barra .quien em { color: var(--tinta-3); font-style: normal; }
+
+button {
+  font: inherit; padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--borde); background: var(--fondo); color: var(--tinta);
+}
+button:hover:not(:disabled) { background: var(--fondo-2); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.activa,
+/* El `:hover` de arriba es más específico que `.activa` y le ganaba el fondo:
+   la pestaña activa se quedaba con letra clara sobre fondo claro en cuanto el
+   ratón se posaba encima, que es justo cuando acabas de pulsarla. Se vio en la
+   captura, no en las pruebas. */
+button.activa:hover { background: var(--tinta); color: var(--fondo); border-color: var(--tinta); }
+button.principal { background: var(--serie-1); border-color: var(--serie-1); color: #fff; }
+
+label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--tinta-2); }
+input, select {
+  font: inherit; padding: 5px 8px; border-radius: 6px;
+  border: 1px solid var(--borde); background: var(--fondo); color: var(--tinta);
+}
+
+.filtros {
+  display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+  padding: 14px 16px; margin-bottom: 20px;
+  border: 1px solid var(--borde); border-radius: 10px; background: var(--fondo-2);
+}
+.filtros .atajos { display: flex; gap: 6px; }
+.filtros fieldset {
+  border: 0; padding: 0; margin: 0; display: flex; gap: 12px; align-items: center;
+}
+.filtros legend { font-size: 12px; color: var(--tinta-2); padding: 0 6px 0 0; float: left; }
+.casilla { flex-direction: row; align-items: center; gap: 5px; color: var(--tinta); }
+.pista { color: var(--tinta-3); cursor: help; }
+
+.tarjetas {
+  display: grid; gap: 12px; margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+.tarjeta { border: 1px solid var(--borde); border-radius: 10px; padding: 12px 14px; }
+.tarjeta header { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--tinta-2); }
+.tarjeta .marca { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.tarjeta .cifra { font-size: 26px; margin: 6px 0 2px; letter-spacing: -0.02em; }
+.tarjeta .cifra .unidad { font-size: 13px; color: var(--tinta-3); }
+.tarjeta .linea { margin: 2px 0; font-size: 12px; color: var(--tinta-2); }
+.sube { color: var(--sube); }
+.baja { color: var(--baja); }
+.aviso { color: var(--aviso); }
+.apagado { color: var(--tinta-3); }
+.error { color: var(--sube); border-left: 3px solid var(--sube); padding-left: 10px; }
+.vacio { color: var(--tinta-3); padding: 16px 0; }
+
+.paneles { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grafico { margin: 0; }
+.grafico figcaption { font-size: 13px; color: var(--tinta-2); margin-bottom: 6px; }
+.grafico .unidad { color: var(--tinta-3); }
+.grafico .lienzo { position: relative; }
+.grafico svg { width: 100%; height: 150px; display: block; overflow: visible; }
+.grafico .eje {
+  display: flex; font-size: 10px; color: var(--tinta-3); margin-top: 4px;
+}
+.grafico .eje span { flex: 1; text-align: center; }
+.grafico .eje .oculto { visibility: hidden; }
+.soplo {
+  position: absolute; bottom: 100%; transform: translateX(-50%);
+  background: var(--tinta); color: var(--fondo); padding: 5px 8px; border-radius: 6px;
+  font-size: 11px; white-space: nowrap; pointer-events: none;
+}
+
+.reparto { margin: 28px 0; }
+.donut svg { height: 190px; width: 190px; }
+.donut-cuerpo { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.leyenda { list-style: none; padding: 0; margin: 0; font-size: 13px; min-width: 260px; }
+.leyenda li { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.leyenda .muestra { width: 10px; height: 10px; border-radius: 3px; }
+.leyenda .nombre { flex: 1; }
+.leyenda .valor { color: var(--tinta-2); }
+.leyenda .valor em { color: var(--tinta-3); font-style: normal; margin-left: 6px; }
+.leyenda .destacada { background: var(--fondo-2); border-radius: 4px; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 12px; }
+caption { text-align: left; color: var(--tinta-3); font-size: 12px; padding-bottom: 6px; }
+th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--borde); }
+th:first-child, td:first-child, th[scope='row'] { text-align: left; }
+thead th { color: var(--tinta-2); font-weight: 600; }
+.subcabecera th { font-weight: 400; color: var(--tinta-3); font-size: 11px; }
+.codigo { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--tinta-3); }
+
+.formulario { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 12px 0 20px; }
+.recuento { list-style: none; padding: 0; display: flex; gap: 20px; font-size: 13px; }
+.recuento-linea { font-size: 13px; color: var(--tinta-2); }
+.mapeo { list-style: none; padding: 0; font-size: 13px; }
+.mapeo li { display: flex; gap: 12px; padding: 2px 0; }
+.mapeo .campo { min-width: 220px; color: var(--tinta-2); }
+.mapeo .falta .columna { color: var(--aviso); }
+.incidencias td { text-align: left; }
+.incidencias .valor { font-family: ui-monospace, monospace; color: var(--tinta-3); }
+.acciones { display: flex; gap: 6px; justify-content: flex-end; }
+
+.entrar { max-width: 420px; margin: 15vh auto; display: flex; flex-direction: column; gap: 14px; }
+.entrar form { display: flex; flex-direction: column; gap: 12px; }
+.entrar .nota { font-size: 12px; }
+.cargando { color: var(--tinta-3); padding: 40px; }
+
+@media (max-width: 700px) {
+  .filtros { flex-direction: column; align-items: stretch; }
+  .barra { gap: 12px; }
+}

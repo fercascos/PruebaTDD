@@ -1,0 +1,141 @@
+# Entorno completo del dashboard ESG.
+#
+# Fichero aparte del `compose.yml` de la due diligence, y no un par de servicios
+# añadidos allí: son dos productos con su base de datos y su ciclo de vida. Con
+# los dos en el mismo fichero, `docker compose down --volumes` de uno se llevaría
+# por delante los datos del otro, y quien levanta el ESG no tiene por qué
+# arrancar MinIO, Mailpit y dos workers de Celery que no usa.
+#
+#     docker compose -f compose.esg.yml up -d --build      (o: make esg-up)
+#
+# `[LIM]` Lo que este fichero NO resuelve, y hace falta para producción: TLS de
+# entrada, secretos fuera del fichero, copias de seguridad y límites de
+# recursos. Y `AUTH_MODE` aquí es `local`: con Entra ID de verdad hay que dar
+# los tres valores de Azure, y entonces la configuración exige `AUTH_MODE=entra`.
+
+name: esg
+
+services:
+  esg-base:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${ESG_DB:-esg}
+      POSTGRES_USER: ${ESG_DB_SUPERUSER:-postgres}
+      # Valor de desarrollo, evidentemente falso. Los secretos de verdad no
+      # viven en un fichero del repositorio.
+      POSTGRES_PASSWORD: ${ESG_DB_SUPERPASSWORD:-desarrollo-sin-valor-real}
+    volumes:
+      - esg-datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ESG_DB_SUPERUSER:-postgres} -d ${ESG_DB:-esg}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "${ESG_PUERTO_BASE:-55433}:5432"
+
+  # Aplica el esquema, crea el rol de aplicación y le da permisos. Va aparte de
+  # la API **y con el usuario de administración**: la RLS impide que `esg_app`
+  # escriba la primera organización, que es como tiene que ser, pero eso hace
+  # imposible arrancar desde el contenedor de la API.
+  esg-preparar:
+    build:
+      context: .
+      dockerfile: docker/esg-api.Dockerfile
+      secrets: [ca_extra]
+    depends_on:
+      esg-base:
+        condition: service_healthy
+    environment:
+      ADMIN_URL: postgresql+psycopg://${ESG_DB_SUPERUSER:-postgres}:${ESG_DB_SUPERPASSWORD:-desarrollo-sin-valor-real}@esg-base:5432/${ESG_DB:-esg}
+      ESG_ROLE: ${ESG_ROLE:-esg_app}
+      ESG_PASS: ${ESG_APP_PASSWORD:-desarrollo-sin-valor-real}
+    entrypoint: ["/bin/sh", "-lc"]
+    command:
+      - |
+        set -e
+        python - <<'PY'
+        import os
+        from sqlalchemy import create_engine, text
+        from esg.db.preparar import aplicar
+
+        dsn, rol, clave = os.environ["ADMIN_URL"], os.environ["ESG_ROLE"], os.environ["ESG_PASS"]
+        motor = create_engine(dsn, future=True)
+        with motor.connect() as conn:
+            conn.execute(text("COMMIT"))
+            ya = conn.execute(text("SELECT to_regclass('public.lectura')")).scalar_one()
+        if ya is None:
+            aplicar(dsn)
+        with motor.connect() as conn:
+            conn.execute(text("COMMIT"))
+            existe = conn.execute(
+                text("SELECT 1 FROM pg_roles WHERE rolname = :r"), {"r": rol}
+            ).scalar()
+            if not existe:
+                conn.execute(text(f"CREATE ROLE {rol} LOGIN PASSWORD :c"), {"c": clave})
+            conn.execute(text("COMMIT"))
+        with motor.begin() as conn:
+            # Después de CADA cambio de esquema, no solo al crear la base: una
+            # tabla nueva nace siendo de `postgres` y `esg_app` se queda sin
+            # permisos sobre ella. La tabla existe, la RLS está puesta, y la
+            # aplicación recibe «permission denied» en cuanto la toca.
+            for orden in (
+                f"GRANT USAGE ON SCHEMA public TO {rol}",
+                f"GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO {rol}",
+                f"GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO {rol}",
+            ):
+                conn.execute(text(orden))
+        print("Base del ESG lista.")
+        PY
+
+  esg-api:
+    build:
+      context: .
+      dockerfile: docker/esg-api.Dockerfile
+      secrets: [ca_extra]
+    depends_on:
+      esg-preparar:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: local
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-clave-de-desarrollo-sin-ningun-valor-real-0123456789}
+      # `esg_app` NO es propietario y NO tiene BYPASSRLS. Arrancar la API con el
+      # usuario de administración dejaría la RLS sin efecto y todo parecería
+      # funcionar, que es la peor forma de que falle.
+      DATABASE_URL: postgresql+psycopg://${ESG_ROLE:-esg_app}:${ESG_APP_PASSWORD:-desarrollo-sin-valor-real}@esg-base:5432/${ESG_DB:-esg}
+      AUTH_MODE: ${AUTH_MODE:-local}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      LECTOR_FACTURAS_URL: ${LECTOR_FACTURAS_URL:-}
+      LECTOR_FACTURAS_API_KEY: ${LECTOR_FACTURAS_API_KEY:-}
+      CORS_ORIGENES: http://localhost:${ESG_PUERTO_WEB:-8081}
+    ports:
+      - "${ESG_PUERTO_API:-8001}:8000"
+
+  esg-web:
+    build:
+      context: .
+      dockerfile: docker/esg-web.Dockerfile
+      args:
+        # Vacío: la interfaz llama a `/api/...` en su mismo origen y nginx lo
+        # reenvía. Así no hay preflight de CORS en cada petición.
+        VITE_API_URL: ""
+        VITE_AUTH_MODE: ${AUTH_MODE:-local}
+        VITE_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+        VITE_AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+        VITE_AZURE_SCOPE: ${AZURE_SCOPE:-}
+    depends_on:
+      esg-api:
+        condition: service_started
+    ports:
+      - "${ESG_PUERTO_WEB:-8081}:80"
+
+secrets:
+  # Opcional: CA corporativa para redes con inspección TLS. Igual que en el
+  # `compose.yml` de la due diligence: sin `CA_EXTRA`, apunta a /dev/null y la
+  # línea del Dockerfile no hace nada.
+  ca_extra:
+    file: ${CA_EXTRA:-/dev/null}
+
+volumes:
+  esg-datos:
