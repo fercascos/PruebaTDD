@@ -190,8 +190,6 @@ def calcular_panel(
     comercializadora.
     """
     ocupacion = ocupacion or {}
-    por_activo = {a.id: a for a in activos}
-
     aportes: dict[tuple[uuid.UUID, str, str], Decimal] = defaultdict(lambda: CERO)
     serie: dict[tuple[str, date], Decimal] = defaultdict(lambda: CERO)
     periodos: dict[tuple[uuid.UUID, str], list[tuple[date, date]]] = defaultdict(list)
@@ -270,9 +268,7 @@ def calcular_panel(
             cobertura=Cobertura(
                 dias_esperados=sum(t.cobertura.dias_esperados for t in presentes),
                 dias_con_dato=sum(t.cobertura.dias_con_dato for t in presentes),
-                lecturas_sin_normalizar=sum(
-                    t.cobertura.lecturas_sin_normalizar for t in presentes
-                ),
+                lecturas_sin_normalizar=sum(t.cobertura.lecturas_sin_normalizar for t in presentes),
             ),
         )
 

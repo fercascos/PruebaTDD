@@ -310,16 +310,28 @@ CREATE INDEX ambito_por_usuario ON ambito_de_visibilidad (usuario_id);
 --  403 con su motivo.
 -- ═════════════════════════════════════════════════════════════════════════════
 
+-- `nullif(..., '')` y no un cast a secas, y esto costó dos pruebas en rojo:
+-- cuando una transacción que hizo `SET LOCAL` termina, la variable NO vuelve a
+-- «no definida», vuelve a **cadena vacía**. Con el cast directo, la siguiente
+-- consulta de esa misma conexión del pool —sin contexto todavía— no devolvía
+-- cero filas: reventaba con «invalid input syntax for type uuid: ""». Un error
+-- donde tenía que haber una lista vacía, y encima en la conexión reutilizada,
+-- que es el caso de todas las peticiones menos la primera.
 CREATE OR REPLACE FUNCTION esg_org() RETURNS UUID
-    LANGUAGE sql STABLE AS $$ SELECT current_setting('app.organizacion_id', TRUE)::uuid $$;
+    LANGUAGE sql STABLE AS $$
+    SELECT nullif(current_setting('app.organizacion_id', TRUE), '')::uuid $$;
 CREATE OR REPLACE FUNCTION esg_usuario() RETURNS UUID
-    LANGUAGE sql STABLE AS $$ SELECT current_setting('app.usuario_id', TRUE)::uuid $$;
+    LANGUAGE sql STABLE AS $$
+    SELECT nullif(current_setting('app.usuario_id', TRUE), '')::uuid $$;
 CREATE OR REPLACE FUNCTION esg_ve_todo() RETURNS BOOLEAN
-    LANGUAGE sql STABLE AS $$ SELECT coalesce(current_setting('app.ve_todo', TRUE)::boolean, FALSE) $$;
+    LANGUAGE sql STABLE AS $$
+    SELECT coalesce(nullif(current_setting('app.ve_todo', TRUE), '')::boolean, FALSE) $$;
 CREATE OR REPLACE FUNCTION esg_escribe_estructura() RETURNS BOOLEAN
-    LANGUAGE sql STABLE AS $$ SELECT coalesce(current_setting('app.escribe_estructura', TRUE)::boolean, FALSE) $$;
+    LANGUAGE sql STABLE AS $$
+    SELECT coalesce(nullif(current_setting('app.escribe_estructura', TRUE), '')::boolean, FALSE) $$;
 CREATE OR REPLACE FUNCTION esg_escribe_datos() RETURNS BOOLEAN
-    LANGUAGE sql STABLE AS $$ SELECT coalesce(current_setting('app.escribe_datos', TRUE)::boolean, FALSE) $$;
+    LANGUAGE sql STABLE AS $$
+    SELECT coalesce(nullif(current_setting('app.escribe_datos', TRUE), '')::boolean, FALSE) $$;
 
 -- Un activo es visible si es de mi organización Y (lo veo todo, O tengo un
 -- ámbito que lo alcanza, directamente o por su cartera).
@@ -497,7 +509,10 @@ CREATE POLICY usuario_primer_acceso ON usuario FOR UPDATE USING (
 CREATE OR REPLACE FUNCTION usuario_solo_marcas_de_acceso() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-    IF coalesce(current_setting('app.escribe_estructura', TRUE)::boolean, FALSE) THEN
+    -- Por la función y no por `current_setting` a pelo: la variable vale ''
+    -- —no NULL— en una conexión reutilizada del pool, y el cast directo aquí
+    -- reventaba el inicio de sesión de todo el mundo menos el primero.
+    IF esg_escribe_estructura() THEN
         RETURN NEW;  -- un administrador sí edita la ficha entera
     END IF;
     IF NEW.rol IS DISTINCT FROM OLD.rol

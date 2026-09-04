@@ -195,8 +195,11 @@ def test_un_suministro_dado_de_alta_a_mitad_de_ventana_no_hunde_la_cobertura() -
         hasta=date(2025, 4, 1),
         lecturas=[luz(LUZ_TORRE, TORRE, date(2025, 3, 1), date(2025, 4, 1), "10000")],
         activos=[ACTIVOS[0]],
-        puntos=[PuntoEsperado(id=LUZ_TORRE, activo_id=TORRE, vector="ELECTRICIDAD",
-                              alta_en=date(2025, 3, 1))],
+        puntos=[
+            PuntoEsperado(
+                id=LUZ_TORRE, activo_id=TORRE, vector="ELECTRICIDAD", alta_en=date(2025, 3, 1)
+            )
+        ],
     )
     cobertura = panel.totales["ELECTRICIDAD"].cobertura
     assert cobertura.dias_esperados == 31

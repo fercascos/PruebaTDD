@@ -57,8 +57,10 @@ _ALIAS: Final[dict[str, str]] = {
     "toneladas": "t",
 }
 
-#: Factores que no dependen de nada: son definiciones.
-_FIJOS: Final[dict[tuple[str, str], Decimal]] = {
+#: Factores que no dependen de nada: son definiciones. Público a propósito:
+#: `db/sembrar.py` genera desde aquí la tabla que consulta quien audita, y una
+#: prueba falla si la tabla y esta constante divergen.
+FACTORES_FIJOS: Final[dict[tuple[str, str], Decimal]] = {
     ("kWh", "kWh"): Decimal(1),
     ("MWh", "kWh"): Decimal(1000),
     ("GWh", "kWh"): Decimal(1000000),
@@ -125,7 +127,7 @@ def normalizar(
             )
         return Normalizada(_redondear(cantidad * factor_gas), destino, factor_gas)
 
-    factor = _FIJOS.get((origen, destino))
+    factor = FACTORES_FIJOS.get((origen, destino))
     if factor is None:
         return Normalizada(
             None, destino, None, motivo=f"no hay conversión de «{origen}» a «{destino}»"

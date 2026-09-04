@@ -68,9 +68,7 @@ def repartir(inicio: date, fin: date, cantidad: Decimal) -> dict[date, Decimal]:
     return reparto
 
 
-def dias_cubiertos(
-    periodos: list[tuple[date, date]], desde: date, hasta: date
-) -> int:
+def dias_cubiertos(periodos: list[tuple[date, date]], desde: date, hasta: date) -> int:
     """Días del intervalo `[desde, hasta)` cubiertos por algún periodo.
 
     Los periodos que llegan aquí **no se solapan** —lo impide la restricción

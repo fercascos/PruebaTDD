@@ -45,7 +45,15 @@ pythonpath = ["src"]
 markers = [
     "db: prueba que necesita PostgreSQL real (RLS, CHECK, EXCLUDE de solape)",
 ]
-filterwarnings = ["error::DeprecationWarning"]
+filterwarnings = [
+    # Un aviso de obsolescencia es un fallo: es la única forma de enterarse a
+    # tiempo, en vez de el día que la biblioteca lo convierte en error.
+    "error::DeprecationWarning",
+    # Excepción: la suelta `anyio` al importar `starlette.testclient`, no
+    # nuestro código, y no hay forma de evitarla desde aquí. Se anota tal cual
+    # para que el día que starlette lo arregle esta línea sobre y se note.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
 
 [tool.ruff]
 line-length = 100
@@ -59,6 +67,12 @@ ignore = ["N818"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["SIM117"]
+# B008 prohíbe llamar a una función en el valor por omisión de un argumento, y
+# tiene razón en general: el valor se evalúa una vez al importar. Pero
+# `Query(...)`, `File(...)` y `Form(...)` son **la** forma en que FastAPI
+# declara un parámetro, y el objeto que devuelven es inmutable y sirve de
+# declaración, no de valor. Se ignora en los routers, y solo ahí.
+"src/esg/*/router.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"

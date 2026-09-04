@@ -93,9 +93,7 @@ def exigir_escritura_de_datos(
 ) -> UsuarioActual:
     """403 con motivo en vez del 500 que devolvería la RLS al rechazar la fila."""
     if not usuario.permisos.escribe_datos:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, "Su rol no permite cargar datos de consumo"
-        )
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Su rol no permite cargar datos de consumo")
     return usuario
 
 
