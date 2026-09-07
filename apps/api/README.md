@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.294 pruebas
+make test        # 1.295 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -64,7 +64,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Errores de usuario** · 409 y 422 donde había 500 | ✅ Completo | `tests/integration/test_errores_de_usuario.py` · 6 |
 | **Tabla de CAPEX** · diseño único para PPTX y XLSX | ✅ Completo | `tests/unit/test_capex_layout.py` · 25 |
 | **Fuentes y desbordamiento** con métricas reales | ✅ Completo | `tests/unit/test_fuentes_y_desbordamiento.py` · 18 |
-| **Cambio de tipografía de una plantilla** `[REQ]` P-39 | ✅ Completo | `tests/unit/test_retipografiar_plantilla.py` · 10 |
+| **Cambio de tipografía de una plantilla** `[REQ]` P-39 | ✅ Completo | `tests/unit/test_retipografiar_plantilla.py` · 11 |
 | **Retirada de la marca de agua** `[REQ]` P-43 | ✅ Completo | `tests/unit/test_marca_de_agua.py` · 10 |
 | **Nombres de fotografía** · 13 tokens y 8 reglas | ✅ Completo | `tests/unit/test_nombres_de_foto.py` · 33 |
 | **Lectura de imágenes** · EXIF, GPS, HEIC, derivados | ✅ Completo | `tests/unit/test_imagenes.py` · 24 |

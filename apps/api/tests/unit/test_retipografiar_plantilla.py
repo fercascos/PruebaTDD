@@ -10,6 +10,7 @@ traducir en vez de adivinarlo.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import zipfile
 from collections import Counter
@@ -50,6 +51,62 @@ def _plantilla(tmp_path: Path, fuentes: dict[str, str]) -> Path:
     destino = tmp_path / "plantilla.pptx"
     pres.save(destino)
     return destino
+
+
+#: `<a:majorFont><a:latin typeface="…">` para titulares, `minorFont` para el
+#: cuerpo. python-pptx no expone el tema, así que se edita el XML.
+_TEMA = re.compile(rb'(<a:(?:majorFont|minorFont)>\s*<a:latin typeface=")[^"]*(")')
+
+
+def _poner_tema(bruto: bytes, titulares: bytes, cuerpo: bytes) -> bytes:
+    # `majorFont` va antes que `minorFont` en el XML del tema, así que el orden
+    # de consumo es el de aparición.
+    orden = iter([titulares, cuerpo])
+    return _TEMA.sub(lambda m: m.group(1) + next(orden) + m.group(2), bruto)
+
+
+def _con_tema(plantilla: Path, titulares: bytes, cuerpo: bytes) -> Path:
+    """La misma plantilla, con el TEMA declarando esas dos familias."""
+    with zipfile.ZipFile(plantilla) as z:
+        nombres = z.namelist()
+        partes = {n: z.read(n) for n in nombres}
+    for nombre in nombres:
+        if nombre.startswith("ppt/theme/"):
+            partes[nombre] = _poner_tema(partes[nombre], titulares, cuerpo)
+    with zipfile.ZipFile(plantilla, "w", zipfile.ZIP_DEFLATED) as salida:
+        for n in nombres:
+            salida.writestr(n, partes[n])
+    return plantilla
+
+
+#: Lo mismo, pero capturando el nombre para poder leerlo.
+_TEMA_LEER = re.compile(rb'<a:(?:majorFont|minorFont)>\s*<a:latin typeface="([^"]*)"')
+
+
+def _tema_de(fichero: Path) -> list[str]:
+    """[titulares, cuerpo] tal y como los declara el tema."""
+    with zipfile.ZipFile(fichero) as z:
+        tema = z.read("ppt/theme/theme1.xml")
+    return [m.decode() for m in _TEMA_LEER.findall(tema)]
+
+
+def test_el_tema_tambien_se_convierte(tmp_path: Path) -> None:
+    """**La parte que más pesa en una plantilla de verdad.**
+
+    Una corporativa fija su tipografía en el tema —`majorFont` para titulares y
+    `minorFont` para el cuerpo—, y todo lo que no lleva formato explícito la
+    hereda de ahí. Convertir solo los `run` dejaría el grueso del informe
+    apuntando a una fuente que en el PowerPoint del lector no existe, que es
+    exactamente el fallo silencioso que esta herramienta viene a evitar.
+    """
+    origen = _con_tema(
+        _plantilla(tmp_path, {"Gotham Light": "cuerpo"}), b"Gotham Ultra", b"Gotham Light"
+    )
+    assert _tema_de(origen) == ["Gotham Ultra", "Gotham Light"]
+
+    salida = tmp_path / "nueva.pptx"
+    herramienta.retipografiar(origen, salida, mapa=herramienta.EQUIVALENCIAS)
+    assert _tema_de(salida) == ["Montserrat Black", "Montserrat Light"]
 
 
 def test_declara_lo_que_hay_dentro(tmp_path: Path) -> None:
