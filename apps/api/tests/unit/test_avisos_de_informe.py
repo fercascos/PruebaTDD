@@ -82,7 +82,7 @@ def test_solo_bloquean_los_cinco_que_producirian_un_documento_incorrecto() -> No
         importe_sin_validar=Decimal("184300.00"),
         desbordamientos=(("system.description", 0.35),),
         diapositivas_de_tabla=3,
-        fuentes_ausentes=("Gotham Book",),
+        fuentes_ausentes=("Montserrat Medium",),
         campos_vacios=("asset.city",),
         solicitudes_pendientes=4,
         hallazgos_en_borrador=8,
@@ -164,7 +164,7 @@ def test_una_tabla_partida_avisa_de_en_cuantas() -> None:
 def test_una_fuente_ausente_avisa_sin_bloquear() -> None:
     """El PPTX guarda el NOMBRE de la fuente, así que en un equipo que sí la
     tenga se verá bien. Lo que pierde precisión es la medición aquí."""
-    avisos = evaluar(EstadoDelInforme(fuentes_ausentes=("Gotham Book",)))
+    avisos = evaluar(EstadoDelInforme(fuentes_ausentes=("Montserrat Medium",)))
     aviso = next(a for a in avisos if a.codigo == "FONT_NOT_AVAILABLE")
     assert aviso.bloquea is False
     assert "por nombre" in aviso.mensaje

@@ -63,17 +63,37 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # completas ya incluyen fontconfig, las `slim` no—, para que la misma receta
 # valga con cualquier base y no se pague una descarga de paquetes cuando no
 # hace falta.
-RUN if ! command -v fc-match >/dev/null 2>&1; then \
-      apt-get update \
-      && apt-get install --no-install-recommends -y fontconfig \
-      && rm -rf /var/lib/apt/lists/*; \
+# Y **Montserrat va dentro de la imagen**, que es lo que P-39 desbloquea: es
+# SIL OFL 1.1, así que distribuirla con cada copia de la imagen es exactamente
+# lo que la licencia permite. Con Gotham no se podía —era comercial— y el
+# despliegue tenía que montarla a mano en un volumen: un paso manual del que
+# dependía una función del bloque 4, y que nadie iba a recordar.
+#
+# `fonts-montserrat` se instala siempre, `fontconfig` solo si la base no lo
+# trae: las imágenes `python:3.11-bookworm` completas ya lo incluyen y las
+# `slim` no.
+RUN apt-get update \
+ && if ! command -v fc-match >/dev/null 2>&1; then \
+      apt-get install --no-install-recommends -y fontconfig; \
     fi \
+ && apt-get install --no-install-recommends -y fonts-montserrat \
+ && rm -rf /var/lib/apt/lists/* \
+ && fc-cache -f >/dev/null \
  && fc-match --version
 
-# `[LIM]` Las tipografías corporativas (Gotham) **no van en la imagen**. Son
-# comerciales, el repositorio tiene una comprobación (`make no-fonts`) que
-# impide versionarlas, y meterlas aquí las distribuiría con cada copia de la
-# imagen. Se montan en `/usr/share/fonts/corporativas` al desplegar.
+# Que estén no basta: tienen que resolverse **por su nombre exacto**, que es
+# como las pide `reporting/fonts.py`. Un paquete que cambiara de nombres de
+# familia dejaría el aviso de desbordamiento mudo, y en tiempo de ejecución eso
+# no se distingue de «este texto cabe».
+RUN for f in "Montserrat Light" "Montserrat" "Montserrat Medium" \
+             "Montserrat SemiBold" "Montserrat ExtraBold" "Montserrat Black"; do \
+      fc-match -f '%{family}' "$f" | tr ',' '\n' | grep -qixF "$f" \
+        || { echo "FALTA la familia $f"; exit 1; }; \
+    done \
+ && echo "Las seis familias del informe resuelven por nombre exacto."
+
+# Sitio para una tipografía adicional que un cliente quiera montar en su
+# despliegue. Vacío por omisión: el informe ya no depende de ello.
 RUN mkdir -p /usr/share/fonts/corporativas
 
 # Sin privilegios. Que la aplicación no pueda escribir en su propio código es

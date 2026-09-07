@@ -282,7 +282,17 @@ de Gotham (o su licencia) e instalarlos en el contenedor del worker. Sin eso, ta
 desbordamiento como la previsualización pierden buena parte de su valor en un informe de 67
 diapositivas cuyo riesgo principal es, precisamente, el texto que se sale.
 
-> ✅ **Resuelto.** El cliente ha facilitado **las seis familias Gotham**, verificadas en §18.7bis. Los
+> ✅ **Superado por P-39 · fuera Gotham.** El cliente la descarta y elige **Segoe UI, o Montserrat en
+> su defecto**. El informe usa **Montserrat**, que es SIL OFL 1.1 y por tanto **va dentro de la imagen
+> del contenedor**: el requisito de fase F0 de esta sección —«obtener los ficheros e instalarlos»—
+> desaparece, y con él el paso manual del despliegue del que dependía el aviso de desbordamiento. Todo
+> lo que este documento mide **sobre las plantillas** sigue valiendo: describen lo que esos ficheros
+> declaran hoy, y seguirán declarando Gotham hasta que alguien los pase por
+> `tools/retipografiar_plantilla.py`. Lo que ya no vale es la conclusión de que hace falta una fuente
+> comercial. `[LIM]` Montserrat es más ancha: la diapositiva de sistema baja de 4.405 a 4.080
+> caracteres, un 7,4 %.
+>
+> ✅ **Resuelto en su momento.** El cliente facilitó **las seis familias Gotham**, verificadas en §18.7bis. Los
 > dos problemas de arriba desaparecen. Conviene además leer §18.7bis para deshacer un malentendido que
 > este apartado puede inducir: **la fuente hace falta para medir y para previsualizar, no para
 > generar**. El PPTX sale con los textos en Gotham aunque el servidor no la tenga instalada.

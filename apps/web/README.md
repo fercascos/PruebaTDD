@@ -121,6 +121,24 @@ código entre Canvas y Pillow—, pero **comparten el formato**, y eso es lo que
 garantiza que dibujen en el mismo sitio. Se comprueba arrastrando el ratón de
 verdad: `npm run test:anotador`.
 
+## La tipografía: Segoe UI aquí, Montserrat en el informe
+
+`[REQ]` P-39. El cliente descarta Gotham y elige **Segoe UI, o Montserrat en su
+defecto**. En la aplicación manda Segoe UI, y va **por delante de `system-ui`** a
+propósito: lo que se decidió es una tipografía, no «la que traiga el sistema». En
+Windows —que es donde se trabaja— está siempre; en un Mac o un Linux la resuelve
+Montserrat si está instalada, y si no, el sistema.
+
+`[REC]` **No se descarga ninguna fuente.** Un `@font-face` contra un CDN metería
+una petición externa en una aplicación que tiene que abrir sin red, y
+empaquetarla añadiría peso al arranque en un móvil de campo. La consecuencia,
+dicha: en un Mac sin Montserrat instalada la aplicación **no se ve exactamente
+igual** que en Windows. Es un cambio de tipografía de interfaz, no de contenido.
+
+Lo que sí sale de la casa —el informe— usa **Montserrat de verdad**, instalada en
+el servidor, porque ahí hay que medir el desbordamiento con el fichero real. El
+porqué de que no pueda ser Segoe UI está en `apps/api/src/tdd/reporting/fonts.py`.
+
 ## Los gráficos, y por qué la paleta está medida
 
 `src/graficos/`. Dos reglas gobiernan todo lo que se pinta aquí, y ninguna es de

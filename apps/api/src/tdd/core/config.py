@@ -103,12 +103,20 @@ class Settings(BaseSettings):
     price_source_http_timeout_seconds: int = 10
     price_source_user_agent: str = ""
 
-    # ── Fuentes corporativas ────────────────────────────────────────────────
+    # ── Fuentes del informe ─────────────────────────────────────────────────
+    # P-39 cerrada: **Montserrat**, SIL OFL 1.1, del paquete `fonts-montserrat`.
+    # Sustituye a Gotham, que era comercial y no podía ni instalarse en la
+    # imagen ni incrustarse. El porqué de que no sea Segoe UI —la primera
+    # opción del cliente— está en `reporting/fonts.py`.
     corporate_fonts_required: str = (
-        "Gotham Light,Gotham Book,Gotham Medium,Gotham Bold,Gotham Black,Gotham Ultra"
+        "Montserrat Light,Montserrat,Montserrat Medium,"
+        "Montserrat SemiBold,Montserrat ExtraBold,Montserrat Black"
     )
     font_fallback_warn: bool = True
-    pptx_embed_fonts: bool = False  # P-39 pendiente: contrato de licencia sin verificar
+    # `[LIM]` La licencia ya **permite** incrustar; el generador todavía no lo
+    # hace. Sigue en `false` porque encenderlo hoy no cambiaría el fichero: es
+    # una función por construir, no un interruptor esperando permiso.
+    pptx_embed_fonts: bool = False
 
     @property
     def required_font_families(self) -> list[str]:

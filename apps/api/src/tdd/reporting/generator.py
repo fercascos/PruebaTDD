@@ -193,10 +193,15 @@ def _hueco_libre(
 def _evaluar_marco(forma: Any) -> str | None:
     """El aviso de desbordamiento de una forma, o `None` si cabe o no se sabe.
 
-    La familia sale de la propia forma, no de una constante: la plantilla del
-    cliente usa `Gotham Light` para el texto corrido y `Gotham Ultra` para los
-    titulares, y medir un titular con las métricas del cuerpo daría un número
-    que no significa nada.
+    La familia sale de la propia forma, no de una constante: una plantilla usa
+    un peso ligero para el texto corrido y uno muy grueso para los titulares
+    —`Montserrat Light` y `Montserrat Black` en las nuestras—, y medir un
+    titular con las métricas del cuerpo daría un número que no significa nada.
+
+    Que salga de la forma es también lo que hace que el cambio de tipografía no
+    exija tocar esto: si una plantilla antigua sigue declarando una familia que
+    no está instalada, `capacidad.fuente_real` es falso y **no se avisa**, en
+    vez de avisar con un número medido sobre otra fuente.
     """
     from tdd.reporting.overflow import capacidad_del_marco
     from tdd.reporting.overflow import evaluar as evaluar_marco

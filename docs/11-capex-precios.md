@@ -976,16 +976,20 @@ una captura de pantalla**, así que no puede volver a quedarse atrasada respecto
 | Celda sin importe | **En blanco**. Es como está hoy y distingue «no aplica» de «cero» |
 | Subtotales | Por capítulo, al cierre de cada bloque |
 | Resumen final | `TOTAL CONTRACT BUDGET` y, como línea propia, los honorarios técnicos `[REC]` |
-| **Tipografía** | **Gotham** ✅ P-38. `Gotham Light` en el cuerpo, `Gotham Medium` en encabezados y subtotales |
+| **Tipografía** | **Montserrat** ✅ P-38 unifica, P-39 elige. `Montserrat Light` en el cuerpo, `Montserrat Medium` en encabezados y subtotales |
 | Partición | 18 filas por diapositiva en el PPTX, encabezado repetido. Sin límite en el XLSX |
 
-`[REQ]` **P-38 · se unifica todo en Gotham.** El Excel original venía en Century Gothic (y algún resto
-de Calibri) simplemente porque era un fichero ajeno a la plantilla; al generar la tabla de forma nativa
-esa frontera desaparece.
+`[REQ]` **P-38 · se unifica la tipografía; P-39 dice cuál.** El Excel original venía en Century Gothic
+(y algún resto de Calibri) simplemente porque era un fichero ajeno a la plantilla; al generar la tabla
+de forma nativa esa frontera desaparece. La familia era Gotham y **pasa a ser Montserrat**: ver
+[`01`](./01-resumen-supuestos-preguntas.md) §3.6.
 
-`[LIM]` **Tiene un coste medido:** Gotham es más ancha. Sobre el texto real de las tablas —3.769
-caracteres extraídos de los metarchivos y comparados con las métricas de los `.otf`—, `Gotham Light`
-ocupa un **+4,9 %** frente a Century Gothic (`Book` +6,2 %, `Medium` +8,2 %, `Bold` +9,6 %). De ahí las
+`[LIM]` **Tiene un coste medido:** la fuente unificada es más ancha que Century Gothic. Sobre el texto
+real de las tablas —3.769 caracteres extraídos de los metarchivos y comparados con las métricas de los
+`.otf`—, `Gotham Light` ocupaba un **+4,9 %** (`Book` +6,2 %, `Medium` +8,2 %, `Bold` +9,6 %). `[PDV]`
+Esa medición **no se ha repetido con Montserrat**, que es a su vez más ancha que Gotham —un 7,4 % menos
+de capacidad en la diapositiva de sistema—, así que el margen de las 9,06 in es hoy más estrecho de lo
+que dice el párrafo siguiente y **hay que volver a medirlo sobre la tabla generada**. De ahí las
 dos correcciones de la tabla de arriba: **cuerpo en la variante más estrecha** y **5 % de anchura
 trasvasado de `Comments` a `Description`**, que es donde el texto largo aparece de verdad. Con eso el
 ancho total se mantiene en las 9,06 in medidas en el original.

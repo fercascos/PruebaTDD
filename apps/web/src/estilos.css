@@ -36,9 +36,20 @@ textarea {
   min-width: 0;
 }
 
+/* `[REQ]` P-39: la tipografía es **Segoe UI**, y Montserrat en su defecto.
+   Aquí van por delante de `system-ui` a propósito: la decisión del cliente es
+   la tipografía, no «la que traiga el sistema». En Windows —que es donde se
+   trabaja— Segoe UI está siempre; en un Mac o un Linux la resuelve Montserrat
+   si está instalada, y si no, el sistema.
+
+   No se descarga ninguna fuente: `@font-face` desde un CDN metería una
+   petición externa en una aplicación que tiene que abrir sin red, y
+   empaquetarla añadiría peso al arranque en un móvil de campo. El informe, que
+   es lo que sale de la casa, sí lleva Montserrat de verdad; ver
+   `apps/api/src/tdd/reporting/fonts.py`. */
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI', Montserrat, system-ui, -apple-system, sans-serif;
   font-size: 15px;
   line-height: 1.5;
   color: var(--tinta);

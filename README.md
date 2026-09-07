@@ -7,7 +7,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado y MVP construido.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **1.271 pruebas en verde
+> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **1.294 pruebas en verde
 > contra PostgreSQL real** y `apps/web/` con la interfaz React. La aplicación se ha recorrido de
 > punta a punta con el servidor en marcha: crear la primera cuenta, iniciar sesión, dar de alta el
 > encargo con sus fases y un activo, **hacer una foto desde la cámara**, clasificarla, registrar el
@@ -88,8 +88,8 @@ avisa de que el worker ha muerto: la interfaz sigue respondiendo rápido y lo ú
 que los informes «tardan».
 
 `[LIM]` Lo que el `compose` **no** resuelve y hace falta para producción: TLS de entrada, secretos
-fuera del fichero, copias de seguridad, límites de recursos y las tipografías corporativas
-—comerciales, no van en la imagen—. Está declarado en `compose.yml`.
+fuera del fichero, copias de seguridad y límites de recursos. Está declarado en `compose.yml`. La
+tipografía del informe **ya no está en esa lista**: tras P-39 es Montserrat y va dentro de la imagen.
 
 ---
 
@@ -160,9 +160,10 @@ Diez cuestiones que estaban abiertas y que estructuran el modelo de datos y el i
 
 | **P-07** | Facilitadas las **4 plantillas reales** de Full Report | Analizadas en [`docs/18`](docs/18-analisis-plantillas-reales.md). Son **una sola estructura** × 2 portadas × 2 idiomas: 67 diapositivas, 4:3, 14 sistemas, 56 marcos de foto. **Corrige cinco decisiones del bloque 4** |
 | **P-31** | La tabla de CAPEX pasa a ser **nativa, respetando el formato del Excel**, y la aplicación incorpora un **botón de exportar el CAPEX a XLSX** | Hoy son imágenes EMF pegadas desde Excel. Su estructura se ha **recuperado de los propios metarchivos** y está especificada en [`docs/11`](docs/11-capex-precios.md) §16.8bis. El generador de PPTX y el exportador de XLSX **comparten una misma pieza** para que no puedan divergir. El XLSX existe para adjuntarlo en los envíos que el equipo haga fuera de la plataforma, y por eso **queda auditado** |
-| **P-32** | Facilitadas las **seis familias Gotham** | Verificadas una a una. El desbordamiento se mide con las fuentes reales, texto y titulares, **sin sustitutas** |
+| **P-32** | Facilitadas las **seis familias Gotham** | Verificadas una a una. El desbordamiento se mide con las fuentes reales, texto y titulares, **sin sustitutas**. `[LIM]` **Superada por P-39**: el cliente descarta Gotham. Sobrevive el método, no la fuente |
 | **P-37** | La tabla lleva **cinco columnas de plazo**, «Otro» incluida | La imagen pegada en la plantilla solo tenía cuatro: estaba desfasada respecto del Excel de trabajo. La tabla nativa se genera **desde el dato**, así que no puede volver a quedarse atrás |
-| **P-38** | **Toda la tipografía unificada en Gotham** | La tabla deja Century Gothic. Cuesta un **+4,9 %** de anchura de texto —medido sobre 3.769 caracteres reales—, absorbido con `Gotham Light` en el cuerpo y un reajuste de columnas |
+| **P-38** | **Toda la tipografía del informe unificada en una sola familia** | La tabla deja Century Gothic, que costaba un **+4,9 %** de anchura de texto —medido sobre 3.769 caracteres reales—, absorbido con el peso ligero en el cuerpo y un reajuste de columnas |
+| **P-39** | **Ni Gotham ni su contrato de licencia: Segoe UI en la aplicación, Montserrat en el informe** | Segoe UI vale en la máquina de quien abre la aplicación y **no** en el servidor, que necesita el fichero instalado para medir el desbordamiento, ni dentro de un PPTX que se envía fuera. Montserrat es **SIL OFL 1.1**: va dentro de la imagen y quita del despliegue el paso manual de montar una fuente comercial. `[LIM]` Cuesta un **7,4 %** de capacidad por diapositiva de sistema, medido |
 
 Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos** y el riesgo del bloque 4
 pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
@@ -175,13 +176,23 @@ pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
 estructuraban el modelo están resueltas por el cliente, y las últimas —P-06, P-16 y P-40— cerraron con
 la aplicación de las decisiones ya propagada a toda la documentación.
 
-Queda **una sola cuestión aplazada**, y no bloquea nada:
+**Y la última que quedaba aplazada se ha cerrado.** `P-39` preguntaba si el contrato de licencia de
+Gotham permitía incrustarla en los PPTX enviados, y llevaba meses parada porque el cliente no
+localizaba el contrato. La respuesta del cliente ha sido cambiar la pregunta: **fuera Gotham**, y en su
+lugar **Segoe UI, o Montserrat en su defecto**.
 
-- 🟡 **`P-39` · ¿Permite el contrato de licencia de Gotham incrustar las fuentes en los PPTX enviados?**
-  El cliente no localiza el contrato. Los ficheros lo admiten (`fsType = Preview & Print`), pero eso no
-  sustituye al contrato. **La incrustación queda desactivada** (`PPTX_EMBED_FONTS=false`), que es
-  exactamente lo que hacen hoy las plantillas de la consultora: ninguna de las cuatro incrusta fuentes.
-  Se puede reabrir cuando aparezca el contrato, sin tocar nada de lo construido.
+- **La aplicación web usa Segoe UI**, que está en la máquina de quien la abre. Ahí no se distribuye
+  nada y no hay licencia que verificar.
+- **El informe usa Montserrat**, y no Segoe UI, por una razón técnica que no admite atajo: para avisar
+  de que un texto se desborda hay que **medirlo con el fichero de la fuente instalado en el servidor**,
+  y Segoe UI es de Microsoft —viaja con Windows, no se instala en un contenedor Linux ni se incrusta en
+  un fichero que se envía a un tercero—. Montserrat es SIL OFL 1.1: se instala con un paquete, va
+  dentro de la imagen y se puede incrustar.
+- `[LIM]` **Cuesta un 7,4 % de capacidad**, medido con las dos fuentes por el mismo código: la
+  diapositiva de sistema pasa de 4.405 caracteres a 4.080. Montserrat es más ancha.
+- `[PDV]` **Las cuatro plantillas reales siguen llevando Gotham escrita por dentro.**
+  `tools/retipografiar_plantilla.py` las convierte sin tocar el original, pero hay que pasarlas y
+  **mirar el resultado**.
 
 > **Siguiente paso: entregable 24** — el código inicial del MVP, que conforme a §16 del encargo se
 > aborda tras la validación de este diseño.
@@ -203,10 +214,12 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   ([`docs/20`](docs/20-poc-pptx.md)) las ha renderizado y comparado; faltaba un paquete de LibreOffice,
   no era un problema de fondo. Ver el render **corrigió cuatro afirmaciones** del doc 18.
 - `[LIM]` La detección de textos que desbordan es una **estimación** por métricas de fuente, con margen
-  de ±10-15 %. El aviso lo dice explícitamente al usuario. Ya se mide con las **fuentes Gotham reales**,
+  de ±10-15 %. El aviso lo dice explícitamente al usuario. Se mide con las **fuentes reales**,
   texto y titulares, sin sustitutas.
 - `[LIM]` **Un PPTX no contiene tipografías, contiene nombres de tipografía.** Que el destinatario vea
-  el informe en Gotham depende de que tenga Gotham instalada, no de esta aplicación. Es el mismo
+  el informe con su tipografía depende de que la tenga instalada, no de esta aplicación. Con Montserrat
+  eso deja de ser un problema práctico —es gratuita y cualquiera puede instalarla—, pero sigue sin
+  incrustarse. Es el mismo
   comportamiento que hoy: las cuatro plantillas facilitadas **no incrustan** las fuentes. Incrustarlas
   es posible y está valorado en [`docs/18`](docs/18-analisis-plantillas-reales.md) §18.7bis, pero
   **no entra en el MVP**.
@@ -214,11 +227,12 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   cabecera de dos niveles, formato— se recuperó de los metarchivos EMF de las plantillas, que son
   exactos, pero los anchos son una reconstrucción y no se ha visto ningún render. La comparación lado a
   lado con la imagen original es criterio de salida de la prueba de concepto. Tras P-38 esa comparación
-  **no busca identidad**: la tabla irá en Gotham y no en Century Gothic, con un **4,9 % más de anchura
-  de texto** ya medido y compensado en los anchos de columna.
-- `[LIM]` **Las fuentes corporativas no están en el repositorio y no deben estarlo.** Gotham es
-  comercial y licenciada; versionarla sería redistribuirla. Se provisionan en el contenedor desde un
-  artefacto privado, con verificación en el arranque.
+  **no busca identidad**: la tabla no irá en Century Gothic, y el reajuste de anchos que compensa esa
+  diferencia ya está hecho.
+- `[REQ]` **Las tipografías no se versionan, se instalan por paquete.** Tras P-39 la del informe es
+  Montserrat (SIL OFL 1.1), así que **va dentro de la imagen** —`fonts-montserrat`, una línea del
+  Dockerfile— con verificación de que las seis familias resuelven por su nombre exacto. Con Gotham no
+  se podía: era comercial y el despliegue tenía que montarla a mano en un volumen.
 - `[LIM]` **No hay ninguna fuente de precios externa, ni está prevista** `[REQ]` P-06. Los precios se
   teclean y se editan a mano, sin fricción. La contrapartida, asumida a conciencia: **el catálogo de
   precios se irá desfasando**, porque nada lo actualiza solo. Por eso el módulo de Sugerencias llega en

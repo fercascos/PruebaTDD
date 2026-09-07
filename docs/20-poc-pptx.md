@@ -169,9 +169,14 @@ declara `Calibri`. Gotham aparece en otras diapositivas, pero **la mezcla tipogr
 de lo que dije**: no es «Gotham en el informe y Century Gothic en las tablas», son tres familias
 repartidas.
 
-`[REC]` Esto **amplía el alcance de P-38**, no lo cambia. La decisión de unificar en Gotham sigue
-siendo la correcta y el `+4,9 %` de anchura medido sigue valiendo, pero afecta a **todo el cuerpo del
-informe**, no solo a la tabla de CAPEX. Conviene saberlo antes de preparar la plantilla piloto.
+`[REC]` Esto **amplía el alcance de P-38**, no lo cambia. La decisión de unificar sigue siendo la
+correcta y el `+4,9 %` de anchura medido sigue valiendo, pero afecta a **todo el cuerpo del informe**,
+no solo a la tabla de CAPEX. Conviene saberlo antes de preparar la plantilla piloto.
+
+> **Y es la razón por la que P-39 necesita una herramienta, no un cambio de constante.** Si la mezcla
+> fuera «Gotham en el informe y Century Gothic en las tablas», bastaría con cambiar lo que genera la
+> aplicación. Son tres familias repartidas por 67 diapositivas, así que la plantilla hay que
+> convertirla entera: `tools/retipografiar_plantilla.py`, que no toca el original.
 
 ### C-9 · Hay una marca de agua «DRAFT»
 

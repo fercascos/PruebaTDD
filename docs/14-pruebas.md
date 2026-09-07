@@ -314,8 +314,8 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Celda sin importe** | Queda **en blanco**. Una prueba busca el literal `0,00 €` en columnas de plazo y falla si aparece `[REC]` |
 | **Formato de importe** | `#.##0,00 €` en `es-ES` y el equivalente en `en-GB`, verificado carácter a carácter sobre el texto de la celda |
 | **Columna «Otro»** | Por defecto la tabla tiene **9 columnas** en los dos formatos, con «Otro» incluida `[REQ]` P-37. Con `include_other_horizon` a falso, 8 |
-| **Tipografía unificada** | Se recorre el XML de la tabla generada y se afirma que **todos** los `typeface` son de la familia `Gotham`. Falla si se cuela `Century Gothic` o `Calibri` `[REQ]` P-38 |
-| **Ancho tras P-38** | Con textos de descripción reales, la tabla en `Gotham Light` **no excede las 9,06 in** del original. Es la prueba que cubre el +4,9 % de anchura |
+| **Tipografía unificada** | Se recorre el XML de la tabla generada y se afirma que **todos** los `typeface` son de la familia del informe —`Montserrat` tras P-39—. Falla si se cuela `Century Gothic` o `Calibri` `[REQ]` P-38 |
+| **Ancho tras P-38** | Con textos de descripción reales, la tabla en el peso ligero **no excede las 9,06 in** del original. Es la prueba que cubre el ensanchamiento respecto de Century Gothic |
 | **Una sola casilla por fila** | Se recorre cada fila y se afirma que exactamente una columna de plazo lleva valor. Es P-05 comprobado en la salida |
 | **Suma cuadrada** | La suma de las columnas de plazo de la tabla coincide con el total del `data_snapshot`, al céntimo |
 | **PPTX y XLSX no divergen** | Prueba de contrato sobre `CapexTableLayout`: se genera el mismo proyecto en los dos formatos y se comparan encabezados, número de columnas, orden y valores celda a celda. **Falla si alguien añade una columna en un solo generador** `[REC]` |
@@ -324,16 +324,16 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Auditoría de la exportación** | Cada `202` deja un `EXPORT_CREATED` con actor, alcance, nº de líneas e importe |
 | **Comparación con el original** | `[PDV]` La tabla generada se renderiza y se compara con la **imagen EMF de la plantilla real**. Es criterio de salida de la prueba de concepto, no una prueba automatizable desde el día uno |
 
-### Fuentes corporativas
+### Las fuentes del informe
 
 | Caso | Verificación |
 |---|---|
-| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra **las seis familias Gotham**. **Falla el arranque del worker si falta alguna** `[REC]` |
+| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra **las seis familias de Montserrat**, y el `Dockerfile` comprueba además que resuelven **por su nombre exacto**. **Falla el arranque del worker si falta alguna** `[REC]` |
 | **Sustitución declarada** | Si una familia falta, la estimación de desbordamiento **lo dice en el aviso** en vez de medir en silencio con una sustituta. Se prueba el texto del aviso |
-| **Métricas** | `Gotham Light` mide 0,4971 em de ancho medio y `Gotham Ultra` 0,6326 em sobre titulares, ± 0,001. Detecta que se haya colado una fuente distinta con el mismo nombre |
+| **Métricas** | La capacidad de la diapositiva de sistema es de **4.080 caracteres con `Montserrat Light`** —eran 4.405 con Gotham—, y el interlineado natural, 1,22 em. Detecta que se haya colado una fuente distinta con el mismo nombre |
 | **Cobertura del español** | Cada familia contiene los glifos de `áéíóúüñÁÉÍÓÚÑ¿¡€ºª–—“”·`. Un informe en español con una fuente sin `ñ` es un fallo que no debe descubrirse en producción `[REC]` |
-| **La generación no depende de la fuente** | Se genera un PPTX **con las fuentes desinstaladas** y se comprueba que el XML sigue llevando `typeface="Gotham Ultra"`. Documenta en código que el fichero de salida es correcto aunque el servidor no tenga la tipografía `[REC]` |
-| **No están en el repositorio** | Prueba de CI que falla si aparece cualquier `.otf` o `.ttf` versionado bajo `assets/fonts/` `[REC]` |
+| **La generación no depende de la fuente** | Se genera un PPTX **con las fuentes desinstaladas** y se comprueba que el XML sigue llevando el `typeface` que toca. Documenta en código que el fichero de salida es correcto aunque el servidor no tenga la tipografía `[REC]` |
+| **No están en el repositorio** | `make no-fonts` en la CI falla si aparece cualquier `.otf` o `.ttf` versionado. Montserrat **se podría** versionar —es OFL— y aun así no se hace: un binario en el repositorio se actualiza a mano y nadie revisa su procedencia al año siguiente `[REC]` |
 
 ---
 

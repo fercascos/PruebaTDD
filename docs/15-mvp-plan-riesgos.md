@@ -72,7 +72,7 @@ Con datos ficticios y sobre una plantilla PPTX real del cliente:
 - [ ] Un consultor completa los flujos E1-E9 de [`14-pruebas.md`](./14-pruebas.md) §19.10 sin bloqueos.
 - [x] ~~Se genera un informe de ≥ 40 diapositivas con 3 activos, 40 hallazgos, 60 líneas y 35
       fotografías~~ **Medido**: 105 diapositivas en 3,1 s, 8,8 MB, las 35 fotografías insertadas,
-      sobre una plantilla real del cliente y con las seis Gotham instaladas
+      sobre una plantilla real del cliente y con las seis familias instaladas
       (`tools/prueba_de_volumen.py`).
 - [ ] …y **un consultor lo considera entregable con retoques menores** (≥ 90 % de diapositivas sin
       retocar) `[SUP]`. **Sigue pendiente**: lo decide una persona abriendo el fichero en
@@ -300,7 +300,7 @@ descubrirse en la semana 16.
 **Semanas 2-3, en paralelo a F0/F1**, un desarrollador dedica dos semanas a un prototipo desechable
 —marcado como tal—. Con las plantillas ya analizadas (doc 18), **el objetivo cambia**: ya no es
 «¿es esto viable?» sino **«¿el clonado de la diapositiva de sistema produce un resultado
-indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas concretas:
+indistinguible del original, con las fuentes del informe instaladas?»**. Preguntas concretas:
 
 | Pregunta | Cómo se responde | Si la respuesta es mala |
 |---|---|---|
@@ -309,8 +309,8 @@ indistinguible del original, con las fuentes Gotham instaladas?»**. Preguntas c
 | ¿El **XLSX exportado** cuadra con la tabla del informe? | Exportar el mismo proyecto en los dos formatos y comparar celda a celda | Se corrige `CapexTableLayout`, que es la pieza compartida |
 | ¿La estimación de desbordamiento es útil (±15 %)? | Comparar con el render de LibreOffice en 20 casos | Se baja la ambición: aviso por umbral de caracteres |
 | ¿Cuánta desviación hay entre LibreOffice y PowerPoint? | Renderizar en ambos y comparar | Se ajusta la expectativa y se documenta |
-| ¿Los **4.405 caracteres** de capacidad **medida con Gotham Light real** por diapositiva de sistema bastan para dos subsistemas? | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
-| ¿La tabla en **Gotham** (P-38) sigue siendo legible a cuerpo pequeño, y cabe en las 9,06 in? | Generar la tabla con descripciones reales y compararla con la imagen original | Se sube medio punto el cuerpo, o se reajustan los anchos otra vez |
+| ¿Los **4.080 caracteres** de capacidad **medida con `Montserrat Light` real** por diapositiva de sistema bastan para dos subsistemas? `[LIM]` Eran 4.405 con Gotham: P-39 quita un 7,4 % | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
+| ¿La tabla en **Montserrat** (P-38 + P-39) sigue siendo legible a cuerpo pequeño, y cabe en las 9,06 in? | Generar la tabla con descripciones reales y compararla con la imagen original | Se sube medio punto el cuerpo, o se reajustan los anchos otra vez |
 | ¿La resolución de catálogos **en inglés** produce un informe coherente? | Generar la misma sección con `A_ES` y `A_EN` | Se revisa el modelo de traducción (C-5) |
 
 **Coste: 2 semanas de una persona. Beneficio: conocer el riesgo mayor en la semana 3 en lugar de la
@@ -371,15 +371,15 @@ quadrantChart
 **Probabilidad media · Impacto crítico.** `[REEVALUADO con las plantillas reales]` Baja de *alta* a
 *media*: el análisis del doc 18 §18.7 confirma que **no hay gráficos, SmartArt, OLE ni medios** —los
 tres elementos que hacían frágil el clonado— y que las cuatro plantillas son **una sola estructura**.
-Sube por la ausencia total de marcadores de posición y por las fuentes corporativas Gotham. Sigue
+Sube por la ausencia total de marcadores de posición. `[REQ]` La parte tipográfica del riesgo **baja con P-39**: la fuente del informe ya no es comercial, va dentro de la imagen y no depende de un contrato. Sigue
 siendo crítico en impacto: si el informe sale descuadrado, el producto no se usa.
 
 | Mitigación | Cuándo |
 |---|---|
 | ✅ **Plantillas reales obtenidas y analizadas** (doc 18) | Hecho |
-| ✅ **Las seis fuentes Gotham recibidas y verificadas**, con métricas reales medidas para texto y titulares | Hecho |
+| ✅ **Las seis familias del informe verificadas una a una**, con métricas reales medidas para texto y titulares. Tras P-39 son las de Montserrat, instaladas por paquete | Hecho |
 | ✅ **P-31 decidida**: tabla nativa respetando el formato del Excel, con la estructura recuperada del propio EMF | Hecho |
-| ✅ **P-37 y P-38 decididas**: cinco columnas de plazo y tipografía unificada en Gotham, con el +4,9 % de anchura ya medido y absorbido | Hecho |
+| ✅ **P-37, P-38 y P-39 decididas**: cinco columnas de plazo y tipografía unificada, ahora en Montserrat, con el ensanchamiento ya medido y absorbido | Hecho |
 | Instalar las fuentes en el worker desde el artefacto privado, con verificación de arranque | Antes de la prueba de concepto |
 | Prueba de concepto dedicada de 2 semanas (§21.3) | Semanas 2-3 |
 | Contrato de plantilla + plantilla de referencia + validador | F8 |

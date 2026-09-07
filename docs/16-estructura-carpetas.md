@@ -421,15 +421,15 @@ LIBREOFFICE_BIN=/usr/bin/soffice
 PPTX_MAX_UNCOMPRESSED_MB=200
 PPTX_RENDER_TIMEOUT_SECONDS=180
 
-# ── Fuentes corporativas ────────────────────────────────────
-# Gotham es una tipografía COMERCIAL y LICENCIADA. Los ficheros .otf NO están
-# en el repositorio: se descargan al arrancar el worker desde un artefacto
-# privado y se instalan con fc-cache. Ver docs/operacion/instalar-fuentes.md
+# ── Fuentes del informe ─────────────────────────────────────
+# P-39: Montserrat (SIL OFL 1.1), instalada por paquete DENTRO de la imagen.
+# Estas dos variables solo hacen falta si un despliegue monta además una
+# fuente propia.
 CORPORATE_FONTS_BUCKET= · CORPORATE_FONTS_PREFIX=fonts/
-CORPORATE_FONTS_INSTALL_DIR=/usr/share/fonts/opentype/corporate
+CORPORATE_FONTS_INSTALL_DIR=/usr/share/fonts/corporativas
 # Familias exigidas. El arranque FALLA si fc-list no las encuentra todas.
-# Century Gothic NO está en la lista: P-38 unifica toda la tipografía en Gotham.
-CORPORATE_FONTS_REQUIRED=Gotham Light,Gotham Book,Gotham Medium,Gotham Bold,Gotham Black,Gotham Ultra
+# Century Gothic NO está en la lista: P-38 unifica toda la tipografía.
+CORPORATE_FONTS_REQUIRED=Montserrat Light,Montserrat,Montserrat Medium,Montserrat SemiBold,Montserrat ExtraBold,Montserrat Black
 FONT_FALLBACK_WARN=true            # si falta una familia, el aviso lo declara
 # Incrustar las fuentes en el PPTX generado. Desactivado: los ficheros lo
 # permiten (fsType = Preview & Print) pero está PENDIENTE de confirmar contra
@@ -460,10 +460,10 @@ DEFAULT_RETENTION_MONTHS=84 · TRASH_PURGE_DAYS=30 · EXPORT_EXPIRY_DAYS=7
 ### `.gitignore` — el fragmento que importa `[REC]`
 
 ```gitignore
-# ── Fuentes corporativas ────────────────────────────────────
-# Gotham es comercial y licenciada. Versionarla sería redistribuirla y
-# exponerla a cualquiera con acceso al repositorio. Se provisionan en el
-# contenedor desde un artefacto privado. Ver docs/operacion/instalar-fuentes.md
+# ── Tipografías ─────────────────────────────────────────────
+# No se versionan, aunque tras P-39 la licencia lo permitiría: un binario en el
+# repositorio se actualiza a mano y nadie revisa su procedencia al año
+# siguiente. Se instalan por paquete: `make fonts-install`.
 assets/fonts/**/*.otf
 assets/fonts/**/*.ttf
 assets/fonts/**/*.woff*

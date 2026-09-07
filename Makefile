@@ -128,9 +128,20 @@ typecheck:  ## Tipado estricto (mypy)
 fmt:  ## Formatea
 	cd apps/api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
 
-no-fonts:  ## Falla si hay tipografías versionadas (Gotham es licenciada)
+# Montserrat es SIL OFL 1.1, así que **se podría** versionar. No se hace: un
+# binario en el repositorio se queda ahí para siempre, se actualiza a mano y
+# nadie revisa su procedencia al año siguiente. El paquete del sistema tiene
+# versión, firma y actualizaciones, y es una línea en el Dockerfile.
+fonts-install:  ## Instala las tipografías del informe (Montserrat, SIL OFL)
+	@if fc-list | grep -qi 'Montserrat-Light'; then echo "Montserrat ya instalada."; else \
+	  echo "Instalando fonts-montserrat (hace falta sudo)…"; \
+	  sudo apt-get update && sudo apt-get install --no-install-recommends -y fonts-montserrat; \
+	  fc-cache -f >/dev/null; fi
+	@fc-list : family | grep -i montserrat | sort -u | head -6
+
+no-fonts:  ## Falla si hay tipografías versionadas (se instalan por paquete)
 	@if git ls-files | grep -qiE '\.(otf|ttf|woff2?)$$'; then \
-	  echo "ERROR: hay tipografías versionadas. Gotham es comercial: no va al repositorio."; \
+	  echo "ERROR: hay tipografías versionadas. Se instalan con 'make fonts-install'."; \
 	  git ls-files | grep -iE '\.(otf|ttf|woff2?)$$'; exit 1; \
 	else echo "Sin tipografías versionadas."; fi
 
@@ -209,4 +220,5 @@ up-admin:  ## Primera organización y su administrador, dentro del contenedor
 	     --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"'
 
 .PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
-        test-catalogs lint typecheck fmt no-fonts run ci certificados up down destroy logs ps up-admin
+        test-catalogs lint typecheck fmt fonts-install no-fonts run ci certificados up down destroy \
+        logs ps up-admin

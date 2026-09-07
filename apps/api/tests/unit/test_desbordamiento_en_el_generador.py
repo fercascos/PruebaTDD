@@ -1,6 +1,6 @@
 """Que el aviso de desbordamiento **llegue al informe**, no solo al módulo.
 
-`overflow.py` estaba construido, medido con la Gotham real y probado en
+`overflow.py` estaba construido, medido con la fuente real y probado en
 `test_fuentes_y_desbordamiento.py`… y **no lo llamaba nadie**. El generador no
 lo usaba, así que el aviso no se emitía jamás sobre un informe de verdad: el
 consultor se enteraba de que un texto no cabía abriendo el PPTX, o el cliente.
@@ -26,8 +26,8 @@ from tdd.reporting.generator import _evaluar_marco
 #: callarse antes que medir con una sustituta y dar un número inventado. Estas
 #: pruebas comprueban justamente que se mide, así que sin fuente no aplican.
 sin_gotham = pytest.mark.skipif(
-    fonts.localizar("Gotham Light") is None,
-    reason="Gotham no instalada: sin ella no se mide, y eso ya lo cubre otra prueba",
+    fonts.localizar("Montserrat Light") is None,
+    reason="Montserrat no instalada: sin ella no se mide, y eso ya lo cubre otra prueba",
 )
 
 
@@ -38,7 +38,7 @@ def _plantilla(ancho_in: float, alto_in: float) -> bytes:
     caja = slide.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(ancho_in), Inches(alto_in))
     run = caja.text_frame.paragraphs[0].add_run()
     run.text = "{{texto}}"
-    run.font.name = "Gotham Light"
+    run.font.name = "Montserrat Light"
     run.font.size = Pt(10)
     salida = io.BytesIO()
     prs.save(salida)

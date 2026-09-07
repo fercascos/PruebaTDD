@@ -45,13 +45,15 @@ jobs:
       - name: Catálogos al día
         run: make catalogs-check
 
-      # `[REQ]` Gotham es comercial. Que no entre al repositorio ni por
-      # descuido ni por un `git add .`.
+      # `[REQ]` Las tipografías se instalan por paquete, no se versionan. La de
+      # ahora —Montserrat, SIL OFL— hasta se podría, y aun así no se hace: un
+      # binario en el repositorio se actualiza a mano y nadie revisa su
+      # procedencia al año siguiente. Que no entre ni por un `git add .`.
       - name: Sin tipografías versionadas
         run: make no-fonts
 
   api:
-    name: API · 1.100 pruebas contra PostgreSQL real
+    name: API · la suite completa contra PostgreSQL real
     runs-on: ubuntu-latest
     services:
       # PostgreSQL de verdad, no un doble: lo que más valor tiene de esta suite
@@ -75,6 +77,16 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -e "apps/api[dev]"
+
+      # Sin la tipografía instalada, las pruebas de medición de desbordamiento
+      # **se saltan solas** —lo dice su `skipif`— y llevaban desde siempre sin
+      # ejecutarse aquí, porque Gotham era comercial y no se podía instalar en
+      # un runner. Con Montserrat (SIL OFL) es un paquete, así que ahora corren.
+      - name: Tipografía del informe
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fonts-montserrat
+          fc-match -f '%{family}\n' "Montserrat Light"
 
       # El rol de aplicación **sin BYPASSRLS**: es lo que hace que las pruebas
       # de aislamiento signifiquen algo. Con un superusuario pasarían todas y no

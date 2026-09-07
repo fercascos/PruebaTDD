@@ -35,10 +35,16 @@ COLOR_PLAZO = {
     "otro": RGBColor(0xE0, 0xE0, 0xE0),
 }
 
-#: P-38 · toda la tipografía unificada en Gotham. El original mezclaba Century
-#: Gothic dentro de las imágenes de tabla, porque venían de un Excel ajeno.
-FUENTE_CUERPO = "Gotham Light"
-FUENTE_CABECERA = "Gotham Medium"
+#: P-38 · toda la tipografía del informe unificada en **una sola familia**. El
+#: original mezclaba Century Gothic dentro de las imágenes de tabla, porque
+#: venían de un Excel ajeno.
+#:
+#: P-39 la fija en **Montserrat**: el cliente descarta Gotham, y de las dos que
+#: pide —Segoe UI, o Montserrat en su defecto— es la única que se puede
+#: instalar en el servidor para medir el desbordamiento e incrustar en un PPTX
+#: que se envía fuera. Ver `reporting/fonts.py`.
+FUENTE_CUERPO = "Montserrat Light"
+FUENTE_CABECERA = "Montserrat Medium"
 
 _ALIGN = {
     Alineacion.IZQUIERDA: PP_ALIGN.LEFT,

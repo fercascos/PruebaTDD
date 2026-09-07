@@ -7,8 +7,9 @@
 # habían escrito un objeto ni enviado un correo a nada externo.
 #
 # `[LIM]` Lo que aquí NO se resuelve, y hace falta para producción: TLS y
-# certificados, secretos fuera del fichero, copias de seguridad, límites de
-# recursos, y las tipografías corporativas montadas en la imagen de la API.
+# certificados, secretos fuera del fichero, copias de seguridad y límites de
+# recursos. La tipografía del informe ya no está en esta lista: tras P-39 es
+# Montserrat (SIL OFL) y va dentro de la imagen de la API.
 
 name: tdd
 
