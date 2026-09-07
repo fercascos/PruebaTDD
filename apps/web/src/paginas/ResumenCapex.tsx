@@ -22,7 +22,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * | ¿En qué se va el dinero? | concepto | **tarta** — es un reparto parte-todo |
  * | ¿Cuándo hay que pagarlo? | horizonte | barras, en orden de plazo |
  * | ¿Qué parte del edificio? | capítulo | barras, de mayor a menor |
- * | ¿Qué edificio? | activo | barras, solo si hay más de uno y sin filtrar |
+ * | ¿Qué edificio? | activo | barras, **siempre del encargo entero** |
  *
  * ## El filtro alcanza a toda la vista
  *
@@ -31,9 +31,19 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * «CAPEX del encargo» encima de unos gráficos de una sola nave se contradice
  * con ellos, y quien mire por encima se lleva la cifra equivocada.
  *
- * «Qué edificio» **desaparece** al elegir uno, y no por ahorrar sitio: con el
- * filtro puesto sería una sola barra con el total otra vez, que es lo que ya
- * dicen las tarjetas. Un gráfico de una barra no es un gráfico.
+ * ## «Qué edificio» se queda, y hace de mando
+ *
+ * `[REQ]` El cuarto bloque **no desaparece al filtrar**: es el que permite
+ * comparar varios activos en el momento sin salir de la pantalla, que es
+ * justo lo que se hace en la reunión —mirar una nave, mirar la de al lado,
+ * volver al conjunto—. Sigue enseñando el encargo entero, y por eso vale de
+ * referencia: dice si el edificio que se está mirando es el caro o uno de los
+ * baratos, cosa que los otros tres, ya filtrados, no pueden decir.
+ *
+ * Sus barras se **pulsan**: cada una lleva toda la vista a ese activo, y la que
+ * ya está puesta la devuelve al conjunto. El desplegable de arriba y estas
+ * barras son el mismo mando escrito dos veces —uno para elegir sabiendo el
+ * nombre, otro para elegir viendo el importe—, y los dos enseñan lo elegido.
  *
  * Y `by-asset` **no se filtra nunca**: es la lista de activos, hace de índice
  * para el desplegable y da el total del encargo, que es lo que permite decir
@@ -329,18 +339,25 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
             />
           </section>
 
-          {/* `[REQ]` Desaparece al elegir un activo, y no por ahorrar sitio:
-              con el filtro puesto sería **una sola barra con el total otra
-              vez**, que es lo que ya dicen las tarjetas de arriba. Un gráfico
-              de una barra no es un gráfico. Con un solo activo en el encargo,
-              lo mismo. */}
-          {cartera && !elegido && (
+          {/* `[REQ]` **Se queda con el filtro puesto**, al revés que los otros
+              tres: es el único que sigue enseñando el encargo entero, y es lo
+              que permite comparar varios activos en el momento sin salir de la
+              pantalla. Con un solo activo en el encargo no se pinta, porque
+              entonces sí sería una barra sola diciendo lo que ya dicen las
+              tarjetas. */}
+          {cartera && (
             <section className="bloque">
               <h3>Qué edificio</h3>
               <p className="ayuda">
                 En un encargo de cartera es el número que entra en la negociación de cada
-                edificio. Los activos sin actuaciones salen con cero: un activo que desaparece
-                de la lista se confunde con uno que se visitó y no tenía nada.
+                edificio. <strong>Este bloque no se filtra nunca</strong>: es la referencia
+                contra la que se lee el resto. Los activos sin actuaciones salen con cero: un
+                activo que desaparece de la lista se confunde con uno que se visitó y no tenía
+                nada.
+              </p>
+              <p className="ayuda">
+                Pulsa una barra para llevar toda la vista a ese edificio
+                {elegido ? ', o la marcada para volver al conjunto' : ''}.
               </p>
               {/* De mayor a menor: es una comparación de magnitudes y la API los
                   devuelve por nombre, que aquí no significa nada. En «cuándo hay
@@ -354,6 +371,10 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
                     importe: Number(a.amount),
                     detalle: `${a.findings} ${a.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
                   }))}
+                // Pulsar la que ya está puesta devuelve al conjunto: es la
+                // salida del filtro más cerca de donde se entró en él.
+                alElegir={(clave) => setActivo(clave === activo ? '' : clave)}
+                puesta={activo}
               />
             </section>
           )}
@@ -417,28 +438,65 @@ type Fila = { clave: string; nombre: string; importe: number; detalle: string }
  * `[REQ]` La escala la marca **la barra más larga**, no el total del encargo:
  * con el total, un reparto dominado por una categoría deja las demás como
  * rayas invisibles y el gráfico deja de decir nada de ellas.
+ *
+ * Con `alElegir`, cada fila es un botón de verdad —no un `div` con un
+ * `onClick`—, así que llega con el tabulador, se activa con el teclado y se
+ * anuncia como lo que es. `aria-pressed` dice cuál está puesta: `[REQ]` la
+ * marcada se distingue **también por escrito**, con su pastilla, porque el
+ * realce de color no lo ve quien imprime esto en blanco y negro.
  */
-function Barras({ filas }: { filas: Fila[] }) {
+function Barras({
+  filas,
+  alElegir,
+  puesta,
+}: {
+  filas: Fila[]
+  alElegir?: (clave: string) => void
+  /** La clave de la fila que manda ahora mismo. Vacío = ninguna. */
+  puesta?: string
+}) {
   const mayor = Math.max(...filas.map((f) => f.importe), 1)
   return (
-    <ul className="barras">
-      {filas.map((f) => (
-        <li key={f.clave}>
-          <span className="etiqueta">{f.nombre}</span>
-          <span className="barra" aria-hidden="true">
-            {/* `[REQ]` Cero no pinta nada. El estilo compartido da un mínimo de
-                2 px para que un importe pequeño no se confunda con «nada»; con
-                un cero hace lo contrario y convierte «nada» en «poco». Los dos
-                casos existen —un plazo sin actuaciones y un plazo con una
-                actuación barata— y tienen que verse distintos. */}
-            {f.importe > 0 && (
-              <span className="relleno" style={{ width: `${(f.importe / mayor) * 100}%` }} />
+    <ul className={alElegir ? 'barras elegibles' : 'barras'}>
+      {filas.map((f) => {
+        const marcada = alElegir !== undefined && f.clave === puesta
+        const contenido = (
+          <>
+            <span className="etiqueta">
+              {f.nombre}
+              {marcada && <span className="pastilla"> en pantalla</span>}
+            </span>
+            <span className="barra" aria-hidden="true">
+              {/* `[REQ]` Cero no pinta nada. El estilo compartido da un mínimo
+                  de 2 px para que un importe pequeño no se confunda con «nada»;
+                  con un cero hace lo contrario y convierte «nada» en «poco».
+                  Los dos casos existen —un plazo sin actuaciones y un plazo con
+                  una actuación barata— y tienen que verse distintos. */}
+              {f.importe > 0 && (
+                <span className="relleno" style={{ width: `${(f.importe / mayor) * 100}%` }} />
+              )}
+            </span>
+            <span className="cifra">{f.detalle}</span>
+            <span className="cifra importe">{euros.format(f.importe)}</span>
+          </>
+        )
+        return (
+          <li key={f.clave}>
+            {alElegir ? (
+              <button
+                type="button"
+                className={marcada ? 'fila marcada' : 'fila'}
+                aria-pressed={marcada}
+                onClick={() => alElegir(f.clave)}
+              >
+                {contenido}
+              </button>
+            ) : (
+              contenido
             )}
-          </span>
-          <span className="cifra">{f.detalle}</span>
-          <span className="cifra importe">{euros.format(f.importe)}</span>
-        </li>
-      ))}
+          </li>
+        )
+      })}
     </ul>
   )
 }

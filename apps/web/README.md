@@ -165,15 +165,22 @@ edificio: saber en qué se va el dinero de una nave no sirve de nada si el
 por gráfico permitiría justo esa pantalla —cuatro alcances distintos, ninguno
 escrito— y sería un error de lectura imposible de detectar mirándola.
 
-Dos consecuencias, las dos deliberadas:
+Con dos consecuencias deliberadas:
 
-* **«Qué edificio» desaparece cuando hay un activo elegido.** Filtrado se
-  quedaría en una sola barra al 100 %, que no es un reparto: es un dato que ya
-  está en el titular.
-* **Ese corte se sigue pidiendo sin filtrar**, porque es el índice del
-  desplegable y da el total del encargo. Con un activo elegido, la cuarta
-  tarjeta deja de contar activos y pasa a decir **qué parte del CAPEX del
-  encargo es este edificio**.
+* **«Qué edificio» se queda, y no se filtra nunca.** Es el único bloque que
+  sigue enseñando el encargo entero, y por eso vale de referencia: dice si el
+  edificio que se está mirando es el caro o uno de los baratos, cosa que los
+  otros tres, ya filtrados, no pueden decir. Y es lo que permite **comparar
+  varios activos en el momento sin salir de la pantalla** —mirar una nave,
+  mirar la de al lado, volver al conjunto—, que es como se usa en la reunión.
+  Sus barras se pulsan: cada una lleva toda la vista a ese activo, y la que ya
+  está puesta la devuelve al conjunto. Son botones de verdad, así que llegan
+  con el tabulador y llevan `aria-pressed`; `[REQ]` la puesta se distingue
+  **también por escrito**, con una pastilla «en pantalla», porque el realce de
+  color no sobrevive a una fotocopia en gris.
+* **La cuarta tarjeta cambia de pregunta.** Con un activo elegido deja de
+  contar activos y pasa a decir **qué parte del CAPEX del encargo es este
+  edificio**, que es el número que entra en la negociación.
 
 Los tres cortes filtrados suman lo mismo entre sí, y hay una prueba en la suite
 del API que lo impone; en el navegador se lee comparando el titular con las tres

@@ -398,14 +398,18 @@ el dinero de una nave si el «cuándo hay que pagarlo» de al lado sigue siendo 
 del parque entero. Los tres cortes filtrados **suman lo mismo entre sí**, y hay
 una prueba que lo impone.
 
-`[REQ]` **`by-asset` no acepta `asset_id`, a propósito.** Es el corte que
-contesta «qué edificio», y filtrarlo por un edificio lo dejaría con una fila:
-deja de ser un reparto. Además es el que da la lista con la que la pantalla
-construye el desplegable y el total del encargo contra el que se calcula «qué
-parte del CAPEX es este activo», de modo que tiene que seguir viéndose entero
-mientras los otros tres están filtrados. En la pantalla, el bloque «Qué
-edificio» **desaparece** cuando hay un activo elegido, en vez de quedarse con
-una sola barra al 100 %.
+`[REQ]` **`by-asset` no acepta `asset_id`, a propósito.** Filtrarlo por un
+edificio lo dejaría con una fila: deja de ser un reparto. Es además el que da la
+lista con la que la pantalla construye el desplegable y el total del encargo
+contra el que se calcula «qué parte del CAPEX es este activo».
+
+Y es lo que permite que su bloque, «Qué edificio», **siga en pantalla con el
+filtro puesto**, enseñando el encargo entero mientras los otros tres enseñan una
+sola nave: es la referencia contra la que se leen —dice si el edificio que se
+está mirando es el caro o uno de los baratos— y el mando con el que se pasa de
+uno a otro sin salir de la vista, que es lo que se hace en una reunión. Sus
+barras se pulsan: cada una lleva la vista a ese activo y la que ya está puesta
+la devuelve al conjunto.
 
 El activo se filtra por el **hallazgo**, no por la línea: `[REQ]` P-44, una
 actuación recurrente tiene varias líneas y un solo edificio.

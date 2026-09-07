@@ -1035,12 +1035,56 @@ tr.inactiva td {
   display: grid;
   gap: 0.45rem;
 }
-.barras li {
+.barras li,
+.barras .fila {
   display: grid;
   grid-template-columns: 11rem 1fr auto auto;
   align-items: center;
   gap: 0.6rem;
   font-size: 0.85rem;
+}
+/* Cuando la fila es un botón, la rejilla vive DENTRO de él: el `li` deja de
+   maquetar y solo contiene. Si el `li` siguiera siendo rejilla, el botón sería
+   su único hijo y se comprimiría en la primera columna. */
+.barras.elegibles li {
+  display: block;
+}
+.barras.elegibles .fila {
+  width: 100%;
+  /* Un botón no hereda ni la tipografía ni el color del texto: sin esto la
+     fila pulsable se ve distinta de las que no lo son, y la diferencia no
+     significaría nada. */
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.15rem 0.3rem;
+  margin: -0.15rem -0.3rem;
+  cursor: pointer;
+}
+.barras.elegibles .fila:hover {
+  background: var(--fondo);
+}
+.barras.elegibles .fila:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+/* La que manda ahora mismo. `[REQ]` El recuadro acompaña a la pastilla «en
+   pantalla»; no la sustituye, porque impreso en gris no se distingue. */
+.barras.elegibles .fila.marcada {
+  border-color: var(--acento);
+  background: var(--fondo);
+}
+.barras.elegibles .fila.marcada .etiqueta {
+  font-weight: 600;
+}
+.barras .etiqueta .pastilla {
+  margin-left: 0.35rem;
+  background: var(--acento);
+  color: var(--papel);
+  white-space: nowrap;
 }
 .barras .etiqueta {
   border-left: 4px solid var(--tono, var(--borde));
@@ -1857,7 +1901,8 @@ button.enlace {
 
 /* Las barras del resumen respiran más que las de riesgos: los nombres de
    capítulo son largos y a 11rem se cortaban. */
-.resumen-capex .barras li {
+.resumen-capex .barras li,
+.resumen-capex .barras .fila {
   grid-template-columns: 14rem 1fr auto auto;
 }
 .resumen-capex .barras .etiqueta {
@@ -1897,7 +1942,8 @@ button.enlace {
   /* En un móvil la etiqueta va encima de su barra: a 320 px, catorce caracteres
      de nombre y una barra en la misma fila no caben, y lo que se pierde es la
      barra. */
-  .resumen-capex .barras li {
+  .resumen-capex .barras li,
+  .resumen-capex .barras .fila {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       'etiqueta importe'

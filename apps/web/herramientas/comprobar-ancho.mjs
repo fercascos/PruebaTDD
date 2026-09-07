@@ -166,6 +166,30 @@ for (const ancho of ANCHOS) {
           (await pg.locator('.resumen-capex, .vacio').count()) > 0,
           'capex · resumen se ha pintado',
         )
+
+        // El resumen filtrado es OTRA pantalla: tres gráficos cambian, las
+        // tarjetas cambian de rótulo y aparecen la frase de alcance y la
+        // pastilla «en pantalla». Medir solo el agrupado daría por buena una
+        // vista filtrada que se desborda, y el filtro se pone pulsando una
+        // barra de «Qué edificio», que es el camino que se usa de verdad.
+        const barras = pg.locator('.barras.elegibles .fila')
+        if (await barras.count()) {
+          await barras.nth(1).click()
+          await pg.waitForTimeout(1200)
+          const filtrado = await pg.evaluate(medir)
+          comprobar(
+            filtrado.sobra <= 0,
+            filtrado.sobra <= 0
+              ? 'capex · resumen filtrado cabe'
+              : `capex · resumen filtrado desborda ${filtrado.sobra}px — ${filtrado.culpables.join(', ')}`,
+          )
+          // `[REQ]` El bloque «Qué edificio» se queda con el filtro puesto: es
+          // lo que permite comparar varias naves sin salir de la pantalla.
+          comprobar(
+            (await pg.locator('.barras.elegibles .fila.marcada').count()) === 1,
+            'capex · «Qué edificio» sigue estando, con la barra marcada',
+          )
+        }
       }
     }
   }
