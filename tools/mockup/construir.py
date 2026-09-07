@@ -13,6 +13,7 @@ descargada tiene que abrir con doble clic sin una carpeta de imágenes al lado.
 
 import argparse
 import base64
+import json
 import io
 import pathlib
 
@@ -110,7 +111,15 @@ BLOQUES = [
                 "Documentación solicitada",
                 "El checklist de lo que se ha pedido al cliente, con su estado. Lo que "
                 "queda parcial o no disponible alimenta el apartado de limitaciones del "
-                "informe sin que nadie tenga que acordarse.",
+                "informe sin que nadie tenga que acordarse. Debajo, sobre un documento "
+                "recibido, se puede <strong>extraer</strong>: la aplicación lee la "
+                "memoria técnica o el plan de autoprotección <strong>sin red y sin "
+                "IA</strong>, con reglas, y deja tres cosas propuestas —datos del "
+                "activo, limitaciones que ese documento impone al informe, y los medios "
+                "que declara, que al aceptarlos crean su ficha de equipo—. "
+                "<strong>Nada se aplica solo</strong>: cada propuesta se acepta o se "
+                "descarta una a una, con la celda literal del PDF y el valor actual del "
+                "activo delante.",
                 (
                     "LIM",
                     "Arriba, la revisión con IA aparece <strong>apagada</strong>, que es "
@@ -118,7 +127,9 @@ BLOQUES = [
                     "constancia de quién lo hizo. Aun autorizada, hoy la revisión está "
                     "<strong>simulada</strong> —no hay proveedor elegido y ningún modelo "
                     "ha leído nada— y cada observación va marcada como simulada en la "
-                    "base de datos, en la API y en pantalla.",
+                    "base de datos, en la API y en pantalla. En esta lámina los paneles "
+                    "de extracción salen <strong>vacíos</strong>: el encargo de "
+                    "demostración no tiene ningún documento subido.",
                 ),
             ),
         ],
@@ -176,6 +187,40 @@ BLOQUES = [
                 "Hallazgos y su coste por horizonte temporal, con impuestos separados. "
                 "Exportable a Excel.",
                 None,
+            ),
+            (
+                "09b-capex-resumen",
+                "Resumen del CAPEX",
+                "Cuatro preguntas de la reunión y sus cuatro respuestas: en qué se va el "
+                "dinero, cuándo hay que pagarlo, qué parte del edificio y qué edificio. "
+                "Los cuatro cortes <strong>suman lo mismo</strong>, y hay una prueba que "
+                "lo impone: cuatro gráficos en una pantalla que no cuadran destruyen la "
+                "confianza en los cuatro.",
+                (
+                    "REC",
+                    "Solo hay una tarta, y es la del reparto por concepto: es la única "
+                    "pregunta de tipo parte-todo. Admite <strong>cuatro conceptos y el "
+                    "resto agrupado</strong> porque es lo que la paleta soporta medido "
+                    "—con cinco tonos, dos porciones dejan de distinguirse—. Ningún "
+                    "gráfico se identifica solo por color: cada porción lleva su nombre, "
+                    "su importe y su porcentaje escritos.",
+                ),
+            ),
+            (
+                "09c-capex-resumen-filtrado",
+                "El mismo resumen, de un solo edificio",
+                "El selector de activo alcanza los cuatro bloques a la vez, porque en la "
+                "reunión las cuatro preguntas se hacen del mismo edificio. Las tarjetas "
+                "cambian con él: la cuarta pasa a decir qué parte del CAPEX del encargo "
+                "representa este activo.",
+                (
+                    "REQ",
+                    "«Qué edificio» <strong>no se filtra nunca</strong> y por eso se "
+                    "queda: es la referencia contra la que se lee el resto —si el que se "
+                    "mira es el caro o uno de los baratos— y el mando con el que se pasa "
+                    "de una nave a otra sin salir de la pantalla. La barra puesta se "
+                    "distingue también por escrito, no solo por color.",
+                ),
             ),
             (
                 "12-ficha-hallazgo",
@@ -298,6 +343,18 @@ argumentos.add_argument(
 )
 OPCIONES = argumentos.parse_args()
 IMGS = cargar(OPCIONES.capturas)
+
+#: Las cifras de la portada las deja `capturar-pantallas.mjs` preguntándoselas a
+#: la API. **No se escriben aquí**: estuvieron escritas a mano, el encargo de
+#: demostración creció a dos activos y la portada siguió diciendo uno durante
+#: semanas. Una cifra falsa en la primera pantalla desmiente lo que viene detrás.
+_CIFRAS = OPCIONES.capturas / "cifras.json"
+if not _CIFRAS.exists():
+    raise SystemExit(
+        f"Falta {_CIFRAS}. Lo escribe apps/web/herramientas/capturar-pantallas.mjs; "
+        "sin él la portada tendría que inventarse las cifras."
+    )
+CIFRAS = json.loads(_CIFRAS.read_text())
 
 faltan = [c for _, _, laminas in BLOQUES for c, *_ in laminas if c not in IMGS]
 if faltan:
@@ -451,11 +508,16 @@ code{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 .indice{padding:2.6rem 0 0}
 .indice > h2{font-size:.72rem;font-family:"IBM Plex Mono",monospace;font-weight:500;
   letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:1rem}
+/* Las líneas de la rejilla se dibujan con la sombra de cada tarjeta, y no
+   pintando el hueco con el color de la línea. Con seis entradas en cinco
+   columnas, aquel truco dejaba **un bloque gris enorme** en la celda que sobra:
+   se veía como un fallo de maquetación, que es lo que era. */
 .indice ol{list-style:none;margin:0;padding:0;display:grid;
   grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
-  background:var(--line);border:1px solid var(--line)}
+  background:var(--plate);border:1px solid var(--line)}
 .indice a{display:block;background:var(--plate);padding:.9rem 1.05rem;
-  text-decoration:none;color:inherit;height:100%}
+  text-decoration:none;color:inherit;height:100%;
+  box-shadow:0 0 0 1px var(--line)}
 .indice a:hover,.indice a:focus-visible{background:var(--accent-suave)}
 .indice .n{font-family:"IBM Plex Mono",monospace;font-size:.7rem;color:var(--accent);
   display:block;margin-bottom:.3rem}
@@ -560,7 +622,7 @@ HTML = f"""<title>Due diligence técnica</title>
 
 <header class="portada">
   <div class="envoltura">
-    <p class="marca">Mockup en funcionamiento · <b>22 pantallas capturadas del MVP</b></p>
+    <p class="marca">Mockup en funcionamiento · <b>{lamina_n} pantallas capturadas del MVP</b></p>
     <h1>Due diligence técnica de activos inmobiliarios</h1>
     <p class="entradilla">
       Estas no son maquetas dibujadas: son <strong>capturas de la aplicación
@@ -571,11 +633,11 @@ HTML = f"""<title>Due diligence técnica</title>
 
     <dl class="ficha">
       <div><dt>Encargo</dt><dd>Plataforma logística Getafe Norte</dd></div>
-      <div><dt>Activos</dt><dd>1</dd></div>
-      <div><dt>Ubicaciones</dt><dd>7</dd></div>
-      <div><dt>Hallazgos</dt><dd>6</dd></div>
-      <div><dt>Fotografías</dt><dd>4</dd></div>
-      <div><dt>Equipos</dt><dd>5</dd></div>
+      <div><dt>Activos</dt><dd>{CIFRAS["activos"]}</dd></div>
+      <div><dt>Ubicaciones</dt><dd>{CIFRAS["ubicaciones"]}</dd></div>
+      <div><dt>Hallazgos</dt><dd>{CIFRAS["hallazgos"]}</dd></div>
+      <div><dt>Fotografías</dt><dd>{CIFRAS["fotografias"]}</dd></div>
+      <div><dt>Equipos</dt><dd>{CIFRAS["equipos"]}</dd></div>
     </dl>
 
     <div class="aviso">

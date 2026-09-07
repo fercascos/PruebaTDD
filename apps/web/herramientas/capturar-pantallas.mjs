@@ -51,6 +51,49 @@ await pg.click('button[type="submit"]')
 await pg.waitForURL('**/proyectos',{timeout:15000})
 await foto('03-proyectos')
 
+// Las cifras de la portada de la página salen de AQUÍ y no escritas a mano en
+// el montador: estaban escritas a mano, el encargo de demostración creció a dos
+// activos y la portada siguió diciendo uno. Una cifra falsa en la primera
+// pantalla desmiente todo lo que viene detrás.
+//
+// Se piden a la API **desde Node y no desde la página**: la aplicación guarda su
+// token en memoria y no en una cookie, así que un `fetch` dentro del navegador
+// recibiría un 401. Y si algo falla aquí, se para: la primera versión devolvía
+// listas vacías en silencio y escribió una portada de ceros.
+const API = process.env.TDD_API ?? 'http://127.0.0.1:8000/api/v1'
+
+async function conSesion() {
+  const r = await fetch(`${API}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: CORREO, password: CLAVE }),
+  })
+  if (!r.ok) throw new Error(`No se pudo entrar en la API para contar: ${r.status}`)
+  const { access_token: token } = await r.json()
+  return async (ruta) => {
+    const res = await fetch(`${API}${ruta}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (!res.ok) throw new Error(`${ruta} → ${res.status}`)
+    const datos = await res.json()
+    return Array.isArray(datos) ? datos : (datos.items ?? datos.resultados ?? [])
+  }
+}
+
+const pedir = await conSesion()
+const activos = await pedir(`/projects/${PID}/assets`)
+const ubicaciones = (
+  await Promise.all(activos.map((a) => pedir(`/assets/${a.id}/locations`)))
+).reduce((n, u) => n + u.length, 0)
+const cifras = {
+  activos: activos.length,
+  ubicaciones,
+  hallazgos: (await pedir(`/projects/${PID}/findings?limit=500`)).length,
+  fotografias: (await pedir(`/projects/${PID}/photos?limit=500`)).length,
+  equipos: (await pedir(`/projects/${PID}/equipment?limit=500`)).length,
+}
+const fs = await import('node:fs/promises')
+await fs.writeFile(`${SALIDA}/cifras.json`, JSON.stringify(cifras, null, 2))
+console.log('· cifras.json', JSON.stringify(cifras))
+
 const pantallas = [
   ['04-fases', ``, '.pestanas'],
   ['05-activos', `/activos`, '.tabla, .vacio'],
@@ -66,6 +109,26 @@ for (const [nombre, sufijo, espera] of pantallas) {
   await pg.goto(`${BASE}/proyectos/${PID}${sufijo}`)
   try { await pg.waitForSelector(espera, { timeout: 12000 }) } catch { /* se captura igual */ }
   await foto(nombre, { completa: true, espera: 900 })
+}
+
+// 9b · El resumen del CAPEX, que vive DETRÁS de un botón dentro de la misma
+// ruta que la rejilla. Sin pulsarlo, la lámina sería la rejilla otra vez.
+await pg.goto(`${BASE}/proyectos/${PID}/capex`)
+await pg.waitForSelector('.tabla.capex')
+const resumen = pg.getByRole('tab', { name: 'Resumen' })
+if (await resumen.count()) {
+  await resumen.click()
+  await pg.waitForSelector('.resumen-capex .tarta, .resumen-capex .vacio')
+  await foto('09b-capex-resumen', { completa: true, espera: 1200 })
+
+  // Y el mismo resumen de un solo activo: es lo que enseña que el filtro
+  // alcanza los cuatro gráficos y que «Qué edificio» se queda como referencia.
+  const barras = pg.locator('.barras.elegibles .fila')
+  if (await barras.count()) {
+    await barras.first().click()
+    await pg.waitForSelector('.fila.marcada')
+    await foto('09c-capex-resumen-filtrado', { completa: true, espera: 1200 })
+  }
 }
 
 // 11b · El árbol de ubicaciones, dentro de la ficha del activo (§8.4)
