@@ -48,6 +48,44 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Sugerencias** | Proponer cambios; la bandeja solo la ve quien atiende el buzón |
 | **Documentación** | La checklist, lo recibido, la revisión asistida y **la extracción de datos del documento**: se lee, se propone, y cada propuesta se acepta o se descarta una a una con la celda literal del PDF y el valor actual del activo delante. Al final, **lo que la documentación dice sobre sí misma**: las limitaciones que aporta cada documento, con su motivo y su epígrafe, y solo las aceptadas entran en el informe. Y **los medios que declara**: aceptar uno crea su ficha de equipo, eligiendo el activo |
 
+## El prototipo navegable
+
+Para enseñar la aplicación a alguien **sin montarle nada**: un solo fichero HTML
+que se abre con doble clic, sin servidor, sin base de datos y sin red.
+
+```bash
+npm run prototipo:grabar   # recorre la aplicación y graba lo que contesta la API
+npm run prototipo          # deja prototipo/dist/prototipo.html
+```
+
+`[REQ]` **No es una maqueta.** Es `src/App.tsx` —las mismas pantallas, el mismo
+`cliente.ts`, la misma hoja de estilos— con dos cambios y ninguno más:
+
+1. Sus `fetch` los contesta `prototipo/servidor.ts` con respuestas **grabadas de
+   la API real** sobre el encargo de demostración, con datos ficticios.
+2. Las rutas van en el fragmento (`#/proyectos`), porque un fichero suelto no
+   tiene detrás quien sirva `/proyectos` al recargar. Es la única razón por la
+   que `App` recibe su enrutador como parámetro.
+
+**Se graba en vez de escribirse a mano** porque un servidor de mentira envejece
+en cuanto la API cambia, y entonces el prototipo enseña una aplicación que ya no
+existe. Esto se vuelve a grabar en un minuto.
+
+`[LIM]` **Es de solo lectura.** Se navega, se cambia de pestaña, se filtra el
+resumen del CAPEX y se abren las fichas; lo que escribe —guardar un hallazgo,
+aceptar una propuesta, generar un informe— responde `501` y la aplicación lo
+enseña como el error que es. **No se simula un éxito**: un prototipo que finge
+guardar es peor que uno que dice que no guarda. Y el mapa sale sin teselas: las
+sirve un servidor externo que ahí no se puede pedir.
+
+Dos cosas que salieron de mirarlo funcionando, y que valen para cualquiera que
+lo regenere: las imágenes se grababan **vacías** —la aplicación aborta la
+descarga al desmontar el componente, y en modo estricto React monta dos veces—
+así que los cuerpos vacíos se vuelven a pedir a la API al final; y la lista de
+encargos se recorta al que se ha grabado, porque la base de demostración
+arrastra 45 de pruebas viejas y **pulsar cualquier otro llevaba a una pantalla
+rota**.
+
 ## Los tres orígenes de fotografía
 
 En el servidor es **el mismo endpoint**. Aquí la diferencia está en el `input`

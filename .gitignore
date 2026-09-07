@@ -5,10 +5,10 @@
 *.pem
 *.key
 
-# ── Fuentes corporativas ─────────────────────────────────────────────────────
-# Gotham es comercial y licenciada. Versionarla sería redistribuirla y
-# exponerla a cualquiera con acceso al repositorio. Se provisionan en el
-# contenedor desde un artefacto privado. Ver docs/operacion/instalar-fuentes.md
+# ── Tipografías ──────────────────────────────────────────────────────────────
+# No se versionan, aunque tras P-39 la licencia lo permitiría: un binario en el
+# repositorio se actualiza a mano y nadie revisa su procedencia al año
+# siguiente. Se instalan por paquete: `make fonts-install`.
 # Hay además una prueba de CI que falla si aparece alguna: un .gitignore se
 # salta con `git add -f`, la prueba no.
 assets/fonts/**/*.otf
@@ -56,3 +56,10 @@ var/certificados-desarrollo/
 
 # ── Caché de compilación de TypeScript ───────────────────────────────────────
 *.tsbuildinfo
+
+# ── La grabación del prototipo navegable ─────────────────────────────────────
+# 0,7 MB de respuestas de la API, con las fotografías dentro. Son datos
+# ficticios y podrían versionarse, pero envejecen en cuanto la API cambia y un
+# fichero generado que se queda viejo dentro del repositorio acaba enseñando
+# una aplicación que ya no existe. Se regenera con `npm run prototipo:grabar`.
+apps/web/prototipo/grabacion.json

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type ComponentType, type ReactNode, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { alCambiarSesion, haySesion, restaurarSesion } from './api/cliente'
 import { Marco } from './ui/Marco'
@@ -11,7 +11,21 @@ import { NuevoProyecto } from './paginas/NuevoProyecto'
 import { Sugerencias } from './paginas/Sugerencias'
 import { Personas } from './paginas/Personas'
 
-export function App() {
+/**
+ * `Enrutador` es `BrowserRouter` **siempre en la aplicación**: las rutas son
+ * de verdad, se comparten por correo y el servidor las sirve.
+ *
+ * Existe como parámetro por el prototipo navegable (`prototipo/`), que es un
+ * solo fichero HTML sin servidor detrás: ahí las rutas van en el fragmento
+ * (`#/proyectos`), porque un `/proyectos` sin nadie que lo sirva se rompe al
+ * recargar. Es la única diferencia entre la aplicación y el prototipo, y por
+ * eso está aquí y no en una copia de este fichero.
+ */
+export function App({
+  Enrutador = BrowserRouter,
+}: {
+  Enrutador?: ComponentType<{ children: ReactNode }>
+} = {}) {
   const [autenticado, setAutenticado] = useState(haySesion())
   const [comprobando, setComprobando] = useState(true)
 
@@ -30,7 +44,7 @@ export function App() {
   }
 
   return (
-    <BrowserRouter>
+    <Enrutador>
       <Routes>
         <Route
           path="/entrar"
@@ -62,6 +76,6 @@ export function App() {
           }
         />
       </Routes>
-    </BrowserRouter>
+    </Enrutador>
   )
 }

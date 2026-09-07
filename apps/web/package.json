@@ -26,7 +26,9 @@
     "test:ubicaciones": "node herramientas/comprobar-ubicaciones.mjs",
     "test:safari": "TDD_NAVEGADOR=webkit TDD_DISPOSITIVO=\"iPhone 14\" node herramientas/comprobar-safari.mjs",
     "test:movil": "TDD_DISPOSITIVO=\"iPhone 14\" node herramientas/comprobar-safari.mjs",
-    "test:android": "TDD_DISPOSITIVO=\"Galaxy S9+\" node herramientas/comprobar-safari.mjs"
+    "test:android": "TDD_DISPOSITIVO=\"Galaxy S9+\" node herramientas/comprobar-safari.mjs",
+    "prototipo": "vite build --config vite.prototipo.config.ts",
+    "prototipo:grabar": "node herramientas/grabar-api.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

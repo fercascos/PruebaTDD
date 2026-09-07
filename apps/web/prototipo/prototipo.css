@@ -1,0 +1,33 @@
+/* Lo único que el prototipo añade a la hoja de estilos de la aplicación: el
+   aviso de que es un prototipo. Va arriba del todo y se puede cerrar, porque
+   una franja fija tapando la interfaz estropea lo que viene a enseñar. */
+.aviso-prototipo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #fdf3d8;
+  border-bottom: 1px solid #e3cf9a;
+  color: #4a3a12;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.aviso-prototipo p {
+  margin: 0;
+  min-width: 0;
+}
+.aviso-prototipo button {
+  flex: none;
+  border: 1px solid #c8ad6a;
+  background: #fff;
+  color: inherit;
+  border-radius: 4px;
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+}
+.aviso-prototipo button:hover {
+  background: #f7ecd2;
+}
