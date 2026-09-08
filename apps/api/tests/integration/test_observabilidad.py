@@ -246,7 +246,7 @@ def test_las_metricas_cuentan_peticiones_y_miden_la_cola(cliente: TestClient) ->
 def test_la_ruta_de_las_metricas_no_lleva_identificadores(cliente: TestClient, cab: Any) -> None:
     """`[REC]` La etiqueta es la ruta con plantilla, no la concreta.
 
-    Con el identificador dentro, cada encargo crearía su propia serie temporal
+    Con el identificador dentro, cada proyecto crearía su propia serie temporal
     y en un mes habría cien mil. Es la forma más habitual de reventar un
     Prometheus.
     """

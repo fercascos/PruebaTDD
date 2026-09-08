@@ -61,7 +61,7 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
         <p className="cargando">Cargando activos…</p>
       ) : activos.length === 0 ? (
         <Vacio>
-          Este encargo todavía no tiene activos. Un proyecto sin activos no sale de borrador.
+          Este proyecto todavía no tiene activos. Un proyecto sin activos no sale de borrador.
         </Vacio>
       ) : (
         <div className="desbordable">

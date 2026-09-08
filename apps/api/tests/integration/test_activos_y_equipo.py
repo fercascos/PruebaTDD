@@ -277,7 +277,7 @@ def proyecto_limpio(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> st
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo de equipo') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto de equipo') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),

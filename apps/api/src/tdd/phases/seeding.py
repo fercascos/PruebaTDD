@@ -60,7 +60,7 @@ TIPOS_DE_COMPROBACION: tuple[tuple[str, str, str], ...] = (
         "VIGENCIA",
         "Vigencia y caducidad",
         "Localiza las fechas de emisión, validez o caducidad y compáralas con la "
-        "fecha del encargo. Cita siempre la fecha exacta que has leído y la "
+        "fecha del proyecto. Cita siempre la fecha exacta que has leído y la "
         "página donde aparece: quien revise tiene que poder comprobarla.",
     ),
     (

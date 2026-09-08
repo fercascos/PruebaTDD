@@ -11,7 +11,7 @@ adornos.
 make install     # dependencias
 make db-up       # PostgreSQL 16
 make db-init     # crea las bases, MIGRA el esquema y siembra catálogos y fases
-make test        # 1.295 pruebas
+make test        # 1.305 pruebas
 ```
 
 Sobre una base recién creada **no hay ninguna cuenta**, y `POST /users` exige un
@@ -163,14 +163,14 @@ precios. Devuelve la fórmula con sus operandos y no aplica nada.
 
 Es la decisión que más se nota al usar la aplicación, y está construida así:
 
-| | **Estado** del encargo | **Fases** del proceso |
+| | **Estado** del proyecto | **Fases** del proceso |
 |---|---|---|
 | Qué describe | El ciclo administrativo | El trabajo real |
 | Valores | Borrador → … → Archivado | Ocho, elegidas a la carta al dar de alta |
 | Cómo avanza | Una a una, con guardas | **En paralelo** |
 | Dónde está | `projects/state_machine.py` | `phases/engine.py` |
 
-Un encargo puede tener la documentación pendiente, la visita hecha y el Q&A en
+Un proyecto puede tener la documentación pendiente, la visita hecha y el Q&A en
 curso **a la vez**. Mezclar ambos ejes en un solo campo habría sido el error de
 modelado más caro del proyecto.
 

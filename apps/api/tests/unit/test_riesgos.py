@@ -52,7 +52,7 @@ def grado(m, code: str):
 
 def test_los_totales_cuadran_con_la_suma_de_las_filas() -> None:
     """Si la matriz no suma lo mismo que el CAPEX del proyecto, nadie la usa dos
-    veces: se pasa el resto del encargo buscando los euros que faltan."""
+    veces: se pasa el resto del proyecto buscando los euros que faltan."""
     m = matriz(
         [
             fila("a", "04", "CORTO", "412500"),
@@ -109,7 +109,7 @@ def test_los_hallazgos_sin_grado_salen_en_su_propia_fila() -> None:
 
 def test_el_catalogo_entero_aparece_aunque_no_haya_hallazgos() -> None:
     """Una matriz a la que le faltan filas según el proyecto no se puede
-    comparar con la del encargo siguiente, y el lector no sabe si es que no hay
+    comparar con la del proyecto siguiente, y el lector no sabe si es que no hay
     nada o es que la fila se ha caído."""
     m = matriz([fila("a", "03")])
     codigos = [g.code for g in m.grados]
@@ -161,7 +161,7 @@ def test_cada_horizonte_suma_lo_suyo() -> None:
 
 def test_los_cinco_horizontes_estan_siempre() -> None:
     """Aunque estén a cero: cinco columnas fijas es lo que permite comparar dos
-    encargos de un vistazo."""
+    proyectos de un vistazo."""
     m = matriz([fila("a", "03", "CORTO", "100")])
     salida = m.como_json(HORIZONTES)
     assert list(salida["total_por_horizonte"]) == HORIZONTES

@@ -18,7 +18,7 @@ from decimal import Decimal
 from typing import Any
 
 from tdd.evidence.naming import sanear
-from tdd.exports.plantilla_capex import Actuacion, Encargo
+from tdd.exports.plantilla_capex import Actuacion, Proyecto
 from tdd.exports.vocabulario_capex import Vocabulario, leer
 
 #: `asset_typology.code` → lo que la plantilla escribe en «00 Datos Activo»!C16.
@@ -33,12 +33,12 @@ def _decimal(valor: Any) -> Decimal | None:
 
 def encargo_de(
     snapshot: dict[str, Any], v: Vocabulario, *, activo_en_el_nombre: bool = False
-) -> Encargo:
+) -> Proyecto:
     """La cabecera que va a «00 Datos Activo».
 
     `[LIM]` La hoja tiene sitio para **un** activo: un nombre, una dirección,
     unas superficies y **un tipo de edificio**, que además decide qué zonas
-    ofrece el desplegable. Un encargo de cartera con varios activos no cabe
+    ofrece el desplegable. Un proyecto de cartera con varios activos no cabe
     ahí. Hay dos formas de resolverlo y las dos están disponibles:
 
     * **Un libro por activo** —`separar_por_activo()`—, que es la buena: cada
@@ -50,7 +50,7 @@ def encargo_de(
       en claro lo que se está perdiendo.
 
     `activo_en_el_nombre` es para el primer caso. La celda está etiquetada
-    «Nombre del proyecto» y en un encargo de cartera eso no basta para saber
+    «Nombre del proyecto» y en un proyecto de cartera eso no basta para saber
     qué edificio se tiene delante, así que el libro de un activo escribe
     «Proyecto · Activo». La celda C5 la referencian por fórmula la cabecera de
     la hoja `CapEx` y el pie de las gráficas, de modo que el nombre se propaga
@@ -65,7 +65,7 @@ def encargo_de(
     if activo_en_el_nombre and primero.get("name"):
         nombre = f"{nombre} · {primero['name']}" if nombre else str(primero["name"])
 
-    return Encargo(
+    return Proyecto(
         nombre=nombre,
         direccion=str(primero.get("address_line") or primero.get("city") or "") or None,
         fecha=str(snapshot.get("generated_at") or "")[:10] or None,
@@ -151,7 +151,7 @@ def _zona(v: Vocabulario, codigo: str, tipologia: str) -> str | None:
 
 def preparar(
     snapshot: dict[str, Any], *, idioma: str = "es", activo_en_el_nombre: bool = False
-) -> tuple[Encargo, list[Actuacion]]:
+) -> tuple[Proyecto, list[Actuacion]]:
     v = leer(idioma)
     return (
         encargo_de(snapshot, v, activo_en_el_nombre=activo_en_el_nombre),
@@ -166,7 +166,7 @@ def preparar(
 
 @dataclass(frozen=True, slots=True)
 class Parte:
-    """El trozo del encargo que le corresponde a un activo.
+    """El trozo del proyecto que le corresponde a un activo.
 
     `snapshot` es un snapshot completo y válido —mismos catálogos, misma fecha,
     mismo proyecto— recortado a un solo activo. Se le pasa a `preparar()` igual
@@ -180,7 +180,7 @@ class Parte:
     #: `asset_code`, si lo tiene. Va al nombre del fichero antes que el nombre.
     codigo: str | None
     snapshot: dict[str, Any]
-    #: Hallazgos cuyo activo ya no está en el encargo. Ver `separar_por_activo`.
+    #: Hallazgos cuyo activo ya no está en el proyecto. Ver `separar_por_activo`.
     huerfana: bool = False
 
     @property
@@ -199,7 +199,7 @@ class Parte:
 
 
 def separar_por_activo(snapshot: dict[str, Any]) -> list[Parte]:
-    """Parte el encargo en un snapshot por activo, **sin perder nada**.
+    """Parte el proyecto en un snapshot por activo, **sin perder nada**.
 
     `[REQ]` Es lo que permite entregar el CAPEX «separado por activo»: la
     plantilla del cliente describe un edificio —un nombre, unas superficies y
@@ -216,7 +216,7 @@ def separar_por_activo(snapshot: dict[str, Any]) -> list[Parte]:
 
     Los activos **sin ninguna actuación también salen**, con su parte vacía:
     quien llama decide si genera su libro o lo declara, pero no se entera por
-    omisión. Y los hallazgos cuyo activo ya no está en el encargo —se borró
+    omisión. Y los hallazgos cuyo activo ya no está en el proyecto —se borró
     después de registrarlos— se agrupan en una última parte marcada
     `huerfana`, porque desaparecer del Excel sin que nadie lo decida es
     exactamente el fallo que no se detecta hasta que alguien suma a mano.
@@ -258,7 +258,7 @@ def separar_por_activo(snapshot: dict[str, Any]) -> list[Parte]:
         partes.append(
             Parte(
                 asset_id=None,
-                nombre="Sin activo en el encargo",
+                nombre="Sin activo en el proyecto",
                 codigo=None,
                 snapshot=recorte([], huerfanos),
                 huerfana=True,
@@ -282,14 +282,14 @@ def avisos_de_cartera(snapshot: dict[str, Any]) -> list[str]:
         nombres = ", ".join(str(a.get("name") or "") for a in activos[1:])
         avisos.append(
             f"La hoja describe en su cabecera el activo «{activos[0].get('name')}». "
-            f"El encargo tiene {len(activos)}: {nombres} salen en las filas de "
+            f"El proyecto tiene {len(activos)}: {nombres} salen en las filas de "
             "actuaciones pero no en los datos del edificio. Para que cada uno lleve "
             "su cabecera, descargue el CAPEX separado por activo."
         )
     tipologias = {str(a.get("typology_code") or "") for a in activos}
     if len(tipologias) > 1:
         avisos.append(
-            "Los activos del encargo no son todos del mismo tipo de edificio, y la "
+            "Los activos del proyecto no son todos del mismo tipo de edificio, y la "
             "plantilla ofrece una lista de zonas distinta para cada uno: alguna zona "
             "puede quedar en blanco. Separado por activo no ocurre, porque cada libro "
             "lleva el tipo de edificio del suyo."

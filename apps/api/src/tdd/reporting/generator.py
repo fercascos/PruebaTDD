@@ -52,8 +52,8 @@ class ResultadoDeGeneracion:
     desbordamientos: list[str] = field(default_factory=list)
     fotos_insertadas: int = 0
     totales: dict[str, Decimal] = field(default_factory=dict)
-    #: Lo que la hoja del cliente no puede representar de este encargo: tiene
-    #: sitio para un activo y el encargo puede tener varios.
+    #: Lo que la hoja del cliente no puede representar de este proyecto: tiene
+    #: sitio para un activo y el proyecto puede tener varios.
     avisos_del_excel: list[str] = field(default_factory=list)
 
 
@@ -333,12 +333,12 @@ def generar(
 
     # 5 · El Excel, sobre la plantilla del cliente y en el mismo idioma.
     idioma = cl.locale_corto(locale)
-    encargo, actuaciones = puente.preparar(snapshot, idioma=idioma)
+    proyecto, actuaciones = puente.preparar(snapshot, idioma=idioma)
     avisos_del_excel = puente.avisos_de_cartera(snapshot)
     # `NoCabe` sube tal cual: no se devuelve un Excel a medias, porque
     # faltarían actuaciones y no habría forma de saber cuáles. El router lo
     # traduce a un 409 con el capítulo que se pasa y por cuánto.
-    xlsx = generar_plantilla(encargo, actuaciones, idioma=idioma)
+    xlsx = generar_plantilla(proyecto, actuaciones, idioma=idioma)
 
     salida = io.BytesIO()
     prs.save(salida)

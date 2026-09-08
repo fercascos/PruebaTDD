@@ -112,7 +112,7 @@ export function ImportarInventario({
       <section>
         <h3>1 · La plantilla</h3>
         <p className="ayuda">
-          Lleva dentro los activos de este encargo y los 14 sistemas técnicos. Rellenarla a partir
+          Lleva dentro los activos de este proyecto y los 14 sistemas técnicos. Rellenarla a partir
           de ella evita que media hoja falle por una tilde en el nombre del edificio.
         </p>
         <button

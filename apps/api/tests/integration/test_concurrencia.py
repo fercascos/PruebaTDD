@@ -11,7 +11,7 @@ cambió, y —lo que de verdad importa— que **el texto de Marta sigue ahí**.
 `consultor_a` y `consultor2_a` son las dos personas. Son de la misma
 organización a propósito: el aislamiento entre organizaciones ya lo cubre
 `test_rls_y_restricciones`, y lo que se prueba aquí es lo contrario, dos
-compañeros trabajando en el mismo encargo.
+compañeros trabajando en el mismo proyecto.
 """
 
 from __future__ import annotations
@@ -55,13 +55,13 @@ def catalogo(motor_admin: Engine) -> dict[str, Any]:
 @pytest.fixture
 def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
     """Uno por prueba: dos personas editando a la vez es justo lo que se
-    prueba, y compartir el encargo haría depender el resultado del orden."""
+    prueba, y compartir el proyecto haría depender el resultado del orden."""
     with motor_admin.begin() as conn:
         return str(
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo a cuatro manos') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto a cuatro manos') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),

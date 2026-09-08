@@ -44,7 +44,7 @@ class CambiarPermiso(BaseModel):
 
 @router.get("/projects/{project_id}/ai-doc-review", response_model=Permiso)
 def ver_permiso(project_id: uuid.UUID, s: SesionDep) -> Any:
-    """Si este encargo tiene autorizada la revisión con IA, y quién la autorizó."""
+    """Si este proyecto tiene autorizada la revisión con IA, y quién la autorizó."""
     p = servicio.permiso_de(s, project_id)
     return {"activo": p.activo, "desde": p.desde, "por": p.por}
 
@@ -53,7 +53,7 @@ def ver_permiso(project_id: uuid.UUID, s: SesionDep) -> Any:
 def cambiar_permiso(
     project_id: uuid.UUID, cuerpo: CambiarPermiso, s: SesionDep, usuario: UsuarioDep
 ) -> Any:
-    """`[REQ]` Enciende o apaga la revisión con IA en este encargo.
+    """`[REQ]` Enciende o apaga la revisión con IA en este proyecto.
 
     Solo quien administra o dirige proyectos puede hacerlo: es una autorización
     sobre documentación de un cliente, no una preferencia de la aplicación.
@@ -206,7 +206,7 @@ def decidir(finding_id: uuid.UUID, cuerpo: Decision, s: SesionDep, usuario: Usua
     """`[REQ]` Una persona acepta o rechaza la propuesta. Este es el único camino.
 
     Aceptar **no cambia** el estado de la línea de la checklist: dice que la
-    observación es cierta. Qué hacer con ella la decide quien lleva el encargo.
+    observación es cierta. Qué hacer con ella la decide quien lleva el proyecto.
     """
     try:
         servicio.decidir(

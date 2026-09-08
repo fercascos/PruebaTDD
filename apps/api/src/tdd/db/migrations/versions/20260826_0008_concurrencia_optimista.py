@@ -88,7 +88,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Se deshace entero. Perder el contador no pierde ningún dato del encargo:
+    """Se deshace entero. Perder el contador no pierde ningún dato del proyecto:
     solo la capacidad de detectar una edición simultánea."""
     for tabla in TABLAS:
         op.execute(f"DROP TRIGGER IF EXISTS {tabla}_version ON {tabla}")

@@ -668,11 +668,29 @@ select {
 
 /* ── Formularios ─────────────────────────────────────────────────────────── */
 
+/* `[REQ]` Alineadas por ARRIBA, no por abajo. Con `end`, un campo que lleva
+   texto de ayuda debajo empujaba a sus vecinos hacia abajo y las etiquetas de
+   una misma fila quedaban a tres alturas distintas: el formulario parecía mal
+   maquetado, y lo estaba. */
 .rejilla-campos {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
-  align-items: end;
+  align-items: start;
+}
+
+/* Un campo que la aplicación rellena y nadie edita. Se enseña —no se esconde—
+   porque el código del proyecto es lo primero que se dice por teléfono, pero se
+   ve a la legua que no se teclea. */
+.campo-bloqueado input,
+.campo-bloqueado output {
+  display: block;
+  padding: 0.45rem 0.6rem;
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio);
+  background: var(--fondo);
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
 }
 
 textarea {
@@ -2014,4 +2032,16 @@ button.enlace {
 }
 .filtro-del-resumen select {
   min-width: 0;
+}
+
+/* El cliente bajo el título del proyecto. Discreto: acompaña al nombre, no
+   compite con él. */
+.cliente-del-proyecto {
+  margin: 0.15rem 0 0;
+  color: var(--tinta-suave);
+  font-size: 0.9rem;
+}
+.pastilla.aviso {
+  background: var(--aviso, #8f6215);
+  margin-left: 0.4rem;
 }

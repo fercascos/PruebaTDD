@@ -9,7 +9,7 @@ documentos subidos e identifica si algo es **no conforme** o **falta**.
 Tres decisiones del cliente están grabadas en el esquema, no en el código,
 porque son exactamente las que no deben poder saltarse por descuido:
 
-1. **Opt-in por encargo, apagado de fábrica.** `project.ai_doc_review_enabled`
+1. **Opt-in por proyecto, apagado de fábrica.** `project.ai_doc_review_enabled`
    nace en `FALSE`, y la restricción `project_revision_ia_con_autoria` impide
    que esté encendido sin que consten **quién** lo encendió y **cuándo**. La
    restricción del cliente pedía «autorización expresa y verificable»: sin esa
@@ -46,7 +46,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # ── 1 · El interruptor por encargo, con su autoría ────────────────────────
+    # ── 1 · El interruptor por proyecto, con su autoría ────────────────────────
     op.execute(
         """
         ALTER TABLE project

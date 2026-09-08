@@ -50,7 +50,7 @@ class ResultadoDeExtraccion(BaseModel):
     objetos: int
     #: `[REQ]` Cuántas limitaciones del informe ha aportado. Un plan de
     #: autoprotección puede no proponer ni un dato y aportar aquí la reserva más
-    #: importante del encargo, así que `propuestas: 0` no significa que la
+    #: importante del proyecto, así que `propuestas: 0` no significa que la
     #: lectura no haya servido para nada.
     limitaciones: int = 0
     #: `[REQ]` Cuántos medios del edificio ha propuesto al inventario.
@@ -148,7 +148,7 @@ def extraer(
     #
     # Esto era un 409 incondicional al principio del endpoint, y estaba mal: un
     # plan de autoprotección cubre un complejo entero y sus limitaciones son del
-    # encargo, no de una nave. Con la comprobación delante, el documento que más
+    # proyecto, no de una nave. Con la comprobación delante, el documento que más
     # limitaciones aporta era justo el que no se podía leer.
     #
     # Ahora solo se exige si el documento propone campos y no hay a quién
@@ -239,8 +239,8 @@ def extraer(
                 "o": str(usuario.organization_id),
                 "p": str(documento["project_id"]),
                 # Se hereda del documento si lo tiene. Un plan de complejo no lo
-                # tiene, y entonces la limitación es del encargo, que es lo
-                # correcto: el alcance del informe es el encargo.
+                # tiene, y entonces la limitación es del proyecto, que es lo
+                # correcto: el alcance del informe es el proyecto.
                 "a": None if documento["asset_id"] is None else str(documento["asset_id"]),
                 "txt": limitacion.texto,
                 "m": limitacion.motivo,
@@ -511,7 +511,7 @@ def listar_limitaciones(
     s: SesionDep,
     estado: str | None = None,
 ) -> Any:
-    """Lo que la documentación del encargo dice sobre su propia fiabilidad.
+    """Lo que la documentación del proyecto dice sobre su propia fiabilidad.
 
     Sin filtro salen todas, con su estado. La pantalla pide las pendientes para
     que alguien decida y las aceptadas para enseñar qué va a ir al informe.
@@ -592,7 +592,7 @@ def decidir_limitaciones(
     if existentes != len(todas):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "Alguna limitación no existe, no es de este encargo o ya estaba decidida. "
+            "Alguna limitación no existe, no es de este proyecto o ya estaba decidida. "
             "Vuelva a cargar la lista: puede que otra persona la haya resuelto.",
         )
 
@@ -654,7 +654,7 @@ def listar_equipos_propuestos(
     s: SesionDep,
     estado: str | None = None,
 ) -> Any:
-    """Los medios que la documentación del encargo dice que existen."""
+    """Los medios que la documentación del proyecto dice que existen."""
     filas = (
         s.execute(
             text(
@@ -760,14 +760,14 @@ def decidir_equipos(
     if len(pendientes) != len(ids):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "Alguna propuesta no existe, no es de este encargo o ya estaba decidida. "
+            "Alguna propuesta no existe, no es de este proyecto o ya estaba decidida. "
             "Vuelva a cargar la lista: puede que otra persona la haya resuelto.",
         )
 
     creados: list[uuid.UUID] = []
     for aceptada in cuerpo.aceptar:
         propuesta = pendientes[str(aceptada.id)]
-        # El activo tiene que ser del encargo. Sin esto, un identificador de otro
+        # El activo tiene que ser del proyecto. Sin esto, un identificador de otro
         # proyecto crearía un equipo cruzado que la RLS no ve como error porque
         # las dos filas son de la misma organización.
         del_encargo = s.execute(
@@ -777,7 +777,7 @@ def decidir_equipos(
         if del_encargo is None:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                f"El activo {aceptada.asset_id} no es de este encargo.",
+                f"El activo {aceptada.asset_id} no es de este proyecto.",
             )
 
         equipment_id = s.execute(

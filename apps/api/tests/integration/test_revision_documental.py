@@ -4,7 +4,7 @@ Lo que se prueba aquí y en ningún otro sitio son las tres garantías que el
 cliente puso como condición, y que no valen nada si solo están escritas en la
 documentación:
 
-1. **Sin autorización expresa del encargo no se analiza nada**, y la
+1. **Sin autorización expresa del proyecto no se analiza nada**, y la
    autorización deja constancia de quién la dio.
 2. **La IA no decide.** Ninguna observación sale de `PROPUESTA` sin una
    persona, y aceptar una propuesta **no cambia** el estado de la línea de la
@@ -37,7 +37,7 @@ def proyecto(cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID]) ->
         json={
             "client_id": str(datos_base["cliente_a"]),
             "internal_code": f"IA-{uuid.uuid4().hex[:6]}",
-            "name": "Encargo con revisión documental",
+            "name": "Proyecto con revisión documental",
             "applicable_phases": [{"code": "SOLICITUD_DOCUMENTACION"}],
         },
     )
@@ -76,7 +76,7 @@ def autorizar(cliente: TestClient, cab: Any, proyecto: str, activo: bool = True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  1 · La autorización por encargo
+#  1 · La autorización por proyecto
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -262,7 +262,7 @@ def test_aceptar_una_propuesta_no_cambia_el_estado_de_la_checklist(
 
     Un documento puede estar RECIBIDA y ser no conforme a la vez. Aceptar la
     observación dice que es cierta; **no** decide qué hacer con la línea. Eso
-    lo decide quien lleva el encargo, con la información delante.
+    lo decide quien lleva el proyecto, con la información delante.
     """
     autorizar(cliente, cab, proyecto)
     linea = cliente.post(

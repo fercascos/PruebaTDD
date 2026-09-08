@@ -29,10 +29,10 @@ from tdd.revision_documental.puerto import (
 
 
 class RevisionNoAutorizada(PermissionError):
-    """El encargo no tiene encendida la revisión con IA.
+    """El proyecto no tiene encendida la revisión con IA.
 
     `[REQ]` No es un fallo técnico ni un problema de rol: es la ausencia de la
-    autorización expresa que el cliente exige por encargo. Se distingue de un
+    autorización expresa que el cliente exige por proyecto. Se distingue de un
     403 corriente para que el mensaje pueda decir qué falta y quién lo enciende.
     """
 
@@ -40,7 +40,7 @@ class RevisionNoAutorizada(PermissionError):
 class DocumentoDemasiadoSensible(PermissionError):
     """`[REQ]` Un documento `RESTRINGIDO` no se manda a un proveedor de IA.
 
-    El interruptor del encargo es la autorización expresa que el cliente exige,
+    El interruptor del proyecto es la autorización expresa que el cliente exige,
     y no basta para éste. `RESTRINGIDO` es el nivel que la propia aplicación
     define como «solo lo descarga quien administra o dirige»: mandárselo a un
     tercero mientras un consultor del equipo no puede ni abrirlo es incoherente,
@@ -50,7 +50,7 @@ class DocumentoDemasiadoSensible(PermissionError):
     procedimientos de emergencia, puntos de reunión y datos de las personas con
     responsabilidad en una emergencia.
 
-    `[REC]` No hay un segundo interruptor. Si en un encargo concreto hay que
+    `[REC]` No hay un segundo interruptor. Si en un proyecto concreto hay que
     revisarlo, se baja su clasificación a mano —lo cual queda en `audit_log` con
     quién y cuándo— y entonces se revisa. Una decisión así tiene que dejar
     rastro; un interruptor más lo convertiría en un clic sin memoria.
@@ -63,7 +63,7 @@ class DecisionInvalida(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class Permiso:
-    """El estado del interruptor de un encargo, con su autoría."""
+    """El estado del interruptor de un proyecto, con su autoría."""
 
     activo: bool
     desde: Any | None = None
@@ -92,7 +92,7 @@ def permiso_de(s: Session, project_id: uuid.UUID) -> Permiso:
 
 
 def autorizar(s: Session, project_id: uuid.UUID, *, usuario_id: uuid.UUID, activo: bool) -> Permiso:
-    """Enciende o apaga la revisión con IA en un encargo.
+    """Enciende o apaga la revisión con IA en un proyecto.
 
     `[REQ]` Encender deja constancia de **quién** y **cuándo**. Apagar borra la
     autoría a la vez que el permiso: dejarla puesta daría a entender que sigue
@@ -174,7 +174,7 @@ def revisar_documento(  # noqa: PLR0913 — cada uno es una dependencia distinta
 ) -> uuid.UUID:
     """Revisa un documento y guarda el resultado como propuestas.
 
-    Devuelve el id de la revisión. Levanta `RevisionNoAutorizada` si el encargo
+    Devuelve el id de la revisión. Levanta `RevisionNoAutorizada` si el proyecto
     no la tiene encendida, y deja la revisión en `FALLIDA` **con su motivo** si
     el proveedor no puede hacerla: un fallo silencioso dejaría a quien lo pidió
     esperando una respuesta que no va a llegar.
@@ -183,19 +183,19 @@ def revisar_documento(  # noqa: PLR0913 — cada uno es una dependencia distinta
     permiso = permiso_de(s, uuid.UUID(str(doc["project_id"])))
     if not permiso.activo:
         raise RevisionNoAutorizada(
-            "Este encargo no tiene activada la revisión de documentación con IA. "
+            "Este proyecto no tiene activada la revisión de documentación con IA. "
             "La activa quien dirige el proyecto, y queda registrado quién lo hizo."
         )
-    # `[REQ]` Y el interruptor del encargo NO basta para un documento
+    # `[REQ]` Y el interruptor del proyecto NO basta para un documento
     # RESTRINGIDO. Esto faltaba: la comprobación de confidencialidad estaba en
     # `descargar()` y no aquí, así que un documento que un consultor del equipo
     # no puede ni abrir sí se podía mandar a un proveedor externo con solo el
-    # interruptor del encargo encendido. Se descubrió al clasificar el plan de
+    # interruptor del proyecto encendido. Se descubrió al clasificar el plan de
     # autoprotección como RESTRINGIDO.
     if doc["confidentiality"] == "RESTRINGIDO":
         raise DocumentoDemasiadoSensible(
             f"«{doc['display_name']}» está clasificado como RESTRINGIDO y no se envía a "
-            "ningún proveedor de IA, ni con la revisión del encargo activada. Es el nivel "
+            "ningún proveedor de IA, ni con la revisión del proyecto activada. Es el nivel "
             "que solo puede descargar quien administra o dirige. Si hay que revisarlo, "
             "baje su clasificación primero: quedará registrado quién lo hizo."
         )
@@ -311,7 +311,7 @@ def decidir(
     certificado está caducado» no convierte la línea en `NO_DISPONIBLE`: dice
     que la observación es cierta. Qué hacer con ella —pedir el documento otra
     vez, abrir un hallazgo, anotarlo como limitación— lo decide quien lleva el
-    encargo, con la información delante.
+    proyecto, con la información delante.
     """
     actual = s.execute(
         text("SELECT CAST(decision AS text) FROM doc_review_finding WHERE id = :i"),

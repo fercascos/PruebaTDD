@@ -187,7 +187,7 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Severidad.ALTA,
                 # No bloquea, por lo mismo que `UNVALIDATED_PRICES`: un Red Flag
                 # temprano con todo en borrador es un uso legítimo. Lo que no es
-                # legítimo es que **no se note**. Sin este aviso, un encargo con
+                # legítimo es que **no se note**. Sin este aviso, un proyecto con
                 # todos los hallazgos en borrador producía un informe que decía
                 # «CAPEX total: 0,00 €» sin una sola advertencia, y el cero se
                 # lee como «no hay nada que hacer», no como «esto no se ha

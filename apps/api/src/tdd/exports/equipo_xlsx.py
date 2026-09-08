@@ -119,7 +119,7 @@ TITULOS = {
 }
 
 AYUDAS = {
-    "asset": "Obligatorio. El nombre o el código de un activo YA dado de alta en el encargo",
+    "asset": "Obligatorio. El nombre o el código de un activo YA dado de alta en el proyecto",
     "tag": "Como está rotulado en la sala: CL-01, AS-Norte. Único dentro del activo",
     "equipment_type": "Obligatorio. Enfriadora, ascensor, cuadro general…",
     "technical_system": "Uno de los 14 del catálogo. Si no casa, el equipo entra sin clasificar",
@@ -134,7 +134,7 @@ AYUDAS = {
 def plantilla(activos: list[str], sistemas: list[str]) -> bytes:
     """El libro vacío que se descarga para rellenar.
 
-    Lleva dentro **los activos del encargo y los 14 sistemas**, en una hoja
+    Lleva dentro **los activos del proyecto y los 14 sistemas**, en una hoja
     aparte. Sin eso, quien rellena la hoja escribe el nombre del edificio de
     memoria y la mitad de las filas fallan al importar por una tilde.
     """
@@ -183,7 +183,7 @@ def plantilla(activos: list[str], sistemas: list[str]) -> bytes:
             fila += 1
         fila += 1
 
-    bloque("Activos de este encargo", activos or ["(el encargo no tiene activos todavía)"])
+    bloque("Activos de este proyecto", activos or ["(el proyecto no tiene activos todavía)"])
     bloque("Sistemas técnicos", sistemas)
     for campo, tabla in ENUMERADOS.items():
         bloque(TITULOS[campo], sorted({v.replace("_", " ").capitalize() for v in tabla.values()}))

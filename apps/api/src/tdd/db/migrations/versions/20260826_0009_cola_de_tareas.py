@@ -179,7 +179,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Bajar esta revisión pierde las tareas pendientes.
 
-    Es aceptable y hay que decirlo: lo que se pierde es el encargo de generar
+    Es aceptable y hay que decirlo: lo que se pierde es el proyecto de generar
     un informe, no el informe. Se vuelve a pedir desde la pantalla.
     """
     for f in (

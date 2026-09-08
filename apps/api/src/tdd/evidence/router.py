@@ -507,7 +507,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
 
 
 #: Los tres que pidió el cliente, más el que hará falta el día que alguien
-#: traiga una carpeta de un encargo anterior.
+#: traiga una carpeta de un proyecto anterior.
 _ORIGENES = {"ORDENADOR", "CARRETE", "CAMARA", "IMPORTACION"}
 
 

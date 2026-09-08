@@ -130,7 +130,7 @@ def exigir_gestion_de_sugerencias(
 #: agujeros reales:
 #:
 #:   · Quien recibía un `201` y pedía ese identificador acto seguido podía no
-#:     encontrarlo. Salió sembrando el encargo de demostración, no de la suite.
+#:     encontrarlo. Salió sembrando el proyecto de demostración, no de la suite.
 #:   · Y si el `COMMIT` fallaba —interbloqueo, disco lleno—, el cliente ya tenía
 #:     su `201` de algo que se deshizo, sin enterarse jamás.
 #:

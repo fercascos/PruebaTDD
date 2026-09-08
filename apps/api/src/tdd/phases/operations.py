@@ -10,7 +10,7 @@ las dos cosas se encuentra.
 documento marcado `NO_DISPONIBLE` y una pregunta `SIN_RESPUESTA` son lo mismo
 desde el punto de vista del informe: algo que no se ha podido revisar y hay que
 declarar. La columna `affects_report_limitations` lo calcula sola en las dos
-tablas, así que nadie tiene que acordarse al final del encargo.
+tablas, así que nadie tiene que acordarse al final del proyecto.
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def _fase(s: Session, project_id: uuid.UUID, codigo: PhaseCode) -> uuid.UUID:
     """La fase del proyecto, exigiendo que exista.
 
     `404` y no creación al vuelo: las fases se eligen a la carta al dar de alta
-    el encargo, y crear una porque alguien llamó a su endpoint saltaría esa
+    el proyecto, y crear una porque alguien llamó a su endpoint saltaría esa
     decisión sin que nadie lo pidiera.
     """
     fila = s.execute(
@@ -272,7 +272,7 @@ def fijar_enlace_vdr(
 ) -> Any:
     """Sustituye el enlace vigente. El anterior se conserva como histórico:
     saber a qué repositorio se accedió y cuándo forma parte de la trazabilidad
-    del encargo."""
+    del proyecto."""
     fase = _fase(s, project_id, PhaseCode.VDR)
     s.execute(
         text("UPDATE vdr_link SET is_active = FALSE WHERE project_phase_id = :f AND is_active"),

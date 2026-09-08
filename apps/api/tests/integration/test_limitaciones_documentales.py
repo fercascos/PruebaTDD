@@ -8,7 +8,7 @@ parece completo, y el documento dice que no se puede confiar en él.
 Lo que estas pruebas fijan:
 
 * que un plan de autoprotección **se puede leer sin activo** —cubre un complejo
-  entero, y sus reservas son del encargo—;
+  entero, y sus reservas son del proyecto—;
 * que **nada llega al informe sin que una persona lo acepte**, y que el snapshot
   es el punto donde eso deja de poder corregirse;
 * que las tres clases salen **distinguidas** por su origen;
@@ -87,7 +87,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con plan de autoprotección') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con plan de autoprotección') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),

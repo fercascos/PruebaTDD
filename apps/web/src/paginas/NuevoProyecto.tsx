@@ -9,7 +9,7 @@ type Cliente = { id: string; name: string; projects: number }
 /**
  * Las ocho fases del proceso, con la explicación de qué significa cada una.
  *
- * `[REQ]` §3.1.5 · **Se eligen a la carta al dar de alta el encargo.** Un
+ * `[REQ]` §3.1.5 · **Se eligen a la carta al dar de alta el proyecto.** Un
  * proyecto sin Q&A no debe arrastrar una fase vacía que nadie va a rellenar y
  * que ensucia la ficha para siempre.
  */
@@ -34,9 +34,9 @@ export function NuevoProyecto() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [clienteId, setClienteId] = useState('')
   const [clienteNuevo, setClienteNuevo] = useState('')
-  const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
-  const [moneda, setMoneda] = useState('EUR')
+  const [arranque, setArranque] = useState('')
+  const [cierre, setCierre] = useState('')
   const [fecha, setFecha] = useState('')
   const [fases, setFases] = useState<Set<string>>(
     new Set(FASES.filter((f) => f.porDefecto).map((f) => f.code)),
@@ -49,20 +49,15 @@ export function NuevoProyecto() {
   }, [])
 
   async function guardar() {
-    // El cliente puede no existir todavía: darlo de alta aquí evita mandar al
-    // usuario a otra pantalla a mitad de rellenar el encargo, que es donde se
-    // pierde lo escrito.
-    let cliente = clienteId
-    if (!cliente && clienteNuevo.trim()) {
-      cliente = (await enviar<Cliente>('/clients', { name: clienteNuevo.trim() })).id
-    }
-    if (!cliente) throw new Error('Elija un cliente o escriba el nombre de uno nuevo')
-
+    // `[REQ]` El cliente que no está en la lista **no bloquea**: se manda el
+    // nombre y la API crea el proyecto igual, con el cliente pendiente de
+    // validar y un aviso en el buzón del administrador. Antes se daba de alta
+    // aquí mismo, y un cliente entraba al catálogo sin que nadie lo revisara.
     const proyecto = await enviar<Proyecto>('/projects', {
-      client_id: cliente,
-      internal_code: codigo.trim(),
+      ...(clienteId ? { client_id: clienteId } : { client_name: clienteNuevo.trim() }),
       name: nombre.trim(),
-      currency: moneda,
+      start_date: arranque || null,
+      close_date: cierre || null,
       report_due_date: fecha || null,
       applicable_phases: [...fases].map((code) => ({ code })),
     })
@@ -80,24 +75,27 @@ export function NuevoProyecto() {
 
   return (
     <>
-      <h1>Nuevo encargo</h1>
+      <h1>Nuevo proyecto</h1>
       <Formulario
-        titulo="Datos del encargo"
+        titulo="Datos del proyecto"
         enviar={guardar}
-        textoDeEnvio="Crear encargo"
+        textoDeEnvio="Crear proyecto"
         alCancelar={() => navegar('/proyectos')}
       >
         <Rejilla>
-          <Campo etiqueta="Código interno" ayuda="Único dentro de la organización">
-            <input
-              required
-              maxLength={40}
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder="2026-014"
-            />
+          {/* `[REQ]` El código lo genera el servidor al crear: `AAAA-NNN`, por
+              organización y año. Se enseña bloqueado y no oculto porque es lo
+              primero que se dice por teléfono, y **no se puede cambiar
+              después**: la API no tiene por dónde. */}
+          <Campo
+            etiqueta="Código interno"
+            ayuda="Lo asigna la aplicación al crear el proyecto. Único e inalterable"
+          >
+            <div className="campo-bloqueado">
+              <output>Se genera al crear · 2026-NNN</output>
+            </div>
           </Campo>
-          <Campo etiqueta="Nombre del encargo">
+          <Campo etiqueta="Nombre del proyecto">
             <input
               required
               maxLength={200}
@@ -114,7 +112,7 @@ export function NuevoProyecto() {
                 if (e.target.value) setClienteNuevo('')
               }}
             >
-              <option value="">— dar de alta uno nuevo —</option>
+              <option value="">— no está en la lista —</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.projects})
@@ -123,29 +121,37 @@ export function NuevoProyecto() {
             </select>
           </Campo>
           {!clienteId && (
-            <Campo etiqueta="Nombre del cliente nuevo">
+            <Campo
+              etiqueta="Si no está en la lista, escríbalo"
+              ayuda="No bloquea: el proyecto se crea y el administrador recibe el aviso para validarlo"
+            >
               <input
+                required
                 value={clienteNuevo}
                 onChange={(e) => setClienteNuevo(e.target.value)}
                 placeholder="Inversora Ficticia S.L."
               />
             </Campo>
           )}
-          <Campo etiqueta="Moneda">
-            <select value={moneda} onChange={(e) => setMoneda(e.target.value)}>
-              <option value="EUR">EUR</option>
-              <option value="USD">USD</option>
-              <option value="GBP">GBP</option>
-            </select>
+          <Campo etiqueta="Fecha de arranque">
+            <input type="date" value={arranque} onChange={(e) => setArranque(e.target.value)} />
           </Campo>
-          <Campo etiqueta="Fecha de entrega prevista">
+          <Campo etiqueta="Fecha de cierre prevista">
+            <input
+              type="date"
+              value={cierre}
+              min={arranque || undefined}
+              onChange={(e) => setCierre(e.target.value)}
+            />
+          </Campo>
+          <Campo etiqueta="Fecha de entrega prevista" ayuda="El compromiso de entrega del informe">
             <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </Campo>
         </Rejilla>
 
         <h3>Fases aplicables</h3>
         <p className="ayuda">
-          Se crean solo las que marque. Un encargo sin Q&amp;A no arrastra una fase vacía que nadie
+          Se crean solo las que marque. Un proyecto sin Q&amp;A no arrastra una fase vacía que nadie
           va a rellenar. Las marcadas como <em>calculada</em> no se marcan a mano después: su estado
           sale del trabajo que hay debajo.
         </p>

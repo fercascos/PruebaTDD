@@ -37,14 +37,27 @@ export function FichaDeProyecto() {
   }, [id])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!proyecto) return <p className="cargando">Cargando el encargo…</p>
+  if (!proyecto) return <p className="cargando">Cargando el proyecto…</p>
 
   return (
     <>
       <header className="ficha">
-        <h1>
-          {proyecto.internal_code} · {proyecto.name}
-        </h1>
+        <div>
+          <h1>
+            {proyecto.internal_code} · {proyecto.name}
+          </h1>
+          {/* `[REQ]` El cliente, en la cabecera. Quien abre un proyecto a media
+              mañana necesita saber de quién es sin bajar a ninguna pestaña: es
+              lo que decide el tono de un correo y lo que se pregunta primero. */}
+          {proyecto.client_name && (
+            <p className="cliente-del-proyecto">
+              {proyecto.client_name}
+              {proyecto.client_pending_validation && (
+                <span className="pastilla aviso">cliente sin validar</span>
+              )}
+            </p>
+          )}
+        </div>
         <span className={`estado e-${proyecto.status.toLowerCase()}`}>{proyecto.status}</span>
       </header>
 
@@ -52,7 +65,7 @@ export function FichaDeProyecto() {
           las fases —el trabajo real, que avanza en paralelo— tienen la suya. */}
       <nav className="pestanas">
         <NavLink to={`/proyectos/${id}`} end>
-          Fases
+          Resumen
         </NavLink>
         <NavLink to={`/proyectos/${id}/documentacion`}>Documentación</NavLink>
         <NavLink to={`/proyectos/${id}/activos`}>Activos</NavLink>

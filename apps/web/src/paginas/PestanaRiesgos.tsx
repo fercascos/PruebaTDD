@@ -247,7 +247,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
 
           <p className="ayuda">
             El grado nunca se identifica solo por color: cada fila lleva su código y su nombre
-            escritos. Los importes son los del CAPEX del encargo; lo descartado no suma.
+            escritos. Los importes son los del CAPEX del proyecto; lo descartado no suma.
           </p>
         </>
       )}

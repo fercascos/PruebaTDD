@@ -86,7 +86,7 @@ sin lógica duplicada en el frontend. La regla de qué zona aplica a qué tipolo
 | `GET` | `/clients?q=&status=&cursor=` | |
 | `POST`/`GET`/`PATCH`/`DELETE` | `/clients[/{id}]` · `/clients/{id}/contacts` | `DELETE` = borrado lógico |
 | `GET` | `/projects` | **Filtros** `[REQ]`: `q`, `client_id`, `status[]`, `owner_user_id`, `member_user_id`, `asset_city`, `asset_country`, `typology_id[]`, `phase_code`, `phase_status`, `created_from/to`, `due_from/to`, `archived`, `sort`, `cursor` |
-| `POST` | `/projects` | Crea en `BORRADOR`. **El cuerpo incluye `applicable_phases[]`** `[REQ]` §3.1.5 |
+| `POST` | `/projects` | Crea en `BORRADOR`. **El cuerpo incluye `applicable_phases[]`** `[REQ]` §3.1.5. **`internal_code` es opcional**: sin él lo genera el servidor. Cliente por `client_id` **o** por `client_name` |
 | `GET` | `/projects/{id}` | Ficha con contadores y estado de fases |
 | `PATCH` | `/projects/{id}` | `If-Match` obligatorio |
 | `POST` | `/projects/{id}/transitions` | `{to_status}` → `422` con las guardas incumplidas si no procede |
@@ -97,15 +97,41 @@ sin lógica duplicada en el frontend. La regla de qué zona aplica a qué tipolo
 | `GET` | `/projects/{id}/history?entity=&field=` | Historial de cambios campo a campo |
 | `POST` | `/projects/{id}/exports` | `{format:"xlsx"\|"csv"}` → `202` `[REQ]` §3.1.6 |
 
+`[REQ]` **El código lo genera el servidor**, `AAAA-NNN` por organización y año,
+calculado sobre los códigos que ya existen y contando solo los de tres cifras
+—uno traído de otro sistema, `2026-123456`, dispararía la serie—. Se admite
+`internal_code` en el cuerpo para una migración desde otro sistema, y ahí un
+choque es un `409` honesto; cuando lo genera él, un choque es cosa suya —dos
+altas a la vez— y reintenta con el siguiente. **No hay forma de cambiarlo
+después**: este módulo no tiene `PATCH`.
+
+`[REQ]` **El cliente que no está en el catálogo no bloquea.** Se manda
+`client_name` en lugar de `client_id`: el proyecto se crea, el cliente nace con
+`pending_validation` y se inserta una sugerencia de tipo `CATALOGO` en el buzón
+que solo ven los administradores. Escribir un nombre que **ya existe** reutiliza
+el que hay en vez de duplicarlo: dos clientes con el mismo nombre parten la
+cartera en dos sin que nadie se entere. El proyecto devuelve
+`client_name` y `client_pending_validation`, que es lo que la lista y la
+cabecera pintan.
+
+`[REQ]` **Tres fechas**, y son tres cosas: `start_date` (arranque del trabajo),
+`close_date` (cierre del proyecto) y `report_due_date` (compromiso de entrega
+del informe). Las dos primeras salen en la lista. Un cierre anterior al arranque
+se rechaza con `422` **y además lo impide un `CHECK`**: la restricción es la
+barrera que ningún camino se salta —una carga por SQL—, pero contesta con un
+`500`, y un error de tecleo merece un mensaje que diga qué fecha está mal.
+
 **Alta de proyecto con fases:**
 
 ```json
 POST /api/v1/projects
 {
   "name": "TDD Cartera Logística Norte",
-  "internal_code": "2026-014",
+  "client_name": "Patrimonios del Turia SL",
   "dd_type": "TECNICA",
   "currency": "EUR",
+  "start_date": "2026-03-02",
+  "close_date": "2026-07-31",
   "report_due_date": "2026-09-30",
   "applicable_phases": [
     { "code": "SOLICITUD_DOCUMENTACION", "owner_user_id": "…" },

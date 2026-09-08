@@ -32,14 +32,14 @@ FASES = [
 
 @pytest.fixture
 def proyecto(cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID]) -> str:
-    """Un encargo con todas las fases activas, creado por la API real."""
+    """Un proyecto con todas las fases activas, creado por la API real."""
     r = cliente.post(
         f"{RUTA}/projects",
         headers=cab("admin_a"),
         json={
             "client_id": str(datos_base["cliente_a"]),
             "internal_code": f"FAS-{uuid.uuid4().hex[:6]}",
-            "name": "Encargo con todas las fases",
+            "name": "Proyecto con todas las fases",
             "applicable_phases": [{"code": c} for c in FASES],
         },
     )
@@ -90,7 +90,7 @@ def test_se_anaden_lineas_al_checklist(
 def test_una_fase_no_activada_da_404_en_vez_de_crearse_sola(
     cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID], categoria: str
 ) -> None:
-    """Las fases se eligen a la carta al dar de alta el encargo. Crear una
+    """Las fases se eligen a la carta al dar de alta el proyecto. Crear una
     porque alguien llamó a su endpoint saltaría esa decisión."""
     sin_fases = cliente.post(
         f"{RUTA}/projects",
@@ -98,7 +98,7 @@ def test_una_fase_no_activada_da_404_en_vez_de_crearse_sola(
         json={
             "client_id": str(datos_base["cliente_a"]),
             "internal_code": f"SIN-{uuid.uuid4().hex[:6]}",
-            "name": "Encargo sin fases",
+            "name": "Proyecto sin fases",
             "applicable_phases": [],
         },
     ).json()
@@ -202,7 +202,7 @@ def test_las_limitaciones_llegan_listas_para_el_informe(
     cliente: TestClient, cab: Any, proyecto: str, categoria: str
 ) -> None:
     """Declarar las limitaciones es una obligación profesional en una TDD, y
-    hoy suele reconstruirse de memoria al final del encargo."""
+    hoy suele reconstruirse de memoria al final del proyecto."""
     linea = cliente.post(
         f"{RUTA}/projects/{proyecto}/doc-requests",
         headers=cab("consultor_a"),
@@ -254,7 +254,7 @@ def test_solo_hay_un_enlace_vigente_y_el_anterior_se_conserva(
     cliente: TestClient, cab: Any, proyecto: str, motor_admin: Engine
 ) -> None:
     """Saber a qué repositorio se accedió y cuándo forma parte de la
-    trazabilidad del encargo."""
+    trazabilidad del proyecto."""
     for url in ("https://vdr.example.com/v1", "https://vdr.example.com/v2"):
         cliente.post(
             f"{RUTA}/projects/{proyecto}/vdr-link", headers=cab("consultor_a"), json={"url": url}

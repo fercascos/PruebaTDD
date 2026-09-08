@@ -133,7 +133,7 @@ def construir(
 
     `grados_del_catalogo` llega entero y en orden aunque no haya ningún hallazgo
     de ese grado: una matriz a la que le faltan filas según el proyecto no se
-    puede comparar con la del encargo siguiente, y el lector no sabe si es que
+    puede comparar con la del proyecto siguiente, y el lector no sabe si es que
     no hay nada o es que la fila se ha caído.
     """
     # Un hallazgo aparece tantas veces como líneas tenga (P-44). Se recuerda

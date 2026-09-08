@@ -127,7 +127,7 @@ familias repartidas. `tools/retipografiar_plantilla.py` las convierte sin tocar 
 
 ### 2.2. Pruebas de componente del frontend · `[REC]` ≈ 5 días
 
-Es el flanco más débil de la suite. Hay 1.295 pruebas de API contra PostgreSQL real y 17
+Es el flanco más débil de la suite. Hay 1.305 pruebas de API contra PostgreSQL real y 17
 comprobaciones en navegador de verdad, pero **las pantallas se verifican a mano**. Los defectos
 de las últimas semanas —importes sin separador de millares, porcentajes con punto decimal, una
 palabra partida a la mitad a 320 px— salieron de mirar capturas, no de una prueba.

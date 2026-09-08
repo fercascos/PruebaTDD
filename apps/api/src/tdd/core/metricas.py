@@ -44,7 +44,7 @@ PETICIONES = Counter(
     "tdd_peticiones_total",
     "Peticiones atendidas",
     # La ruta con PLANTILLA, no la concreta: `/projects/{id}` y no
-    # `/projects/8f3a…`. Con el identificador dentro, cada encargo crearía su
+    # `/projects/8f3a…`. Con el identificador dentro, cada proyecto crearía su
     # propia serie temporal y en un mes habría cien mil.
     ["metodo", "ruta", "estado"],
     registry=REGISTRO,

@@ -44,7 +44,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con memoria') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con memoria') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),

@@ -330,7 +330,7 @@ def test_no_se_cuelga_un_equipo_de_un_activo_de_otro_encargo(
         otro_proyecto = conn.execute(
             text(
                 "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                "VALUES (:o, :c, :cod, 'Otro encargo') RETURNING id"
+                "VALUES (:o, :c, :cod, 'Otro proyecto') RETURNING id"
             ),
             {
                 "o": str(datos_base["org_a"]),

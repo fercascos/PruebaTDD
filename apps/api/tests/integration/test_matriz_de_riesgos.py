@@ -65,7 +65,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con riesgos') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con riesgos') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),
@@ -232,7 +232,7 @@ def test_lo_descartado_no_suma(
     motor_admin: Engine,
 ) -> None:
     """Decir que una actuación no se hace y seguir sumándola al riesgo del
-    encargo sería contradictorio."""
+    proyecto sería contradictorio."""
     descartado = crear(
         cliente,
         cab,
@@ -279,7 +279,7 @@ def test_estan_los_cuatro_grados_y_los_cinco_horizontes_aunque_esten_vacios(
     cliente: TestClient, cab: Any, proyecto: str
 ) -> None:
     """Una matriz que cambia de forma según el proyecto no se puede comparar con
-    la del encargo siguiente."""
+    la del proyecto siguiente."""
     datos = matriz(cliente, cab, proyecto)
     assert [g["code"] for g in datos["grados"]] == ["04", "03", "02", "01", "SIN_GRADO"]
     assert datos["horizontes"] == ["CORTO", "MEDIO", "LARGO", "MEJORAS", "OTRO"]

@@ -194,7 +194,7 @@ export function FichaDeActivo({
 
       {/* `[REQ]` Lo que aporta la memoria técnica del edificio. Va en su propio
           bloque porque tiene otro origen: los de arriba los teclea quien da de
-          alta el encargo, éstos salen del documento que entrega la propiedad. */}
+          alta el proyecto, éstos salen del documento que entrega la propiedad. */}
       <h3>
         Datos de la memoria técnica{' '}
         {activo?.memoria_validada_at ? (

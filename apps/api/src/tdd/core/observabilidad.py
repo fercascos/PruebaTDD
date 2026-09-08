@@ -131,7 +131,7 @@ class FormatoJson(logging.Formatter):
         if traza:
             datos["peticion"] = traza
         # Lo que cada llamada añada con `extra={...}` entra tal cual. Es lo que
-        # convierte «falló algo» en «falló la tarea X del encargo Y».
+        # convierte «falló algo» en «falló la tarea X del proyecto Y».
         for clave, valor in record.__dict__.items():
             if clave not in _RESERVADOS and not clave.startswith("_"):
                 datos[clave] = valor

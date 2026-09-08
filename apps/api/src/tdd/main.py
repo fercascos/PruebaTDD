@@ -81,7 +81,7 @@ def crear_app() -> FastAPI:
         version="0.1.0",
         lifespan=ciclo_de_vida,
         description=(
-            "Gestión de proyectos de TDD: encargo y fases, evidencia fotográfica, "
+            "Gestión de proyectos de TDD: proyecto y fases, evidencia fotográfica, "
             "CAPEX con trazabilidad e informes PPTX."
         ),
     )
@@ -127,16 +127,16 @@ def crear_app() -> FastAPI:
             headers={observabilidad.CABECERA: traza} if traza else None,
         )
 
-    # Repetir el código de un encargo es un error del usuario, no del servidor:
+    # Repetir el código de un proyecto es un error del usuario, no del servidor:
     # sin este traductor salía un 500 genérico que no decía qué campo repetir.
     registrar_conflictos(app)
 
     @app.exception_handler(ProyectoInexistente)
     async def _proyecto_inexistente(request: Request, exc: ProyectoInexistente) -> JSONResponse:
-        """Un encargo de otra organización es un 404, no un error interno.
+        """Un proyecto de otra organización es un 404, no un error interno.
 
         La RLS lo oculta y la consulta no devuelve nada; sin esto, pedir el
-        Excel de un encargo ajeno rompía con un 500 en vez de decir que no
+        Excel de un proyecto ajeno rompía con un 500 en vez de decir que no
         existe. Vive aquí y no en cada endpoint para que ningún consumidor
         futuro del snapshot tenga que acordarse.
         """

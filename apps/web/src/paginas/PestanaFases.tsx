@@ -26,7 +26,7 @@ export function PestanaFases({ projectId }: { projectId: string }) {
   if (fases.length === 0) {
     return (
       <Vacio>
-        Este encargo no tiene ninguna fase activa. Las fases se eligen a la carta al darlo de alta.
+        Este proyecto no tiene ninguna fase activa. Las fases se eligen a la carta al darlo de alta.
       </Vacio>
     )
   }

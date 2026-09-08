@@ -1,7 +1,7 @@
 """Máquina de estados del proyecto · **función pura**.
 
 `[REQ]` docs/02 §5.1. El `estado` describe el **ciclo administrativo** del
-encargo. No describe el trabajo: para eso están las fases, que son un eje
+proyecto. No describe el trabajo: para eso están las fases, que son un eje
 independiente y avanzan en paralelo.
 
 Las guardas no son decoración. Dejar pasar un proyecto a «visita realizada»

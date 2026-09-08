@@ -23,7 +23,7 @@ type LineaEnEdicion = { plazo: string; importe: string }
  *
  * `[REC]` No es un atajo: en la tabla real del cliente son la misma fila.
  * Partirlo en dos pantallas multiplicaría por dos los pasos de la operación que
- * más se repite en todo el proyecto —sesenta o setenta veces por encargo— y
+ * más se repite en todo el proyecto —sesenta o setenta veces por proyecto— y
  * dejaría hallazgos huérfanos cada vez que alguien se distrajera a mitad.
  *
  * `[REQ]` P-44 · Se pueden añadir varias líneas, **una por plazo**. Es la

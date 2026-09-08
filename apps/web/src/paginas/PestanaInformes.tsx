@@ -37,7 +37,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
    * preguntar cada dos segundos.
    *
    * Se sondea en vez de abrir una conexión permanente porque es una espera de
-   * segundos y ocurre unas pocas veces por encargo: montar WebSockets para eso
+   * segundos y ocurre unas pocas veces por proyecto: montar WebSockets para eso
    * añadiría un canal que mantener a cambio de nada.
    */
   const generando = versiones.some((v) => v.status === 'GENERANDO')
@@ -183,7 +183,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
 
       <h3>Versiones</h3>
       {versiones.length === 0 ? (
-        <Vacio>Todavía no se ha generado ningún informe de este encargo.</Vacio>
+        <Vacio>Todavía no se ha generado ningún informe de este proyecto.</Vacio>
       ) : (
         <div className="desbordable">
           <table className="tabla">

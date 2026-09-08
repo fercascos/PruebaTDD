@@ -73,7 +73,7 @@ describe('persistencia de la cola', () => {
     expect(ids).toEqual(['a', 'b', 'c'])
   })
 
-  it('no mezcla las fotos de dos encargos', async () => {
+  it('no mezcla las fotos de dos proyectos', async () => {
     await guardar(PROYECTO, elemento('mia'))
     await guardar(OTRO, elemento('ajena'))
 

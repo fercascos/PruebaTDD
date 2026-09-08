@@ -17,13 +17,13 @@ redactado **con las naves vacías** define los recorridos de evacuación
 suponiendo espacios diáfanos. En cuanto entra un inquilino con estanterías, esas
 longitudes, salidas y capacidades dejan de ser las que dice el plan. El
 documento está entregado y completo. La limitación solo la ve quien se lo lee
-entero, y en un encargo con doscientos documentos eso no ocurre.
+entero, y en un proyecto con doscientos documentos eso no ocurre.
 
 Dos decisiones que no son evidentes:
 
-* **Cuelga del encargo, no del activo.** Un plan cubre un complejo de seis
+* **Cuelga del proyecto, no del activo.** Un plan cubre un complejo de seis
   naves; una reserva sobre la evacuación no es de una nave concreta. El alcance
-  del informe es el encargo, y ahí es donde la limitación tiene que aparecer.
+  del informe es el proyecto, y ahí es donde la limitación tiene que aparecer.
   `asset_id` queda como opcional para cuando sí se sepa.
 * **Nada llega al informe sin que una persona lo acepte.** Mismo ciclo que una
   propuesta de dato. Una limitación inventada por una máquina y colada en un

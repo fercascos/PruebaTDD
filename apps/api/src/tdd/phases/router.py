@@ -190,7 +190,7 @@ def limitaciones_del_informe(project_id: uuid.UUID, s: SesionDep) -> Any:
     """`[REC]` Lo que no se ha podido revisar, listo para volcar al informe.
 
     Declarar las limitaciones es una obligación profesional en una TDD, y hoy
-    suele reconstruirse de memoria al final del encargo.
+    suele reconstruirse de memoria al final del proyecto.
 
     Son **tres clases** y las tres salen de aquí:
 

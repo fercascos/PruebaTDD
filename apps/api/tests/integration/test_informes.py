@@ -71,7 +71,7 @@ def proyecto(cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID]) ->
         json={
             "client_id": str(datos_base["cliente_a"]),
             "internal_code": f"INF-{uuid.uuid4().hex[:6]}",
-            "name": "Encargo con informe",
+            "name": "Proyecto con informe",
             "applicable_phases": [{"code": "FULL_REPORT"}],
         },
     )
@@ -306,7 +306,7 @@ def test_un_hallazgo_en_borrador_avisa_de_que_no_saldra_en_el_informe(
     motor_admin: Engine,
 ) -> None:
     """El snapshot solo publica `EN_REVISION` y `VALIDADO`. Sin este aviso, un
-    encargo con todo en borrador generaba un informe con la tabla de CAPEX
+    proyecto con todo en borrador generaba un informe con la tabla de CAPEX
     vacía y «CAPEX total: 0,00 €», sin advertir de nada."""
     with motor_admin.begin() as conn:
         tipologia = conn.execute(
@@ -431,7 +431,7 @@ def test_los_marcadores_se_sustituyen_de_verdad(
         if forma.has_text_frame
     )
     assert "{{" not in texto, "no queda ningún marcador sin resolver"
-    assert "Encargo con informe" in texto
+    assert "Proyecto con informe" in texto
     assert "Inversora Ficticia" in texto
 
 

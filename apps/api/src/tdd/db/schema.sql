@@ -193,6 +193,13 @@ CREATE TABLE client (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES organization(id),
     name            VARCHAR(200) NOT NULL,
+    -- [REQ] El cliente se elige de una lista que mantiene la administración.
+    -- Escribir uno que no está NO bloquea el alta del proyecto —quien lo da de
+    -- alta suele tener el encargo por correo y el alta del cliente va por otro
+    -- circuito—, pero tampoco entra al catálogo como si lo hubiera validado
+    -- alguien: nace pendiente y se avisa en el buzón de sugerencias, que solo
+    -- ven los administradores.
+    pending_validation BOOLEAN NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at      TIMESTAMPTZ
 );
@@ -205,6 +212,12 @@ CREATE TABLE project (
     name             VARCHAR(200) NOT NULL,
     status           project_status NOT NULL DEFAULT 'BORRADOR',
     currency         CHAR(3) NOT NULL DEFAULT 'EUR',
+
+    -- [REQ] Tres fechas y no una, porque son tres cosas distintas y la lista de
+    -- proyectos enseña las dos primeras: cuándo arranca el trabajo, cuándo se
+    -- cierra el proyecto, y a qué se comprometió la entrega del informe.
+    start_date       DATE,
+    close_date       DATE,
     report_due_date  DATE,
 
     -- [REQ] La revisión de documentación con IA es OPT-IN POR ENCARGO y nace
@@ -230,7 +243,13 @@ CREATE TABLE project (
     CONSTRAINT project_revision_ia_con_autoria
         CHECK (NOT ai_doc_review_enabled
                OR (ai_doc_review_enabled_at IS NOT NULL
-                   AND ai_doc_review_enabled_by IS NOT NULL))
+                   AND ai_doc_review_enabled_by IS NOT NULL)),
+
+    -- Un proyecto que cierra antes de arrancar es un error de tecleo, y sin
+    -- esto se queda dentro para siempre: la lista lo ordena por fechas y nadie
+    -- vuelve a mirar la que ya está escrita.
+    CONSTRAINT project_cierre_despues_del_arranque
+        CHECK (close_date IS NULL OR start_date IS NULL OR close_date >= start_date)
 );
 
 CREATE TABLE asset (

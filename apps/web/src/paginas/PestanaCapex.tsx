@@ -27,11 +27,11 @@ const euros = new Intl.NumberFormat('es-ES', {
 type Idioma = 'es' | 'en'
 
 /**
- * Qué se descarga cuando el encargo tiene más de un activo.
+ * Qué se descarga cuando el proyecto tiene más de un activo.
  *
  * `[REQ]` La plantilla del cliente describe **un** edificio: un nombre, unas
  * superficies y un tipo que decide qué zonas ofrece el desplegable. En un
- * encargo de cartera, `conjunto` deja a los demás activos sin identificar y
+ * proyecto de cartera, `conjunto` deja a los demás activos sin identificar y
  * `por-activo` da un libro a cada uno. Por eso la opción está aquí y no
  * escondida en la API: es una decisión sobre lo que se le manda al cliente.
  */
@@ -182,7 +182,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
           <option value="en">English</option>
         </select>
       </label>
-      {/* Solo aparece si hay más de un activo: en un encargo de un edificio la
+      {/* Solo aparece si hay más de un activo: en un proyecto de un edificio la
           elección no existe y el control sobraría. */}
       {cartera && (
         <label className="alcance">
@@ -193,7 +193,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
             disabled={exportando}
           >
             <option value="por-activo">Un libro por activo</option>
-            <option value="conjunto">Un libro para todo el encargo</option>
+            <option value="conjunto">Un libro para todo el proyecto</option>
           </select>
         </label>
       )}
@@ -269,7 +269,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
    * `[REQ]` La rejilla, **separada por activo**.
    *
    * En una cartera la pregunta que se hace el cliente no es cuánto suma el
-   * encargo, sino cuánto cuesta cada edificio: es el número que entra en la
+   * proyecto, sino cuánto cuesta cada edificio: es el número que entra en la
    * negociación de cada uno. Sin agrupar había que sumarlo a mano desde una
    * lista corrida, y ahí es donde aparecen los descuadres.
    *
@@ -391,7 +391,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
           <tbody className="grupo-activo">
             <tr className="cabecera-grupo">
               <th colSpan={2 + PLAZOS.length + 1} scope="colgroup">
-                Sin activo en el encargo
+                Sin activo en el proyecto
                 <em className="ayuda">
                   {' '}
                   · su activo se borró después de registrarlos. Siguen contando en el total.

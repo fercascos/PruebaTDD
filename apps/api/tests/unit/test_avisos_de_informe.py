@@ -117,7 +117,7 @@ def test_los_precios_sin_validar_avisan_con_su_importe_y_no_bloquean() -> None:
 
 
 def test_los_hallazgos_en_borrador_avisan_de_lo_que_se_queda_fuera() -> None:
-    """El informe solo publica `EN_REVISION` y `VALIDADO`. Un encargo entero en
+    """El informe solo publica `EN_REVISION` y `VALIDADO`. Un proyecto entero en
     borrador producía un documento que decía «CAPEX total: 0,00 €» sin una sola
     advertencia, y el cero se lee como «no hay nada que hacer»."""
     avisos = evaluar(
@@ -132,7 +132,7 @@ def test_los_hallazgos_en_borrador_avisan_de_lo_que_se_queda_fuera() -> None:
 
 
 def test_sin_borradores_no_se_avisa_de_nada() -> None:
-    """El aviso mira los hallazgos que EXISTEN y quedan fuera. Un encargo sin
+    """El aviso mira los hallazgos que EXISTEN y quedan fuera. Un proyecto sin
     ninguno no tiene nada que declarar."""
     assert "DRAFT_FINDINGS_EXCLUDED" not in codigos(EstadoDelInforme())
 

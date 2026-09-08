@@ -2,7 +2,7 @@
 
 **Es opcional, y eso se nota en que no aparece en ninguna otra parte.** Ningún
 hallazgo lo exige, ninguna línea de CAPEX lo referencia y ningún informe se
-bloquea por no tenerlo. Un encargo entero se puede entregar sin dar de alta un
+bloquea por no tenerlo. Un proyecto entero se puede entregar sin dar de alta un
 solo equipo. Está aquí porque en una visita a un edificio con instalaciones
 alguien apunta el fabricante, el modelo y el año de la enfriadora en una
 libreta, y esa libreta acaba siendo la única fuente para justificar por qué se
@@ -224,7 +224,7 @@ def listar(
     solo_vencidos: bool = False,
     solo_mantenimiento_vencido: bool = False,
 ) -> Any:
-    """El inventario del encargo, con filtros.
+    """El inventario del proyecto, con filtros.
 
     `solo_vencidos` compara contra el año en curso en SQL y no contra un valor
     guardado: un inventario cargado en 2025 tiene que seguir diciendo la verdad
@@ -283,7 +283,7 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
     datos = cuerpo.model_dump()
     _comprobar_enumerados(datos)
 
-    # El activo tiene que ser del encargo. Sin esto se podría colgar un equipo
+    # El activo tiene que ser del proyecto. Sin esto se podría colgar un equipo
     # de un activo de otro proyecto de la misma organización, y el inventario
     # dejaría de cuadrar sin que nada avisara.
     if (
@@ -558,7 +558,7 @@ def _a_respuesta(hoja: Any, analisis: Any) -> dict[str, Any]:
 def plantilla_de_importacion(project_id: uuid.UUID, s: SesionDep) -> Response:
     """La hoja que se descarga para rellenar.
 
-    Lleva dentro **los activos de este encargo y los 14 sistemas técnicos**. Sin
+    Lleva dentro **los activos de este proyecto y los 14 sistemas técnicos**. Sin
     eso, quien la rellena escribe el nombre del edificio de memoria y la mitad
     de las filas fallan al importar por una tilde.
     """

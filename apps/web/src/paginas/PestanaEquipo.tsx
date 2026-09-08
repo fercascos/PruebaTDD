@@ -33,7 +33,7 @@ function nombreDe(lista: readonly { code: string; nombre: string }[], code: stri
 /**
  * Inventario de equipo `[REQ]` §7 / P-15.
  *
- * **Es opcional.** Un encargo entero se puede entregar sin dar de alta un solo
+ * **Es opcional.** Un proyecto entero se puede entregar sin dar de alta un solo
  * equipo, y nada en la aplicación lo reclama. Existe porque en una visita a un
  * edificio con instalaciones alguien apunta el fabricante, el modelo y el año
  * de la enfriadora en una libreta, y esa libreta acaba siendo la única fuente
@@ -203,7 +203,7 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
 
       {activos.length === 0 && (
         <Mensaje tipo="aviso">
-          El encargo todavía no tiene activos. Un equipo cuelga siempre de uno: dé de alta el
+          El proyecto todavía no tiene activos. Un equipo cuelga siempre de uno: dé de alta el
           edificio primero.
         </Mensaje>
       )}
@@ -212,7 +212,7 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
         <p className="cargando">Cargando el inventario…</p>
       ) : equipos.length === 0 ? (
         <Vacio>
-          Sin equipos en el inventario. Es opcional: un encargo se entrega igual sin él. Sirve para
+          Sin equipos en el inventario. Es opcional: un proyecto se entrega igual sin él. Sirve para
           apuntar en la visita el fabricante, el modelo y el año de lo que después se propone
           sustituir.
         </Vacio>

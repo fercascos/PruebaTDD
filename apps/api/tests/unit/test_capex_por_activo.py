@@ -1,7 +1,7 @@
 """El CAPEX de una cartera, separado por activo.
 
 La plantilla del cliente describe **un** edificio: un nombre, unas superficies
-y un tipo que decide qué zonas ofrece el desplegable. Un encargo de tres naves
+y un tipo que decide qué zonas ofrece el desplegable. Un proyecto de tres naves
 metido en un solo libro sale con la cabecera de la primera y las otras dos sin
 identificar, y si son de tipos distintos sus zonas se vacían.
 
@@ -184,7 +184,7 @@ def test_cada_parte_lleva_su_cabecera_y_su_tipo_de_edificio() -> None:
 def test_el_libro_de_un_activo_lleva_su_nombre_en_la_cabecera() -> None:
     """La celda se llama «Nombre del proyecto» y en una cartera eso no basta.
 
-    Dos libros del mismo encargo llevarían la misma cabecera y solo se
+    Dos libros del mismo proyecto llevarían la misma cabecera y solo se
     distinguirían por el nombre del fichero.
     """
     v = leer("es")
@@ -237,9 +237,9 @@ def test_preparar_acepta_la_parte_como_si_fuera_el_encargo_entero() -> None:
     """
     parte = separar_por_activo(_cartera())[0]
 
-    encargo, actuaciones = preparar(parte.snapshot, idioma="es", activo_en_el_nombre=True)
+    proyecto, actuaciones = preparar(parte.snapshot, idioma="es", activo_en_el_nombre=True)
 
-    assert encargo.nombre.endswith("Nave Norte")
+    assert proyecto.nombre.endswith("Nave Norte")
     assert len(actuaciones) == 2
 
 

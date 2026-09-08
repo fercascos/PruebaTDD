@@ -1,6 +1,6 @@
 """Clientes y personas de la organización.
 
-Dos listados pequeños sin los que no se puede dar de alta un encargo desde la
+Dos listados pequeños sin los que no se puede dar de alta un proyecto desde la
 interfaz. La prueba que más importa aquí es la última: **el listado de personas
 no devuelve el hash de la contraseña ni el estado de bloqueo**.
 """
@@ -69,7 +69,7 @@ def test_no_se_borra_un_cliente_con_encargos(
     trabajo hecho y facturado."""
     r = cliente.delete(f"{RUTA}/clients/{datos_base['cliente_a']}", headers=cab("admin_a"))
     assert r.status_code == 409
-    assert "encargos" in r.json()["detail"]
+    assert "proyectos" in r.json()["detail"]
 
 
 def test_un_cliente_sin_encargos_si_se_borra(cliente: TestClient, cab: Any) -> None:

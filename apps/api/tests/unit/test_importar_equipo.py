@@ -103,7 +103,7 @@ def test_un_activo_que_no_existe_es_un_error_y_no_se_crea() -> None:
     resultado = correr([fila("Nave del Sur", "", "Enfriadora")])
     unica = resultado.filas[0]
     assert unica.estado is Estado.ERROR
-    assert "no es un activo de este encargo" in unica.errores[0]
+    assert "no es un activo de este proyecto" in unica.errores[0]
     assert "antes de importar" in unica.errores[0]
 
 

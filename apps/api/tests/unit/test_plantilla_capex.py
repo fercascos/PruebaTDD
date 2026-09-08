@@ -23,8 +23,8 @@ from tdd.exports.plantilla_capex import (
     POR_CODIGO,
     Actuacion,
     CeldaInexistente,
-    Encargo,
     NoCabe,
+    Proyecto,
     comprobar_cabida,
     generar,
 )
@@ -34,9 +34,9 @@ IDIOMAS = sorted(FICHERO)
 
 
 @pytest.fixture
-def encargo() -> Encargo:
-    return Encargo(
-        nombre="Encargo de prueba",
+def proyecto() -> Proyecto:
+    return Proyecto(
+        nombre="Proyecto de prueba",
         direccion="Sin dirección real",
         fecha="2026-07-28",
         ano_construccion=1998,
@@ -62,23 +62,23 @@ def _actuacion(categoria: str = "HC.H08", **extra) -> Actuacion:
 
 
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_no_se_pierde_ninguna_parte(encargo: Encargo, idioma: str) -> None:
+def test_no_se_pierde_ninguna_parte(proyecto: Proyecto, idioma: str) -> None:
     """Ni una. La plantilla lleva gráficos, tablas dinámicas, segmentaciones,
     dos logotipos y formato condicional avanzado; reconstruir el libro los
     tiraría y devolvería al cliente su propia hoja rota."""
     original = zipfile.ZipFile(PLANTILLAS / FICHERO[idioma]).namelist()
-    salida = zipfile.ZipFile(BytesIO(generar(encargo, [_actuacion()], idioma=idioma))).namelist()
+    salida = zipfile.ZipFile(BytesIO(generar(proyecto, [_actuacion()], idioma=idioma))).namelist()
     assert set(original) == set(salida)
     # Y en el mismo orden, que es lo que hace el fichero reproducible.
     assert original == salida
 
 
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_sobreviven_las_extensiones_que_openpyxl_tira(encargo: Encargo, idioma: str) -> None:
+def test_sobreviven_las_extensiones_que_openpyxl_tira(proyecto: Proyecto, idioma: str) -> None:
     """Las validaciones y el formato condicional modernos viven en un `extLst`
     que `openpyxl` no entiende y elimina al guardar. Sin ellos los desplegables
     en cascada dejan de funcionar, y eso no se ve hasta que alguien teclea."""
-    datos = generar(encargo, [_actuacion()], idioma=idioma)
+    datos = generar(proyecto, [_actuacion()], idioma=idioma)
     with zipfile.ZipFile(BytesIO(datos)) as z:
         hoja = next(n for n in z.namelist() if n.endswith("sheet5.xml"))
         crudo = z.read(hoja).decode("utf-8")
@@ -87,11 +87,11 @@ def test_sobreviven_las_extensiones_que_openpyxl_tira(encargo: Encargo, idioma: 
 
 
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_sale_un_xlsx_y_no_una_plantilla(encargo: Encargo, idioma: str) -> None:
+def test_sale_un_xlsx_y_no_una_plantilla(proyecto: Proyecto, idioma: str) -> None:
     """El origen es `.xltm`. Se comprobó que **no lleva `vbaProject.bin`**, así
     que convertirlo a libro normal no pierde nada y evita que el correo del
     cliente lo bloquee por venir marcado como macros."""
-    with zipfile.ZipFile(BytesIO(generar(encargo, [_actuacion()], idioma=idioma))) as z:
+    with zipfile.ZipFile(BytesIO(generar(proyecto, [_actuacion()], idioma=idioma))) as z:
         tipos = z.read("[Content_Types].xml").decode("utf-8")
         assert "spreadsheetml.sheet.main+xml" in tipos
         assert "template.macroEnabled" not in tipos
@@ -99,11 +99,11 @@ def test_sale_un_xlsx_y_no_una_plantilla(encargo: Encargo, idioma: str) -> None:
 
 
 @pytest.mark.parametrize("idioma", IDIOMAS)
-def test_excel_recalculara_al_abrir(encargo: Encargo, idioma: str) -> None:
+def test_excel_recalculara_al_abrir(proyecto: Proyecto, idioma: str) -> None:
     """Los subtotales de la plantilla traen cacheado el cero del libro en
     blanco. Sin forzar el recálculo, la hoja se abriría enseñando ceros con las
     líneas rellenas justo encima."""
-    with zipfile.ZipFile(BytesIO(generar(encargo, [_actuacion()], idioma=idioma))) as z:
+    with zipfile.ZipFile(BytesIO(generar(proyecto, [_actuacion()], idioma=idioma))) as z:
         assert 'fullCalcOnLoad="1"' in z.read("xl/workbook.xml").decode("utf-8")
 
 
@@ -112,9 +112,9 @@ def test_excel_recalculara_al_abrir(encargo: Encargo, idioma: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_cada_actuacion_cae_en_el_bloque_de_su_categoria(encargo: Encargo) -> None:
+def test_cada_actuacion_cae_en_el_bloque_de_su_categoria(proyecto: Proyecto) -> None:
     datos = generar(
-        encargo,
+        proyecto,
         [
             _actuacion("HC.H02", objeto="Cubierta", descripcion="Lámina al final de su vida"),
             _actuacion("HC.H09", objeto="CGBT", descripcion="Cuadro sin diferencial"),
@@ -127,9 +127,9 @@ def test_cada_actuacion_cae_en_el_bloque_de_su_categoria(encargo: Encargo) -> No
     assert hoja[f"G{POR_CODIGO['MA.General'].primera}"].value == "Nivel sonoro en fachada"
 
 
-def test_dos_actuaciones_de_la_misma_categoria_van_en_filas_seguidas(encargo: Encargo) -> None:
+def test_dos_actuaciones_de_la_misma_categoria_van_en_filas_seguidas(proyecto: Proyecto) -> None:
     datos = generar(
-        encargo,
+        proyecto,
         [_actuacion("HC.H02", descripcion="Primera"), _actuacion("HC.H02", descripcion="Segunda")],
     )
     hoja = load_workbook(BytesIO(datos))["CapEx"]
@@ -138,11 +138,11 @@ def test_dos_actuaciones_de_la_misma_categoria_van_en_filas_seguidas(encargo: En
     assert hoja[f"G{bloque.primera + 1}"].value == "Segunda"
 
 
-def test_una_actuacion_recurrente_ocupa_una_columna_por_plazo(encargo: Encargo) -> None:
+def test_una_actuacion_recurrente_ocupa_una_columna_por_plazo(proyecto: Proyecto) -> None:
     """`[REQ]` P-44 · Una actuación con dos plazos lleva importe en las dos
     columnas de la misma fila, no dos filas."""
     datos = generar(
-        encargo,
+        proyecto,
         [
             _actuacion(
                 "HC.H02",
@@ -158,19 +158,19 @@ def test_una_actuacion_recurrente_ocupa_una_columna_por_plazo(encargo: Encargo) 
     assert hoja[f"L{fila}"].value == 38000
 
 
-def test_la_cabecera_del_encargo_llega_a_la_hoja_de_datos(encargo: Encargo) -> None:
-    libro = load_workbook(BytesIO(generar(encargo, [_actuacion()])))
+def test_la_cabecera_del_encargo_llega_a_la_hoja_de_datos(proyecto: Proyecto) -> None:
+    libro = load_workbook(BytesIO(generar(proyecto, [_actuacion()])))
     activo = libro.worksheets[2]
-    assert activo["C5"].value == "Encargo de prueba"
+    assert activo["C5"].value == "Proyecto de prueba"
     assert activo["C8"].value == 1998
     assert activo["C16"].value == "INDUSTRIAL"
 
 
-def test_una_categoria_que_la_plantilla_no_tiene_revienta(encargo: Encargo) -> None:
+def test_una_categoria_que_la_plantilla_no_tiene_revienta(proyecto: Proyecto) -> None:
     """Se prefiere reventar a colocarla en el bloque de al lado: una actuación
     en la categoría equivocada suma mal y no se nota."""
     with pytest.raises(CeldaInexistente):
-        generar(encargo, [_actuacion("HC.H99")])
+        generar(proyecto, [_actuacion("HC.H99")])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ def test_la_plantilla_admite_diez_filas_por_bloque() -> None:
     }
 
 
-def test_once_actuaciones_no_caben_y_se_dice_cual(encargo: Encargo) -> None:
+def test_once_actuaciones_no_caben_y_se_dice_cual(proyecto: Proyecto) -> None:
     """`[LIM]` Nunca se descarta una actuación en silencio: una que desaparece
     de la hoja que se manda al cliente es el fallo que nadie ve hasta que
     alguien suma a mano."""
@@ -199,13 +199,13 @@ def test_once_actuaciones_no_caben_y_se_dice_cual(encargo: Encargo) -> None:
     sobra = comprobar_cabida(once)
     assert [(d.categoria, d.hay, d.caben, d.sobran) for d in sobra] == [("HC.H08", 11, 10, 1)]
     with pytest.raises(NoCabe, match="HC.H08: 11 de 10"):
-        generar(encargo, once)
+        generar(proyecto, once)
 
 
-def test_diez_caben_justas(encargo: Encargo) -> None:
+def test_diez_caben_justas(proyecto: Proyecto) -> None:
     diez = [_actuacion("HC.H08", descripcion=f"Actuación {i}") for i in range(10)]
     assert comprobar_cabida(diez) == []
-    hoja = load_workbook(BytesIO(generar(encargo, diez)))["CapEx"]
+    hoja = load_workbook(BytesIO(generar(proyecto, diez)))["CapEx"]
     assert hoja[f"G{POR_CODIGO['HC.H08'].ultima}"].value == "Actuación 9"
 
 
@@ -214,7 +214,7 @@ def test_diez_caben_justas(encargo: Encargo) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_el_idioma_elige_la_plantilla_y_sus_etiquetas(encargo: Encargo) -> None:
+def test_el_idioma_elige_la_plantilla_y_sus_etiquetas(proyecto: Proyecto) -> None:
     """La plantilla es la fuente de verdad de sus etiquetas: escribir «Cuartos
     Técnicos» donde el desplegable inglés espera «Technical Rooms» no da error,
     da una hoja que se abre bien y con los gráficos vacíos."""
@@ -222,7 +222,7 @@ def test_el_idioma_elige_la_plantilla_y_sus_etiquetas(encargo: Encargo) -> None:
     for idioma in ("es", "en"):
         v = leer(idioma)
         datos = generar(
-            encargo,
+            proyecto,
             [
                 Actuacion(
                     categoria="HC.H09",
@@ -251,9 +251,9 @@ def test_el_idioma_elige_la_plantilla_y_sus_etiquetas(encargo: Encargo) -> None:
     )
 
 
-def test_un_idioma_sin_plantilla_se_rechaza(encargo: Encargo) -> None:
+def test_un_idioma_sin_plantilla_se_rechaza(proyecto: Proyecto) -> None:
     with pytest.raises(ValueError, match="idioma no soportado"):
-        generar(encargo, [_actuacion()], idioma="fr")
+        generar(proyecto, [_actuacion()], idioma="fr")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -476,12 +476,12 @@ def test_los_imprevistos_se_calculan_desde_la_hoja_de_parametros(idioma: str) ->
     assert ("00 Asset Data" if idioma == "en" else "00 Datos Activo") in formula
 
 
-def test_la_exportacion_no_pisa_las_lineas_de_honorarios(encargo: Encargo) -> None:
+def test_la_exportacion_no_pisa_las_lineas_de_honorarios(proyecto: Proyecto) -> None:
     """`SC.S01`, `SC.S02`, `SC.S03` e `IMP` traen líneas de la plantilla con su
     porcentaje. Escribir una actuación encima borraría la fórmula: el importe
     dejaría de recalcularse y nadie lo notaría hasta cuadrar a mano."""
     datos = generar(
-        encargo,
+        proyecto,
         [
             _actuacion("SC.S03", objeto="General", descripcion="Tasa extra"),
             _actuacion("IMP.General", objeto="General", descripcion="Partida adicional"),
@@ -498,13 +498,13 @@ def test_la_exportacion_no_pisa_las_lineas_de_honorarios(encargo: Encargo) -> No
 
 
 def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
-    encargo: Encargo,
+    proyecto: Proyecto,
 ) -> None:
     """La plantilla da un solo bloque para los dos capítulos. Si cada categoría
     llevase su propia cuenta, la segunda empezaría otra vez por arriba y
     machacaría a la primera."""
     datos = generar(
-        encargo,
+        proyecto,
         [
             _actuacion("OP.C01", objeto="General", descripcion="Consumos de obra"),
             _actuacion("OP.C02", objeto="General", descripcion="Limpieza final"),

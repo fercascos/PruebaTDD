@@ -4,7 +4,7 @@
 No es un atajo: es que en la tabla real del cliente son la misma fila. Pedirle
 al consultor que cree primero el hallazgo y después vaya a otra pantalla a
 añadirle el importe multiplicaría por dos los pasos de la operación que más
-veces se repite en todo el proyecto —sesenta o setenta veces por encargo— y
+veces se repite en todo el proyecto —sesenta o setenta veces por proyecto— y
 dejaría hallazgos huérfanos cada vez que alguien se distrajera a mitad.
 
 `[REQ]` **P-44 · Una actuación puede tener varias líneas, una por plazo.** La
@@ -606,7 +606,7 @@ def matriz_de_riesgos(
                 "a": str(asset_id) if asset_id else None,
                 "c": chapter_code,
                 # Lo descartado queda fuera: decir que no se hace y seguir
-                # sumándolo al riesgo del encargo sería contradictorio.
+                # sumándolo al riesgo del proyecto sería contradictorio.
                 "estados": ["BORRADOR", "EN_REVISION", "VALIDADO"],
             },
         )

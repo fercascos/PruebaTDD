@@ -65,7 +65,7 @@ def proyecto(datos_base: dict[str, uuid.UUID]) -> str:
 def nave(cliente: TestClient, cab: Any, proyecto: str, motor_admin: Engine) -> dict[str, str]:
     """Un activo nuevo por prueba.
 
-    Devuelve el `id` además del nombre a propósito: el encargo es compartido
+    Devuelve el `id` además del nombre a propósito: el proyecto es compartido
     entre pruebas y buscar «el equipo con etiqueta CL-01» en todo el proyecto
     encuentra el que dejó otra. Los listados de aquí filtran por activo.
     """
@@ -350,5 +350,5 @@ def test_otra_organizacion_no_importa_en_este_encargo(
             )
         },
     )
-    # La RLS oculta los activos del encargo ajeno, así que ninguna fila casa.
+    # La RLS oculta los activos del proyecto ajeno, así que ninguna fila casa.
     assert r.json()["nuevas"] == 0

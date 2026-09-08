@@ -30,7 +30,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * 2. **Lo que la IA devuelve son propuestas.** Se pintan como tales, con su
  *    evidencia al lado, y no cambian el estado de ninguna línea hasta que una
  *    persona las acepta. Aceptar tampoco lo cambia: dice que la observación es
- *    cierta, y qué hacer con ella lo decide quien lleva el encargo.
+ *    cierta, y qué hacer con ella lo decide quien lleva el proyecto.
  */
 
 const ESTADOS: EstadoSolicitud[] = [
@@ -104,7 +104,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
    * Cuántas extracciones se han hecho en esta sesión de pantalla.
    *
    * No se usa el número: se usa que **cambie**. Extraer un documento puede
-   * aportar limitaciones al encargo, y el panel de limitaciones está fuera de
+   * aportar limitaciones al proyecto, y el panel de limitaciones está fuera de
    * la ficha de ese documento, así que necesita saber que hay algo nuevo. Un
    * contador es la forma más simple de decírselo sin subir su estado aquí.
    */
@@ -183,13 +183,13 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
       )}
 
       {/* `[REQ]` Va al final y no dentro de cada documento a propósito: una
-          limitación es del ENCARGO, no del fichero. Un plan de autoprotección
+          limitación es del PROYECTO, no del fichero. Un plan de autoprotección
           cubre un complejo de seis naves y sus reservas afectan al informe
           entero; enterrarlas en la ficha del PDF las dejaría fuera de la vista
           de quien redacta el apartado de limitaciones. */}
       <Limitaciones projectId={projectId} clave={extraccionesHechas} alFallar={setError} />
 
-      {/* Igual que las limitaciones: los medios son del ENCARGO hasta que
+      {/* Igual que las limitaciones: los medios son del PROYECTO hasta que
           alguien dice de qué activo son, así que van fuera de la ficha del
           documento que los declaró. */}
       <EquiposPropuestos
@@ -202,7 +202,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
         <details className="sueltos">
           <summary>{sinLinea.length} documento(s) sin línea de checklist</summary>
           <p className="detalle">
-            Llegaron al encargo sin decir qué solicitud cubren. Se pueden revisar igual, pero no
+            Llegaron al proyecto sin decir qué solicitud cubren. Se pueden revisar igual, pero no
             cuentan para la checklist ni para las limitaciones del informe.
           </p>
           <ul>
@@ -260,12 +260,12 @@ function Autorizacion({
         <strong>Revisión de documentación con IA</strong>
         {permiso.activo ? (
           <p className="detalle">
-            Autorizada para este encargo{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
+            Autorizada para este proyecto{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
             Los documentos que se suban podrán analizarse a petición.
           </p>
         ) : (
           <p className="detalle">
-            Apagada. Ningún documento de este encargo se analiza mientras lo esté. La autoriza quien
+            Apagada. Ningún documento de este proyecto se analiza mientras lo esté. La autoriza quien
             dirige el proyecto, y queda constancia de quién lo hizo.
           </p>
         )}
@@ -583,7 +583,7 @@ function Extraccion({
     try {
       setResultado(await enviar<ResultadoDeExtraccion>(`/documents/${documento.id}/extraer`, {}))
       await cargar()
-      // Puede haber aportado limitaciones al encargo, y ésas se pintan fuera
+      // Puede haber aportado limitaciones al proyecto, y ésas se pintan fuera
       // de esta ficha.
       alExtraer()
     } catch (e) {
@@ -910,7 +910,7 @@ function Limitaciones({
   }
 
   // Nada extraído todavía: la sección no aparece. Una caja vacía en cada
-  // encargo enseña a no mirarla.
+  // proyecto enseña a no mirarla.
   if (!todas || todas.length === 0) return null
 
   const pendientes = todas.filter((l) => l.estado === 'PENDIENTE')
@@ -1072,7 +1072,7 @@ function EquiposPropuestos({
 
       {activos.length === 0 && pendientes.length > 0 && (
         <Mensaje tipo="aviso">
-          Este encargo no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer
+          Este proyecto no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer
           en alguno. Créalo antes de aceptar estas propuestas.
         </Mensaje>
       )}

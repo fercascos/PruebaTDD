@@ -50,7 +50,7 @@ def proyecto(cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID]) ->
         json={
             "client_id": str(datos_base["cliente_a"]),
             "internal_code": f"DOC-{uuid.uuid4().hex[:6]}",
-            "name": "Encargo con documentación",
+            "name": "Proyecto con documentación",
             "applicable_phases": [{"code": "SOLICITUD_DOCUMENTACION"}, {"code": "QA"}],
         },
     )

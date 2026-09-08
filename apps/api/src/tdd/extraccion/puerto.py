@@ -102,7 +102,7 @@ class LimitacionPropuesta:
     """`[REQ]` Una razón por la que lo revisado no se puede dar por cerrado.
 
     Declarar las limitaciones es una obligación profesional en una due
-    diligence, y hoy se reconstruyen de memoria al final del encargo. Las que ya
+    diligence, y hoy se reconstruyen de memoria al final del proyecto. Las que ya
     había salían de **lo que no llegó**: una línea de la checklist sin recibir,
     una pregunta sin respuesta. Ésta es de otra clase y por eso no cabía en
     aquéllas: **el documento llegó, y dice que no se puede confiar en él**.
@@ -182,7 +182,7 @@ class Aportacion:
     objetos: list[ObjetoPropuesto] = field(default_factory=list)
     #: `[REQ]` Lo que el documento dice sobre su propia fiabilidad. Un documento
     #: puede no aportar ni un dato y aportar la limitación más importante del
-    #: encargo, así que esto **no** cuenta como aportación vacía.
+    #: proyecto, así que esto **no** cuenta como aportación vacía.
     limitaciones: list[LimitacionPropuesta] = field(default_factory=list)
     #: `[REQ]` Los medios e instalaciones que el documento dice que existen.
     equipos: list[EquipoPropuesto] = field(default_factory=list)
@@ -231,7 +231,7 @@ class Extractor(Protocol):
 class SinExtractor(LookupError):
     """No hay lector para ese tipo de documento.
 
-    Es un caso normal y no un fallo: la mayoría de los documentos de un encargo
+    Es un caso normal y no un fallo: la mayoría de los documentos de un proyecto
     —una licencia, un certificado— no se extraen. Se distingue con su propia
     excepción para que quien llama pueda decir «este tipo todavía no se lee» en
     vez de un error genérico que parece una avería.

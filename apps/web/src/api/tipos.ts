@@ -20,6 +20,13 @@ export type Proyecto = {
   name: string
   status: string
   currency: string
+  client_id: string | null
+  client_name: string | null
+  /** El cliente se escribió al dar de alta y nadie lo ha validado todavía. */
+  client_pending_validation: boolean
+  start_date: string | null
+  close_date: string | null
+  report_due_date: string | null
 }
 
 export type Fase = {
@@ -348,7 +355,7 @@ export type Documento = {
   uploaded_by: string
 }
 
-/** `[REQ]` Autorización expresa por encargo, con constancia de quién la dio. */
+/** `[REQ]` Autorización expresa por proyecto, con constancia de quién la dio. */
 export type PermisoDeRevision = { activo: boolean; desde: string | null; por: string | null }
 
 export type VeredictoIa = 'CONFORME' | 'NO_CONFORME' | 'FALTA' | 'DUDOSO'
@@ -524,7 +531,7 @@ export type PropuestaDeEquipo = {
 }
 
 /**
- * `[REQ]` Los cortes del CAPEX del encargo, para el resumen.
+ * `[REQ]` Los cortes del CAPEX del proyecto, para el resumen.
  *
  * Los cuatro responden preguntas distintas y por eso son cuatro consultas y no
  * una tabla que el cliente reagrupa: **en qué se va el dinero** (concepto),

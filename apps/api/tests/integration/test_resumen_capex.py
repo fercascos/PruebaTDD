@@ -36,7 +36,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con resumen') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con resumen') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),
@@ -194,7 +194,7 @@ def test_un_hallazgo_sin_concepto_no_se_pierde(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
     """`[REQ]` Que nadie lo haya clasificado **es un dato**, no un hueco. Si
-    desapareciera del reparto, la tarta no sumaría el total del encargo y nadie
+    desapareciera del reparto, la tarta no sumaría el total del proyecto y nadie
     sabría por qué."""
     crear_hallazgo(
         cliente,
@@ -242,7 +242,7 @@ def test_un_hallazgo_en_un_objeto_suma_en_su_capitulo(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
     """`[REQ]` El capítulo es el nivel 2 y un hallazgo puede estar codificado en
-    el 3. Agrupando por el código directo, un encargo con hallazgos a distintos
+    el 3. Agrupando por el código directo, un proyecto con hallazgos a distintos
     niveles saldría partido en trozos que no suman nada reconocible."""
     codigos = catalogo(cliente, cab, "capex-codes")
     # Un objeto cualquiera de nivel 3 y el capítulo del que cuelga.
@@ -513,7 +513,7 @@ def test_un_activo_de_otro_encargo_no_trae_nada(
     """`[REC]` **Solo filtra**, como en la matriz de riesgos: no es un 404.
 
     Es la convención de la casa para los filtros de lectura, y aquí además el
-    desplegable de la pantalla se construye con los activos del propio encargo,
+    desplegable de la pantalla se construye con los activos del propio proyecto,
     así que un identificador ajeno solo llega escribiendo la URL a mano.
     """
     crear_hallazgo(
@@ -529,7 +529,7 @@ def test_un_activo_de_otro_encargo_no_trae_nada(
         otro = conn.execute(
             text(
                 "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                "VALUES (:o, :c, :cod, 'Otro encargo') RETURNING id"
+                "VALUES (:o, :c, :cod, 'Otro proyecto') RETURNING id"
             ),
             {
                 "o": str(datos_base["org_a"]),

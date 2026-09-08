@@ -83,7 +83,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con documentos') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con documentos') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),
@@ -143,7 +143,7 @@ def test_los_tipos_que_se_leen_hoy_se_publican(cliente: TestClient, cab: Any) ->
 def test_un_tipo_sin_lector_lo_dice_y_no_revienta(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
-    """`[REQ]` La mayoría de los documentos de un encargo no se extraen. Que un
+    """`[REQ]` La mayoría de los documentos de un proyecto no se extraen. Que un
     tipo no se lea todavía es un caso normal, no una avería: 422 con la lista
     de los que sí, que es lo accionable."""
     documento = subir(

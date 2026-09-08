@@ -1,13 +1,15 @@
 """Fases y proyectos, punta a punta.
 
 Lo que se comprueba aquí es el vínculo entre los dos ejes: que el **estado** del
-encargo y las **fases** avanzan por separado, y que las dos fases derivadas
+proyecto y las **fases** avanzan por separado, y que las dos fases derivadas
 siguen al trabajo real en vez de a lo que alguien haya marcado.
 """
 
 from __future__ import annotations
 
+import re
 import uuid
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -45,7 +47,7 @@ def proyecto(cliente, cab, datos_base):
 
 
 def test_solo_se_crean_las_fases_marcadas(cliente, cab, datos_base, proyecto) -> None:
-    """[REQ] §3.1.5 · Un encargo sin Q&A no arrastra una fase vacía."""
+    """[REQ] §3.1.5 · Un proyecto sin Q&A no arrastra una fase vacía."""
     fases = cliente.get(
         f"/api/v1/projects/{proyecto['id']}/phases", headers=cab("consultor_a")
     ).json()
@@ -447,7 +449,7 @@ def test_una_organizacion_ajena_no_transiciona_el_proyecto(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Listado y ficha del encargo
+#  Listado y ficha del proyecto
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -479,3 +481,140 @@ def test_la_ficha_del_encargo_se_lee_por_su_identificador(cliente, cab, datos_ba
 def test_un_encargo_de_otra_organizacion_da_404(cliente, cab, datos_base) -> None:
     r = cliente.get(f"/api/v1/projects/{datos_base['proyecto_a']}", headers=cab("admin_b"))
     assert r.status_code == 404
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  El alta tras la revisión del primer prototipo
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Tres cambios de la pantalla de entrada, con su prueba: el código lo genera el
+# servidor, el cliente que no está en la lista no bloquea, y el proyecto tiene
+# fechas de arranque y cierre.
+
+
+def _alta(cliente, cab, **campos):
+    cuerpo = {"name": "TDD sin código", "applicable_phases": [{"code": "VISITA"}], **campos}
+    return cliente.post("/api/v1/projects", headers=cab("consultor_a"), json=cuerpo)
+
+
+def test_sin_codigo_lo_genera_el_servidor(cliente, cab, datos_base):
+    """Se dejó de teclear porque un código que escribe una persona se repite, y
+    el segundo que lo intenta se lleva un 409 a mitad del alta."""
+    r = _alta(cliente, cab, client_id=str(datos_base["cliente_a"]))
+    assert r.status_code == 201, r.text
+    codigo = r.json()["internal_code"]
+    assert re.fullmatch(r"\d{4}-\d{3}", codigo), codigo
+    assert codigo.startswith(str(date.today().year))
+
+
+def test_dos_altas_seguidas_no_repiten_codigo(cliente, cab, datos_base):
+    codigos = {
+        _alta(cliente, cab, client_id=str(datos_base["cliente_a"])).json()["internal_code"]
+        for _ in range(3)
+    }
+    assert len(codigos) == 3
+
+
+def test_el_codigo_dado_a_mano_se_respeta_y_choca_si_se_repite(cliente, cab, datos_base):
+    """Una migración desde otro sistema trae los suyos, y ahí un choque **sí**
+    es cosa de quien llama: se le dice, no se le cambia el código por otro."""
+    unico = f"2026-{uuid.uuid4().hex[:6]}"
+    primero = _alta(cliente, cab, client_id=str(datos_base["cliente_a"]), internal_code=unico)
+    assert primero.json()["internal_code"] == unico
+
+    repetido = _alta(cliente, cab, client_id=str(datos_base["cliente_a"]), internal_code=unico)
+    assert repetido.status_code == 409
+    assert unico in repetido.json()["detail"]
+    assert "cogido" in repetido.json()["detail"]
+
+
+def test_un_cliente_que_no_esta_en_la_lista_no_bloquea(cliente, cab):
+    """`[REQ]` Quien da de alta suele tener el proyecto por correo; el alta del
+    cliente va por otro circuito y no puede parar el trabajo."""
+    r = _alta(cliente, cab, client_name="Patrimonios Inventados SL")
+    assert r.status_code == 201, r.text
+    assert r.json()["client_name"] == "Patrimonios Inventados SL"
+    assert r.json()["client_pending_validation"] is True
+
+
+def test_el_cliente_sin_validar_avisa_al_administrador(cliente, cab):
+    """El aviso vive en el buzón que ya existe, y **solo lo ven los
+    administradores**: es RLS, no un filtro de servicio."""
+    proyecto = _alta(cliente, cab, client_name="Fondo Ficticio II").json()
+
+    bandeja = cliente.get("/api/v1/suggestions", headers=cab("admin_a"))
+    assert bandeja.status_code == 200, bandeja.text
+    avisos = [s for s in bandeja.json() if "Fondo Ficticio II" in s["title"]]
+    assert len(avisos) == 1
+    assert avisos[0]["type"] == "CATALOGO"
+    assert proyecto["internal_code"] in avisos[0]["body"]
+
+    # Y quien no atiende el buzón no lo ve.
+    ajeno = cliente.get("/api/v1/suggestions", headers=cab("consultor_a"))
+    assert ajeno.status_code in (200, 403)
+    if ajeno.status_code == 200:
+        assert not [s for s in ajeno.json() if "Fondo Ficticio II" in s["title"]]
+
+
+def test_escribir_un_cliente_que_ya_existe_reutiliza_el_suyo(cliente, cab, datos_base):
+    """Dos clientes con el mismo nombre parten la cartera en dos sin que nadie
+    se entere."""
+    catalogo = cliente.get("/api/v1/clients", headers=cab("consultor_a")).json()
+    nombre = next(c["name"] for c in catalogo if c["id"] == str(datos_base["cliente_a"]))
+    r = _alta(cliente, cab, client_name=nombre.upper())
+    assert r.status_code == 201, r.text
+    assert r.json()["client_id"] == str(datos_base["cliente_a"])
+    assert r.json()["client_pending_validation"] is False
+
+
+def test_sin_cliente_de_ninguna_de_las_dos_formas_no_se_crea(cliente, cab):
+    r = _alta(cliente, cab)
+    assert r.status_code == 422
+    assert "cliente" in r.json()["detail"].lower()
+
+
+def test_las_fechas_de_arranque_y_cierre_viajan_hasta_la_lista(cliente, cab, datos_base):
+    r = _alta(
+        cliente,
+        cab,
+        client_id=str(datos_base["cliente_a"]),
+        start_date="2026-02-01",
+        close_date="2026-06-30",
+        report_due_date="2026-05-15",
+    )
+    assert r.status_code == 201, r.text
+
+    listado = cliente.get("/api/v1/projects", headers=cab("consultor_a")).json()
+    fila = next(p for p in listado if p["id"] == r.json()["id"])
+    assert fila["start_date"] == "2026-02-01"
+    assert fila["close_date"] == "2026-06-30"
+    assert fila["report_due_date"] == "2026-05-15"
+    assert fila["client_name"]
+
+
+def test_cerrar_antes_de_arrancar_se_rechaza(cliente, cab, datos_base):
+    """Un error de tecleo en una fecha que ya está escrita no lo vuelve a mirar
+    nadie: la lista se ordena por fechas y se queda dentro para siempre."""
+    r = _alta(
+        cliente,
+        cab,
+        client_id=str(datos_base["cliente_a"]),
+        start_date="2026-06-30",
+        close_date="2026-02-01",
+    )
+    assert r.status_code == 422
+    assert "cierre" in r.text
+
+
+def test_y_la_base_lo_impide_tambien_por_sql(como, datos_base):
+    """La misma regla, en la barrera que ningún camino se salta. Sin ella, una
+    carga por SQL mete la fecha imposible y la API ya no la ve nunca."""
+    with como("admin_a") as s, pytest.raises((IntegrityError, DBAPIError)):
+        s.execute(
+            text(
+                "INSERT INTO project (organization_id, client_id, internal_code, name, "
+                "start_date, close_date) VALUES (:o, :c, '2026-999', 'por SQL', "
+                "'2026-06-30', '2026-02-01')"
+            ),
+            {"o": datos_base["org_a"], "c": datos_base["cliente_a"]},
+        )

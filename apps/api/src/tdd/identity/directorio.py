@@ -1,6 +1,6 @@
 """Clientes y personas de la organización.
 
-Dos listados pequeños sin los que **no se puede dar de alta un encargo desde la
+Dos listados pequeños sin los que **no se puede dar de alta un proyecto desde la
 interfaz**: un proyecto exige cliente, y asignar el equipo exige saber quién hay
 en la organización. Los dos existían solo como tablas.
 
@@ -40,7 +40,7 @@ class DatosDeCliente(BaseModel):
 class Cliente(BaseModel):
     id: uuid.UUID
     name: str
-    #: Cuántos encargos tiene. Evita borrar por error al que sostiene la cartera.
+    #: Cuántos proyectos tiene. Evita borrar por error al que sostiene la cartera.
     projects: int = 0
 
 
@@ -114,20 +114,20 @@ def renombrar_cliente(client_id: uuid.UUID, cuerpo: DatosDeCliente, s: SesionDep
 
 @router.delete("/clients/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
 def borrar_cliente(client_id: uuid.UUID, s: SesionDep) -> None:
-    """No se borra un cliente que sostiene encargos.
+    """No se borra un cliente que sostiene proyectos.
 
     Es un `409` y no un borrado en cascada: los proyectos de ese cliente son
     trabajo hecho y facturado, y dejarlos huérfanos por un clic sería el peor
     resultado posible de una pantalla de mantenimiento.
     """
-    encargos = s.execute(
+    proyectos = s.execute(
         text("SELECT count(*) FROM project WHERE client_id = :i AND deleted_at IS NULL"),
         {"i": str(client_id)},
     ).scalar_one()
-    if encargos:
+    if proyectos:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"El cliente tiene {encargos} encargos y no se puede borrar",
+            f"El cliente tiene {proyectos} proyectos y no se puede borrar",
         )
     hay = s.execute(
         text(

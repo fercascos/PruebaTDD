@@ -1,16 +1,16 @@
 # Aplicación de gestión de due diligence técnica inmobiliaria
 
 Diseño y plan de implementación de una aplicación web empresarial para gestionar de principio a fin
-proyectos de **due diligence técnica (TDD) de activos inmobiliarios**: gestión del encargo y de sus
+proyectos de **due diligence técnica (TDD) de activos inmobiliarios**: gestión del proyecto y de sus
 fases, repositorio fotográfico, elaboración del CAPEX con trazabilidad, y generación de informes
 PowerPoint desde la plantilla PPTX de cada proyecto.
 
 > **Estado actual: diseño cerrado y MVP construido.**
 > Los entregables 1 a 23 (análisis funcional, arquitectura, modelo de datos y plan) están en `docs/`.
-> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **1.295 pruebas en verde
+> El **entregable 24 está completo en sus cuatro bloques**: `apps/api/` con **1.305 pruebas en verde
 > contra PostgreSQL real** y `apps/web/` con la interfaz React. La aplicación se ha recorrido de
 > punta a punta con el servidor en marcha: crear la primera cuenta, iniciar sesión, dar de alta el
-> encargo con sus fases y un activo, **hacer una foto desde la cámara**, clasificarla, registrar el
+> proyecto con sus fases y un activo, **hacer una foto desde la cámara**, clasificarla, registrar el
 > hallazgo con su CAPEX, exportarlo a Excel, subir la plantilla, mapearla, generar el informe y
 > emitirlo. Qué está construido y qué no, sin adornos, en
 > [`apps/api/README.md`](apps/api/README.md) y [`apps/web/README.md`](apps/web/README.md).
@@ -21,7 +21,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 > sin red— que con cobertura no se ve.
 >
 > Ese recorrido no es decorativo: **seis defectos reales salieron de ahí** y de ningún otro sitio.
-> Un `500` al repetir el código de un encargo en vez de decir que estaba cogido; el botón de
+> Un `500` al repetir el código de un proyecto en vez de decir que estaba cogido; el botón de
 > exportar el CAPEX a XLSX sin ninguna ruta que lo sirviera; las miniaturas pidiendo el original de
 > cada foto y devolviendo `401` porque un `<img src>` no lleva credencial; el permiso del buzón de
 > sugerencias calculado de tres formas distintas; un desplegable ofreciendo tipos que la API
@@ -34,7 +34,7 @@ PowerPoint desde la plantilla PPTX de cada proyecto.
 
 | # | Decisión | Por qué importa |
 |---|---|---|
-| 1 | **Estado y fases son ejes distintos** | El `estado` del proyecto describe el ciclo administrativo; las **fases** (documentación, VDR, visita, Q&A, Red Flag/CAPEX, Full Report, presentación, defensa) describen el trabajo real, se eligen a la carta al dar de alta y avanzan en paralelo. Un encargo puede tener la documentación pendiente, la visita hecha y el Q&A en curso a la vez |
+| 1 | **Estado y fases son ejes distintos** | El `estado` del proyecto describe el ciclo administrativo; las **fases** (documentación, VDR, visita, Q&A, Red Flag/CAPEX, Full Report, presentación, defensa) describen el trabajo real, se eligen a la carta al dar de alta y avanzan en paralelo. Un proyecto puede tener la documentación pendiente, la visita hecha y el Q&A en curso a la vez |
 | 2 | **La fila que rellena el consultor es una sola cosa** | Hallazgo y partida CAPEX son la misma línea: código, zona, riesgo, concepto, **un horizonte y un importe**. La interfaz muestra una fila; por debajo se persisten `Finding` y `CapexItem` con relación 1:1, para conservar el modelo exigido y permitir que un hallazgo genere varias partidas |
 | 3 | **Los catálogos son datos, no código** | 6 tipologías, 20 zonas dependientes de ellas, 125 códigos CAPEX en árbol de tres niveles, cuatro grados de riesgo con su definición íntegra, cinco horizontes. Todo en tablas versionadas y ampliables: corregir el árbol no puede exigir un despliegue |
 | 4 | **El original nunca se toca** | Fotografías, documentos y plantillas son objetos inmutables, garantizado por cuatro barreras independientes: API, dominio, base de datos y almacenamiento WORM |
@@ -131,6 +131,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[20b](docs/18-analisis-plantillas-reales.md#generación-a-volumen-con-las-tipografías-puestas)** | **Generación a volumen medida** · 105 diapositivas en 3,1 s, y las tres cosas que solo se ven a ese tamaño | añadido |
 | **[21](docs/21-bucket-s3.md)** | **El bucket de S3** · cómo crearlo y los permisos exactos del rol. Sin ejecutar contra AWS todavía | añadido |
 | **[22](docs/22-camino-a-produccion.md)** | **El camino a producción** · qué falta para un go-live, con esfuerzo estimado y casillas marcables | añadido |
+| **[23](docs/23-rediseno-tras-el-prototipo.md)** | **El rediseño tras el primer prototipo** · lo que el cliente pidió cambiar, qué está hecho y qué falta por definir | añadido |
 | **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 | **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |
 
@@ -195,7 +196,7 @@ lugar **Segoe UI, o Montserrat en su defecto**.
   `tools/retipografiar_plantilla.py` las convierte sin tocar el original, pero hay que pasarlas y
   **mirar el resultado**.
 
-> **Siguiente paso: entregable 24** — el código inicial del MVP, que conforme a §16 del encargo se
+> **Siguiente paso: entregable 24** — el código inicial del MVP, que conforme a §16 del proyecto se
 > aborda tras la validación de este diseño.
 
 Las demás preguntas, ordenadas por impacto, están en
@@ -249,7 +250,7 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
 ## Alcance del MVP en una línea
 
 > Un consultor debe poder llevar a cabo una due diligence técnica real de principio a fin —desde abrir
-> el encargo y pedir la documentación hasta emitir el PPTX— **sin salirse de la herramienta ni una sola
+> el proyecto y pedir la documentación hasta emitir el PPTX— **sin salirse de la herramienta ni una sola
 > vez.**
 
 Estimación: **19,5 semanas** con el equipo supuesto (1 tech lead + 2 full stack + diseñador y QA a media

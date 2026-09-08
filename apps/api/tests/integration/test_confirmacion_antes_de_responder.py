@@ -1,6 +1,6 @@
 """La transacción se confirma **antes** de enviar la respuesta.
 
-El fallo que estas pruebas fijan salió al sembrar el encargo de demostración, y
+El fallo que estas pruebas fijan salió al sembrar el proyecto de demostración, y
 no de la suite: el sembrador creaba un activo, leía el identificador del `201` y
 pedía ese activo acto seguido. A veces no estaba.
 
@@ -82,7 +82,7 @@ def test_la_fila_ya_se_ve_desde_fuera_cuando_sale_la_respuesta(
     datos_base: dict[str, uuid.UUID],
     cab: Any,
 ) -> None:
-    """Crear un encargo y preguntar por él desde otra conexión, a la vez."""
+    """Crear un proyecto y preguntar por él desde otra conexión, a la vez."""
 
     def mirar(cuerpo: bytes) -> bool:
         creado = json.loads(cuerpo)
@@ -118,7 +118,7 @@ def test_la_fila_ya_se_ve_desde_fuera_cuando_sale_la_respuesta(
             json={
                 "client_id": str(datos_base["cliente_a"]),
                 "internal_code": f"CARRERA-{uuid.uuid4().hex[:8]}",
-                "name": "Encargo para medir el orden",
+                "name": "Proyecto para medir el orden",
             },
             headers=cab("admin_a"),
         )
@@ -162,7 +162,7 @@ def test_si_falla_el_commit_el_cliente_no_recibe_un_201(
             json={
                 "client_id": str(datos_base["cliente_a"]),
                 "internal_code": f"FALLO-{uuid.uuid4().hex[:8]}",
-                "name": "Encargo que no llega a confirmarse",
+                "name": "Proyecto que no llega a confirmarse",
             },
             headers=cab("admin_a"),
         )

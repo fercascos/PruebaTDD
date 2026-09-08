@@ -166,7 +166,7 @@ class ResumenPorActivo(BaseModel):
 def resumen_por_activo(project_id: uuid.UUID, s: SesionDep) -> Any:
     """`[REQ]` El CAPEX **separado por activo**, que es como se decide.
 
-    En un encargo de cartera la pregunta que se hace el cliente no es cuánto
+    En un proyecto de cartera la pregunta que se hace el cliente no es cuánto
     suma el proyecto, sino cuánto cuesta cada edificio: es el número que entra
     en la negociación del precio de cada uno. Sin esta vista había que sumar a
     mano desde la rejilla de hallazgos, y ahí es donde aparecen los descuadres.
@@ -227,7 +227,7 @@ def resumen_por_horizonte(
     hallazgo es lógico —`deleted_at`, porque borrar del informe algo que se
     llegó a valorar deja a nadie sabiendo que existió—, así que sus líneas de
     CAPEX siguen en la tabla. Esta consulta unía `capex_item` con `time_horizon`
-    sin pasar por `finding`, de modo que las contaba: el mismo encargo sumaba
+    sin pasar por `finding`, de modo que las contaba: el mismo proyecto sumaba
     una cosa por horizonte y otra por activo, que sí lo excluía.
 
     No se veía porque nada ponía los dos cortes en la misma pantalla. La vista
@@ -242,7 +242,7 @@ def resumen_por_horizonte(
                 "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
-                # Las líneas vivas del encargo, en una subconsulta, y el
+                # Las líneas vivas del proyecto, en una subconsulta, y el
                 # `LEFT JOIN` contra los cinco plazos. Antes eran dos `LEFT
                 # JOIN` encadenados que cruzaban cada plazo con TODOS los
                 # hallazgos antes de filtrar; con el activo dentro habría que
@@ -283,7 +283,7 @@ class ResumenPorConcepto(BaseModel):
 def resumen_por_concepto(
     project_id: uuid.UUID,
     s: SesionDep,
-    #: `[REQ]` Sin él, el reparto es el del **encargo entero**; con él, el de un
+    #: `[REQ]` Sin él, el reparto es el del **proyecto entero**; con él, el de un
     #: solo edificio.
     #:
     #: Son dos preguntas distintas y las dos se hacen en la misma reunión. En
@@ -299,7 +299,7 @@ def resumen_por_concepto(
     Es la pregunta que separa un edificio caro de uno mal mantenido. Doscientos
     mil euros de «Normativa» y doscientos mil de «Mejora» valen lo mismo en la
     hoja y significan cosas opuestas: lo primero hay que pagarlo, lo segundo se
-    puede decidir. Sin este corte, el total del encargo no distingue una cosa
+    puede decidir. Sin este corte, el total del proyecto no distingue una cosa
     de la otra.
 
     **Solo salen los conceptos con importe.** Los diez del catálogo con ceros
@@ -308,10 +308,10 @@ def resumen_por_concepto(
     como «Sin concepto», que es un dato —alguien no lo clasificó— y no un hueco.
 
     `[REC]` `asset_id` **solo filtra**, como en la matriz de riesgos: un activo
-    de otro encargo devuelve una lista vacía en vez de un error. Es la
+    de otro proyecto devuelve una lista vacía en vez de un error. Es la
     convención de la casa para los filtros de lectura, y aquí además es lo
     correcto: la pantalla construye el desplegable con los activos del propio
-    encargo, así que un identificador ajeno solo llega escribiendo la URL a
+    proyecto, así que un identificador ajeno solo llega escribiendo la URL a
     mano.
     """
     filas = (
@@ -366,7 +366,7 @@ def resumen_por_capitulo(
 
     El capítulo es el **nivel 2** y un hallazgo puede estar codificado en el
     nivel 3, así que se sube por el árbol hasta el capítulo en vez de agrupar
-    por el código del hallazgo: agrupando por el código directo, un encargo con
+    por el código del hallazgo: agrupando por el código directo, un proyecto con
     hallazgos a distintos niveles saldría partido en trozos que no suman nada
     reconocible.
     """
@@ -425,7 +425,7 @@ def exportar_xlsx(
     fórmulas, y el equipo lo adjunta tal cual.
 
     `asset_id` acota el libro a **un activo**: su cabecera, su tipo de edificio
-    —y por tanto sus zonas— y solo sus actuaciones. Sin él sale el encargo
+    —y por tanto sus zonas— y solo sus actuaciones. Sin él sale el proyecto
     entero en un libro, que es lo que había y sigue siendo lo que ocurre por
     omisión. Para bajarse todos los activos de una cartera de golpe, cada uno
     en su libro, está `export.zip`.
@@ -441,13 +441,13 @@ def exportar_xlsx(
     prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
 
     if asset_id is None:
-        contenido = _libro(datos, idioma, quien="El encargo")
+        contenido = _libro(datos, idioma, quien="El proyecto")
         nombre = f"{prefijo}_actual.xlsx"
     else:
         partes = {p.asset_id: p for p in puente.separar_por_activo(datos)}
         parte = partes.get(str(asset_id))
         if parte is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "El activo no pertenece a este encargo")
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "El activo no pertenece a este proyecto")
         contenido = _libro(
             parte.snapshot, idioma, quien=f"El activo «{parte.nombre}»", del_activo=True
         )
@@ -461,7 +461,7 @@ def exportar_xlsx(
 
 
 def _snapshot_de_trabajo(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
-    """El estado actual del encargo, con los borradores dentro.
+    """El estado actual del proyecto, con los borradores dentro.
 
     Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
     mientras todavía lo construye, y un fichero que se deja fuera las líneas en
@@ -476,7 +476,7 @@ def _snapshot_de_trabajo(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
 def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: bool = False) -> bytes:
     """Rellena la plantilla del cliente, o dice por qué no puede.
 
-    Está aparte porque lo llaman las tres descargas —encargo entero, un activo
+    Está aparte porque lo llaman las tres descargas —proyecto entero, un activo
     y el ZIP de la cartera— y las tres tienen que traducir los mismos dos
     errores al mismo código HTTP. Con el cuerpo duplicado, el día que cambie el
     mensaje solo cambiaría en una.
@@ -484,7 +484,7 @@ def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: boo
     from tdd.exports import capex_desde_snapshot as puente
     from tdd.exports.plantilla_capex import NoCabe, generar
 
-    encargo, actuaciones = puente.preparar(
+    proyecto, actuaciones = puente.preparar(
         datos, idioma=idioma.value, activo_en_el_nombre=del_activo
     )
     if not actuaciones:
@@ -495,9 +495,9 @@ def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: boo
             f"{quien} todavía no tiene ninguna actuación que exportar",
         )
     try:
-        return generar(encargo, actuaciones, idioma=idioma.value)
+        return generar(proyecto, actuaciones, idioma=idioma.value)
     except NoCabe as exc:
-        # 409 y no 500: no es un fallo del servidor, es que el encargo tiene
+        # 409 y no 500: no es un fallo del servidor, es que el proyecto tiene
         # más actuaciones de las que admite la plantilla. El mensaje dice qué
         # capítulo se pasa y por cuánto, que es lo accionable.
         raise HTTPException(status.HTTP_409_CONFLICT, f"{quien}: {exc}") from exc
@@ -545,7 +545,7 @@ def exportar_cartera_zip(
     if not con_actuaciones:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "El encargo todavía no tiene ninguna actuación que exportar",
+            "El proyecto todavía no tiene ninguna actuación que exportar",
         )
 
     buffer = BytesIO()
@@ -601,7 +601,7 @@ def _leeme(proyecto: dict[str, Any], partes: list[Parte], con_actuaciones: list[
     if huerfanas:
         lineas += [
             "",
-            "AVISO: hay actuaciones cuyo activo ya no está en el encargo (se borró",
+            "AVISO: hay actuaciones cuyo activo ya no está en el proyecto (se borró",
             "después de registrarlas). Van en su propio libro para no perderse, pero",
             "su cabecera está vacía y sus zonas pueden estarlo también.",
         ]

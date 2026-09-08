@@ -10,7 +10,7 @@ decisiones que exige decir **a qué activo va**: el documento no lo dice.
 
 **La confidencialidad.** Un plan de autoprotección nace `RESTRINGIDO`, y eso
 tenía que significar algo más que un adorno en la ficha: **no se manda a un
-proveedor de IA**, ni con la revisión del encargo activada.
+proveedor de IA**, ni con la revisión del proyecto activada.
 
 `[REQ]` No hay ningún documento de cliente en el repositorio. El plan de estas
 pruebas se fabrica aquí.
@@ -85,7 +85,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo con inventario') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto con inventario') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),
@@ -129,7 +129,7 @@ def subir_plan(cliente: TestClient, cab: Any, proyecto: str, **extra: str) -> di
 
 
 def _autorizar_ia(cliente: TestClient, cab: Any, proyecto: str) -> None:
-    """Enciende la revisión con IA del encargo, con su autoría."""
+    """Enciende la revisión con IA del proyecto, con su autoría."""
     r = cliente.put(
         f"{RUTA}/projects/{proyecto}/ai-doc-review",
         headers=cab("admin_a"),
@@ -281,7 +281,7 @@ def test_un_activo_de_otro_encargo_se_rechaza(
         otro = conn.execute(
             text(
                 "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                "VALUES (:o, :c, :cod, 'Otro encargo') RETURNING id"
+                "VALUES (:o, :c, :cod, 'Otro proyecto') RETURNING id"
             ),
             {
                 "o": str(datos_base["org_a"]),
@@ -304,7 +304,7 @@ def test_un_activo_de_otro_encargo_se_rechaza(
         json={"aceptar": [{"id": lista[0]["id"], "asset_id": str(ajeno)}]},
     )
     assert r.status_code == 422
-    assert "no es de este encargo" in r.json()["detail"]
+    assert "no es de este proyecto" in r.json()["detail"]
 
 
 def test_descartar_no_crea_nada_y_deja_constancia(
@@ -435,7 +435,7 @@ def test_un_restringido_no_se_manda_a_ningun_proveedor_de_ia(
     """`[REQ]` **El hueco que faltaba.** La comprobación de confidencialidad
     estaba en `descargar()` y no en la revisión, así que un documento que un
     consultor del equipo no puede ni abrir sí se podía mandar a un proveedor
-    externo con solo el interruptor del encargo encendido.
+    externo con solo el interruptor del proyecto encendido.
     """
     # Por el endpoint y no por SQL: la base exige que el interruptor lleve su
     # autoría —`project_revision_ia_con_autoria`—, que es justo lo que hace que

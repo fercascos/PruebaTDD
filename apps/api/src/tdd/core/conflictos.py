@@ -1,9 +1,9 @@
 """Choques con una restricción de unicidad, traducidos a algo que se entienda.
 
-`[REQ]` §13 · Repetir el código de un encargo es un error **del usuario**, no
+`[REQ]` §13 · Repetir el código de un proyecto es un error **del usuario**, no
 del servidor. Sin esto salía un `500` genérico: la pantalla decía «error
 interno», el usuario volvía a pulsar, y el código que ya estaba cogido no se
-mencionaba por ningún lado. Se descubrió dando de alta dos veces el encargo
+mencionaba por ningún lado. Se descubrió dando de alta dos veces el proyecto
 «2026-014» con la aplicación en marcha.
 
 Vive en **un solo sitio** a propósito. La alternativa —una consulta previa en
@@ -27,13 +27,13 @@ from sqlalchemy.exc import IntegrityError
 #: La clave es el nombre que PostgreSQL le da al índice único.
 MENSAJES: dict[str, str] = {
     "project_organization_id_internal_code_key": (
-        "Ya existe un encargo con ese código interno. Use otro."
+        "Ya existe un proyecto con ese código interno. Use otro."
     ),
     "app_user_organization_id_email_key": "Ya existe una cuenta con ese correo.",
-    "asset_codigo_uniq": "Ya hay un activo con ese código del cliente en el encargo.",
+    "asset_codigo_uniq": "Ya hay un activo con ese código del cliente en el proyecto.",
     "client_organization_id_name_key": "Ya existe un cliente con ese nombre.",
     "project_phase_project_id_phase_definition_id_key": (
-        "Esa fase ya está activada en el encargo."
+        "Esa fase ya está activada en el proyecto."
     ),
     "report_template_organization_id_name_language_key": (
         "Ya existe una plantilla con ese nombre en ese idioma."

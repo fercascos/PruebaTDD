@@ -2,7 +2,7 @@
 
 Las imágenes se construyen aquí, con Pillow. `[REQ]` No se usa ni una sola
 fotografía real del cliente, ni siquiera como fixture: el repositorio no debe
-contener material del encargo.
+contener material del proyecto.
 """
 
 from __future__ import annotations

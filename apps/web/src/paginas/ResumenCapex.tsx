@@ -22,13 +22,13 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * | ¿En qué se va el dinero? | concepto | **tarta** — es un reparto parte-todo |
  * | ¿Cuándo hay que pagarlo? | horizonte | barras, en orden de plazo |
  * | ¿Qué parte del edificio? | capítulo | barras, de mayor a menor |
- * | ¿Qué edificio? | activo | barras, **siempre del encargo entero** |
+ * | ¿Qué edificio? | activo | barras, **siempre del proyecto entero** |
  *
  * ## El filtro alcanza a toda la vista
  *
  * `[REQ]` Un selector de activo arriba, y **los tres primeros cortes se piden
  * filtrados**. Las tarjetas de titulares se mueven con él: una que dijera
- * «CAPEX del encargo» encima de unos gráficos de una sola nave se contradice
+ * «CAPEX del proyecto» encima de unos gráficos de una sola nave se contradice
  * con ellos, y quien mire por encima se lleva la cifra equivocada.
  *
  * ## «Qué edificio» se queda, y hace de mando
@@ -36,7 +36,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * `[REQ]` El cuarto bloque **no desaparece al filtrar**: es el que permite
  * comparar varios activos en el momento sin salir de la pantalla, que es
  * justo lo que se hace en la reunión —mirar una nave, mirar la de al lado,
- * volver al conjunto—. Sigue enseñando el encargo entero, y por eso vale de
+ * volver al conjunto—. Sigue enseñando el proyecto entero, y por eso vale de
  * referencia: dice si el edificio que se está mirando es el caro o uno de los
  * baratos, cosa que los otros tres, ya filtrados, no pueden decir.
  *
@@ -46,7 +46,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * nombre, otro para elegir viendo el importe—, y los dos enseñan lo elegido.
  *
  * Y `by-asset` **no se filtra nunca**: es la lista de activos, hace de índice
- * para el desplegable y da el total del encargo, que es lo que permite decir
+ * para el desplegable y da el total del proyecto, que es lo que permite decir
  * qué parte representa el activo elegido sin volver a pedirlo.
  *
  * ## Por qué solo una es una tarta
@@ -143,15 +143,15 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
   if (!datos) return <p className="cargando">Cargando el resumen…</p>
 
-  // El total del ENCARGO sale de `by-asset`, que no se filtra. Es lo que
-  // permite decir qué parte del encargo representa el activo elegido sin
+  // El total del PROYECTO sale de `by-asset`, que no se filtra. Es lo que
+  // permite decir qué parte del proyecto representa el activo elegido sin
   // pedirlo otra vez, y lo que evita que la pantalla se quede en blanco
   // mientras llegan los tres cortes.
-  const totalDelEncargo = datos.activo.reduce((s, a) => s + Number(a.amount), 0)
+  const totalDelProyecto = datos.activo.reduce((s, a) => s + Number(a.amount), 0)
   const cartera = datos.activo.length > 1
   const elegido = datos.activo.find((a) => a.asset_id === activo)
 
-  if (totalDelEncargo <= 0) {
+  if (totalDelProyecto <= 0) {
     return (
       <Vacio>
         Todavía no hay ninguna línea de CAPEX valorada. Este resumen se rellena solo a medida que
@@ -183,7 +183,7 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
         <Cabecera
           selector={selector}
           elegido={elegido}
-          totalDelEncargo={totalDelEncargo}
+          totalDelProyecto={totalDelProyecto}
           activos={datos.activo}
           alQuitarFiltro={() => setActivo('')}
         />
@@ -224,7 +224,7 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
       <Cabecera
         selector={selector}
         elegido={elegido}
-        totalDelEncargo={totalDelEncargo}
+        totalDelProyecto={totalDelProyecto}
         activos={datos.activo}
         alQuitarFiltro={() => setActivo('')}
       />
@@ -232,13 +232,13 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
       {/* `[REC]` Los titulares primero, y como cifras y no como gráficos. Un
           número solo no es un gráfico de una barra: es un número.
           Y **se mueven con el filtro**: una tarjeta que dijera «CAPEX del
-          encargo» encima de unos gráficos de una sola nave se contradice con
+          proyecto» encima de unos gráficos de una sola nave se contradice con
           ellos, y quien mire por encima se lleva la cifra equivocada. */}
       <ul className="cifras-clave">
         <li>
           <span className="valor">{eurosExactos.format(total)}</span>
           <span className="rotulo">
-            {elegido ? `CAPEX de ${elegido.asset_name}` : 'CAPEX del encargo'}
+            {elegido ? `CAPEX de ${elegido.asset_name}` : 'CAPEX del proyecto'}
           </span>
         </li>
         <li>
@@ -253,11 +253,11 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
         </li>
         {elegido ? (
           /* Con un activo elegido, «activos con actuaciones» no dice nada: la
-             pregunta pasa a ser cuánto pesa ESTE dentro del encargo, que es lo
+             pregunta pasa a ser cuánto pesa ESTE dentro del proyecto, que es lo
              que se lleva a la negociación. */
           <li>
-            <span className="valor">{porcentaje(total, totalDelEncargo)}</span>
-            <span className="rotulo">del CAPEX del encargo</span>
+            <span className="valor">{porcentaje(total, totalDelProyecto)}</span>
+            <span className="rotulo">del CAPEX del proyecto</span>
           </li>
         ) : (
           <li>
@@ -290,7 +290,7 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
               titulo={
                 elegido
                   ? `Reparto del CAPEX de ${elegido.asset_name} por concepto de gasto`
-                  : 'Reparto del CAPEX del encargo por concepto de gasto'
+                  : 'Reparto del CAPEX del proyecto por concepto de gasto'
               }
               formatear={(v) => eurosExactos.format(v)}
             />
@@ -340,16 +340,16 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
           </section>
 
           {/* `[REQ]` **Se queda con el filtro puesto**, al revés que los otros
-              tres: es el único que sigue enseñando el encargo entero, y es lo
+              tres: es el único que sigue enseñando el proyecto entero, y es lo
               que permite comparar varios activos en el momento sin salir de la
-              pantalla. Con un solo activo en el encargo no se pinta, porque
+              pantalla. Con un solo activo en el proyecto no se pinta, porque
               entonces sí sería una barra sola diciendo lo que ya dicen las
               tarjetas. */}
           {cartera && (
             <section className="bloque">
               <h3>Qué edificio</h3>
               <p className="ayuda">
-                En un encargo de cartera es el número que entra en la negociación de cada
+                En un proyecto de cartera es el número que entra en la negociación de cada
                 edificio. <strong>Este bloque no se filtra nunca</strong>: es la referencia
                 contra la que se lee el resto. Los activos sin actuaciones salen con cero: un
                 activo que desaparece de la lista se confunde con uno que se visitó y no tenía
@@ -389,20 +389,20 @@ export function ResumenCapex({ projectId }: { projectId: string }) {
  *
  * `[REQ]` **El alcance va en palabras y no solo en el desplegable.** Los cuatro
  * gráficos cambian a la vez, así que una pantalla filtrada sin decirlo se lee
- * como el encargo entero y las cifras no cuadran con nada. Se saca a su propio
+ * como el proyecto entero y las cifras no cuadran con nada. Se saca a su propio
  * componente porque se pinta también mientras cargan los gráficos: quitarlo en
  * ese momento haría desaparecer el selector con el que se acaba de elegir.
  */
 function Cabecera({
   selector,
   elegido,
-  totalDelEncargo,
+  totalDelProyecto,
   activos,
   alQuitarFiltro,
 }: {
   selector: React.ReactNode
   elegido: ResumenPorActivo | undefined
-  totalDelEncargo: number
+  totalDelProyecto: number
   activos: ResumenPorActivo[]
   alQuitarFiltro: () => void
 }) {
@@ -418,11 +418,11 @@ function Cabecera({
           </>
         ) : activos.length > 1 ? (
           <>
-            Todo el resumen, con los <strong>{activos.length} activos</strong> del encargo
-            agrupados · {eurosExactos.format(totalDelEncargo)}
+            Todo el resumen, con los <strong>{activos.length} activos</strong> del proyecto
+            agrupados · {eurosExactos.format(totalDelProyecto)}
           </>
         ) : (
-          <>Un solo activo en el encargo · {eurosExactos.format(totalDelEncargo)}</>
+          <>Un solo activo en el proyecto · {eurosExactos.format(totalDelProyecto)}</>
         )}
       </p>
       {selector}
@@ -435,7 +435,7 @@ type Fila = { clave: string; nombre: string; importe: number; detalle: string }
 /**
  * Barras horizontales de un solo tono.
  *
- * `[REQ]` La escala la marca **la barra más larga**, no el total del encargo:
+ * `[REQ]` La escala la marca **la barra más larga**, no el total del proyecto:
  * con el total, un reparto dominado por una categoría deja las demás como
  * rayas invisibles y el gráfico deja de decir nada de ellas.
  *

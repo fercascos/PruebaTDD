@@ -277,12 +277,12 @@ def test_el_casi_duplicado_se_sube_y_solo_se_avisa(
 def test_el_mismo_fichero_si_puede_estar_en_dos_proyectos(
     cliente: TestClient, cab: Any, datos_base: dict[str, uuid.UUID], motor_admin: Any
 ) -> None:
-    """Dos encargos sobre el mismo edificio es legítimo."""
+    """Dos proyectos sobre el mismo edificio es legítimo."""
     with motor_admin.begin() as conn:
         otro = conn.execute(
             text(
                 "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                "VALUES (:o, :c, :cod, 'Segundo encargo') RETURNING id"
+                "VALUES (:o, :c, :cod, 'Segundo proyecto') RETURNING id"
             ),
             {
                 "o": str(datos_base["org_a"]),

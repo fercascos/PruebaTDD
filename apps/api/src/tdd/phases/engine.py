@@ -3,8 +3,8 @@
 Dos ideas sostienen este módulo:
 
 1. **Estado y fases son ejes independientes.** El `estado` del proyecto describe
-   el ciclo administrativo del encargo (borrador → archivado). Las **fases**
-   describen el trabajo real y avanzan en paralelo: un encargo puede tener la
+   el ciclo administrativo del proyecto (borrador → archivado). Las **fases**
+   describen el trabajo real y avanzan en paralelo: un proyecto puede tener la
    documentación pendiente, la visita hecha y el Q&A en curso a la vez.
 
 2. **Dos fases tienen el estado derivado y no se marcan a mano.** Red Flag/CAPEX

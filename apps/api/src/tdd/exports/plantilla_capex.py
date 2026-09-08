@@ -155,7 +155,7 @@ COL_PLAZO: dict[str, str] = {
     "OTRO": "N",
 }
 
-#: Hoja «00 Datos Activo»: dónde va cada dato del encargo.
+#: Hoja «00 Datos Activo»: dónde va cada dato del proyecto.
 CELDA_ACTIVO = {
     "nombre": "C5",
     "direccion": "C6",
@@ -269,7 +269,7 @@ class Actuacion:
 
 
 @dataclass(frozen=True, slots=True)
-class Encargo:
+class Proyecto:
     """La cabecera que va a «00 Datos Activo»."""
 
     nombre: str
@@ -355,7 +355,7 @@ POS_CAPEX = 4  # «CapEx» en los dos idiomas
 
 
 def generar(
-    encargo: Encargo,
+    proyecto: Proyecto,
     actuaciones: list[Actuacion],
     *,
     idioma: str = "es",
@@ -381,7 +381,7 @@ def generar(
         ruta_activo = ruta_de_hoja(zf, POS_ACTIVO)
         ruta_capex = ruta_de_hoja(zf, POS_CAPEX)
 
-    partes[ruta_activo] = _rellenar_activo(partes[ruta_activo], encargo, porcentajes)
+    partes[ruta_activo] = _rellenar_activo(partes[ruta_activo], proyecto, porcentajes)
     partes[ruta_capex] = _rellenar_capex(partes[ruta_capex], actuaciones)
 
     libro = partes["xl/workbook.xml"].decode("utf-8")
@@ -415,11 +415,11 @@ def _serializar(raiz: etree._Element) -> bytes:
 
 
 def _rellenar_activo(
-    bruto: bytes, encargo: Encargo, porcentajes: dict[str, Decimal] | None
+    bruto: bytes, proyecto: Proyecto, porcentajes: dict[str, Decimal] | None
 ) -> bytes:
     raiz, datos = _arbol(bruto)
     for campo, ref in CELDA_ACTIVO.items():
-        escribir(datos, ref, getattr(encargo, campo))
+        escribir(datos, ref, getattr(proyecto, campo))
     for campo, ref in CELDA_PORCENTAJE.items():
         if porcentajes and campo in porcentajes:
             escribir(datos, ref, porcentajes[campo])

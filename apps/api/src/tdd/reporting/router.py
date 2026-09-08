@@ -397,7 +397,7 @@ def _reunir_estado(
     )
 
     # Lo que el informe se deja fuera por estado. El snapshot solo publica
-    # `EN_REVISION` y `VALIDADO`, así que un encargo entero en borrador genera
+    # `EN_REVISION` y `VALIDADO`, así que un proyecto entero en borrador genera
     # un documento con la tabla vacía y un total de cero. Contarlo aquí es lo
     # que permite decirlo antes de generar en vez de después de enviarlo.
     borradores = s.execute(
@@ -628,7 +628,7 @@ def generar(
     )
 
     # Encolar va en ESTA transacción: si el `INSERT` de arriba revirtiera, la
-    # tarea revierte con él y el worker no se encuentra un encargo sobre una
+    # tarea revierte con él y el worker no se encuentra un proyecto sobre una
     # versión que no existe.
     cola.encolar(
         s,

@@ -29,7 +29,7 @@
  * abrirla**. Un consultor hace una visita el viernes, no vuelve a abrir la
  * aplicación hasta el lunes de la semana siguiente, y las fotografías que no se
  * subieron ya no están. No es un caso rebuscado: es el calendario normal de un
- * encargo.
+ * proyecto.
  *
  * `[LIM]` Pedirla **no garantiza** que la den. En iOS el permiso llega, en la
  * práctica, cuando la aplicación se añade a la pantalla de inicio. Por eso
@@ -97,8 +97,8 @@ function abrir(): Promise<IDBDatabase> {
       const db = peticion.result
       if (!db.objectStoreNames.contains(ALMACEN)) {
         const almacen = db.createObjectStore(ALMACEN, { keyPath: 'id' })
-        // Por proyecto: al abrir un encargo solo interesa lo suyo, y recorrer
-        // toda la cola de todos los encargos para filtrar sería absurdo en un
+        // Por proyecto: al abrir un proyecto solo interesa lo suyo, y recorrer
+        // toda la cola de todos los proyectos para filtrar sería absurdo en un
         // móvil con 400 fotos guardadas.
         almacen.createIndex('projectId', 'projectId')
       }

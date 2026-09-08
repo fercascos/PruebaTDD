@@ -59,7 +59,7 @@ def proyecto(motor_admin: Engine, datos_base: dict[str, uuid.UUID]) -> str:
             conn.execute(
                 text(
                     "INSERT INTO project (organization_id, client_id, internal_code, name) "
-                    "VALUES (:o, :c, :cod, 'Encargo exportable') RETURNING id"
+                    "VALUES (:o, :c, :cod, 'Proyecto exportable') RETURNING id"
                 ),
                 {
                     "o": str(datos_base["org_a"]),
@@ -522,7 +522,7 @@ def test_se_puede_descargar_el_libro_de_un_solo_activo(
 def test_un_activo_de_otro_encargo_da_404(
     cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, str], activo: str
 ) -> None:
-    """Y no un libro vacío ni el del encargo entero: el parámetro está mal."""
+    """Y no un libro vacío ni el del proyecto entero: el parámetro está mal."""
     crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="A", importe="100")
 
     r = cliente.get(
@@ -539,7 +539,7 @@ def test_un_activo_sin_actuaciones_lo_dice_con_su_nombre(
     activo: str,
     segundo_activo: str,
 ) -> None:
-    """El mensaje nombra el activo, no «el encargo»: quien pulsa está en su ficha."""
+    """El mensaje nombra el activo, no «el proyecto»: quien pulsa está en su ficha."""
     crear_hallazgo(cliente, cab, proyecto, catalogo, activo, titulo="Solo A", importe="100")
 
     r = cliente.get(

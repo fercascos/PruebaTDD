@@ -45,7 +45,7 @@ MAX_BYTES_DOCUMENTO = 100 * 1024 * 1024
 #: `[REQ]` Confidencialidad por omisión **según el tipo de documento**.
 #:
 #: Casi todo es `INTERNO`, que es lo razonable para la documentación de un
-#: encargo. La excepción es el **plan de autoprotección**: lleva procedimientos
+#: proyecto. La excepción es el **plan de autoprotección**: lleva procedimientos
 #: de emergencia, puntos de reunión, ubicaciones de medios contra incendios y
 #: datos de las personas con responsabilidad en una emergencia. Publicarlo es
 #: dar el mapa a quien quiera aprovecharlo, y el propio documento que se leyó

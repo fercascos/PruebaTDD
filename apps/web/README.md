@@ -28,10 +28,10 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | Pantalla | Qué hace |
 |---|---|
 | **Inicio de sesión** | Emite el par de tokens y recupera la sesión al recargar |
-| **Proyectos** | Listado de encargos de la organización |
+| **Proyectos** | Listado de proyectos de la organización |
 | **Fases** | Estado de cada fase **con su motivo**; las derivadas se marcan como calculadas |
 | **Activos** | Ficha resumida por activo |
-| **Nuevo encargo** | Alta con cliente —nuevo o existente— y **elección de fases a la carta** |
+| **Nuevo proyecto** | Alta con cliente —nuevo o existente— y **elección de fases a la carta** |
 | **Ficha de activo** | Alta y edición; los campos de nave se conservan al reclasificar |
 | **Fotografías** | **Los tres orígenes**, cola de subida, selección y renombrado en lote |
 | **Ficha de fotografía** | Clasificar por activo y zona, pie, orden en el informe, procedencia |
@@ -62,7 +62,7 @@ npm run prototipo          # deja prototipo/dist/prototipo.html
 `cliente.ts`, la misma hoja de estilos— con dos cambios y ninguno más:
 
 1. Sus `fetch` los contesta `prototipo/servidor.ts` con respuestas **grabadas de
-   la API real** sobre el encargo de demostración, con datos ficticios.
+   la API real** sobre el proyecto de demostración, con datos ficticios.
 2. Las rutas van en el fragmento (`#/proyectos`), porque un fichero suelto no
    tiene detrás quien sirva `/proyectos` al recargar. Es la única razón por la
    que `App` recibe su enrutador como parámetro.
@@ -82,7 +82,7 @@ Dos cosas que salieron de mirarlo funcionando, y que valen para cualquiera que
 lo regenere: las imágenes se grababan **vacías** —la aplicación aborta la
 descarga al desmontar el componente, y en modo estricto React monta dos veces—
 así que los cuerpos vacíos se vuelven a pedir a la API al final; y la lista de
-encargos se recorta al que se ha grabado, porque la base de demostración
+proyectos se recorta al que se ha grabado, porque la base de demostración
 arrastra 45 de pruebas viejas y **pulsar cualquier otro llevaba a una pantalla
 rota**.
 
@@ -224,7 +224,7 @@ escrito— y sería un error de lectura imposible de detectar mirándola.
 Con dos consecuencias deliberadas:
 
 * **«Qué edificio» se queda, y no se filtra nunca.** Es el único bloque que
-  sigue enseñando el encargo entero, y por eso vale de referencia: dice si el
+  sigue enseñando el proyecto entero, y por eso vale de referencia: dice si el
   edificio que se está mirando es el caro o uno de los baratos, cosa que los
   otros tres, ya filtrados, no pueden decir. Y es lo que permite **comparar
   varios activos en el momento sin salir de la pantalla** —mirar una nave,
@@ -235,7 +235,7 @@ Con dos consecuencias deliberadas:
   **también por escrito**, con una pastilla «en pantalla», porque el realce de
   color no sobrevive a una fotocopia en gris.
 * **La cuarta tarjeta cambia de pregunta.** Con un activo elegido deja de
-  contar activos y pasa a decir **qué parte del CAPEX del encargo es este
+  contar activos y pasa a decir **qué parte del CAPEX del proyecto es este
   edificio**, que es el número que entra en la negociación.
 
 Los tres cortes filtrados suman lo mismo entre sí, y hay una prueba en la suite
@@ -378,7 +378,7 @@ los veía:
 | Culpable | Cuánto sacaba a 320 px | Arreglo |
 |---|---|---|
 | La barra de navegación superior | 48 px, **en las trece pantallas** | `flex-wrap: wrap`: cuatro destinos que se envuelven |
-| Las tablas de encargos y de activos | 85 px y 226 px | Envueltas en `.desbordable`, como ya lo estaban otras cuatro |
+| Las tablas de proyectos y de activos | 85 px y 226 px | Envueltas en `.desbordable`, como ya lo estaban otras cuatro |
 | El filtro de activos de la matriz de riesgos | 92 px | Acotar la **etiqueta**, no el `<select>` |
 | El adjunto de la checklist de documentación | 18 px | La etiqueta pasa a bloque para que el `input` tenga contra qué medirse |
 

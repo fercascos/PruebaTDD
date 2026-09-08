@@ -2,7 +2,7 @@
 
 Los cuatro casos de este fichero se encontraron **recorriendo la aplicación con
 el servidor en marcha**, no leyendo el código. Ninguno lo veía la suite: repetir
-el código de un encargo, escribir mal el nombre de un campo o mandar un valor
+el código de un proyecto, escribir mal el nombre de un campo o mandar un valor
 que no está en un enumerado de PostgreSQL son cosas que las pruebas no hacían
 porque las pruebas escriben los datos bien.
 
@@ -58,7 +58,7 @@ def test_repetir_el_codigo_de_encargo_dice_que_esta_cogido(cliente: TestClient, 
 
 def test_el_mismo_codigo_en_otra_organizacion_si_vale(cliente: TestClient, cab: Any) -> None:
     """La unicidad es **por organización**. Dos consultoras distintas pueden
-    numerar sus encargos igual sin enterarse la una de la otra."""
+    numerar sus proyectos igual sin enterarse la una de la otra."""
     codigo = _codigo()
     cliente_a = _cliente_id(cliente, cab)
     cliente_b = cliente.post(
@@ -69,7 +69,7 @@ def test_el_mismo_codigo_en_otra_organizacion_si_vale(cliente: TestClient, cab: 
         r = cliente.post(
             f"{RUTA}/projects",
             headers=cab(cab_usuario),
-            json={"client_id": cid, "internal_code": codigo, "name": "Encargo"},
+            json={"client_id": cid, "internal_code": codigo, "name": "Proyecto"},
         )
         assert r.status_code == 201, r.text
 
@@ -101,7 +101,7 @@ def test_activar_dos_veces_la_misma_fase_no_es_un_error_interno(
 def test_un_campo_mal_escrito_en_el_alta_de_encargo_se_rechaza(
     cliente: TestClient, cab: Any
 ) -> None:
-    """Un `fecha_entrega` que la API ignora crea un encargo sin fecha de entrega
+    """Un `fecha_entrega` que la API ignora crea un proyecto sin fecha de entrega
     que nadie detecta hasta que se pasa."""
     r = cliente.post(
         f"{RUTA}/projects",

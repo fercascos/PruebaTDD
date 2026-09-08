@@ -18,7 +18,7 @@ escribió alguien en una visita a la que no se vuelve.
 
 **Lo que no se entiende se dice, no se adivina.** Un sistema técnico que no
 casa con el catálogo no se aproxima al más parecido: la fila entra sin
-clasificar y el aviso lo cuenta. Un activo que no existe en el encargo es un
+clasificar y el aviso lo cuenta. Un activo que no existe en el proyecto es un
 error, no una invitación a crearlo.
 
 El análisis es lógica pura: recibe listas de diccionarios y catálogos ya
@@ -210,7 +210,7 @@ def _analizar_fila(
     avisos: list[str] = []
     valores: dict[str, object] = {}
 
-    # ── Activo: obligatorio y tiene que existir ya en el encargo ─────────────
+    # ── Activo: obligatorio y tiene que existir ya en el proyecto ─────────────
     # No se crea sobre la marcha. Un activo es una ficha con veinte campos y
     # una tipología que manda sobre las zonas; inventarlo a partir de un nombre
     # suelto de una celda produciría un edificio a medias que nadie sabría que
@@ -226,7 +226,7 @@ def _analizar_fila(
         )
         if encontrado is None:
             errores.append(
-                f"«{texto_activo}» no es un activo de este encargo. "
+                f"«{texto_activo}» no es un activo de este proyecto. "
                 f"Dé de alta el activo antes de importar su inventario."
             )
         else:
