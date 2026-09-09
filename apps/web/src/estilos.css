@@ -1647,6 +1647,129 @@ button.enlace {
   color: var(--error);
 }
 
+/* ── Árbol de CAPEX del activo (§3.2 e de docs/23) ───────────────────────── */
+/* La sangría la marca el propio anidamiento de los `<ul>`, no una clase por
+   nivel: así una rama de tres niveles y una de dos se leen igual y no hay que
+   inventar un `.nivel-4` el día que el catálogo crezca. */
+
+.arbol-capex {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}
+.arbol-capex > .alcance {
+  margin: 0 0 0.8rem;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.arbol-capex .ramas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+/* Los hijos se sangran, y una línea vertical marca de quién cuelgan: sin ella,
+   a partir del segundo nivel hay que contar los saltos para saber dónde se
+   está. */
+.arbol-capex .ramas .ramas {
+  margin-left: 0.6rem;
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--borde);
+}
+.arbol-capex .rama > details > summary {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.35rem 0.2rem;
+  cursor: pointer;
+  border-bottom: 1px dashed var(--borde);
+  font-size: 0.9rem;
+}
+.arbol-capex .rama > details > summary:hover {
+  background: var(--fondo);
+}
+.arbol-capex .rama > details > summary:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+}
+/* El tipo de coste manda sobre la categoría, y la categoría sobre el objeto.
+   Se distingue por peso y no por color: esto se imprime. */
+.arbol-capex .nivel-1 > details > summary {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.arbol-capex .nivel-2 > details > summary {
+  font-weight: 600;
+}
+.arbol-capex .codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  color: var(--tinta-suave);
+  margin-right: 0.45rem;
+}
+.arbol-capex summary .cifra {
+  color: var(--tinta-suave);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  font-weight: 400;
+}
+.arbol-capex summary .cifra.importe {
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 7rem;
+  text-align: right;
+}
+/* La tabla de actuaciones respira dentro de su rama y no toca el borde. */
+.arbol-capex .desbordable {
+  margin: 0.4rem 0 0.8rem 0.6rem;
+}
+.arbol-capex .tabla.actuaciones {
+  font-size: 0.82rem;
+}
+/* La descripción y los comentarios, bajo el título de la actuación: son texto
+   libre y en columna estirarían la fila hasta descolocar las cifras. */
+.arbol-capex .tabla .descripcion {
+  display: block;
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+.arbol-capex .anadir-aqui {
+  margin: 0.2rem 0 0.8rem 0.6rem;
+}
+
+@media (max-width: 640px) {
+  /* A 360 px el resumen no cabe en una línea: el nombre de un objeto —
+     «Acometida-Centro de transformación»— más el recuento más el importe con
+     sus 7 rem de columna empujaban la página entera hacia la derecha. Las
+     cifras bajan a su propia línea, que es lo mismo que hacen las barras del
+     dashboard y por el mismo motivo. */
+  .arbol-capex .rama > details > summary {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'nodo   nodo'
+      'cuenta importe';
+    row-gap: 0.15rem;
+  }
+  .arbol-capex summary .nodo {
+    grid-area: nodo;
+    overflow-wrap: anywhere;
+  }
+  .arbol-capex summary .cifra:not(.importe) {
+    grid-area: cuenta;
+  }
+  .arbol-capex summary .cifra.importe {
+    grid-area: importe;
+    min-width: 0;
+  }
+  /* Y la sangría se estrecha: con cuatro niveles a 1,5 rem cada uno, el texto
+     del objeto arrancaba a un tercio de la pantalla. */
+  .arbol-capex .ramas .ramas {
+    margin-left: 0.25rem;
+    padding-left: 0.5rem;
+  }
+}
+
 /* ── Árbol de ubicaciones (§8.4) ─────────────────────────────────────────── */
 
 .ubicaciones {

@@ -4,6 +4,7 @@ import type { Activo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeActivo } from './FichaDeActivo'
 import { ArbolDeUbicaciones } from './ArbolDeUbicaciones'
+import { ArbolDeCapex } from './ArbolDeCapex'
 
 export function PestanaActivos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[] | null>(null)
@@ -42,9 +43,18 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
           }}
           alCancelar={() => setEditando(null)}
         />
-        {/* El árbol solo tiene sentido sobre un activo que ya existe: sus nodos
-            cuelgan de un `asset_id`. En el alta no se muestra. */}
-        {editando !== 'nuevo' && <ArbolDeUbicaciones assetId={editando.id} />}
+        {/* Los dos árboles solo tienen sentido sobre un activo que ya existe:
+            sus nodos y sus actuaciones cuelgan de un `asset_id`. En el alta no
+            se muestran.
+            `[REQ]` §3.2 de `docs/23` · El de CAPEX vive **dentro del activo**,
+            que es donde va a acabar todo. Es el primer trozo de esa mudanza:
+            está aquí, y no en una pestaña del proyecto, desde el primer día. */}
+        {editando !== 'nuevo' && (
+          <>
+            <ArbolDeUbicaciones assetId={editando.id} />
+            <ArbolDeCapex projectId={projectId} assetId={editando.id} />
+          </>
+        )}
       </>
     )
   }

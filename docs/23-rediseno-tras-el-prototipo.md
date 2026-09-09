@@ -114,7 +114,7 @@ ser secciones **de cada activo**. Cinco:
 | **b) Documentación** | La del activo | `[PDV]` **estructura por revisar** |
 | **c) Visita** | Fecha de la visita y sus fotografías | `[PDV]` **por definir** |
 | **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo | ⬜ |
-| **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ⬜ |
+| **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
 
 **La ficha de cada objeto del CAPEX** lleva: descripción, zona afectada, riesgo,
 comentarios del gestor técnico, CAPEX estimado por plazo —corto, medio, largo,
@@ -125,6 +125,39 @@ repercutible a inquilinos.
 > la columna de repercutible (`tenant_recoverable`) y los cinco plazos. Lo que
 > cambia **no es el modelo, es la presentación**: hoy es una rejilla plana por
 > proyecto y pasa a ser un árbol por activo. Eso abarata mucho este punto.
+
+`[REQ]` **El árbol ya está** ✅, dentro del activo, que es donde va a acabar
+todo. No hizo falta ni una línea de API: los campos estaban y
+`GET /projects/{id}/findings?asset_id=` ya filtraba. Cada nodo enseña cuántas
+actuaciones cuelgan de él y cuánto suman —**el total de una categoría es la suma
+de sus objetos, no un número calculado aparte**—, y cada actuación trae la ficha
+que pidió el cliente: descripción, zona afectada, riesgo, comentarios del gestor
+técnico, los cinco plazos con su total, el concepto y si es repercutible.
+
+Tres decisiones que conviene tener a la vista:
+
+- **Solo se dibujan las ramas con contenido.** El catálogo tiene 175 nodos y un
+  activo toca diez o quince: pintarlo entero obligaría a buscar lo que hay entre
+  lo que no hay. Es lo contrario que en el dashboard, donde los cinco plazos y
+  los cuatro grados **sí** salen con cero, y no es una incoherencia: allí la
+  lista es corta y cerrada, y un plazo que desaparece se confunde con uno que no
+  toca.
+- **Desde cada hoja se puede dar de alta**, con el código ya puesto. Quien está
+  mirando «Electricidad › CGBT» no tiene que volver a buscar ese código en una
+  lista de 141.
+- **Un código retirado no se traga una actuación.** Las siete «General» que
+  deprecó la migración `0020` ya no están en el catálogo, así que sus
+  actuaciones no encuentran nodo. Van a una rama propia, con su aviso, y siguen
+  contando: si desaparecieran, el total del activo dejaría de cuadrar con el
+  dashboard.
+
+`[REQ]` **Y destapó un defecto que no daba ningún error.** El alta de hallazgos
+ofrecía solo los objetos —nivel 3—, y con el árbol del cliente eso dejó fuera
+tipos de coste enteros: **soft costs, operativos e imprevistos no tienen
+objetos** en su hoja, así que su categoría es la hoja del árbol. Desde que se
+sembró su estructura no había forma de dar de alta un soft cost, y no saltaba
+nada: simplemente no estaba en el desplegable. Ahora se ofrecen los objetos **y
+las categorías que no tienen objetos**, agrupados por tipo de coste.
 
 `[REQ]` **El árbol de categorías ya está cambiado** ✅. El cliente mandó su hoja
 y el catálogo se ha regenerado desde ella: **6 tipos de coste · 28 categorías ·
@@ -229,7 +262,8 @@ Con una persona a tiempo completo que ya conoce el código.
 |---|---|
 | §1 y §2 · pantallas de entrada | ✅ hecho |
 | ~~§3.3 · Dashboard completo~~ | ✅ hecho |
-| §3.2 · el activo con sus cinco secciones | 10-12 días |
+| ~~§3.2 e · el árbol del CAPEX por activo~~ | ✅ hecho |
+| §3.2 · el resto del activo (detalle, documentación, visita, inventario) | 7-9 días |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 | Documentación y visita del activo | por definir |
@@ -239,8 +273,8 @@ Con una persona a tiempo completo que ya conoce el código.
 `[REC]` **Por este orden**: Dashboard primero —enseña resultado pronto y no
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,
 que es lo que obliga a mover documentación, fotos e inventario de pestaña. El
-Dashboard ✅ y el árbol del CAPEX ✅ ya están; queda el activo con sus cinco
-secciones.
+Dashboard ✅ y el árbol del CAPEX ✅ ya están; queda el resto del activo, y dos
+de sus cinco secciones siguen `[PDV]` a la espera de que el cliente las defina.
 
 ## 5. Lo que hace falta del cliente
 

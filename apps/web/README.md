@@ -41,6 +41,7 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
 | **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
 | **Dashboard** | Cinco cortes del CAPEX —concepto, plazo, riesgo, categoría con sus objetos apilados, y activo—, todos **agrupados, de uno o de varios activos** con un mismo selector |
+| **Árbol de CAPEX del activo** | Tipo de coste → categoría → objeto, con lo que suma cada nodo y, colgando de cada hoja, sus actuaciones con zona, riesgo, concepto, repercutible y los cinco plazos |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |
@@ -258,6 +259,46 @@ Con dos consecuencias deliberadas:
 Los cortes filtrados suman lo mismo entre sí, y hay pruebas que lo imponen: en la
 suite del API con varios activos elegidos, y en `npm run test:dashboard` sobre la
 pantalla ya pintada.
+
+### El árbol de CAPEX de un activo
+
+`src/paginas/ArbolDeCapex.tsx`, dentro de la ficha del activo, que es donde va a
+acabar todo (§3.2 de `docs/23`). La rejilla de Hallazgos y CAPEX es una lista
+corrida por proyecto y contesta «qué hay que hacer»; el árbol contesta **«qué le
+pasa a este edificio, y por dónde»**, que es la pregunta con la que se recorre un
+activo.
+
+**No hizo falta ni una línea de API.** Los campos ya estaban en `finding` y
+`GET /projects/{id}/findings?asset_id=` ya filtraba; el árbol se monta en el
+navegador con el catálogo de códigos. Y se monta **desde las actuaciones hacia
+arriba**, lo que trae dos cosas gratis: solo existen las ramas con contenido, y
+el total de una categoría **es** la suma de lo que cuelga de ella, no un número
+calculado aparte que pueda discrepar.
+
+Tres detalles que no son detalles:
+
+* **Solo las ramas con contenido.** El catálogo tiene 175 nodos y un activo toca
+  diez o quince. Es la decisión contraria a la del dashboard, donde los cinco
+  plazos y los cuatro grados salen con cero: allí la lista es corta y cerrada, y
+  un plazo que desaparece se confunde con uno que no toca; aquí, enseñar 175
+  entradas vacías obligaría a buscar lo que hay entre lo que no hay.
+* **Los códigos retirados no se tragan una actuación.** `/catalogs/capex-codes`
+  no devuelve los que tienen `deprecated_at`, y hay actuaciones que apuntan a
+  ellos —la migración `0020` deprecó siete objetos «General»—. Van a una rama
+  propia con su aviso: si desaparecieran, el total del activo dejaría de cuadrar
+  con el dashboard y nadie sabría por qué.
+* **Se da de alta desde la hoja**, con el código ya puesto, y solo desde donde se
+  puede codificar de verdad: una hoja **del catálogo**, no del árbol dibujado.
+  No son lo mismo — una categoría con quince objetos de los que solo uno tiene
+  actuaciones parece aquí tener un único hijo—, y confundirlas ofrecería el alta
+  en el sitio equivocado.
+
+`[REQ]` Y destapó un defecto que no daba ningún error: el alta ofrecía **solo los
+objetos**, y con el árbol del cliente soft costs, operativos e imprevistos **no
+tienen objetos**, así que su categoría es la hoja. Desde que se sembró esa
+estructura no había forma de dar de alta un soft cost, y no saltaba nada:
+simplemente no estaba en el desplegable. Ahora se ofrecen los objetos y las
+categorías sin objetos, agrupados por tipo de coste.
 
 ### En una barra apilada el color separa, no identifica
 

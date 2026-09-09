@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
-import type { Activo, ElementoCatalogo } from '../api/tipos'
+import type { Activo, CodigoCapex, ElementoCatalogo } from '../api/tipos'
 import { Campo, Formulario, Rejilla } from '../ui/Formulario'
 import { Mensaje } from '../ui/Marco'
 
-type CodigoCapex = ElementoCatalogo & { level: number; parent_id: string | null }
 type GradoDeRiesgo = ElementoCatalogo & { score: number; definition_es: string }
 
 /** `[REQ]` P-05 · Los cinco destinos posibles del importe. Mutuamente excluyentes. */
@@ -35,6 +34,7 @@ export function NuevoHallazgo({
   photoId,
   activoInicial,
   zonaInicial,
+  codigoInicial,
   alGuardar,
   alCancelar,
 }: {
@@ -43,6 +43,13 @@ export function NuevoHallazgo({
   photoId?: string
   activoInicial?: string
   zonaInicial?: string
+  /**
+   * `[REC]` Si viene del árbol de CAPEX de un activo, el hallazgo nace **en el
+   * nodo desde el que se pulsó**. Sin esto, quien está mirando «Electricidad ›
+   * CGBT» y quiere anotar algo tiene que volver a buscar ese código en una
+   * lista de 141, que es la mejor forma de que acabe en el nodo de al lado.
+   */
+  codigoInicial?: string
   alGuardar: () => void
   alCancelar: () => void
 }) {
@@ -53,7 +60,7 @@ export function NuevoHallazgo({
 
   const [activo, setActivo] = useState(activoInicial ?? '')
   const [zona, setZona] = useState(zonaInicial ?? '')
-  const [codigo, setCodigo] = useState('')
+  const [codigo, setCodigo] = useState(codigoInicial ?? '')
   const [riesgo, setRiesgo] = useState('')
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
@@ -68,7 +75,8 @@ export function NuevoHallazgo({
         if (!activoInicial && lista[0]) setActivo(lista[0].id)
       })
       .catch(() => setActivos([]))
-    obtener<CodigoCapex[]>('/catalogs/capex-codes?level=3')
+    // El árbol entero, no solo el nivel 3: ver `codificables`.
+    obtener<CodigoCapex[]>('/catalogs/capex-codes')
       .then(setCodigos)
       .catch(() => setCodigos([]))
     obtener<GradoDeRiesgo[]>('/catalogs/risk-levels')
@@ -89,6 +97,38 @@ export function NuevoHallazgo({
       })
       .catch(() => setZonas([]))
   }, [activo])
+
+  /**
+   * `[REQ]` Dónde se puede codificar un hallazgo: **los objetos, y las
+   * categorías que no tienen objetos**.
+   *
+   * Esta lista ofrecía solo el nivel 3, y con el árbol del cliente (P-45) eso
+   * dejó fuera tipos de coste enteros: soft costs, operativos e imprevistos
+   * **no tienen objetos** en su hoja, así que sus categorías son la hoja del
+   * árbol. Con el filtro anterior no había forma de dar de alta un soft cost
+   * desde la aplicación, y no saltaba ningún error: simplemente no estaba en el
+   * desplegable.
+   *
+   * Una categoría **que sí tiene objetos** no se ofrece: codificar en ella
+   * cuando existe el objeto concreto es perder el detalle, y el desglose por
+   * objeto del dashboard lo enseñaría como «sin detallar».
+   */
+  const codificables = useMemo(() => {
+    const conHijos = new Set(codigos.map((c) => c.parent_id).filter(Boolean))
+    const nombreDeTipo = new Map(codigos.filter((c) => c.level === 1).map((c) => [c.id, c]))
+    const tipoDe = (c: CodigoCapex): string => {
+      if (c.level === 2) return nombreDeTipo.get(c.parent_id ?? '')?.name_es ?? '—'
+      const padre = codigos.find((p) => p.id === c.parent_id)
+      return nombreDeTipo.get(padre?.parent_id ?? '')?.name_es ?? '—'
+    }
+    const hojas = codigos.filter((c) => c.level === 3 || (c.level === 2 && !conHijos.has(c.id)))
+    const grupos = new Map<string, CodigoCapex[]>()
+    for (const c of [...hojas].sort((a, b) => a.code.localeCompare(b.code, 'es'))) {
+      const tipo = tipoDe(c)
+      grupos.set(tipo, [...(grupos.get(tipo) ?? []), c])
+    }
+    return [...grupos]
+  }, [codigos])
 
   const plazosUsados = new Set(lineas.map((l) => l.plazo))
   const definicion = riesgos.find((r) => r.id === riesgo)?.definition_es
@@ -170,13 +210,17 @@ export function NuevoHallazgo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Código CAPEX">
+        <Campo etiqueta="Código CAPEX" ayuda="Agrupado por tipo de coste">
           <select required value={codigo} onChange={(e) => setCodigo(e.target.value)}>
             <option value="">— elija un elemento —</option>
-            {codigos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.code} · {c.name_es}
-              </option>
+            {codificables.map(([tipo, lista]) => (
+              <optgroup key={tipo} label={tipo}>
+                {lista.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} · {c.name_es}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </Campo>

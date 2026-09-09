@@ -98,6 +98,17 @@ export type Activo = {
 
 export type ElementoCatalogo = { id: string; code: string; name_es: string }
 
+/**
+ * Un nodo del árbol de CAPEX. `level` es 1 (tipo de coste), 2 (categoría) o 3
+ * (objeto), y `parent_id` cuelga cada uno del anterior.
+ *
+ * `[LIM]` `/catalogs/capex-codes` **no devuelve los retirados**, así que un
+ * hallazgo codificado en uno de ellos no encuentra su nodo. No es un caso raro:
+ * la migración `0020` deprecó siete objetos «General» al adoptar el árbol del
+ * cliente. Quien monte el árbol tiene que preverlo; ver `ArbolDeCapex`.
+ */
+export type CodigoCapex = ElementoCatalogo & { level: number; parent_id: string | null }
+
 export type Duplicado = {
   tipo: 'EXACTO' | 'CASI'
   photo_id: string
@@ -172,6 +183,9 @@ export type Hallazgo = {
   recommendation: string | null
   status: string
   risk_level_id: string | null
+  capex_concept_id: string | null
+  /** «SI», «NO» o «NA», tal como lo espera el desplegable de la plantilla. */
+  tenant_recoverable: string
   capex_lines: LineaCapex[]
   total_amount: string
   total_with_tax: string
