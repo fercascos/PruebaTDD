@@ -2034,6 +2034,103 @@ button.enlace {
   min-width: 0;
 }
 
+/* ── El selector de varios activos del dashboard ─────────────────────────── */
+/* Casillas dentro de un `<details>`: quince activos en abierto empujarían el
+   primer gráfico fuera de la pantalla, y un `<select multiple>` pierde la
+   selección entera con un clic despistado. */
+.filtro-de-activos {
+  min-width: 0;
+  max-width: 100%;
+}
+.filtro-de-activos > summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  background: var(--papel);
+  white-space: nowrap;
+}
+.filtro-de-activos > summary:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+.filtro-de-activos fieldset {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  /* Con muchos activos la lista se desplaza dentro de su caja en vez de
+     empujar la página: el filtro tiene que caber en la misma pantalla que lo
+     que filtra. */
+  max-height: 15rem;
+  overflow-y: auto;
+}
+.filtro-de-activos ul {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.filtro-de-activos label {
+  gap: 0.45rem;
+  font-weight: 400;
+}
+.filtro-de-activos input[type='checkbox'] {
+  /* Que no se estire a lo ancho de su columna: `input` es de bloque en esta
+     hoja, y una casilla de 20 rem de ancho no se lee como una casilla. */
+  width: auto;
+  margin: 0;
+}
+
+/* ── Barras apiladas: categoría con sus objetos dentro ───────────────────── */
+/* [REQ] El color NO identifica a los objetos: los separa. Ver `paleta.ts`. El
+   nombre va dentro del tramo cuando cabe, en el título siempre, y todos en la
+   tabla de debajo. */
+.barras.apiladas .barra {
+  display: flex;
+  /* Dos píxeles de hueco entre tramos: el corte se ve aunque dos claridades de
+     la escalera caigan cerca, y a partir de ahí la barra no depende del tono. */
+  gap: 2px;
+  background: none;
+  height: 1.15rem;
+}
+.barras.apiladas .tramo {
+  display: flex;
+  align-items: center;
+  min-width: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+/* `.barra span` —la barra de progreso de las fases— pinta de acento cualquier
+   span que cuelgue de una `.barra`, y el rótulo de un tramo es exactamente eso:
+   salía con un recuadro azul detrás del nombre, encima de su propio tono. */
+.barras.apiladas .rotulo-de-tramo {
+  background: none;
+  height: auto;
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  /* En un móvil la barra de una categoría pequeña mide cuarenta píxeles, y ahí
+     el nombre del objeto sale como «Cu…», que no dice nada y ensucia el tramo.
+     Se quita: para eso está la tabla de debajo, que los lista enteros. */
+  .barras.apiladas .rotulo-de-tramo {
+    display: none;
+  }
+}
+
+/* El enlace al dashboard desde la rejilla de hallazgos. */
+.ir-al-dashboard {
+  margin: 0 0 1rem;
+}
+
 /* El cliente bajo el título del proyecto. Discreto: acompaña al nombre, no
    compite con él. */
 .cliente-del-proyecto {

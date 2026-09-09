@@ -86,7 +86,14 @@ volver a preguntar.
 |---|---|
 | La cabecera añade el **nombre del cliente** | ✅ |
 | «Fases» pasa a llamarse **«Resumen»** | ✅ solo el nombre |
-| Las cuatro pestañas: Resumen · Activos · Dashboard · Informes | ⬜ |
+| Las cuatro pestañas: Resumen · Activos · Dashboard · Informes | 🟡 |
+
+🟡 **Dashboard ya es una pestaña** (§3.3). Las otras tres siguen conviviendo con
+las seis que quedan —Documentación, Fotografías, Mapa, Inventario, Hallazgos y
+CAPEX, Riesgos—, porque reducirlas a cuatro es mover esas seis **dentro del
+activo**, que es §3.2 y el trabajo grande. Añadir la pestaña ahora y recolocarla
+después no cuesta nada; hacerlo al revés habría dejado el dashboard escondido
+hasta el final.
 
 ### 3.1. Resumen ⬜
 
@@ -134,7 +141,7 @@ tipo de coste acaba con una categoría «Otros», y cada categoría con un objet
 «Otros», que es la salida que necesita un consultor cuando lo que ve no está en
 la lista. En la hoja del cliente ese cajón se escribe `-`.
 
-`[REQ]` **La plantilla de Excel ya tiene el tramo de `SC.S04 «Otros»»`** ✅. No
+`[REQ]` **La plantilla de Excel ya tiene el tramo de `SC.S04 «Otros»`** ✅. No
 lo tenía —su total de soft costs sumaba exactamente las otras tres categorías—,
 el cliente confirmó que su plantilla puede cambiar y se le dieron las filas
 256-266, justo detrás de `S03`. Operativos e Imprevistos bajan doce filas para
@@ -148,30 +155,53 @@ desplegable en la columna «Categoría»**, igual que las diez filas de `S03` en
 plantilla original. No afecta a lo que exporta la aplicación, que escribe la
 etiqueta; afecta a quien rellene esas filas a mano.
 
-### 3.3. Dashboard ⬜
+### 3.3. Dashboard ✅ hecho
 
-El desglose económico del CAPEX, con **cinco cortes**:
+El desglose económico del CAPEX, con **cinco cortes**, en su propia pestaña:
 
 | Corte | Forma | Estado |
 |---|---|---|
-| Por **concepto** | tarta | ✅ existe |
-| Por **plazo** | barras | ✅ existe |
-| Por **categoría y objeto** | **barras apiladas**: cada categoría es una barra y dentro van sus objetos | ⬜ |
-| Por **riesgo** | ⬜ | la matriz de riesgos ya tiene el dato |
-| Por **activo** acumulado | barras | ✅ existe |
+| Por **concepto** | tarta | ✅ |
+| Por **plazo** | barras, en orden de plazo | ✅ |
+| Por **riesgo** | barras, en orden de gravedad | ✅ nuevo |
+| Por **categoría y objeto** | **barras apiladas**: cada categoría es una barra y dentro van sus objetos | ✅ nuevo |
+| Por **activo** acumulado | barras | ✅ |
 
-Y el selector pasa de **un activo** a **uno, varios o toda la cartera**.
+Y el selector pasa de un activo a **uno, varios o toda la cartera** ✅. En la API
+es el mismo parámetro repetido —`?asset_id=…&asset_id=…`—, escrito una sola vez
+para los cuatro cortes filtrables: tenerlo en un sitio es lo que impide que uno
+filtre por el activo de la línea y otro por el del hallazgo, que es el descuadre
+que ya apareció una vez.
 
-> `[REC]` Esta pestaña es la actual vista «Resumen» de Hallazgos y CAPEX,
-> ascendida a pestaña propia. Los cuatro gráficos que ya existen se mueven tal
-> cual; lo nuevo es el corte por riesgo, el apilado por categoría y la selección
-> múltiple. Es el punto con mejor relación entre lo que se ve y lo que cuesta.
+**Era la vista «Resumen» de Hallazgos y CAPEX y sube a pestaña propia.** En la
+rejilla queda un enlace, no una copia: las dos se consultan una detrás de otra
+—se mira el reparto, se ve que «Normativa» pesa demasiado y se va a la rejilla a
+comprobar de qué hallazgos sale— y con dos copias del mismo gráfico una acabaría
+quedándose atrás.
 
-`[REC]` El apilado por categoría **necesita una decisión de color**: la paleta
-está medida para **cuatro tonos más «Otros»** y una barra apilada con quince
-objetos dentro no se puede colorear de quince maneras distinguibles. Lo honesto
-es apilar con una sola familia de tono y separar por hueco, o enseñar el detalle
-de objetos al desplegar la categoría en vez de dentro de la barra.
+`[REQ]` **La decisión de color del apilado, tomada.** La paleta está medida para
+cuatro tonos más «Otros», y una categoría del CAPEX puede traer dieciséis
+objetos: no existe una paleta de dieciséis que pase las comprobaciones de
+daltonismo. Así que en las apiladas **el color no identifica, separa**: una sola
+familia de tono en cuatro claridades que se alternan, con dos píxeles de hueco
+entre tramos. Lo que distingue dos tramos contiguos es la **luminosidad**, que
+sobrevive a los tres tipos de daltonismo y a una impresión en blanco y negro.
+Quién es cada tramo lo dicen su nombre escrito dentro cuando cabe, su título al
+pasar por encima y la tabla de debajo, que los lista todos con su importe y su
+parte. En un móvil el nombre de dentro se quita: en una barra de cuarenta
+píxeles salía como «Cu…».
+
+`[REQ]` **Los cinco cortes suman lo mismo**, y hay pruebas que lo imponen: en la
+API se comparan entre sí con varios activos elegidos, `by-risk` se compara además
+contra la matriz de riesgos —que calcula lo mismo por otro camino—, y
+`herramientas/comprobar-dashboard.mjs` lo vuelve a comprobar **sobre la pantalla
+ya pintada**, incluido que «Qué edificio» siga enseñando la cartera entera con el
+filtro puesto.
+
+`[PDV]` El corte por riesgo y la matriz de riesgos enseñan ahora el mismo reparto
+en dos pestañas. No se ha unificado: la matriz cruza riesgo × plazo y es otra
+lectura. Conviene decidir con el cliente si la matriz se absorbe en el dashboard
+o se queda aparte.
 
 ### 3.4. Informes ⬜
 
@@ -186,7 +216,7 @@ Con una persona a tiempo completo que ya conoce el código.
 | Bloque | Esfuerzo |
 |---|---|
 | §1 y §2 · pantallas de entrada | ✅ hecho |
-| §3.3 · Dashboard completo | 5-6 días |
+| ~~§3.3 · Dashboard completo~~ | ✅ hecho |
 | §3.2 · el activo con sus cinco secciones | 10-12 días |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
@@ -196,7 +226,9 @@ Con una persona a tiempo completo que ya conoce el código.
 
 `[REC]` **Por este orden**: Dashboard primero —enseña resultado pronto y no
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,
-que es lo que obliga a mover documentación, fotos e inventario de pestaña.
+que es lo que obliga a mover documentación, fotos e inventario de pestaña. El
+Dashboard ✅ y el árbol del CAPEX ✅ ya están; queda el activo con sus cinco
+secciones.
 
 ## 5. Lo que hace falta del cliente
 

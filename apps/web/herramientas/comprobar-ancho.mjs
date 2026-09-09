@@ -46,6 +46,7 @@ const PANTALLAS = [
   ['mapa', `/proyectos/${PID}/mapa`],
   ['equipo', `/proyectos/${PID}/equipo`],
   ['capex', `/proyectos/${PID}/capex`],
+  ['dashboard', `/proyectos/${PID}/dashboard`],
   ['riesgos', `/proyectos/${PID}/riesgos`],
   ['informes', `/proyectos/${PID}/informes`],
 ]

@@ -4,7 +4,7 @@ import type { Activo, Hallazgo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeHallazgo } from './FichaDeHallazgo'
 import { NuevoHallazgo } from './NuevoHallazgo'
-import { ResumenCapex } from './ResumenCapex'
+import { Link } from 'react-router-dom'
 
 const PLAZOS = ['CORTO', 'MEDIO', 'LARGO', 'MEJORAS', 'OTRO'] as const
 
@@ -37,17 +37,6 @@ type Idioma = 'es' | 'en'
  */
 type Alcance = 'conjunto' | 'por-activo'
 
-/**
- * Las dos vistas del CAPEX.
- *
- * `[REC]` Van aquí dentro y **no como una décima pestaña de proyecto**. Son dos
- * lecturas del mismo dato —lo que hay que hacer y cuánto suma—, y separarlas al
- * primer nivel de navegación las alejaría entre sí justo cuando se consultan
- * una detrás de otra: se mira el reparto, se ve que «Normativa» pesa demasiado
- * y se va a la rejilla a comprobar de qué hallazgos sale.
- */
-type Vista = 'hallazgos' | 'resumen'
-
 export function PestanaCapex({ projectId }: { projectId: string }) {
   const [hallazgos, setHallazgos] = useState<Hallazgo[] | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
@@ -57,7 +46,6 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   const [exportando, setExportando] = useState(false)
   const [idioma, setIdioma] = useState<Idioma>('es')
   const [alcance, setAlcance] = useState<Alcance>('por-activo')
-  const [vista, setVista] = useState<Vista>('hallazgos')
   // Aparte del error de carga: que falle la exportación no debe dejar la
   // pestaña en blanco y hacer perder de vista la tabla.
   const [errorExport, setErrorExport] = useState<string | null>(null)
@@ -202,39 +190,18 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
 
   const avisoExport = errorExport ? <Mensaje tipo="error">{errorExport}</Mensaje> : null
 
-  /* Dos botones y no un desplegable: son dos, se alternan constantemente, y un
-     desplegable esconde la mitad de la pantalla detrás de un clic. */
+  /* `[REQ]` §3.3 de `docs/23` · El resumen **sube a pestaña propia** y se
+     llama Dashboard. Aquí queda el enlace y no una copia de la vista: las dos
+     se consultan una detrás de otra —se mira el reparto, se ve que «Normativa»
+     pesa demasiado y se viene a la rejilla a comprobar de qué hallazgos sale—,
+     y esa cercanía se conserva con un clic. Con dos copias del mismo gráfico,
+     una acabaría quedándose atrás. */
   const conmutador = (
-    <div className="vistas" role="tablist" aria-label="Vista del CAPEX">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={vista === 'hallazgos'}
-        className={vista === 'hallazgos' ? 'activa' : ''}
-        onClick={() => setVista('hallazgos')}
-      >
-        Hallazgos
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={vista === 'resumen'}
-        className={vista === 'resumen' ? 'activa' : ''}
-        onClick={() => setVista('resumen')}
-      >
-        Resumen
-      </button>
-    </div>
+    <p className="ayuda ir-al-dashboard">
+      ¿Cuánto suma todo esto? Está en el <Link to={`/proyectos/${projectId}/dashboard`}>Dashboard</Link>,
+      con el reparto por concepto, plazo, riesgo, categoría y activo.
+    </p>
   )
-
-  if (vista === 'resumen') {
-    return (
-      <>
-        {conmutador}
-        <ResumenCapex projectId={projectId} />
-      </>
-    )
-  }
 
   if (!hallazgos) return <p className="cargando">Cargando hallazgos…</p>
   if (hallazgos.length === 0) {

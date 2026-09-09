@@ -83,6 +83,7 @@ def crear_hallazgo(
     importe: str,
     horizonte: str = "CORTO",
     titulo: str = "Actuación",
+    riesgo: str | None = None,
 ) -> str:
     # `/capex-codes` es una lista PLANA con `level` y `parent_id`. La
     # documentación menciona un `/capex-codes/tree` que no está construido:
@@ -104,6 +105,9 @@ def crear_hallazgo(
     if concepto is not None:
         conceptos = catalogo(cliente, cab, "capex-concepts")
         cuerpo["capex_concept_id"] = next(c["id"] for c in conceptos if c["code"] == concepto)
+    if riesgo is not None:
+        grados = catalogo(cliente, cab, "risk-levels")
+        cuerpo["risk_level_id"] = next(g["id"] for g in grados if g["code"] == riesgo)
 
     r = cliente.post(
         f"{RUTA}/projects/{proyecto}/findings", headers=cab("consultor_a"), json=cuerpo
@@ -119,8 +123,12 @@ def resumen(
     corte: str,
     *,
     asset_id: str | None = None,
+    #: `[REQ]` El filtro admite **varios activos**: es la comparación que se
+    #: hace en la reunión, «las dos naves del polígono frente al resto».
+    asset_ids: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    sufijo = f"?asset_id={asset_id}" if asset_id else ""
+    elegidos = asset_ids if asset_ids is not None else ([asset_id] if asset_id else [])
+    sufijo = "?" + "&".join(f"asset_id={a}" for a in elegidos) if elegidos else ""
     r = cliente.get(
         f"{RUTA}/projects/{proyecto}/capex/summary/by-{corte}{sufijo}",
         headers=cab("consultor_a"),
@@ -670,3 +678,280 @@ def test_un_hallazgo_recurrente_cuenta_una_vez_en_su_activo(
     assert filas[0]["findings"] == 1, "un hallazgo, aunque tenga dos líneas"
     assert filas[0]["lines"] == 2
     assert Decimal(filas[0]["amount"]) == Decimal("3000.00")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Varios activos a la vez: el selector del dashboard
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_filtro_admite_varios_activos_a_la_vez(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str, tipologia: str
+) -> None:
+    """`[REQ]` §3.3 de `docs/23` · El selector pasa de **un activo** a uno,
+    varios o toda la cartera.
+
+    No es una comodidad: en una cartera la comparación que se hace es «las dos
+    naves del polígono frente al resto», y con un solo activo por consulta hay
+    que sumarlas a mano, que es de donde salen los descuadres que este resumen
+    existe para evitar.
+    """
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/assets",
+        headers=cab("consultor_a"),
+        json={"name": "Nave 3", "typology_id": tipologia},
+    )
+    assert r.status_code == 201, r.text
+    tercero = str(r.json()["id"])
+
+    for destino, importe in ((activo, "1000.00"), (otro_activo, "2000.00"), (tercero, "4000.00")):
+        crear_hallazgo(
+            cliente,
+            cab,
+            proyecto,
+            destino,
+            codigo_capex="HC.H06",
+            concepto="NORMATIVA",
+            importe=importe,
+        )
+
+    def total(**kw: Any) -> Decimal:
+        return sum(
+            (Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, "concept", **kw)),
+            Decimal("0"),
+        )
+
+    assert total() == Decimal("7000.00")
+    assert total(asset_id=activo) == Decimal("1000.00")
+    assert total(asset_ids=[activo, otro_activo]) == Decimal("3000.00")
+    assert total(asset_ids=[activo, otro_activo, tercero]) == Decimal("7000.00")
+
+
+def test_los_cinco_cortes_cuadran_con_varios_activos_elegidos(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str, tipologia: str
+) -> None:
+    """`[REQ]` Los cinco gráficos del dashboard se leen en la misma pantalla y
+    con el mismo filtro. Si no sumaran lo mismo, el descuadre lo encontraría el
+    cliente con la calculadora delante."""
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/assets",
+        headers=cab("consultor_a"),
+        json={"name": "Nave 3", "typology_id": tipologia},
+    )
+    tercero = str(r.json()["id"])
+
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06.01",
+        concepto="NORMATIVA",
+        importe="12345.67",
+        horizonte="CORTO",
+        riesgo="04",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        otro_activo,
+        codigo_capex="HC.H02",
+        concepto=None,
+        importe="8000.00",
+        horizonte="LARGO",
+    )
+    # Ruido fuera de la selección: si el filtro no llegara a alguno de los
+    # cortes, ese corte saldría más grande que los demás.
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        tercero,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="99999.00",
+        horizonte="MEDIO",
+        riesgo="01",
+    )
+
+    dos = [activo, otro_activo]
+    totales = {
+        corte: sum(
+            (Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, corte, asset_ids=dos)),
+            Decimal("0"),
+        )
+        for corte in ("concept", "horizon", "chapter", "risk", "object")
+    }
+
+    assert len(set(totales.values())) == 1, totales
+    assert totales["concept"] == Decimal("20345.67")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Por riesgo: cuánto de lo que hay que pagar es grave
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_reparto_por_riesgo_trae_los_cuatro_grados_en_orden_de_gravedad(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """`[REQ]` Los cuatro salen siempre y en orden de gravedad, no de importe.
+
+    Un grado que desaparece de la lista porque no tiene nada se confunde con
+    uno que sí lo tiene, y reordenar por cuantía destruye el eje: el riesgo es
+    una escala, no un ranking.
+    """
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06",
+        concepto="NORMATIVA",
+        importe="90000.00",
+        riesgo="04",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="1000.00",
+        riesgo="01",
+    )
+
+    filas = resumen(cliente, cab, proyecto, "risk")
+
+    assert [f["risk_score"] for f in filas] == [4, 3, 2, 1], "de más grave a menos"
+    por_codigo = {f["risk_code"]: f for f in filas}
+    assert Decimal(por_codigo["04"]["amount"]) == Decimal("90000.00")
+    assert Decimal(por_codigo["01"]["amount"]) == Decimal("1000.00")
+    assert Decimal(por_codigo["02"]["amount"]) == Decimal("0"), "los vacíos salen con cero"
+
+
+def test_un_hallazgo_sin_riesgo_sale_como_sin_clasificar(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Que nadie lo haya valorado es un dato, no un hueco: igual que el «Sin
+    concepto» de `by-concept`. Y su fila **solo aparece si tiene algo**."""
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06",
+        concepto="NORMATIVA",
+        importe="500.00",
+        riesgo="03",
+    )
+    assert [f["risk_code"] for f in resumen(cliente, cab, proyecto, "risk")] == [
+        "04",
+        "03",
+        "02",
+        "01",
+    ]
+
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="700.00",
+    )
+    filas = resumen(cliente, cab, proyecto, "risk")
+
+    sin = next(f for f in filas if f["risk_code"] == "SIN_GRADO")
+    assert filas[-1] is sin, "va al final: no tiene puesto en la escala"
+    assert sin["risk_score"] is None
+    assert Decimal(sin["amount"]) == Decimal("700.00")
+
+
+def test_el_reparto_por_riesgo_cuadra_con_la_matriz_de_riesgos(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """`[REC]` Dos pantallas calculan lo mismo por caminos distintos —la matriz
+    cruza riesgo × plazo, este corte solo agrupa—, así que se comparan aquí. Un
+    descuadre entre las dos lo encontraría el cliente."""
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H06",
+        concepto="NORMATIVA",
+        importe="12345.67",
+        riesgo="04",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H03",
+        concepto="MEJORA",
+        importe="800.00",
+        riesgo="02",
+    )
+
+    corte = {f["risk_code"]: Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, "risk")}
+    matriz = cliente.get(
+        f"{RUTA}/projects/{proyecto}/risk-matrix", headers=cab("consultor_a")
+    ).json()
+
+    for grado in matriz["grados"]:
+        # La matriz enseña siempre la fila de «Sin clasificar» y el corte solo
+        # cuando tiene algo: ausente y a cero son lo mismo, y es lo que se
+        # compara. Lo que no puede pasar es que un importe discrepe.
+        assert corte.get(grado["code"], Decimal("0")) == Decimal(grado["importe"]), grado["code"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Por objeto: el desglose dentro de cada capítulo
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_desglose_por_objeto_suma_lo_mismo_que_su_capitulo(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """`[REQ]` §3.3 · Las barras apiladas se leen contra las de capítulo, una
+    encima de otra. Si los trozos no sumaran la barra, el gráfico mentiría en
+    la misma pantalla que lo desmiente."""
+    for codigo, importe in (
+        ("HC.H09.01", "5000.00"),
+        ("HC.H09.02", "3000.00"),
+        # Codificado **en el capítulo**, sin bajar al objeto: también suma.
+        ("HC.H09", "1000.00"),
+        ("HC.H02.01", "400.00"),
+    ):
+        crear_hallazgo(
+            cliente,
+            cab,
+            proyecto,
+            activo,
+            codigo_capex=codigo,
+            concepto="NORMATIVA",
+            importe=importe,
+        )
+
+    objetos = resumen(cliente, cab, proyecto, "object")
+    capitulos = {
+        c["chapter_code"]: Decimal(c["amount"]) for c in resumen(cliente, cab, proyecto, "chapter")
+    }
+
+    por_capitulo: dict[str, Decimal] = {}
+    for f in objetos:
+        por_capitulo[f["chapter_code"]] = por_capitulo.get(
+            f["chapter_code"], Decimal("0")
+        ) + Decimal(f["amount"])
+    assert por_capitulo == capitulos
+
+    # El capítulo grande va primero, y dentro sus objetos de mayor a menor.
+    assert [f["chapter_code"] for f in objetos][:3] == ["HC.H09"] * 3
+    h09 = [f for f in objetos if f["chapter_code"] == "HC.H09"]
+    assert [f["object_code"] for f in h09] == ["HC.H09.01", "HC.H09.02", None]
+    assert h09[-1]["object_name"] is None, "codificado en el capítulo: no tiene objeto"

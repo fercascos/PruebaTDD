@@ -566,6 +566,30 @@ export type ResumenPorCapitulo = {
   total_cost: string
 }
 
+export type ResumenPorRiesgo = {
+  /** `01`…`04`, o `SIN_GRADO` para los hallazgos que nadie clasificó. */
+  risk_code: string
+  risk_name: string
+  /** 1 a 4, y `null` en la fila de los sin clasificar: no tiene puesto en la escala. */
+  risk_score: number | null
+  findings: number
+  lines: number
+  amount: string
+  total_cost: string
+}
+
+export type ResumenPorObjeto = {
+  chapter_code: string
+  chapter_name: string
+  /** `null` cuando el hallazgo está codificado **en el capítulo**, sin bajar al objeto. */
+  object_code: string | null
+  object_name: string | null
+  findings: number
+  lines: number
+  amount: string
+  total_cost: string
+}
+
 export type ResumenPorActivo = {
   asset_id: string
   asset_name: string

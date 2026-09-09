@@ -85,7 +85,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Medios del plan al inventario** · capítulo 4 de la Norma Básica | ✅ Completo | `test_medios_del_plan.py` · 14 + `test_equipos_y_confidencialidad.py` · 15 |
 | **Mantenimiento preventivo** · periodicidad y próxima revisión | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
 | **Confidencialidad por tipo** · un RESTRINGIDO no va a ninguna IA | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
-| **Resumen del CAPEX** · los cuatro cortes, que cuadren entre sí, y el reparto por activo | ✅ Completo | `tests/integration/test_resumen_capex.py` · 13 |
+| **Cortes del CAPEX** · los cinco del dashboard, que cuadren entre sí con **varios activos elegidos**, y que el de riesgo cuadre con la matriz | ✅ Completo | `tests/integration/test_resumen_capex.py` · 21 |
 
 ## El esquema se versiona con Alembic
 

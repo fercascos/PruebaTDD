@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -25,6 +25,7 @@ from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.exports.plantilla_capex import Idioma
+from tdd.findings.riesgos import SIN_GRADO
 
 if TYPE_CHECKING:  # `capex_desde_snapshot` arrastra `openpyxl`: se importa al usarlo.
     from tdd.exports.capex_desde_snapshot import Parte
@@ -147,6 +148,31 @@ def listar(project_id: uuid.UUID, s: SesionDep) -> Any:
     return [dict(f) for f in filas]
 
 
+#: `[REQ]` El filtro de activos de los cortes del dashboard, escrito una vez.
+#:
+#: Se repite el mismo parámetro —`?asset_id=…&asset_id=…`— en vez de inventar
+#: uno nuevo: es la forma estándar de una lista en una URL, no rompe a quien ya
+#: llamaba con uno solo, y **un activo y varios son la misma consulta**. Tenerlo
+#: en un sitio es lo que impide que un corte filtre por `capex_item.asset_id` y
+#: otro por el del hallazgo, que es exactamente el descuadre que ya apareció una
+#: vez entre `by-horizon` y `by-asset`.
+#:
+#: El activo está siempre **en el hallazgo**: una actuación recurrente (P-44)
+#: tiene varias líneas y un solo edificio.
+FILTRO_DE_ACTIVOS = " AND (CAST(:a AS uuid[]) IS NULL OR f.asset_id = ANY(CAST(:a AS uuid[]))) "
+
+
+def _activos(asset_id: list[uuid.UUID] | None) -> list[str] | None:
+    """La lista para el `ANY`, o `None` cuando no hay filtro.
+
+    Una lista **vacía** es `None` y no «ningún activo»: llega escribiendo
+    `?asset_id=` a mano o soltando el último de la selección, y devolver cero
+    euros ahí se lee como un proyecto sin CAPEX. Sin filtro es lo que espera
+    quien acaba de quitar el último.
+    """
+    return [str(a) for a in asset_id] if asset_id else None
+
+
 class ResumenPorActivo(BaseModel):
     asset_id: uuid.UUID
     asset_name: str
@@ -215,8 +241,8 @@ class ResumenPorHorizonte(BaseModel):
 def resumen_por_horizonte(
     project_id: uuid.UUID,
     s: SesionDep,
-    #: El perfil temporal del gasto de un solo edificio. Ver `by-concept`.
-    asset_id: uuid.UUID | None = None,
+    #: El perfil temporal del gasto de los edificios elegidos. Ver `by-concept`.
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
 ) -> Any:
     """P-05 · Con un horizonte por línea, esto es un `GROUP BY`.
 
@@ -253,13 +279,13 @@ def resumen_por_horizonte(
                 "  FROM capex_item ci "
                 "  JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
                 "  WHERE ci.project_id = :p "
-                "    AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
-                ") ci ON ci.time_horizon_id = th.id "
+                + FILTRO_DE_ACTIVOS
+                + ") ci ON ci.time_horizon_id = th.id "
                 # Los cinco plazos salen siempre, con ceros: un plazo que
                 # desaparece de la lista se confunde con uno que no toca.
                 "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
             ),
-            {"p": project_id, "a": str(asset_id) if asset_id else None},
+            {"p": project_id, "a": _activos(asset_id)},
         )
         .mappings()
         .all()
@@ -292,7 +318,11 @@ def resumen_por_concepto(
     #: por activo dice qué le pasa a ESE edificio, que es sobre el que se
     #: negocia el precio. Un parque con un 40 % de normativa puede tener ese
     #: 40 % concentrado en una sola nave, y agregado eso no se ve.
-    asset_id: uuid.UUID | None = None,
+    #:
+    #: `[REQ]` Se puede repetir —`?asset_id=…&asset_id=…`— para leer **varios
+    #: edificios juntos** sin llegar a la cartera entera: es la comparación que
+    #: se hace en la reunión, «las dos naves del polígono frente al resto».
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
 ) -> Any:
     """`[REQ]` El CAPEX por **concepto de gasto**: en qué se va el dinero.
 
@@ -325,16 +355,12 @@ def resumen_por_concepto(
                 "FROM capex_item ci "
                 "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
                 "LEFT JOIN capex_concept cc ON cc.id = f.capex_concept_id "
-                "WHERE ci.project_id = :p "
-                # El activo está en el HALLAZGO, no en la línea: una actuación
-                # recurrente (P-44) tiene varias líneas y un solo edificio.
-                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
-                "GROUP BY cc.code, cc.name_es "
+                "WHERE ci.project_id = :p " + FILTRO_DE_ACTIVOS + "GROUP BY cc.code, cc.name_es "
                 # De mayor a menor: es el orden en el que se lee un reparto, y
                 # el que permite doblar la cola en «Otros» sin recalcular nada.
                 "ORDER BY sum(ci.amount) DESC"
             ),
-            {"p": project_id, "a": str(asset_id) if asset_id else None},
+            {"p": project_id, "a": _activos(asset_id)},
         )
         .mappings()
         .all()
@@ -358,8 +384,8 @@ class ResumenPorCapitulo(BaseModel):
 def resumen_por_capitulo(
     project_id: uuid.UUID,
     s: SesionDep,
-    #: Qué parte de UN edificio se lleva el dinero. Ver `by-concept`.
-    asset_id: uuid.UUID | None = None,
+    #: Qué parte de los edificios elegidos se lleva el dinero. Ver `by-concept`.
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
 ) -> Any:
     """El CAPEX por **capítulo** del árbol: qué parte del edificio se lleva el
     dinero.
@@ -385,10 +411,157 @@ def resumen_por_capitulo(
                 "JOIN capex_code cap ON cap.id = CASE WHEN cod.level = 3 "
                 "                                     THEN cod.parent_id ELSE cod.id END "
                 "WHERE ci.project_id = :p "
-                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
-                "GROUP BY cap.code, cap.name_es ORDER BY sum(ci.amount) DESC"
+                + FILTRO_DE_ACTIVOS
+                + "GROUP BY cap.code, cap.name_es ORDER BY sum(ci.amount) DESC"
             ),
-            {"p": project_id, "a": str(asset_id) if asset_id else None},
+            {"p": project_id, "a": _activos(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class ResumenPorRiesgo(BaseModel):
+    risk_code: str
+    risk_name: str
+    #: 1 a 4, o `None` en la fila de los hallazgos sin clasificar.
+    risk_score: int | None
+    findings: int
+    lines: int
+    amount: Decimal
+    total_cost: Decimal
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-risk",
+    response_model=list[ResumenPorRiesgo],
+)
+def resumen_por_riesgo(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
+) -> Any:
+    """El CAPEX por **grado de riesgo**: cuánto de lo que hay que pagar es grave.
+
+    Es el corte que convierte el total en una decisión. Un millón repartido en
+    riesgo bajo y un millón concentrado en extremo se escriben igual y no se
+    negocian igual.
+
+    **Los cuatro grados salen siempre, con ceros**, y en orden de gravedad
+    descendente: un grado que desaparece de la lista porque no tiene nada se
+    confunde con uno que sí, y el orden por importe destruiría el eje —el
+    riesgo es una escala, no un ranking—.
+
+    Los hallazgos **sin grado** salen en su propia fila, como «Sin clasificar»,
+    igual que el «Sin concepto» de `by-concept`: que nadie lo haya valorado es
+    un dato, no un hueco. Esa fila **solo aparece si tiene algo**; las otras
+    cuatro, siempre. Su código es el mismo `SIN_GRADO` que usa la matriz de
+    riesgos, y no un `SIN` de andar por casa: las dos pantallas enseñan la misma
+    fila y llamarla de dos maneras obliga a traducir en el cliente.
+
+    `[REC]` La matriz de riesgos calcula lo mismo por otro camino y con otra
+    forma —riesgo × plazo—. Que coincidan no se deja a la suerte: hay una
+    prueba que compara los dos.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT * FROM ( "
+                # Los cuatro grados por la izquierda, para que salgan con ceros.
+                # Qué grados ve esta organización lo decide la RLS del catálogo,
+                # no un `WHERE` aquí: una organización con sus propios grados
+                # los vería filtrados en un sitio y no en el otro.
+                "  SELECT rl.code AS risk_code, rl.name_es AS risk_name, "
+                "         rl.score AS risk_score, "
+                "         count(DISTINCT ci.finding_id) AS findings, "
+                "         count(ci.id) AS lines, "
+                "         COALESCE(sum(ci.amount), 0) AS amount, "
+                "         COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "  FROM risk_level rl LEFT JOIN ( "
+                "    SELECT ci.id, ci.finding_id, ci.amount, ci.total_cost, f.risk_level_id "
+                "    FROM capex_item ci "
+                "    JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "    WHERE ci.project_id = :p " + FILTRO_DE_ACTIVOS + "  ) ci "
+                "    ON ci.risk_level_id = rl.id "
+                "  GROUP BY rl.code, rl.name_es, rl.score "
+                # Y la fila de los que nadie clasificó, solo si la hay.
+                "  UNION ALL "
+                "  SELECT :sin, 'Sin clasificar', NULL, "
+                "         count(DISTINCT ci.finding_id), count(ci.id), "
+                "         COALESCE(sum(ci.amount), 0), COALESCE(sum(ci.total_cost), 0) "
+                "  FROM capex_item ci "
+                "  JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "  WHERE ci.project_id = :p AND f.risk_level_id IS NULL "
+                + FILTRO_DE_ACTIVOS
+                + "  HAVING count(ci.id) > 0 "
+                ") g ORDER BY g.risk_score DESC NULLS LAST"
+            ),
+            {"p": project_id, "a": _activos(asset_id), "sin": SIN_GRADO},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class ResumenPorObjeto(BaseModel):
+    chapter_code: str
+    chapter_name: str
+    #: `None` cuando el hallazgo está codificado **en el capítulo**, sin bajar al
+    #: objeto. No es lo mismo que un objeto llamado «General».
+    object_code: str | None
+    object_name: str | None
+    findings: int
+    lines: int
+    amount: Decimal
+    total_cost: Decimal
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-object",
+    response_model=list[ResumenPorObjeto],
+)
+def resumen_por_objeto(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
+) -> Any:
+    """El desglose de `by-chapter` **un nivel más abajo**: capítulo y objeto.
+
+    Es el mismo dinero que `by-chapter` partido en trozos, y por eso devuelve el
+    capítulo en cada fila en vez de dejar que el cliente lo deduzca del código:
+    dos objetos pueden llamarse igual en capítulos distintos —«General» y
+    «Otros» están en los veintiocho— y agrupar por nombre los sumaría juntos.
+
+    Ordenado por **capítulo de mayor a menor y, dentro, objeto de mayor a
+    menor**: es el orden en el que se lee una barra apilada, y el que hace que
+    el trozo grande quede a la izquierda en todas.
+    """
+    filas = (
+        s.execute(
+            text(
+                "SELECT cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                # El objeto solo existe si el hallazgo bajó al nivel 3.
+                "CASE WHEN cod.level = 3 THEN cod.code END AS object_code, "
+                "CASE WHEN cod.level = 3 THEN cod.name_es END AS object_name, "
+                "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
+                "COALESCE(sum(ci.amount), 0) AS amount, "
+                "COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM capex_item ci "
+                "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
+                "JOIN capex_code cod ON cod.id = f.capex_code_id "
+                "JOIN capex_code cap ON cap.id = CASE WHEN cod.level = 3 "
+                "                                     THEN cod.parent_id ELSE cod.id END "
+                "WHERE ci.project_id = :p "
+                + FILTRO_DE_ACTIVOS
+                + "GROUP BY cap.code, cap.name_es, cod.level, cod.code, cod.name_es "
+                # El capítulo se ordena por SU total, no por el del trozo: si no,
+                # las barras saldrían intercaladas y dejaría de leerse.
+                "ORDER BY sum(sum(ci.amount)) OVER (PARTITION BY cap.code) DESC, "
+                "         cap.code, sum(ci.amount) DESC"
+            ),
+            {"p": project_id, "a": _activos(asset_id)},
         )
         .mappings()
         .all()

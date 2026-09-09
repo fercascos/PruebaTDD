@@ -39,7 +39,8 @@ hay CORS y en producción la aplicación se sirve de un solo origen.
 | **Riesgos** | Distribución por grado, matriz riesgo × horizonte y desglose por capítulo |
 | **Anotador** | Flechas, recuadros, elipses, líneas y texto sobre la foto; el original no se toca |
 | **Nuevo hallazgo** | Con sus líneas de CAPEX, una por plazo; también **desde una foto** |
-| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX**. Con una vista de **Resumen**: los titulares, la tarta de conceptos y tres gráficos de barras, todo ello **agrupado o de un solo activo** con un mismo selector |
+| **Hallazgos y CAPEX** | La tabla del informe: una fila por actuación, una columna por plazo, y **exportar a XLSX** |
+| **Dashboard** | Cinco cortes del CAPEX —concepto, plazo, riesgo, categoría con sus objetos apilados, y activo—, todos **agrupados, de uno o de varios activos** con un mismo selector |
 | **Ficha de hallazgo** | Editar la actuación y sus líneas, con la **cascada de CAPEX a la vista** y las transiciones con su motivo |
 | **Personas** | Alta, rol y baja del equipo. Sin esto la aplicación la usaba una sola persona |
 | **Inventario de equipo** | Con **mantenimiento preventivo**: cada cuántos meses toca, cuándo fue la última y si está vencido. Filtro propio, separado del de vida útil agotada |
@@ -211,36 +212,62 @@ nombre, su importe y su porcentaje escritos; cada barra, su nombre y su cifra; y
 bajo la tarta hay una tabla con los mismos números. El color acompaña; no
 informa por sí solo.
 
-### El filtro alcanza los cuatro bloques a la vez
+### El dashboard: cinco cortes y un solo filtro
 
-`[REQ]` El selector de activo está **una sola vez, arriba**, junto a la frase
-que dice qué se está mirando, y manda sobre los titulares y sobre los cuatro
-gráficos. La razón es que en la reunión las cuatro preguntas se hacen del mismo
-edificio: saber en qué se va el dinero de una nave no sirve de nada si el
-«cuándo hay que pagarlo» de al lado sigue siendo el del parque entero. Un filtro
-por gráfico permitiría justo esa pantalla —cuatro alcances distintos, ninguno
-escrito— y sería un error de lectura imposible de detectar mirándola.
+`src/paginas/Dashboard.tsx`. Cinco preguntas —en qué se va el dinero, cuándo hay
+que pagarlo, cuánto de esto es grave, qué parte del edificio y qué edificio— con
+**un selector arriba que manda sobre las cuatro primeras**. La razón es que en la
+reunión las preguntas se hacen del mismo edificio: saber en qué se va el dinero
+de una nave no sirve de nada si el «cuándo hay que pagarlo» de al lado sigue
+siendo el del parque entero. Un filtro por gráfico permitiría justo esa pantalla
+—cinco alcances distintos, ninguno escrito— y sería un error de lectura imposible
+de detectar mirándola.
+
+`[REQ]` El selector admite **uno, varios o toda la cartera**. No es una
+comodidad: la comparación que se hace es «las dos naves del polígono frente al
+resto», y con un activo por consulta hay que sumarlas a mano, que es el descuadre
+que esta pantalla existe para evitar. Son casillas y no un `<select multiple>`,
+que obliga a saber que se elige con la tecla de control y **pierde la selección
+entera con un clic despistado** —aquí, recargar cuatro gráficos sin saber por
+qué—.
 
 Con dos consecuencias deliberadas:
 
 * **«Qué edificio» se queda, y no se filtra nunca.** Es el único bloque que
-  sigue enseñando el proyecto entero, y por eso vale de referencia: dice si el
+  sigue enseñando la cartera entera, y por eso vale de referencia: dice si el
   edificio que se está mirando es el caro o uno de los baratos, cosa que los
-  otros tres, ya filtrados, no pueden decir. Y es lo que permite **comparar
+  otros cuatro, ya filtrados, no pueden decir. Y es lo que permite **comparar
   varios activos en el momento sin salir de la pantalla** —mirar una nave,
   mirar la de al lado, volver al conjunto—, que es como se usa en la reunión.
-  Sus barras se pulsan: cada una lleva toda la vista a ese activo, y la que ya
-  está puesta la devuelve al conjunto. Son botones de verdad, así que llegan
-  con el tabulador y llevan `aria-pressed`; `[REQ]` la puesta se distingue
-  **también por escrito**, con una pastilla «en pantalla», porque el realce de
-  color no sobrevive a una fotocopia en gris.
-* **La cuarta tarjeta cambia de pregunta.** Con un activo elegido deja de
-  contar activos y pasa a decir **qué parte del CAPEX del proyecto es este
-  edificio**, que es el número que entra en la negociación.
+  Sus barras se pulsan: cada una mete o saca ese activo de la selección. Son
+  botones de verdad, así que llegan con el tabulador y llevan `aria-pressed`;
+  `[REQ]` las puestas se distinguen **también por escrito**, con una pastilla
+  «en pantalla», porque el realce de color no sobrevive a una fotocopia en gris.
+* **La cuarta tarjeta cambia de pregunta.** Con una selección puesta deja de
+  contar activos y pasa a decir **qué parte del CAPEX del proyecto es esto**, que
+  es el número que entra en la negociación.
 
-Los tres cortes filtrados suman lo mismo entre sí, y hay una prueba en la suite
-del API que lo impone; en el navegador se lee comparando el titular con las tres
-sumas.
+Los cortes filtrados suman lo mismo entre sí, y hay pruebas que lo imponen: en la
+suite del API con varios activos elegidos, y en `npm run test:dashboard` sobre la
+pantalla ya pintada.
+
+### En una barra apilada el color separa, no identifica
+
+El corte por categoría y objeto es una **barra apilada**: cada categoría del
+árbol de CAPEX es una barra y los tramos de dentro son sus objetos. Y ahí la
+paleta medida no da: una categoría puede traer dieciséis objetos, y **no existe
+una paleta de dieciséis tonos** que pase las comprobaciones de daltonismo.
+
+Así que los tramos van en una **escalera de claridades de un solo tono**, con dos
+píxeles de hueco entre ellos. Lo que distingue dos tramos contiguos es la
+luminosidad, que sobrevive a los tres tipos de daltonismo y a una impresión en
+blanco y negro; la escalera se cicla, y eso es correcto justo porque el color no
+identifica —dos tramos que comparten claridad nunca están pegados—. `[REQ]` Quién
+es cada tramo lo dicen su nombre escrito dentro cuando cabe, su título al pasar
+por encima y la tabla de debajo, que los lista todos con su importe y su parte de
+la categoría. Cada peldaño lleva el color de su texto **medido** contra su fondo:
+los cuatro pasan el 4,5:1. En un móvil el rótulo de dentro se quita: en una barra
+de cuarenta píxeles salía como «Cu…».
 
 ### Los números se escriben en castellano, y eso hay que forzarlo
 

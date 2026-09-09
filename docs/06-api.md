@@ -399,12 +399,20 @@ que hasta ahora se sumaba a mano.
 | `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
 | `GET` | `/projects/{id}/capex/summary/by-horizon?asset_id=` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe. Los cinco plazos salen siempre, con ceros |
 | `GET` | `/projects/{id}/capex/summary/by-chapter?asset_id=` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
+| `GET` | `/projects/{id}/capex/summary/by-object?asset_id=` | **Lo mismo, un nivel más abajo:** una fila por capítulo **y objeto**, que es lo que alimenta las barras apiladas. El objeto va a `null` cuando el hallazgo se codificó en el propio capítulo |
+| `GET` | `/projects/{id}/capex/summary/by-risk?asset_id=` | **Cuánto de esto es grave.** Los cuatro grados salen siempre y en orden de gravedad; los hallazgos sin grado, como `SIN_GRADO`, solo si los hay |
 | `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros. **Sin `asset_id`: es el índice, no un corte** |
 
-`[REQ]` **Los cuatro suman lo mismo, y hay una prueba que lo impone.** Cuatro
-gráficos en la misma pantalla que no cuadran destruyen la confianza en los
-cuatro, y el descuadre no lo ve nadie hasta que el cliente suma con la
-calculadora.
+`[REQ]` **`asset_id` se puede repetir**: `?asset_id=…&asset_id=…` lee **varios
+edificios juntos**, que es la comparación que se hace en una cartera —«las dos
+naves del polígono frente al resto»—. Es la forma estándar de una lista en una
+URL y no rompe a quien llamaba con uno solo. Sin el parámetro, el proyecto
+entero.
+
+`[REQ]` **Todos suman lo mismo, y hay una prueba que lo impone.** Cinco gráficos
+en la misma pantalla que no cuadran destruyen la confianza en los cinco, y el
+descuadre no lo ve nadie hasta que el cliente suma con la calculadora. `by-risk`
+se compara además contra `/risk-matrix`, que calcula lo mismo por otro camino.
 
 Esa prueba encontró uno: `by-horizon` **no excluía los hallazgos borrados**. El
 borrado es lógico —`deleted_at`, porque borrar del informe algo que se llegó a

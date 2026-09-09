@@ -85,6 +85,46 @@ export function agrupar<T>(
   }
 }
 
+/**
+ * La escalera de tonos para **apilar**, que es otro problema y tiene otra
+ * respuesta.
+ *
+ * Una barra apilada de un capítulo del CAPEX puede llevar dieciséis objetos
+ * dentro. Con cuatro tonos medidos, colorearlos de dieciséis maneras
+ * distinguibles **no se puede**: no es que no se haya hecho, es que no existe
+ * una paleta que pase las comprobaciones con dieciséis categorías.
+ *
+ * Así que aquí el color **no identifica: separa**. Es una sola familia de tono
+ * —el azul de la serie— en cuatro claridades que se alternan, y lo que
+ * distingue dos tramos contiguos es la **luminosidad**, que sobrevive a los
+ * tres tipos de daltonismo y a una impresión en blanco y negro. Entre tramos va
+ * además un hueco de dos píxeles, para que el corte se vea aunque dos
+ * claridades caigan cerca.
+ *
+ * La escalera **se cicla**: el quinto tramo repite el primero. Es deliberado y
+ * es la diferencia con `colorDePorcion`, que prefiere caer en gris antes que
+ * ciclar. Allí el color identifica y repetirlo sería mentir; aquí no
+ * identifica, así que repetirlo no dice nada falso —los tramos que comparten
+ * claridad nunca están pegados—. `[REQ]` Quién es cada tramo lo dicen su nombre
+ * escrito dentro cuando cabe, su título al pasar por encima y la tabla de
+ * debajo, que los lista todos.
+ *
+ * Cada peldaño lleva **el color de su texto ya medido** contra su fondo: los
+ * dos oscuros con blanco (10,6:1 y 7,8:1) y los dos claros con la tinta
+ * (6,0:1 y 9,1:1). Los cuatro pasan el 4,5:1 que pide texto normal.
+ */
+export const APILADO = [
+  { fondo: '#0f3f75', texto: '#ffffff' },
+  { fondo: '#6fa3e4', texto: '#12243a' },
+  { fondo: '#1c5391', texto: '#ffffff' },
+  { fondo: '#a8c8ef', texto: '#12243a' },
+] as const
+
+/** El peldaño del tramo `n`, ciclando. Ver `APILADO`. */
+export function tinteApilado(indice: number): { fondo: string; texto: string } {
+  return APILADO[indice % APILADO.length] ?? APILADO[0]
+}
+
 /** El color de la porción `n`, con el gris para la cola.
  *
  * Un índice fuera de la paleta cae en el gris en vez de ciclar. Ciclar los

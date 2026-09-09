@@ -12,6 +12,7 @@
     "test:anotador": "node herramientas/comprobar-anotador.mjs",
     "test:mapa": "node herramientas/comprobar-mapa.mjs",
     "test:riesgos": "node herramientas/comprobar-riesgos.mjs",
+    "test:dashboard": "node herramientas/comprobar-dashboard.mjs",
     "test:comparador": "node herramientas/comprobar-comparador.mjs",
     "test:inventario": "node herramientas/comprobar-inventario.mjs",
     "test:importacion": "node herramientas/comprobar-importacion.mjs",
