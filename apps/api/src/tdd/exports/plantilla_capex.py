@@ -113,8 +113,8 @@ GEOMETRIA: tuple[Bloque, ...] = (
     # tramo por tipo de coste**, con un subtotal que suma el tipo entero. Por
     # eso su categoría «Otros» comparte tramo con la de contenido: no hay
     # subtotal al que atribuirla mal, y es el mismo caso que las dos categorías
-    # de Operativos, que ya lo compartían. Soft costs no puede hacerlo —ver
-    # `SIN_TRAMO`—, porque allí cada categoría tiene subtotal propio.
+    # de Operativos, que ya lo compartían. Soft costs es el único donde cada
+    # categoría tiene subtotal propio, y por eso su «Otros» lleva tramo aparte.
     Bloque("MA.MA1", 194, 195, 204),
     Bloque("MA.MA2", 194, 195, 204),
     Bloque("ESG.ES1", 207, 208, 217),
@@ -129,38 +129,27 @@ GEOMETRIA: tuple[Bloque, ...] = (
     Bloque("SC.S01", 220, 224, 230, 3),
     Bloque("SC.S02", 232, 234, 242, 1),
     Bloque("SC.S03", 244, 248, 254, 3),
-    # Añadidos por `tools/anadir_bloques_plantillas.py`: la plantilla declaraba
-    # los dos tipos de coste en «00 Datos Categorías» pero no tenía dónde
-    # escribirlos. Van al final de la hoja, sobre filas que estaban vacías.
-    # `[LIM]` Operativos tiene dos categorías y **comparten el bloque**: sus
-    # veinte filas son las mismas diez, porque la plantilla no da más. Se
+    # Añadidos por `tools/anadir_bloques_plantillas.py` sobre filas que estaban
+    # vacías al final de la hoja. Primero la cuarta categoría de soft costs
+    # `[REQ]` P-45, pegada a las suyas; detrás, los dos tipos de coste que la
+    # plantilla declaraba en «00 Datos Categorías» y no sabía dónde escribir.
+    # `SC.S04` no reserva filas: es el cajón de sastre, no lleva porcentajes.
+    Bloque("SC.S04", 256, 257, 266),
+    # `[LIM]` Las tres categorías de Operativos **comparten el bloque**: sus
+    # treinta filas son las mismas diez, porque la plantilla no da más. Se
     # controla con `comprobar_cabida`, que las cuenta juntas.
-    Bloque("OP.OP1", 257, 258, 267),
-    Bloque("OP.OP2", 257, 258, 267),
-    Bloque("OP.OP3", 257, 258, 267),
-    # La 271 es la línea de imprevistos que calcula la plantilla desde el
-    # porcentaje de «00 Datos Activo». La aplicación escribe a partir de la 272.
-    Bloque("IMP.IM1", 270, 272, 280, 1),
-    Bloque("IMP.IM2", 270, 272, 280, 1),
+    Bloque("OP.OP1", 269, 270, 279),
+    Bloque("OP.OP2", 269, 270, 279),
+    Bloque("OP.OP3", 269, 270, 279),
+    # La 283 es la línea de imprevistos que calcula la plantilla desde el
+    # porcentaje de «00 Datos Activo». La aplicación escribe a partir de la 284.
+    Bloque("IMP.IM1", 282, 284, 292, 1),
+    Bloque("IMP.IM2", 282, 284, 292, 1),
 )
 POR_CODIGO: dict[str, Bloque] = {b.codigo: b for b in GEOMETRIA}
 
-#: `[LIM]` Categorías del catálogo que **la plantilla no sabe dónde escribir**.
-#:
-#: `SC.S04 «Otros»` llegó con el árbol del cliente y la hoja no tiene tramo para
-#: ella: el total de soft costs es `=J220+J232+J244`, la suma exacta de las tres
-#: categorías que sí trae. Meterla en el tramo de otra la sumaría a un subtotal
-#: que no es el suyo —«Licencias y Tasas» cobrando lo que no es una licencia—, y
-#: ese error no se ve en la hoja: cuadra. Así que no se exporta: se avisa antes,
-#: por la misma vía que un bloque desbordado, y la exportación se niega entera.
-#:
-#: `[PDV]` Resolverlo bien es **añadir un cuarto tramo a la plantilla** y
-#: corregir la fórmula del total, como hizo `tools/anadir_bloques_plantillas.py`
-#: con Operativos e Imprevistos. Hace falta que el cliente confirme que su
-#: plantilla puede cambiar.
-SIN_TRAMO: frozenset[str] = frozenset({"SC.S04"})
-
 #: Columnas de una fila de actuación.
+COL_CATEGORIA = "D"
 COL_OBJETO = "E"
 COL_ZONA = "F"
 COL_DESCRIPCION = "G"
@@ -278,6 +267,11 @@ class Actuacion:
 
     #: Código de `capex_code` de nivel 2: decide en qué bloque cae.
     categoria: str
+    #: Etiqueta de esa categoría **en el idioma de la plantilla**, y solo cuando
+    #: hace falta escribirla: los tramos que comparten varias categorías traen
+    #: en la columna «Categoría» la de la primera, y dejarla puesta clasificaría
+    #: un «Otros» de Medioambiente como si fuera de `MA1`. Ver `vocabulario`.
+    etiqueta_categoria: str | None = None
     objeto: str | None = None
     zona: str | None = None
     descripcion: str = ""
@@ -333,14 +327,16 @@ def comprobar_cabida(actuaciones: list[Actuacion]) -> list[Desbordamiento]:
     # repartidas entre las dos tampoco caben.
     cuenta: dict[int, int] = {}
     etiquetas: dict[int, list[str]] = {}
-    # Las categorías sin tramo se cuentan aparte y se devuelven como un
-    # desbordamiento de cabida cero, que es literalmente lo que son.
+    # Una categoría para la que la hoja no tiene tramo se devuelve como un
+    # desbordamiento de cabida cero, que es literalmente lo que es. Hoy no
+    # debería haber ninguna —el árbol del cliente tiene tramo para todas—, y
+    # avisar antes es mejor que reventar al escribir: el aviso dice qué
+    # categoría y cuántas actuaciones, y llega sin haber tocado el fichero.
     sin_tramo: dict[str, int] = {}
     for a in actuaciones:
         bloque = POR_CODIGO.get(a.categoria)
         if bloque is None:
-            if a.categoria in SIN_TRAMO:
-                sin_tramo[a.categoria] = sin_tramo.get(a.categoria, 0) + 1
+            sin_tramo[a.categoria] = sin_tramo.get(a.categoria, 0) + 1
             continue
         cuenta[bloque.primera] = cuenta.get(bloque.primera, 0) + 1
         if a.categoria not in etiquetas.setdefault(bloque.primera, []):
@@ -472,6 +468,8 @@ def _rellenar_capex(bruto: bytes, actuaciones: list[Actuacion]) -> bytes:
         fila = siguiente.get(bloque.primera, bloque.primera)
         siguiente[bloque.primera] = fila + 1
 
+        if a.etiqueta_categoria is not None:
+            escribir(datos, f"{COL_CATEGORIA}{fila}", a.etiqueta_categoria)
         escribir(datos, f"{COL_OBJETO}{fila}", a.objeto)
         escribir(datos, f"{COL_ZONA}{fila}", a.zona)
         escribir(datos, f"{COL_DESCRIPCION}{fila}", a.descripcion)

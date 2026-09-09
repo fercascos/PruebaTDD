@@ -62,6 +62,29 @@ MAX_OBJETOS = 16  # C..R
 #: escribe `-`. Traducirlo a la palabra dejaría el valor fuera de lista.
 HUECO = "-"
 
+#: «00 Datos Categorías»: casilla `(fila, columna)` del nombre de cada categoría
+#: de nivel 2, **solo las de los tipos de coste cuyas categorías comparten tramo
+#: en la hoja `CapEx`**. Ahí la columna «Categoría» viene rellena con la de la
+#: primera —el tramo de Medioambiente dice «Medioamb» en sus diez filas—, así
+#: que una actuación de `MA.MA2 «Otros»` saldría clasificada como `MA1` si no se
+#: escribiera encima. Hard Costs y `SC.S01`…`S04` no están: cada uno tiene tramo
+#: propio y la etiqueta que trae ya es la suya.
+#:
+#: Las listas son cortas y ordenadas, y **se indexan por posición dentro de su
+#: columna** porque no hay nada más por lo que emparejarlas: el nombre de la
+#: categoría cambia con el idioma y el `-` de «Otros» no tiene nombre.
+CASILLA_DE_CATEGORIA: dict[str, tuple[int, int]] = {
+    "OP.OP1": (4, 5),  # E4
+    "OP.OP2": (5, 5),
+    "OP.OP3": (6, 5),
+    "MA.MA1": (4, 6),  # F4
+    "MA.MA2": (5, 6),
+    "ESG.ES1": (4, 7),  # G4
+    "ESG.ES2": (5, 7),
+    "IMP.IM1": (4, 8),  # H4
+    "IMP.IM2": (5, 8),
+}
+
 #: «Leyenda»: los cinco plazos y los cuatro grados de riesgo.
 FILA_PLAZO = {"CORTO": 3, "MEDIO": 4, "LARGO": 5, "MEJORAS": 6, "OTRO": 7}
 FILA_RIESGO = {"04": 10, "03": 11, "02": 12, "01": 13}
@@ -123,6 +146,9 @@ class Vocabulario:
     idioma: str
     #: `código de nivel 3` → etiqueta. Ej. `HC.H09.02` → «CGBT».
     objetos: dict[str, str]
+    #: `código de nivel 2` → etiqueta, solo las que hay que escribir. Ver
+    #: `CASILLA_DE_CATEGORIA`.
+    categorias: dict[str, str]
     #: `(código de zona, código de tipología)` → etiqueta.
     zonas: dict[tuple[str, str], str]
     #: `código de tipología` → etiqueta del tipo de edificio.
@@ -153,6 +179,14 @@ class Vocabulario:
         if codigo.rsplit(".", 1)[0] not in FILA_OBJETO:
             return None
         raise FaltaEnLaPlantilla(f"la plantilla «{self.idioma}» no tiene el objeto {codigo!r}")
+
+    def categoria(self, codigo: str | None) -> str | None:
+        """La etiqueta de la categoría, o `None` si no hay que escribirla.
+
+        `None` no es un fallo: la mayoría de los tramos son de una sola
+        categoría y ya traen su nombre puesto. Ver `CASILLA_DE_CATEGORIA`.
+        """
+        return self.categorias.get(codigo) if codigo else None
 
     def zona(self, codigo: str | None, tipologia: str) -> str | None:
         if codigo is None:
@@ -210,7 +244,8 @@ def leer(idioma: str = "es") -> Vocabulario:
         raise ValueError(f"idioma no soportado: {idioma!r}")
     libro = load_workbook(PLANTILLAS / FICHERO[idioma], read_only=False, data_only=False)
     hojas = libro.worksheets
-    objeto, activo, leyenda = hojas[POS_OBJETO], hojas[POS_ACTIVO], hojas[POS_LEYENDA]
+    categoria, objeto = hojas[POS_CATEGORIAS], hojas[POS_OBJETO]
+    activo, leyenda = hojas[POS_ACTIVO], hojas[POS_LEYENDA]
 
     # Por nombre y no por índice: ver la cabecera del módulo. `General` ocupa
     # la primera posición del catálogo en MA y ESG y la última en la plantilla.
@@ -219,6 +254,12 @@ def leer(idioma: str = "es") -> Vocabulario:
         etiqueta = _texto_o_hueco(objeto.cell(fila, columna))
         if etiqueta is not None:
             objetos[codigo] = etiqueta
+
+    categorias: dict[str, str] = {}
+    for codigo, (fila, columna) in CASILLA_DE_CATEGORIA.items():
+        etiqueta = _texto_o_hueco(categoria.cell(fila, columna))
+        if etiqueta is not None:
+            categorias[codigo] = etiqueta
 
     tipos_de_edificio = {
         COD_TIPOLOGIA[i]: t
@@ -260,6 +301,7 @@ def leer(idioma: str = "es") -> Vocabulario:
     return Vocabulario(
         idioma=idioma,
         objetos=objetos,
+        categorias=categorias,
         zonas=zonas,
         tipos_de_edificio=tipos_de_edificio,
         riesgos=riesgos,

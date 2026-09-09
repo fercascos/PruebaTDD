@@ -251,15 +251,34 @@ validación de la hoja, y escribir la palabra dejaría el valor **fuera de lista
 abriéndose igual y los gráficos sin contarlo. El puente lo tiende
 `apps/api/src/tdd/exports/vocabulario_capex.py`.
 
-`[LIM]` **`SC.S04 «Otros»` todavía no se puede exportar.** La hoja `CapEx` no tiene tramo para ella:
-el total de soft costs es `=J220+J232+J244`, la suma exacta de las otras tres categorías. Meterla en
-el tramo de una vecina la sumaría a un subtotal que no es el suyo **sin que la hoja descuadre**, que
-es la clase de error que no se ve. Así que se avisa **antes** de exportar —cabida cero, por la misma
-vía que un bloque desbordado— y la exportación se niega entera. Las categorías «Otros» de
-Medioambiente, ESG, Operativos e Imprevistos sí se exportan: sus tipos de coste tienen **un solo
-tramo** con un subtotal que suma el tipo entero, así que compartirlo no atribuye nada mal. `[PDV]`
-Resolverlo es añadir un cuarto tramo a la plantilla y corregir la fórmula del total; hace falta que
-el cliente confirme que su plantilla puede cambiar.
+`[REQ]` **`SC.S04 «Otros»` tiene tramo propio en la plantilla.** No lo tenía: el total de soft costs
+era `=J220+J232+J244`, la suma exacta de las otras tres categorías, y meterla en el tramo de una
+vecina la habría sumado a un subtotal que no es el suyo **sin que la hoja descuadre**, que es la
+clase de error que no se ve. El cliente confirmó que su plantilla puede cambiar, así que
+`tools/anadir_bloques_plantillas.py` le da las filas **256-266**, justo detrás de `S03`, y el total
+pasa a `=J220+J232+J244+J256`. Operativos e Imprevistos bajan doce filas para dejarle sitio: la
+cuarta categoría de soft costs tenía que quedar **pegada a las suyas**, o se leería como una sección
+aparte al final de la hoja.
+
+Las categorías «Otros» de Medioambiente, ESG, Operativos e Imprevistos **comparten tramo** con la
+categoría con contenido de su tipo, porque esos tipos tienen un solo tramo con un subtotal que suma
+el tipo entero: compartirlo no atribuye nada mal. Lo que sí hacía falta es **escribir la categoría
+en cada fila**: el tramo viene con la de la primera puesta —«Medioamb» en las diez filas de
+Medioambiente—, así que una actuación de `MA.MA2` habría salido clasificada como `MA1`. Se escribe
+encima con la etiqueta que la propia plantilla da a ese cajón, que es `-` en los dos idiomas.
+
+`[REC]` **De paso se arregló algo que venía roto.** El origen de la tabla dinámica que alimenta
+«Resumen CapEx» y sus gráficos llegaba hasta la fila **256**, así que Operativos e Imprevistos
+—añadidos en su día detrás de esa fila— cuadraban en los totales y **no aparecían en ningún
+gráfico**. Ahora llega a la 293 y los tres tramos entran. `[PDV]` Verificado sobre el XML; **queda
+abrirlo en Excel**, que es donde se ve una tabla dinámica.
+
+`[LIM]` **Los tres tramos añadidos no tienen desplegable en la columna «Categoría».** Las
+validaciones de la plantilla enumeran rangos concretos —`D221:D230`, `D234:D242`— y ampliarlas es
+tocar una referencia relativa que no se puede comprobar sin abrir Excel. No afecta a lo que exporta
+la aplicación, que escribe la etiqueta directamente; afecta a quien rellene esas filas a mano.
+`[PDV]` Conviene saber además que **la plantilla del cliente ya traía ese hueco** en `D245:D254`,
+las diez filas de `S03`.
 
 `[REC]` **`General` va ahora el penúltimo, antes de «Otros».** Es el orden de la hoja del cliente y
 el que tiene sentido leyendo un desplegable: primero lo concreto, y al final las dos salidas. La

@@ -134,14 +134,19 @@ tipo de coste acaba con una categoría «Otros», y cada categoría con un objet
 «Otros», que es la salida que necesita un consultor cuando lo que ve no está en
 la lista. En la hoja del cliente ese cajón se escribe `-`.
 
-`[LIM]` Dos cosas quedan abiertas y ninguna bloquea la pantalla: los nombres
-`Placas fotovoltáicas` y `Bies` **traen erratas del cliente** y se copian
-literales —el catálogo tiene que decir lo que dicen sus desplegables—, y la
-categoría `SC.S04 «Otros»` **no tiene tramo en la plantilla de Excel**, cuyo
-total de soft costs suma exactamente las otras tres. Una actuación codificada
-ahí se avisa antes de exportar en vez de sumarse a un subtotal que no es el
-suyo. Arreglarlo es añadir un cuarto tramo a la plantilla, y hace falta que el
-cliente confirme que su plantilla puede cambiar.
+`[REQ]` **La plantilla de Excel ya tiene el tramo de `SC.S04 «Otros»»`** ✅. No
+lo tenía —su total de soft costs sumaba exactamente las otras tres categorías—,
+el cliente confirmó que su plantilla puede cambiar y se le dieron las filas
+256-266, justo detrás de `S03`. Operativos e Imprevistos bajan doce filas para
+dejarle sitio: una cuarta categoría de soft costs al final de la hoja se leería
+como una sección aparte.
+
+`[LIM]` Lo que queda abierto no bloquea nada: los nombres `Placas fotovoltáicas`
+y `Bies` **traen erratas del cliente** y se copian literales —el catálogo tiene
+que decir lo que dicen sus desplegables—, y los tramos añadidos **no traen
+desplegable en la columna «Categoría»**, igual que las diez filas de `S03` en la
+plantilla original. No afecta a lo que exporta la aplicación, que escribe la
+etiqueta; afecta a quien rellene esas filas a mano.
 
 ### 3.3. Dashboard ⬜
 
@@ -197,8 +202,9 @@ que es lo que obliga a mover documentación, fotos e inventario de pestaña.
 
 - ~~El listado de los 6 tipos de coste y sus categorías~~ ✅ **recibido y
   sembrado**: 28 categorías y 141 objetos. Ya no bloquea nada.
-- **Si su plantilla de Excel puede cambiar**, para darle un tramo propio a la
-  categoría `SC.S04 «Otros»`, que hoy no se puede exportar (§3.2).
+- ~~Si su plantilla de Excel puede cambiar~~ ✅ **confirmado y aplicado**:
+  `SC.S04 «Otros»` ya tiene su tramo. `[PDV]` Queda **abrir el fichero en Excel
+  y comprobarlo**: aquí solo se puede verificar el XML.
 - **Qué estructura sigue la documentación del activo** (§3.2 b).
 - **Qué lleva la visita** además de fecha y fotos (§3.2 c).
 - **Qué roles pueden añadir clientes al catálogo** (§2).

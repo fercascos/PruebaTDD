@@ -120,6 +120,7 @@ def actuaciones_de(snapshot: dict[str, Any], v: Vocabulario) -> list[Actuacion]:
         salida.append(
             Actuacion(
                 categoria=str(h.get("capex_chapter_code") or ""),
+                etiqueta_categoria=v.categoria(str(h.get("capex_chapter_code") or "") or None),
                 objeto=v.objeto(str(h.get("capex_code") or "") or None),
                 zona=_zona(v, str(h.get("zone_code") or ""), tipologia),
                 descripcion=str(h.get("title") or ""),

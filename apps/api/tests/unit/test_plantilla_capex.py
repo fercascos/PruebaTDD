@@ -22,7 +22,6 @@ from tdd.exports.plantilla_capex import (
     PLANTILLAS,
     POR_CODIGO,
     Actuacion,
-    CeldaInexistente,
     NoCabe,
     Proyecto,
     comprobar_cabida,
@@ -168,8 +167,12 @@ def test_la_cabecera_del_encargo_llega_a_la_hoja_de_datos(proyecto: Proyecto) ->
 
 def test_una_categoria_que_la_plantilla_no_tiene_revienta(proyecto: Proyecto) -> None:
     """Se prefiere reventar a colocarla en el bloque de al lado: una actuación
-    en la categoría equivocada suma mal y no se nota."""
-    with pytest.raises(CeldaInexistente):
+    en la categoría equivocada suma mal y no se nota.
+
+    Se avisa **antes** de escribir, por la vía del desbordamiento: cabida cero
+    es exactamente lo que tiene una categoría sin tramo, y así el mensaje dice
+    cuál es y cuántas actuaciones se quedaron fuera."""
+    with pytest.raises(NoCabe, match="HC.H99: 1 de 0"):
         generar(proyecto, [_actuacion("HC.H99")])
 
 
@@ -340,20 +343,40 @@ def test_el_otros_del_catalogo_se_escribe_como_el_guion_de_la_plantilla() -> Non
         assert v.objeto("ESG.ES1.12") == "-"
 
 
-def test_la_categoria_otros_de_soft_costs_avisa_en_vez_de_caer_en_otro_subtotal(
-    proyecto: Proyecto,
-) -> None:
-    """`[LIM]` `SC.S04 «Otros»` llegó con el árbol del cliente y la plantilla no
-    tiene tramo para ella. Se avisa antes de exportar —cabida cero— en vez de
-    escribirla en el tramo de otra categoría, donde sumaría a un subtotal que no
-    es el suyo sin que la hoja descuadre."""
-    from tdd.exports.plantilla_capex import SIN_TRAMO
-
-    assert "SC.S04" in SIN_TRAMO
+def test_la_categoria_otros_de_soft_costs_tiene_su_propio_tramo(proyecto: Proyecto) -> None:
+    """`[REQ]` P-45 · `SC.S04 «Otros»` llegó con el árbol del cliente y la hoja
+    no la tenía. El cliente confirmó que su plantilla puede cambiar, así que se
+    le dio tramo propio en vez de escribirla en el de una vecina: allí habría
+    sumado a un subtotal que no es el suyo **sin que la hoja descuadre**, que es
+    la clase de error que nadie ve."""
     una = [_actuacion("SC.S04", descripcion="Un soft cost que no es de los tres")]
-    assert [(d.categoria, d.hay, d.caben) for d in comprobar_cabida(una)] == [("SC.S04", 1, 0)]
-    with pytest.raises(NoCabe, match="SC.S04: 1 de 0"):
-        generar(proyecto, una)
+    assert comprobar_cabida(una) == []
+
+    hoja = load_workbook(BytesIO(generar(proyecto, una)))["CapEx"]
+    bloque = POR_CODIGO["SC.S04"]
+    assert hoja[f"G{bloque.primera}"].value == "Un soft cost que no es de los tres"
+    # Y su subtotal entra en el total de soft costs, que antes sumaba tres.
+    assert f"J{bloque.subtotal}" in str(hoja["J219"].value)
+    # El tramo va **detrás de `S03`**, no al final de la hoja: una cuarta
+    # categoría de soft costs colocada después de «IMPREVISTOS» se leería como
+    # una sección aparte.
+    assert POR_CODIGO["SC.S03"].ultima < bloque.subtotal < POR_CODIGO["OP.OP1"].subtotal
+
+
+@pytest.mark.parametrize("idioma", IDIOMAS)
+def test_los_tramos_compartidos_escriben_la_categoria_de_cada_fila(idioma: str) -> None:
+    """`[LIM]` Medioambiente, ESG, Operativos e Imprevistos tienen **un tramo
+    por tipo de coste**, y sus filas vienen con la categoría de la primera
+    puesta. Una actuación de `MA.MA2 «Otros»` escrita ahí saldría clasificada
+    como `MA1`, así que la etiqueta se escribe encima. En la plantilla ese cajón
+    se llama `-` en los dos idiomas."""
+    v = leer(idioma)
+    assert v.categoria("MA.MA2") == "-"
+    assert v.categoria("ESG.ES2") == "-"
+    assert v.categoria("OP.OP3") == "-"
+    # Los tramos de una sola categoría no necesitan escribirla: ya la traen.
+    assert v.categoria("HC.H09") is None
+    assert v.categoria("SC.S01") is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -483,7 +506,7 @@ def test_operativos_e_imprevistos_tienen_bloque(idioma: str) -> None:
     libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
     capex = libro["CapEx"]
     esperado = {"es": ("OPERATIVOS", "IMPREVISTOS"), "en": ("OPERATING", "CONTINGENCIES")}[idioma]
-    assert (capex["A256"].value, capex["A269"].value) == esperado
+    assert (capex["A268"].value, capex["A281"].value) == esperado
     libro.close()
 
 
@@ -494,8 +517,15 @@ def test_el_total_general_cuenta_los_bloques_nuevos() -> None:
         libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
         total = str(libro["CapEx"]["J11"].value or "")
         libro.close()
-        for seccion in ("J256", "J269"):
+        for seccion in ("J268", "J281"):
             assert seccion in total, f"{idioma}: el TOTAL no cuenta {seccion} → {total}"
+
+        # Y el de soft costs cuenta su cuarta categoría, que es la que se le
+        # añadió: sin esto, `SC.S04` se escribiría y no se sumaría.
+        libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
+        soft = str(libro["CapEx"]["J219"].value or "")
+        libro.close()
+        assert "J256" in soft, f"{idioma}: SOFT COSTS no cuenta J256 → {soft}"
 
 
 @pytest.mark.parametrize("idioma", IDIOMAS)
@@ -504,7 +534,7 @@ def test_los_imprevistos_se_calculan_desde_la_hoja_de_parametros(idioma: str) ->
     lee de ahí y no se teclea, para que cambiarlo una vez lo cambie en todas
     las líneas."""
     libro = load_workbook(PLANTILLAS / FICHERO[idioma], keep_vba=True)
-    formula = str(libro["CapEx"]["T271"].value or "")
+    formula = str(libro["CapEx"]["T283"].value or "")
     libro.close()
     assert "C45" in formula
     assert ("00 Asset Data" if idioma == "en" else "00 Datos Activo") in formula
@@ -525,10 +555,10 @@ def test_la_exportacion_no_pisa_las_lineas_de_honorarios(proyecto: Proyecto) -> 
     # Las de la plantilla, intactas.
     assert hoja["G245"].value == "Honorarios ECLU"
     assert hoja["T245"].value == 0.02
-    assert "C45" in str(hoja["T271"].value)
+    assert "C45" in str(hoja["T283"].value)
     # Y las de la aplicación, justo debajo.
     assert hoja["G248"].value == "Tasa extra"
-    assert hoja["G272"].value == "Partida adicional"
+    assert hoja["G284"].value == "Partida adicional"
 
 
 def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
@@ -545,8 +575,8 @@ def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
         ],
     )
     hoja = load_workbook(BytesIO(datos))["CapEx"]
-    assert hoja["G258"].value == "Consumos de obra"
-    assert hoja["G259"].value == "Limpieza final"
+    assert hoja["G270"].value == "Consumos de obra"
+    assert hoja["G271"].value == "Limpieza final"
 
 
 def test_el_desbordamiento_de_operativos_cuenta_las_dos_categorias_juntas() -> None:
