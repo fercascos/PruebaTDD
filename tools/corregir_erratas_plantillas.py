@@ -43,8 +43,24 @@ PLANTILLAS = RAIZ / "apps" / "api" / "src" / "tdd" / "exports" / "plantillas"
 #: también el catálogo sembrado dejaría celdas fuera de su propia lista. Ver la
 #: nota de §5.3. `Mediambiente` sí se corrige porque es una **etiqueta** y su
 #: nombre definido se renombra con ella.
+#:
+#: `[REQ]` **`Placas fotovoltáicas` y `Bies` llegaron con el árbol del cliente
+#: (P-45) y el cliente ha pedido corregirlas.** Son valores de lista, así que
+#: cumplen la condición que exigía la nota anterior: se corrigen **aquí y en el
+#: catálogo a la vez**, con la migración `0021`. Cambiar solo uno de los dos
+#: lados dejaría el desplegable y la base de datos diciendo cosas distintas, que
+#: es una hoja que se abre bien y cuyos gráficos salen incompletos.
+#:
+#: `fotovoltaicas` no lleva tilde: el diptongo `ai` es átono. Y `BIE` es el
+#: acrónimo de Boca de Incendio Equipada, así que su plural se escribe `BIEs`.
+#: La plantilla inglesa dice `Photovoltaic panels` y `Fire hose reels`, que
+#: están bien: por eso solo se toca la española.
 ERRATAS: dict[str, dict[str, str]] = {
-    "capex_ddt_es.xltm": {"Mediambiente": "Medioambiente"},
+    "capex_ddt_es.xltm": {
+        "Mediambiente": "Medioambiente",
+        "Placas fotovoltáicas": "Placas fotovoltaicas",
+        "Bies": "BIEs",
+    },
 }
 
 #: `fichero → {celda de la hoja CapEx: fórmula correcta}`.

@@ -133,14 +133,23 @@ const titulos = []
 for (const b of bloques) titulos.push((await b.locator('h3').innerText()).trim())
 console.log('  bloques:', titulos.join(' · '))
 for (const esperado of [
-  'En qué se va el dinero',
-  'Cuándo hay que pagarlo',
-  'Cuánto de esto es grave',
-  'Qué parte del edificio',
-  'Qué edificio',
+  'Distribución por concepto de gasto',
+  'Perfil temporal de la inversión',
+  'Exposición por grado de riesgo',
+  'Desglose por categoría y objeto',
+  'Distribución por activo',
 ]) {
   if (!titulos.includes(esperado)) fallos.push(`Falta el bloque «${esperado}»`)
 }
+
+/** Los cuatro bloques de barras, por su título en pantalla. El último —el de
+ *  activo— es el que NO se filtra. */
+const BARRAS = [
+  'Perfil temporal de la inversión',
+  'Exposición por grado de riesgo',
+  'Desglose por categoría y objeto',
+  'Distribución por activo',
+]
 
 /** El total de un bloque de barras: la suma de sus importes de fila. */
 async function totalDelBloque(titulo) {
@@ -148,7 +157,7 @@ async function totalDelBloque(titulo) {
   const cifras = await bloque.locator('.barras > li .cifra.importe').allInnerTexts()
   return cifras.reduce((a, t) => a + (importes(t)[0] ?? 0), 0)
 }
-for (const titulo of ['Cuándo hay que pagarlo', 'Cuánto de esto es grave', 'Qué parte del edificio', 'Qué edificio']) {
+for (const titulo of BARRAS) {
   const suma = await totalDelBloque(titulo)
   console.log(`  «${titulo}» suma ${suma}`)
   if (suma !== TOTAL) fallos.push(`«${titulo}» suma ${suma} y el CAPEX es ${TOTAL}`)
@@ -157,7 +166,7 @@ for (const titulo of ['Cuándo hay que pagarlo', 'Cuánto de esto es grave', 'Qu
 // 3 · El grado de riesgo va escrito, no solo en color.
 const riesgo = await pagina
   .locator('.bloque')
-  .filter({ has: pagina.getByText('Cuánto de esto es grave', { exact: true }) })
+  .filter({ has: pagina.getByText('Exposición por grado de riesgo', { exact: true }) })
   .innerText()
 for (const codigo of ['01', '02', '03', '04']) {
   if (!riesgo.includes(codigo)) fallos.push(`El grado «${codigo}» no aparece escrito`)
@@ -195,12 +204,12 @@ if (rotulos !== 2) {
 // Los objetos, escritos en la tabla: el color no los identifica.
 await pagina
   .locator('.bloque')
-  .filter({ has: pagina.getByText('Qué parte del edificio', { exact: true }) })
+  .filter({ has: pagina.getByText('Desglose por categoría y objeto', { exact: true }) })
   .locator('summary')
   .click()
 const tabla = await pagina
   .locator('.bloque')
-  .filter({ has: pagina.getByText('Qué parte del edificio', { exact: true }) })
+  .filter({ has: pagina.getByText('Desglose por categoría y objeto', { exact: true }) })
   .locator('table')
   .innerText()
 for (const nombre of ['Acometida-Centro de transformación', 'CGBT', 'Sin detallar']) {
@@ -225,16 +234,16 @@ console.log('  alcance:', alcance)
 if (!alcance.includes('Nave Norte') || !alcance.includes('Nave Sur')) {
   fallos.push(`El alcance no nombra los dos activos elegidos: ${alcance}`)
 }
-for (const titulo of ['Cuándo hay que pagarlo', 'Cuánto de esto es grave', 'Qué parte del edificio']) {
+for (const titulo of BARRAS.slice(0, -1)) {
   const suma = await totalDelBloque(titulo)
   console.log(`  filtrado, «${titulo}» suma ${suma}`)
   if (suma !== DOS_NAVES) fallos.push(`Filtrado, «${titulo}» suma ${suma} y debería ser ${DOS_NAVES}`)
 }
-// «Qué edificio» NO se filtra: es la referencia contra la que se lee el resto.
-const edificios = await totalDelBloque('Qué edificio')
-console.log(`  filtrado, «Qué edificio» sigue sumando ${edificios}`)
+// La distribución por activo NO se filtra: es la referencia del resto.
+const edificios = await totalDelBloque('Distribución por activo')
+console.log(`  filtrado, la distribución por activo sigue sumando ${edificios}`)
 if (edificios !== TOTAL) {
-  fallos.push(`«Qué edificio» debería seguir enseñando la cartera entera (${TOTAL}), y suma ${edificios}`)
+  fallos.push(`«Distribución por activo» debería seguir enseñando la cartera entera (${TOTAL}), y suma ${edificios}`)
 }
 
 await navegador.close()
@@ -245,4 +254,4 @@ if (fallos.length) {
   for (const f of fallos) console.log(' -', f)
   process.exit(1)
 }
-console.log('Los cinco cortes cuadran, el filtro de varios activos alcanza a cuatro y «Qué edificio» se queda.')
+console.log('Los cinco cortes cuadran, el filtro alcanza a cuatro y la distribución por activo se queda.')

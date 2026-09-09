@@ -148,9 +148,13 @@ el cliente confirmó que su plantilla puede cambiar y se le dieron las filas
 dejarle sitio: una cuarta categoría de soft costs al final de la hoja se leería
 como una sección aparte.
 
-`[LIM]` Lo que queda abierto no bloquea nada: los nombres `Placas fotovoltáicas`
-y `Bies` **traen erratas del cliente** y se copian literales —el catálogo tiene
-que decir lo que dicen sus desplegables—, y los tramos añadidos **no traen
+`[REQ]` **Las dos erratas del árbol, corregidas** ✅. La hoja traía `Placas
+fotovoltáicas` y `Bies`; el cliente pidió arreglarlas y se han arreglado **en los
+dos lados a la vez** —catálogo con la migración `0021`, plantilla española con
+`tools/corregir_erratas_plantillas.py`—, que es la única forma de que el
+desplegable y la base de datos sigan diciendo lo mismo.
+
+`[LIM]` Lo que queda abierto no bloquea nada: los tramos añadidos **no traen
 desplegable en la columna «Categoría»**, igual que las diez filas de `S03` en la
 plantilla original. No afecta a lo que exporta la aplicación, que escribe la
 etiqueta; afecta a quien rellene esas filas a mano.
@@ -159,13 +163,20 @@ etiqueta; afecta a quien rellene esas filas a mano.
 
 El desglose económico del CAPEX, con **cinco cortes**, en su propia pestaña:
 
-| Corte | Forma | Estado |
-|---|---|---|
-| Por **concepto** | tarta | ✅ |
-| Por **plazo** | barras, en orden de plazo | ✅ |
-| Por **riesgo** | barras, en orden de gravedad | ✅ nuevo |
-| Por **categoría y objeto** | **barras apiladas**: cada categoría es una barra y dentro van sus objetos | ✅ nuevo |
-| Por **activo** acumulado | barras | ✅ |
+| Título en pantalla | Corte | Forma | Estado |
+|---|---|---|---|
+| Distribución por concepto de gasto | concepto | tarta | ✅ |
+| Perfil temporal de la inversión | plazo | barras, en orden de plazo | ✅ |
+| Exposición por grado de riesgo | riesgo | barras, en orden de gravedad | ✅ nuevo |
+| Desglose por categoría y objeto | categoría y objeto | **barras apiladas**: cada categoría es una barra y dentro van sus objetos | ✅ nuevo |
+| Distribución por activo | activo | barras | ✅ |
+
+`[REQ]` **Los títulos van en el registro de una due diligence técnica**, a
+petición del cliente: es el del informe que sale de aquí. La pregunta coloquial
+que contesta cada corte —«en qué se va el dinero», «cuánto de esto es grave»—
+sigue estando en el texto de ayuda de cada bloque, donde explica; el encabezado,
+que es lo que se imprime y lo que ve el cliente del cliente, dice lo que dice un
+informe.
 
 Y el selector pasa de un activo a **uno, varios o toda la cartera** ✅. En la API
 es el mismo parámetro repetido —`?asset_id=…&asset_id=…`—, escrito una sola vez
@@ -195,7 +206,7 @@ píxeles salía como «Cu…».
 API se comparan entre sí con varios activos elegidos, `by-risk` se compara además
 contra la matriz de riesgos —que calcula lo mismo por otro camino—, y
 `herramientas/comprobar-dashboard.mjs` lo vuelve a comprobar **sobre la pantalla
-ya pintada**, incluido que «Qué edificio» siga enseñando la cartera entera con el
+ya pintada**, incluido que «Distribución por activo» siga enseñando la cartera entera con el
 filtro puesto.
 
 `[PDV]` El corte por riesgo y la matriz de riesgos enseñan ahora el mismo reparto

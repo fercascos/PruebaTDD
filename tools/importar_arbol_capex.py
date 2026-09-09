@@ -16,12 +16,15 @@ discutir:
    confirmó dejarlo así, de modo que **la categoría lleva el nombre de su
    tipo**, igual que ya pasa en Medioambiente.
 4. `V1.2` estaba repetido en el bloque de visita; el segundo es `V1.3`.
+5. `Placas fotovoltáicas` y `Bies` **traen erratas** —el diptongo `ai` es átono y
+   `BIE` es un acrónimo—. Se corrigen aquí **y en la plantilla**, porque el
+   cliente lo pidió; ver `CORRECCIONES`.
 
 `[SUP]` Dos más, propuestas y no contestadas, marcadas en el resultado:
 
-5. `H15 Otros` y `H16 -` serían dos categorías hermanas llamadas «Otros». Se
+6. `H15 Otros` y `H16 -` serían dos categorías hermanas llamadas «Otros». Se
    **fusionan** en `H15`, y `H16.1 General` pasa a ser objeto suyo.
-6. La última fila de la hoja crea un **tipo de coste** entero llamado «Otros»,
+7. La última fila de la hoja crea un **tipo de coste** entero llamado «Otros»,
    sin objetos. Se **descarta**: el cajón de sastre ya existe dentro de cada
    tipo y de cada categoría.
 
@@ -54,8 +57,24 @@ TIPOS = {
 #: Lo que la hoja escribe cuando quiere decir «Otros».
 HUECO = "-"
 
-#: `[SUP]` Decisión 5: `H16` no llega a existir; su contenido va a `H15`.
+#: `[SUP]` Decisión 6: `H16` no llega a existir; su contenido va a `H15`.
 FUSIONAR = {"H16": "H15"}
+
+#: `[REQ]` Decisión 7: dos erratas de la hoja que el cliente pidió corregir.
+#:
+#: Estuvieron copiadas literales una versión, y con motivo: el catálogo tiene que
+#: decir lo que dicen los desplegables de la plantilla, y arreglar uno solo de
+#: los dos lados deja la base de datos y el Excel diciendo cosas distintas. El
+#: cliente pidió corregirlas, así que se corrigen **las dos a la vez** —aquí y en
+#: la plantilla española, con `tools/corregir_erratas_plantillas.py`— y el
+#: catálogo se migra con `0021`.
+#:
+#: Van aquí y no en un `sed` sobre el resultado porque la hoja del cliente
+#: seguirá trayéndolas: sin esto, la próxima vez que mande su árbol volverían.
+CORRECCIONES = {
+    "Placas fotovoltáicas": "Placas fotovoltaicas",
+    "Bies": "BIEs",
+}
 
 
 def leer(hoja: Path) -> list[dict[str, str]]:
@@ -67,8 +86,25 @@ def leer(hoja: Path) -> list[dict[str, str]]:
         v = [("" if c is None else str(c).strip()) for c in celdas]
         if not any(v):
             continue
-        filas.append({"bloque": v[0], "nivel": v[1], "codigo": v[2], "nombre": v[3], "padre": v[4]})
+        filas.append(
+            {
+                "bloque": v[0],
+                "nivel": v[1],
+                "codigo": v[2],
+                "nombre": v[3],
+                "padre": v[4],
+            }
+        )
     return filas
+
+
+def _nombre(bruto: str) -> str:
+    """El nombre del nodo tal como lo escribe el catálogo.
+
+    Traduce el `-` de la hoja a «Otros» —decisión 1— y aplica las dos
+    correcciones de la decisión 5.
+    """
+    return "Otros" if bruto == HUECO else CORRECCIONES.get(bruto, bruto)
 
 
 def arbol(filas: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -84,29 +120,33 @@ def arbol(filas: list[dict[str, str]]) -> list[dict[str, str]]:
     capex = [f for f in filas if f["bloque"] == "CAPEX"]
 
     for nombre, code in TIPOS.items():
-        salida.append({"code": code, "name_es": nombre, "level": "1", "parent_code": ""})
+        salida.append(
+            {"code": code, "name_es": nombre, "level": "1", "parent_code": ""}
+        )
 
     #: código de la hoja —`H01`, `MA1`— → código completo del catálogo.
     por_codigo: dict[str, str] = {}
 
     for f in capex:
         # Decisión 2: la errata de nivel de H14.
-        es_categoria = f["nivel"] == "Categoría" or (f["nivel"] == "Objeto" and f["codigo"] == "H14")
+        es_categoria = f["nivel"] == "Categoría" or (
+            f["nivel"] == "Objeto" and f["codigo"] == "H14"
+        )
         if not es_categoria:
             continue
         destino = FUSIONAR.get(f["codigo"], f["codigo"])
         if destino != f["codigo"]:
-            # Decisión 5: `H16` no llega a existir; lo suyo va a `H15`.
+            # Decisión 6: `H16` no llega a existir; lo suyo va a `H15`.
             por_codigo[f["codigo"]] = por_codigo[destino]
             continue
         tipo = TIPOS.get(f["padre"])
-        if tipo is None:  # Decisión 6: el tipo «Otros» del final se descarta.
+        if tipo is None:  # Decisión 7: el tipo «Otros» del final se descarta.
             continue
         code = f"{tipo}.{destino}"
         salida.append(
             {
                 "code": code,
-                "name_es": "Otros" if f["nombre"] == HUECO else f["nombre"],
+                "name_es": _nombre(f["nombre"]),
                 "level": "2",
                 "parent_code": tipo,
             }
@@ -123,7 +163,7 @@ def arbol(filas: list[dict[str, str]]) -> list[dict[str, str]]:
         if padre is None:
             print(f"AVISO: objeto sin categoría, se descarta: {f}", file=sys.stderr)
             continue
-        nombre = "Otros" if f["nombre"] == HUECO else f["nombre"]
+        nombre = _nombre(f["nombre"])
         # Dos objetos con el mismo nombre dentro de la misma categoría son
         # indistinguibles en un desplegable. Pasa al fusionar `H16` en `H15`:
         # los dos traen «General» y «Otros».
@@ -149,7 +189,9 @@ def comparar(nuevo: list[dict[str, str]], csv_actual: Path) -> None:
     altas = [c for c in nuevos if c not in actual]
     bajas = [c for c in actual if c not in nuevos]
     renombres = [
-        (c, actual[c], nuevos[c]) for c in nuevos if c in actual and actual[c] != nuevos[c]
+        (c, actual[c], nuevos[c])
+        for c in nuevos
+        if c in actual and actual[c] != nuevos[c]
     ]
 
     print(f"IGUALES     {len(nuevos) - len(altas) - len(renombres):4d}")
@@ -168,7 +210,9 @@ def main() -> int:
     )
     ap.add_argument("hoja", type=Path)
     ap.add_argument("--csv", type=Path, help="fichero de catálogo a escribir")
-    ap.add_argument("--comparar", action="store_true", help="qué cambia respecto de lo sembrado")
+    ap.add_argument(
+        "--comparar", action="store_true", help="qué cambia respecto de lo sembrado"
+    )
     args = ap.parse_args()
 
     filas = arbol(leer(args.hoja))
@@ -182,7 +226,9 @@ def main() -> int:
         comparar(filas, RAIZ / "data" / "catalogos" / "codigos_capex.csv")
     if args.csv:
         with args.csv.open("w", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=["code", "name_es", "level", "parent_code"])
+            w = csv.DictWriter(
+                f, fieldnames=["code", "name_es", "level", "parent_code"]
+            )
             w.writeheader()
             w.writerows(filas)
         print(f"escrito {args.csv}", file=sys.stderr)

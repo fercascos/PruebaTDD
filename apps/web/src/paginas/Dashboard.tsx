@@ -19,13 +19,19 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * las cinco que se hacen en la reunión, y que antes se contestaban sumando a
  * mano:
  *
- * | Pregunta | Corte | Forma |
+ * | Título en pantalla | Pregunta que contesta | Forma |
  * |---|---|---|
- * | ¿En qué se va el dinero? | concepto | **tarta** — es un reparto parte-todo |
- * | ¿Cuándo hay que pagarlo? | plazo | barras, en orden de plazo |
- * | ¿Cuánto de esto es grave? | riesgo | barras, en orden de gravedad |
- * | ¿Qué parte del edificio? | categoría **y objeto** | barras **apiladas** |
- * | ¿Qué edificio? | activo | barras, **siempre de la cartera entera** |
+ * | Distribución por concepto de gasto | ¿en qué se va el dinero? | **tarta** — es un reparto parte-todo |
+ * | Perfil temporal de la inversión | ¿cuándo hay que pagarlo? | barras, en orden de plazo |
+ * | Exposición por grado de riesgo | ¿cuánto de esto es grave? | barras, en orden de gravedad |
+ * | Desglose por categoría y objeto | ¿qué parte del edificio? | barras **apiladas** |
+ * | Distribución por activo | ¿qué activo? | barras, **siempre de la cartera entera** |
+ *
+ * `[REQ]` Los títulos van en el **registro de una due diligence técnica**, que es
+ * el del informe que sale de aquí. La pregunta coloquial —«en qué se va el
+ * dinero»— es la que se hace en la reunión y por eso se conserva en esta tabla y
+ * en el texto de ayuda de cada bloque, donde explica; pero el encabezado que se
+ * imprime y se enseña al cliente dice lo que dice un informe.
  *
  * `[REQ]` §3.3 de `docs/23`. Era la vista «Resumen» de Hallazgos y CAPEX y
  * sube a pestaña propia, con dos cortes nuevos —riesgo y objeto— y un selector
@@ -43,7 +49,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * consulta hay que sumarlas a mano —que es justo el descuadre que esta pantalla
  * existe para evitar—.
  *
- * ## «Qué edificio» se queda, y hace de mando
+ * ## «Distribución por activo» se queda, y hace de mando
  *
  * `[REQ]` El quinto bloque **no desaparece al filtrar**: es el que permite
  * comparar varios activos en el momento sin salir de la pantalla. Sigue
@@ -287,11 +293,11 @@ export function Dashboard({ projectId }: { projectId: string }) {
       ) : (
         <>
           <section className="bloque">
-            <h3>En qué se va el dinero</h3>
+            <h3>Distribución por concepto de gasto</h3>
             <p className="ayuda">
-              Por concepto de gasto. Es la distinción que separa un edificio caro de uno mal
-              mantenido: <strong>«Normativa» hay que pagarlo y «Mejora» se puede
-              decidir</strong>, y en el total valen lo mismo.
+              Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal
+              mantenido: <strong>lo exigido por normativa hay que ejecutarlo y una mejora es
+              discrecional</strong>, y en el total pesan igual.
             </p>
             <Tarta
               porciones={porciones}
@@ -315,10 +321,10 @@ export function Dashboard({ projectId }: { projectId: string }) {
           </section>
 
           <section className="bloque">
-            <h3>Cuándo hay que pagarlo</h3>
+            <h3>Perfil temporal de la inversión</h3>
             <p className="ayuda">
-              En orden de plazo, no de importe: aquí lo que se lee es el perfil temporal del
-              gasto, y reordenarlo por cuantía lo destruiría.
+              Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí es
+              el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.
             </p>
             <Barras
               filas={filtrado.horizonte.map((h) => ({
@@ -336,10 +342,11 @@ export function Dashboard({ projectId }: { projectId: string }) {
               riesgos —es el mismo dato leído de otra manera— y, como allí, el
               grado va escrito: el color solo acompaña. */}
           <section className="bloque">
-            <h3>Cuánto de esto es grave</h3>
+            <h3>Exposición por grado de riesgo</h3>
             <p className="ayuda">
-              Por grado de riesgo, de más grave a menos. Los grados sin importe salen con cero:
-              uno que desaparece de la lista se confunde con uno que no tiene nada.
+              Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los grados
+              sin importe se muestran con cero: uno que desaparece de la lista se confunde con uno
+              que no tiene nada.
             </p>
             <Barras
               filas={filtrado.riesgo.map((r) => ({
@@ -354,12 +361,12 @@ export function Dashboard({ projectId }: { projectId: string }) {
           </section>
 
           <section className="bloque">
-            <h3>Qué parte del edificio</h3>
+            <h3>Desglose por categoría y objeto</h3>
             <p className="ayuda">
               Cada barra es una <strong>categoría</strong> del árbol de CAPEX y los tramos de
               dentro son sus <strong>objetos</strong>, de mayor a menor. Un hallazgo codificado
-              en la propia categoría, sin bajar al objeto, sale como «sin detallar»: no es lo
-              mismo que un objeto llamado «General».
+              en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es
+              lo mismo que un objeto denominado «General».
             </p>
             <BarrasApiladas filas={filtrado.objeto} />
           </section>
@@ -372,16 +379,15 @@ export function Dashboard({ projectId }: { projectId: string }) {
               tarjetas. */}
           {cartera && (
             <section className="bloque">
-              <h3>Qué edificio</h3>
+              <h3>Distribución por activo</h3>
               <p className="ayuda">
-                En un proyecto de cartera es el número que entra en la negociación de cada
-                edificio. <strong>Este bloque no se filtra nunca</strong>: es la referencia
-                contra la que se lee el resto. Los activos sin actuaciones salen con cero: un
-                activo que desaparece de la lista se confunde con uno que se visitó y no tenía
-                nada.
+                En un proyecto de cartera es la cifra que entra en la negociación de cada activo.
+                <strong> Este bloque no se filtra nunca</strong>: es la referencia contra la que
+                se lee el resto. Los activos sin actuaciones se muestran con cero: uno que
+                desaparece de la lista se confunde con uno que se visitó y no tenía nada.
               </p>
               <p className="ayuda">
-                Pulsa una barra para meter o sacar ese edificio de la selección.
+                Pulse una barra para incorporar ese activo a la selección o retirarlo de ella.
               </p>
               {/* De mayor a menor: es una comparación de magnitudes y la API los
                   devuelve por nombre, que aquí no significa nada. En «cuándo hay
@@ -455,18 +461,18 @@ function Cabecera({
       <p className="alcance">
         {seleccion.length ? (
           <>
-            Todo el dashboard, <strong>solo de {nombreDeLaSeleccion(seleccion)}</strong>
+            Alcance: <strong>{nombreDeLaSeleccion(seleccion)}</strong>
             <button type="button" className="enlace" onClick={alQuitarFiltro}>
-              ver los {activos.length} agrupados
+              ver los {activos.length} agregados
             </button>
           </>
         ) : cartera ? (
           <>
-            Todo el dashboard, con los <strong>{activos.length} activos</strong> del proyecto
-            agrupados · {eurosExactos.format(totalDelProyecto)}
+            Alcance: los <strong>{activos.length} activos</strong> del proyecto, agregados ·{' '}
+            {eurosExactos.format(totalDelProyecto)}
           </>
         ) : (
-          <>Un solo activo en el proyecto · {eurosExactos.format(totalDelProyecto)}</>
+          <>Alcance: un solo activo · {eurosExactos.format(totalDelProyecto)}</>
         )}
       </p>
       {cartera && (
@@ -478,7 +484,7 @@ function Cabecera({
           </summary>
           <fieldset>
             <legend className="ayuda">
-              Elige uno, varios o ninguno. Sin ninguno marcado se lee la cartera entera.
+              Uno, varios o ninguno. Sin ninguna casilla marcada se lee la cartera entera.
             </legend>
             <ul>
               {activos.map((a) => (

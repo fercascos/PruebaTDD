@@ -214,14 +214,22 @@ informa por sí solo.
 
 ### El dashboard: cinco cortes y un solo filtro
 
-`src/paginas/Dashboard.tsx`. Cinco preguntas —en qué se va el dinero, cuándo hay
-que pagarlo, cuánto de esto es grave, qué parte del edificio y qué edificio— con
-**un selector arriba que manda sobre las cuatro primeras**. La razón es que en la
-reunión las preguntas se hacen del mismo edificio: saber en qué se va el dinero
-de una nave no sirve de nada si el «cuándo hay que pagarlo» de al lado sigue
-siendo el del parque entero. Un filtro por gráfico permitiría justo esa pantalla
-—cinco alcances distintos, ninguno escrito— y sería un error de lectura imposible
-de detectar mirándola.
+`src/paginas/Dashboard.tsx`. Cinco cortes —**distribución por concepto de gasto**,
+**perfil temporal de la inversión**, **exposición por grado de riesgo**,
+**desglose por categoría y objeto** y **distribución por activo**— con **un
+selector arriba que manda sobre los cuatro primeros**.
+
+`[REQ]` Los títulos van en el registro de una due diligence técnica, que es el
+del informe que sale de aquí. La pregunta coloquial que contesta cada uno —«en
+qué se va el dinero», «cuánto de esto es grave»— sigue estando **en el texto de
+ayuda**, donde explica; el encabezado, que es lo que se imprime y lo que ve el
+cliente, dice lo que dice un informe.
+
+**El selector está una sola vez, arriba**, porque en la reunión las preguntas se
+hacen del mismo edificio: saber en qué se va el dinero de una nave no sirve de
+nada si el perfil temporal de al lado sigue siendo el del parque entero. Un
+filtro por gráfico permitiría justo esa pantalla —cinco alcances distintos,
+ninguno escrito— y sería un error de lectura imposible de detectar mirándola.
 
 `[REQ]` El selector admite **uno, varios o toda la cartera**. No es una
 comodidad: la comparación que se hace es «las dos naves del polígono frente al
@@ -233,7 +241,7 @@ qué—.
 
 Con dos consecuencias deliberadas:
 
-* **«Qué edificio» se queda, y no se filtra nunca.** Es el único bloque que
+* **«Distribución por activo» se queda, y no se filtra nunca.** Es el único bloque que
   sigue enseñando la cartera entera, y por eso vale de referencia: dice si el
   edificio que se está mirando es el caro o uno de los baratos, cosa que los
   otros cuatro, ya filtrados, no pueden decir. Y es lo que permite **comparar

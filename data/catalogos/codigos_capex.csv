@@ -80,7 +80,7 @@ HC.H09.10,Alumbrado,3,HC.H09
 HC.H09.11,Alumbrado de emergencia,3,HC.H09
 HC.H09.12,Pararrayos,3,HC.H09
 HC.H09.13,Red de tierras,3,HC.H09
-HC.H09.14,Placas fotovoltáicas,3,HC.H09
+HC.H09.14,Placas fotovoltaicas,3,HC.H09
 HC.H09.15,General,3,HC.H09
 HC.H09.16,Otros,3,HC.H09
 HC.H10,Protección Activa Incendios,2,HC
@@ -88,7 +88,7 @@ HC.H10.01,Grupo de presión,3,HC.H10
 HC.H10.02,Hidrantes,3,HC.H10
 HC.H10.03,Aljibe,3,HC.H10
 HC.H10.04,Columna seca,3,HC.H10
-HC.H10.05,Bies,3,HC.H10
+HC.H10.05,BIEs,3,HC.H10
 HC.H10.06,Extintores portátiles,3,HC.H10
 HC.H10.07,Extinción automática por gas,3,HC.H10
 HC.H10.08,Detección de CO,3,HC.H10

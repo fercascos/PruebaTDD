@@ -198,8 +198,9 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
      una acabaría quedándose atrás. */
   const conmutador = (
     <p className="ayuda ir-al-dashboard">
-      ¿Cuánto suma todo esto? Está en el <Link to={`/proyectos/${projectId}/dashboard`}>Dashboard</Link>,
-      con el reparto por concepto, plazo, riesgo, categoría y activo.
+      El desglose económico está en el{' '}
+      <Link to={`/proyectos/${projectId}/dashboard`}>Dashboard</Link>: distribución por concepto de
+      gasto, perfil temporal, exposición por riesgo, categoría con sus objetos y activo.
     </p>
   )
 

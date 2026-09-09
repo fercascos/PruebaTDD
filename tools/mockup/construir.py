@@ -215,7 +215,7 @@ BLOQUES = [
                 "representa este activo.",
                 (
                     "REQ",
-                    "«Qué edificio» <strong>no se filtra nunca</strong> y por eso se "
+                    "«Distribución por activo» <strong>no se filtra nunca</strong> y por eso se "
                     "queda: es la referencia contra la que se lee el resto —si el que se "
                     "mira es el caro o uno de los baratos— y el mando con el que se pasa "
                     "de una nave a otra sin salir de la pantalla. La barra puesta se "

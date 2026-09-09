@@ -396,12 +396,12 @@ que hasta ahora se sumaba a mano.
 
 | Método | Ruta | Pregunta que contesta |
 |---|---|---|
-| `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **En qué se va el dinero.** Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
-| `GET` | `/projects/{id}/capex/summary/by-horizon?asset_id=` | **Cuándo hay que pagarlo.** En orden de plazo, no de importe. Los cinco plazos salen siempre, con ceros |
-| `GET` | `/projects/{id}/capex/summary/by-chapter?asset_id=` | **Qué parte del edificio.** Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
+| `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **Distribución por concepto de gasto** · en qué se va el dinero. Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
+| `GET` | `/projects/{id}/capex/summary/by-horizon?asset_id=` | **Perfil temporal de la inversión** · cuándo hay que pagarlo. En orden de plazo, no de importe. Los cinco plazos salen siempre, con ceros |
+| `GET` | `/projects/{id}/capex/summary/by-chapter?asset_id=` | **Desglose por categoría** · qué parte del edificio. Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
 | `GET` | `/projects/{id}/capex/summary/by-object?asset_id=` | **Lo mismo, un nivel más abajo:** una fila por capítulo **y objeto**, que es lo que alimenta las barras apiladas. El objeto va a `null` cuando el hallazgo se codificó en el propio capítulo |
-| `GET` | `/projects/{id}/capex/summary/by-risk?asset_id=` | **Cuánto de esto es grave.** Los cuatro grados salen siempre y en orden de gravedad; los hallazgos sin grado, como `SIN_GRADO`, solo si los hay |
-| `GET` | `/projects/{id}/capex/summary/by-asset` | **Qué edificio.** Un activo por fila aunque no tenga actuaciones, con ceros. **Sin `asset_id`: es el índice, no un corte** |
+| `GET` | `/projects/{id}/capex/summary/by-risk?asset_id=` | **Exposición por grado de riesgo** · cuánto de esto es grave. Los cuatro grados salen siempre y en orden de gravedad; los hallazgos sin grado, como `SIN_GRADO`, solo si los hay |
+| `GET` | `/projects/{id}/capex/summary/by-asset` | **Distribución por activo.** Un activo por fila aunque no tenga actuaciones, con ceros. **Sin `asset_id`: es el índice, no un corte** |
 
 `[REQ]` **`asset_id` se puede repetir**: `?asset_id=…&asset_id=…` lee **varios
 edificios juntos**, que es la comparación que se hace en una cartera —«las dos
@@ -437,7 +437,7 @@ edificio lo dejaría con una fila: deja de ser un reparto. Es además el que da 
 lista con la que la pantalla construye el desplegable y el total del encargo
 contra el que se calcula «qué parte del CAPEX es este activo».
 
-Y es lo que permite que su bloque, «Qué edificio», **siga en pantalla con el
+Y es lo que permite que su bloque, «Distribución por activo», **siga en pantalla con el
 filtro puesto**, enseñando el encargo entero mientras los otros tres enseñan una
 sola nave: es la referencia contra la que se leen —dice si el edificio que se
 está mirando es el caro o uno de los baratos— y el mando con el que se pasa de

@@ -210,8 +210,8 @@ flowchart LR
 | **H06. Protección Pasiva Incendios** | Sectorización · Zonas de riesgo especial · Espacios ocultos y pasos de instalaciones · Resistencia al fuego de la estructura · Reacción al fuego de los elementos constructivos · Propagación exterior horizontal · Propagación exterior vertical · Propagación exterior por cubierta · Evacuación de ocupantes · General · Otros |
 | **H07. Accesibilidad** | Accesibilidad desde el exterior · Accesibilidad entre las plantas · Accesibilidad en las plantas · Dotación de plazas de aparcamiento accesibles · Dotación de servicios higiénicos accesibles · Mobiliario fijo · Evacuación de personas con discapacidad · Señalética SIA · Instalaciones · General · Otros |
 | **H08. HVAC** | Producción de climatización · Producción de calor · Distribución · Grupos de presión · Elementos terminales · Humectación · Ventilación aire primario · Extracción · Ventilación natural de humos · General · Otros |
-| **H09. Electricidad** | Acometida-Centro de transformación · CGBT · BTV · Centralización de contadores · Cuadros secundarios de distribución · Batería de condensadores · Grupo electrógeno · Cableado · UPS · Alumbrado · Alumbrado de emergencia · Pararrayos · Red de tierras · Placas fotovoltáicas · General · Otros |
-| **H10. Protección Activa Incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · Bies · Extintores portátiles · Extinción automática por gas · Detección de CO · Extracción de CO y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General · Otros |
+| **H09. Electricidad** | Acometida-Centro de transformación · CGBT · BTV · Centralización de contadores · Cuadros secundarios de distribución · Batería de condensadores · Grupo electrógeno · Cableado · UPS · Alumbrado · Alumbrado de emergencia · Pararrayos · Red de tierras · Placas fotovoltaicas · General · Otros |
+| **H10. Protección Activa Incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · BIEs · Extintores portátiles · Extinción automática por gas · Detección de CO · Extracción de CO y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General · Otros |
 | **H11. Fontanería y saneamiento** | Acometida · Grupo de presión · Aljibes · Aseos · Producción de ACS · Saneamiento · Contribución mínima de renovables · General · Otros |
 | **H12. Transporte vertical y puertas mecánicas** | Ascensor · Acceso al parking · Góndola · Escaleras mecánicas · Puerta de acceso principal · General · Otros |
 | **H13. Seguridad CCTV y BMS** | Control de accesos · Instalación CCTV · Central de seguridad · Sistemas de megafonía · BMS · General · Otros |
@@ -296,11 +296,25 @@ definido no puede apuntar a dos listas: la de categorías se quedaba sin resolve
 CAPEX y por la que agrupan las tablas dinámicas. `tools/reparar_nombres_plantilla_en.py` lo aplica y
 hay pruebas que comprueban los dos niveles en las dos plantillas.
 
+`[REQ]` **`Placas fotovoltaicas` y `BIEs` llegaron mal escritos, y se han corregido.** La hoja del
+cliente traía `Placas fotovoltáicas` —el diptongo `ai` es átono y no lleva tilde— y `Bies`, que es el
+acrónimo BIE (Boca de Incendio Equipada) escrito como si fuera una palabra. Estuvieron copiados
+literales una versión, con el criterio de abajo; el cliente ha pedido corregirlos y se corrigen **en
+los dos sitios a la vez**: en el catálogo, con la migración `0021`, y en la plantilla española, con
+`tools/corregir_erratas_plantillas.py`. La inglesa dice `Photovoltaic panels` y `Fire hose reels`,
+que están bien. `tools/importar_arbol_capex.py` los corrige también al leer la hoja, porque la hoja
+del cliente los seguirá trayendo.
+
 `[REC]` **`Certificación WIRESCORED` está mal escrito, y se copia igual.** El producto es
 *WiredScore*, y la plantilla inglesa lo escribe bien («WIREDSCORE Certification»); la española tiene
 la errata. Se siembra el literal español tal cual porque es el que ofrece su desplegable: escribir el
 nombre correcto produciría una celda con un valor que no está en su propia lista, y las tablas
-dinámicas lo dejarían fuera. Corregirlo exige corregir antes la plantilla del cliente.
+dinámicas lo dejarían fuera.
+
+**Y ahí está el criterio**, que es el mismo en los tres casos y no una excepción: el catálogo y el
+desplegable tienen que decir lo mismo, así que una errata **se corrige en los dos lados o en
+ninguno**. En los dos primeros el cliente lo pidió y se hizo; en este no lo ha pedido, así que se
+queda. `[PDV]` Basta con que lo diga.
 
 `[REC]` **Operativos e Imprevistos se siembran, y para eso hubo que darles sitio en la plantilla.**
 Los dos tipos de coste estaban declarados en «00 Datos Categorías» pero la hoja `CapEx` no tenía
