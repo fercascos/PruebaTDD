@@ -233,7 +233,7 @@ De la hoja de estructura del cliente, igual que la tabla anterior.
 | **OP. OP3 · Otros** |  |
 | **MA. MA1 · Medioambiente** | Situación legal · Gestión de residuos urbanos · Gestión de residuos peligrosos · Emisiones de gases · Consumo de agua · Sistemas de drenaje · Ruido · Contaminación del suelo · Almacenamiento de sustancias peligrosas · Sustancias reductoras de la capa de ozono (ODS) · Presencia potencial de PCBs · Certificado de sostenibilidad · General · Otros |
 | **MA. MA2 · Otros** |  |
-| **ESG. ES1 · ESG** | Análisis CRREM · Análisis de Riesgos Climáticos · Certificación BREEAM · Certificación LEED · Certificación WELL · Certificación WIRESCORED · Certificado de Eficiencia Energética · Auditoría Net Zero · Auditoría Energética · Cumplimiento Nuevo Reglamento EPBD · General · Otros |
+| **ESG. ES1 · ESG** | Análisis CRREM · Análisis de Riesgos Climáticos · Certificación BREEAM · Certificación LEED · Certificación WELL · Certificación WIREDSCORE · Certificado de Eficiencia Energética · Auditoría Net Zero · Auditoría Energética · Cumplimiento Nuevo Reglamento EPBD · General · Otros |
 | **ESG. ES2 · Otros** |  |
 | **IMP. IM1 · General** |  |
 | **IMP. IM2 · Otros** |  |
@@ -305,16 +305,20 @@ los dos sitios a la vez**: en el catálogo, con la migración `0021`, y en la pl
 que están bien. `tools/importar_arbol_capex.py` los corrige también al leer la hoja, porque la hoja
 del cliente los seguirá trayendo.
 
-`[REC]` **`Certificación WIRESCORED` está mal escrito, y se copia igual.** El producto es
-*WiredScore*, y la plantilla inglesa lo escribe bien («WIREDSCORE Certification»); la española tiene
-la errata. Se siembra el literal español tal cual porque es el que ofrece su desplegable: escribir el
-nombre correcto produciría una celda con un valor que no está en su propia lista, y las tablas
-dinámicas lo dejarían fuera.
+`[REQ]` **`Certificación WIRESCORED` era una transposición de letras, y también está corregida.**
+El producto se llama *WiredScore*. La plantilla inglesa ya lo escribía bien —«WIREDSCORE
+Certification»— y la española tenía las dos últimas letras cambiadas. Se corrige con la migración
+`0022` y con `tools/corregir_erratas_plantillas.py`, igual que las dos anteriores.
 
-**Y ahí está el criterio**, que es el mismo en los tres casos y no una excepción: el catálogo y el
-desplegable tienen que decir lo mismo, así que una errata **se corrige en los dos lados o en
-ninguno**. En los dos primeros el cliente lo pidió y se hizo; en este no lo ha pedido, así que se
-queda. `[PDV]` Basta con que lo diga.
+Se escribe **`WIREDSCORE` en mayúsculas** y no `WiredScore`: es como lo escribe la plantilla inglesa
+y como están sus cuatro vecinas de lista —BREEAM, LEED, WELL—. Corregir una errata es una cosa y
+cambiar el estilo de toda la lista es otra; lo segundo no se ha pedido. `[PDV]` Si el cliente
+prefiere la grafía de marca, es cambiar los dos lados otra vez.
+
+**El criterio, que es el mismo en los tres casos:** el catálogo y el desplegable tienen que decir lo
+mismo, así que una errata **se corrige en los dos lados o en ninguno**. Cambiar solo uno produce una
+celda con un valor que no está en su propia lista: la hoja se abre bien y las tablas dinámicas la
+dejan fuera, que es la peor forma de que falle.
 
 `[REC]` **Operativos e Imprevistos se siembran, y para eso hubo que darles sitio en la plantilla.**
 Los dos tipos de coste estaban declarados en «00 Datos Categorías» pero la hoja `CapEx` no tenía

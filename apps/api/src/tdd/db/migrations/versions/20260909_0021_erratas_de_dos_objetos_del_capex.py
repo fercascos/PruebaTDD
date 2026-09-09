@@ -24,10 +24,9 @@ La plantilla **inglesa** no hace falta tocarla: dice `Photovoltaic panels` y
 así que ningún hallazgo cambia de código. Y lleva el nombre anterior en el
 `WHERE`, para no pisar el de una organización que lo hubiera editado.
 
-`[REC]` No se toca `Certificación WIRESCORED`, que también está mal escrito —el
-producto es *WiredScore*—. Es lo mismo pero sin la parte que importa: el cliente
-no lo ha pedido, y cambiarlo por iniciativa propia rompería la correspondencia
-con su plantilla, que es lo que hace que sus tablas dinámicas cuenten.
+`[REC]` Queda fuera `Certificación WIRESCORED`, que también está mal escrito
+—el producto es *WiredScore*—, porque cuando se escribió esto el cliente no lo
+había pedido. Lo pidió justo después: lo corrige `0022`, por este mismo camino.
 """
 
 from __future__ import annotations

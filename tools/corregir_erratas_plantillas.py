@@ -36,13 +36,12 @@ PLANTILLAS = RAIZ / "apps" / "api" / "src" / "tdd" / "exports" / "plantillas"
 
 #: `fichero → {texto mal escrito: texto correcto}`.
 #:
-#: `[REC]` No toda diferencia con el diccionario es una errata que se corrija
-#: aquí. `Certificación WIRESCORED` también está mal —el producto es
-#: *WiredScore*— y **se deja como está**: ese texto es un valor de una lista
-#: cerrada por la que agrupan las tablas dinámicas, y cambiarlo sin cambiar
-#: también el catálogo sembrado dejaría celdas fuera de su propia lista. Ver la
-#: nota de §5.3. `Mediambiente` sí se corrige porque es una **etiqueta** y su
-#: nombre definido se renombra con ella.
+#: `[REC]` **El criterio, que es uno para las tres:** estos textos son valores de
+#: listas cerradas por las que agrupan las tablas dinámicas, así que una errata
+#: **se corrige en la plantilla y en el catálogo a la vez, o en ninguno de los
+#: dos**. Cambiar un solo lado deja celdas fuera de su propia lista: la hoja se
+#: abre bien y los gráficos salen incompletos. `Mediambiente` fue el primer caso,
+#: y además es una **etiqueta**, así que su nombre definido se renombra con ella.
 #:
 #: `[REQ]` **`Placas fotovoltáicas` y `Bies` llegaron con el árbol del cliente
 #: (P-45) y el cliente ha pedido corregirlas.** Son valores de lista, así que
@@ -55,11 +54,19 @@ PLANTILLAS = RAIZ / "apps" / "api" / "src" / "tdd" / "exports" / "plantillas"
 #: acrónimo de Boca de Incendio Equipada, así que su plural se escribe `BIEs`.
 #: La plantilla inglesa dice `Photovoltaic panels` y `Fire hose reels`, que
 #: están bien: por eso solo se toca la española.
+#:
+#: `[REQ]` **`WIRESCORED` → `WIREDSCORE`**, también a petición del cliente. Es una
+#: transposición de letras: el producto se llama *WiredScore*. Se escribe en
+#: mayúsculas y no `WiredScore` porque así lo escribe **la propia plantilla
+#: inglesa** —`WIREDSCORE Certification`— y así están sus cuatro vecinas de lista
+#: en español: BREEAM, LEED y WELL. Corregir la errata es una cosa y cambiar el
+#: estilo de toda la lista es otra, y solo se ha pedido la primera.
 ERRATAS: dict[str, dict[str, str]] = {
     "capex_ddt_es.xltm": {
         "Mediambiente": "Medioambiente",
         "Placas fotovoltáicas": "Placas fotovoltaicas",
         "Bies": "BIEs",
+        "WIRESCORED": "WIREDSCORE",
     },
 }
 

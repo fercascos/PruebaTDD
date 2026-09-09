@@ -16,9 +16,10 @@ discutir:
    confirmó dejarlo así, de modo que **la categoría lleva el nombre de su
    tipo**, igual que ya pasa en Medioambiente.
 4. `V1.2` estaba repetido en el bloque de visita; el segundo es `V1.3`.
-5. `Placas fotovoltáicas` y `Bies` **traen erratas** —el diptongo `ai` es átono y
-   `BIE` es un acrónimo—. Se corrigen aquí **y en la plantilla**, porque el
-   cliente lo pidió; ver `CORRECCIONES`.
+5. `Placas fotovoltáicas`, `Bies` y `Certificación WIRESCORED` **traen erratas**
+   —el diptongo `ai` es átono, `BIE` es un acrónimo y el producto es
+   *WiredScore*—. Se corrigen aquí **y en la plantilla**, porque el cliente lo
+   pidió; ver `CORRECCIONES`.
 
 `[SUP]` Dos más, propuestas y no contestadas, marcadas en el resultado:
 
@@ -74,6 +75,9 @@ FUSIONAR = {"H16": "H15"}
 CORRECCIONES = {
     "Placas fotovoltáicas": "Placas fotovoltaicas",
     "Bies": "BIEs",
+    # Transposición de letras: el producto es *WiredScore*. En mayúsculas, como
+    # lo escribe la plantilla inglesa y como están sus vecinas de lista.
+    "Certificación WIRESCORED": "Certificación WIREDSCORE",
 }
 
 

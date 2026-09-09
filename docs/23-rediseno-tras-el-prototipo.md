@@ -148,11 +148,12 @@ el cliente confirmó que su plantilla puede cambiar y se le dieron las filas
 dejarle sitio: una cuarta categoría de soft costs al final de la hoja se leería
 como una sección aparte.
 
-`[REQ]` **Las dos erratas del árbol, corregidas** ✅. La hoja traía `Placas
-fotovoltáicas` y `Bies`; el cliente pidió arreglarlas y se han arreglado **en los
-dos lados a la vez** —catálogo con la migración `0021`, plantilla española con
-`tools/corregir_erratas_plantillas.py`—, que es la única forma de que el
-desplegable y la base de datos sigan diciendo lo mismo.
+`[REQ]` **Las tres erratas del árbol, corregidas** ✅. La hoja traía `Placas
+fotovoltáicas`, `Bies` y `Certificación WIRESCORED`; el cliente pidió arreglarlas
+y se han arreglado **en los dos lados a la vez** —catálogo con las migraciones
+`0021` y `0022`, plantilla española con `tools/corregir_erratas_plantillas.py`—,
+que es la única forma de que el desplegable y la base de datos sigan diciendo lo
+mismo.
 
 `[LIM]` Lo que queda abierto no bloquea nada: los tramos añadidos **no traen
 desplegable en la columna «Categoría»**, igual que las diez filas de `S03` en la
