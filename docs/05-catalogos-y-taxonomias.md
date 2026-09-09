@@ -158,9 +158,9 @@ consultor porque alguien tocó un desplegable es inaceptable: se conserva, se ma
 
 ```mermaid
 flowchart LR
-    R["Código CAPEX"] --> N1["Nivel 1 · CATEGORÍA<br/>4 valores"]
-    N1 --> N2["Nivel 2 · CAPÍTULO<br/>H01…H15 en Hard Costs"]
-    N2 --> N3["Nivel 3 · ELEMENTO<br/>~120 hojas"]
+    R["Código CAPEX"] --> N1["Nivel 1 · TIPO DE COSTE<br/>6 valores"]
+    N1 --> N2["Nivel 2 · CATEGORÍA<br/>H01…H15 en Hard Cost"]
+    N2 --> N3["Nivel 3 · OBJETO<br/>141 hojas"]
     N3 --> S["Solo el nivel 3 es seleccionable<br/>en una línea de CAPEX"]
 
     style N3 fill:#e8f5e9,stroke:#2e7d32
@@ -170,56 +170,73 @@ flowchart LR
 
 | `code` | Nombre | Estado |
 |---|---|---|
-| `HC` | Hard Costs | ✅ Desarrollada (15 capítulos) |
-| `MA` | Medioambiental | ✅ Desarrollada (13 elementos) |
-| `ESG` | ESG & Energía | ✅ Desarrollada (11 elementos) |
-| `SC` | Soft Costs | ✅ Desarrollada (3 capítulos) |
-| `OP` | Operativos | ✅ Desarrollada (2 capítulos) |
-| `IMP` | Imprevistos | ✅ Desarrollada (1 capítulo) |
+| `HC` | Hard Cost | ✅ 15 categorías |
+| `SC` | Soft Cost | ✅ 4 categorías |
+| `OP` | Operativo | ✅ 3 categorías |
+| `MA` | Medioambiente | ✅ 2 categorías |
+| `ESG` | ESG y Energía | ✅ 2 categorías |
+| `IMP` | Imprevistos | ✅ 2 categorías |
 
-> **P-03 · CERRADO.** Se recibió la plantilla CAPEX DDT vigente, que **sí trae el desglose** de las
-> tres categorías que faltaban. Se incorpora tal cual viene, y esta sección deja de ser provisional.
+> **P-45 · El árbol lo mantiene el cliente, y con sus códigos.** Tras la revisión del primer
+> prototipo, el cliente entregó su estructura completa en una hoja de cálculo y pidió que el
+> catálogo use **su codificación**. Es la fuente de esta sección: la traduce
+> `tools/importar_arbol_capex.py` y de aquí sale la semilla, como con todos los catálogos.
 >
-> `[REQ]` **Sin migración de datos, como se prometió.** `MA.General` y `ESG.General` siguen siendo
-> capítulos válidos y conservan su elemento `General`: lo que se hace es **añadir** elementos a su
-> lado. Ninguna línea de CAPEX ya codificada cambia de código ni se queda huérfana. `SC.General`
-> también se conserva por la misma razón, junto a los tres capítulos nuevos `S01`, `S02` y `S03`.
+> `[REQ]` **Hubo migración, y por eso no hay huérfanos.** Seis categorías cambian de código
+> —`MA.General` → `MA.MA1`, `ESG.General` → `ESG.ES1`, `OP.C01` → `OP.OP1`, `OP.C02` → `OP.OP2`,
+> `IMP.General` → `IMP.IM1`, y `SC.General` pasa a ser el `SC.S04 Otros`—. La migración `0020`
+> **renombra la fila** en vez de crear otra: conserva su `id`, así que todo lo que apuntaba a ella
+> —hallazgos, fotografías, categorías de memoria— sigue apuntando a lo mismo sin tocar esas tablas.
+>
+> `[LIM]` Esto **revoca la promesa anterior** de que `MA.General.01` conservaría su código para
+> siempre. Se revoca porque el cliente decidió otra cosa, y queda escrito aquí para que quien lea
+> la versión vieja del documento sepa que ya no vale. La prueba que lo fijaba se ha sustituido por
+> otra que comprueba lo que sigue importando: que nada se quede sin código.
+>
+> `[SUP]` Los siete objetos `General` de las categorías que en la hoja del cliente **no tienen
+> objetos** —soft costs, operativos, imprevistos— se **deprecan**: dejan de ofrecerse y lo que
+> apuntaba a ellos sube a su categoría, que es un nivel válido para codificar. No se borran, porque
+> un informe ya emitido tiene que seguir resolviendo su código.
 
 ### Nivel 2 y 3 · Hard Costs, completo
 
 | Capítulo | Elementos |
 |---|---|
-| **H01. Estructura** | Cimentación · Solera · Forjados · Estructura · General |
-| **H02. Cubierta** | Cubierta · General |
-| **H03. Fachadas** | Fachadas · General |
-| **H04. Interiores** | Particiones interiores y revestimientos interiores · Carpintería y cerrajería · Suelos y techos · General |
-| **H05. Zonas exteriores** | Exteriores · General |
-| **H06. Protección pasiva contra incendios** | Sectorización · Zonas de riesgo especial · Espacios ocultos y pasos de instalaciones · Resistencia al fuego de la estructura · Reacción al fuego de los elementos constructivos · Propagación exterior horizontal · Propagación exterior vertical · Propagación exterior por cubierta · Evacuación de ocupantes · General |
-| **H07. Accesibilidad** | Accesibilidad desde el exterior · Accesibilidad entre las plantas · Accesibilidad en las plantas · Dotación de plazas de aparcamiento accesibles · Dotación de servicios higiénicos accesibles · Mobiliario fijo · Evacuación de personas con discapacidad · Señalética SIA · Instalaciones · General |
-| **H08. HVAC** | Producción de climatización · Producción de calor · Distribución · Grupos de presión · Elementos terminales · Humectación · Ventilación aire primario · Extracción · Ventilación natural de humos · General |
-| **H09. Electricidad** | Acometida-Centro de transformación · CGBT · BTV · Centralización de contadores · Cuadros secundarios de distribución · Batería de condensadores · Grupo electrógeno · Cableado · UPS · Alumbrado · Alumbrado de emergencia · Pararrayos · Red de tierras · Placas fotovoltaicas · General |
-| **H10. Protección activa contra incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · BIEs · Extintores portátiles · Extinción automática por gas · Detección de CO · Extracción de CO y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General |
-| **H11. Fontanería y saneamiento** | Acometida · Grupo de presión · Aljibes · Aseos · Producción de ACS · Saneamiento · Contribución mínima de renovables · General |
-| **H12. Transporte vertical y puertas mecánicas** | Ascensor · Acceso al parking · Góndola · Escaleras mecánicas · Puerta de acceso principal · General |
-| **H13. Seguridad, CCTV y BMS** | Control de accesos · Instalación CCTV · Central de seguridad · Sistemas de megafonía · BMS · General |
-| **H14. Telecomunicaciones, voz y datos** | WIFI · PPV · Voz y datos · Interfono · General |
-| **H15. Otros** | General |
+| **H01. Estructura** | Cimentación · Solera · Forjados · Estructura · General · Otros |
+| **H02. Cubierta** | Cubierta · General · Otros |
+| **H03. Fachadas** | Fachadas · General · Otros |
+| **H04. Interiores** | Particiones interiores y revestimientos interiores · Carpintería y cerrajería · Suelos y techos · General · Otros |
+| **H05. Zonas exteriores** | Exteriores · General · Otros |
+| **H06. Protección Pasiva Incendios** | Sectorización · Zonas de riesgo especial · Espacios ocultos y pasos de instalaciones · Resistencia al fuego de la estructura · Reacción al fuego de los elementos constructivos · Propagación exterior horizontal · Propagación exterior vertical · Propagación exterior por cubierta · Evacuación de ocupantes · General · Otros |
+| **H07. Accesibilidad** | Accesibilidad desde el exterior · Accesibilidad entre las plantas · Accesibilidad en las plantas · Dotación de plazas de aparcamiento accesibles · Dotación de servicios higiénicos accesibles · Mobiliario fijo · Evacuación de personas con discapacidad · Señalética SIA · Instalaciones · General · Otros |
+| **H08. HVAC** | Producción de climatización · Producción de calor · Distribución · Grupos de presión · Elementos terminales · Humectación · Ventilación aire primario · Extracción · Ventilación natural de humos · General · Otros |
+| **H09. Electricidad** | Acometida-Centro de transformación · CGBT · BTV · Centralización de contadores · Cuadros secundarios de distribución · Batería de condensadores · Grupo electrógeno · Cableado · UPS · Alumbrado · Alumbrado de emergencia · Pararrayos · Red de tierras · Placas fotovoltáicas · General · Otros |
+| **H10. Protección Activa Incendios** | Grupo de presión · Hidrantes · Aljibe · Columna seca · Bies · Extintores portátiles · Extinción automática por gas · Detección de CO · Extracción de CO y ventilación del parking · Rociadores · Detección y alarma de incendios · Inspección RIPCI · Exutorios · General · Otros |
+| **H11. Fontanería y saneamiento** | Acometida · Grupo de presión · Aljibes · Aseos · Producción de ACS · Saneamiento · Contribución mínima de renovables · General · Otros |
+| **H12. Transporte vertical y puertas mecánicas** | Ascensor · Acceso al parking · Góndola · Escaleras mecánicas · Puerta de acceso principal · General · Otros |
+| **H13. Seguridad CCTV y BMS** | Control de accesos · Instalación CCTV · Central de seguridad · Sistemas de megafonía · BMS · General · Otros |
+| **H14. Telecomunicaciones, voz y datos** | WIFI · PPV · Voz y datos · Interfono · General · Otros |
+| **H15. Otros** | General · Otros |
 
-### Nivel 2 y 3 · Medioambiental, ESG y Soft Costs
+### Nivel 2 y 3 · el resto de tipos de coste
 
-De la plantilla CAPEX DDT vigente. Cierra P-03.
+De la hoja de estructura del cliente, igual que la tabla anterior.
 
 | Capítulo | Elementos |
 |---|---|
-| **MA. General** | General · Situación legal · Gestión de residuos urbanos · Gestión de residuos peligrosos · Emisiones de gases · Consumo de agua · Sistemas de drenaje · Ruido · Contaminación del suelo · Almacenamiento de sustancias peligrosas · Sustancias reductoras de la capa de ozono (ODS) · Presencia potencial de PCBs · Certificado de sostenibilidad |
-| **ESG. General** | General · Análisis CRREM · Análisis de Riesgos Climáticos · Certificación BREEAM · Certificación LEED · Certificación WELL · Certificación WIRESCORED · Certificado de Eficiencia Energética · Auditoría Net Zero · Auditoría Energética · Cumplimiento Nuevo Reglamento EPBD |
-| **SC. General** | General |
-| **SC. S01 · Proyectos, Diseño y DO** | General |
-| **SC. S02 · Trabajos Complementarios** | General |
-| **SC. S03 · Licencias y Tasas** | General |
-| **OP. C01 · Consumos Obra** | General |
-| **OP. C02 · Limpieza** | General |
-| **IMP. General** | General |
+| **SC. S01 · Proyectos, Diseño y DO** |  |
+| **SC. S02 · Trabajos Complementarios** |  |
+| **SC. S03 · Licencias y Tasas** |  |
+| **SC. S04 · Otros** |  |
+| **OP. OP1 · Consumos obra** |  |
+| **OP. OP2 · Limpieza** |  |
+| **OP. OP3 · Otros** |  |
+| **MA. MA1 · Medioambiente** | Situación legal · Gestión de residuos urbanos · Gestión de residuos peligrosos · Emisiones de gases · Consumo de agua · Sistemas de drenaje · Ruido · Contaminación del suelo · Almacenamiento de sustancias peligrosas · Sustancias reductoras de la capa de ozono (ODS) · Presencia potencial de PCBs · Certificado de sostenibilidad · General · Otros |
+| **MA. MA2 · Otros** |  |
+| **ESG. ES1 · ESG** | Análisis CRREM · Análisis de Riesgos Climáticos · Certificación BREEAM · Certificación LEED · Certificación WELL · Certificación WIRESCORED · Certificado de Eficiencia Energética · Auditoría Net Zero · Auditoría Energética · Cumplimiento Nuevo Reglamento EPBD · General · Otros |
+| **ESG. ES2 · Otros** |  |
+| **IMP. IM1 · General** |  |
+| **IMP. IM2 · Otros** |  |
 
 `[REC]` **Los capítulos de soft costs no llevan desglose de elementos, y es fiel a la plantilla.**
 En la hoja `CapEx` las filas de soft costs escriben su concepto —«Redacción de Proyectos y Dirección
@@ -227,10 +244,28 @@ Facultativa (DF)», «Honorarios ECLU»— **en la columna de descripción**, no
 elementos: la validación en cascada solo cubre la columna de categoría. Inventar aquí una lista de
 elementos habría producido códigos que la plantilla no sabe colocar.
 
-`[REC]` **`General` va el primero en MA y ESG, y no por orden alfabético.** Es el elemento que ya
-existía y el que tienen asignado las líneas sembradas antes de recibir el desglose: dejarlo en su
-posición mantiene estable su código `MA.General.01`, y ninguna línea de CAPEX existente cambia de
-código. Poner `Situación legal` delante habría renumerado todo el capítulo.
+`[REQ]` **«Otros» y el `-` de la plantilla son la misma casilla.** El cliente pidió mantener los `-`
+de sus listas «porque sirve como *otros*», y en la aplicación ese nodo se llama «Otros», que es lo
+que hay que leer en un desplegable. Al exportar se escribe otra vez `-`: es lo que admite la
+validación de la hoja, y escribir la palabra dejaría el valor **fuera de lista**, con la hoja
+abriéndose igual y los gráficos sin contarlo. El puente lo tiende
+`apps/api/src/tdd/exports/vocabulario_capex.py`.
+
+`[LIM]` **`SC.S04 «Otros»` todavía no se puede exportar.** La hoja `CapEx` no tiene tramo para ella:
+el total de soft costs es `=J220+J232+J244`, la suma exacta de las otras tres categorías. Meterla en
+el tramo de una vecina la sumaría a un subtotal que no es el suyo **sin que la hoja descuadre**, que
+es la clase de error que no se ve. Así que se avisa **antes** de exportar —cabida cero, por la misma
+vía que un bloque desbordado— y la exportación se niega entera. Las categorías «Otros» de
+Medioambiente, ESG, Operativos e Imprevistos sí se exportan: sus tipos de coste tienen **un solo
+tramo** con un subtotal que suma el tipo entero, así que compartirlo no atribuye nada mal. `[PDV]`
+Resolverlo es añadir un cuarto tramo a la plantilla y corregir la fórmula del total; hace falta que
+el cliente confirme que su plantilla puede cambiar.
+
+`[REC]` **`General` va ahora el penúltimo, antes de «Otros».** Es el orden de la hoja del cliente y
+el que tiene sentido leyendo un desplegable: primero lo concreto, y al final las dos salidas. La
+versión anterior lo ponía el primero para no renumerar el capítulo; al renombrar los códigos por
+migración eso dejó de hacer falta, y `MA.General.01` es hoy `MA.MA1.13`, con el mismo significado y
+la misma fila.
 
 `[REC]` **En inglés el tipo de coste medioambiental se llama `Environmental_Cost`.** Los
 desplegables de la plantilla van en cascada: la columna «Categoría» se valida con `INDIRECT()` sobre
@@ -261,10 +296,14 @@ cambia de sitio.
 costs, no una lista de actuaciones. `Operativos` es un bloque itemizado normal, y su categoría la
 elige el desplegable entre las dos que declara el catálogo.
 
-**Totales de la semilla:** **6 categorías · 24 capítulos** (15 de Hard Costs + `MA.General` +
-`ESG.General` + `SC.General` + 3 de Soft Costs + 2 de Operativos + `IMP.General`) · **131 elementos**
-(100 de Hard Costs + 13 de Medioambiental + 11 de ESG + 1 de `SC.General` + 3 de Soft Costs + 2 de
-Operativos + 1 de Imprevistos). **161 nodos** en total.
+**Totales de la semilla:** **6 tipos de coste · 28 categorías** (15 de Hard Cost + 4 de Soft Cost +
+3 de Operativo + 2 de Medioambiente + 2 de ESG y Energía + 2 de Imprevistos) · **141 objetos**
+(115 de Hard Cost + 14 de Medioambiente + 12 de ESG y Energía). **175 nodos** en total.
+
+`[REC]` **Soft costs, operativos e imprevistos no traen objetos, y es fiel a la hoja.** Sus
+categorías son la hoja del árbol y ahí se codifica el hallazgo: el concepto concreto —«Honorarios
+ECLU»— se escribe en la descripción, como en la plantilla CAPEX. Conviene saberlo porque en el
+informe esas líneas salen con la celda de objeto vacía.
 
 `[REC]` La cifra de «121» que arrastraba una versión anterior de este documento era **capítulos más
 elementos**, no elementos. Hay una prueba que fija los cuatro recuentos para que no vuelva a
@@ -288,7 +327,7 @@ de electricidad» es `path <@ 'HC.H09'`.
 | # | Observación | Tratamiento |
 |---|---|---|
 | 1 | Todos los capítulos tienen un elemento **«General»** | Se conserva: es la vía de escape cuando el consultor no quiere afinar más. Es `is_selectable = true` |
-| 2 | Aparece también un elemento **«–»** en cada capítulo | No se modela como fila: es `NULL`, como en las zonas |
+| 2 | Aparece también un elemento **«–»** en cada capítulo | `[REQ]` **Sí se modela, y se llama «Otros»**. Al recibir la hoja se preguntó, y el cliente confirmó que no es relleno: es la salida que necesita un consultor cuando lo que ve no está en la lista. Antes se descartaba, y quien no encontraba su objeto acababa usando «General», que significa otra cosa. Hay una prueba que exige que **toda categoría con objetos ofrezca «Otros»** |
 | 3 | **«Grupo de presión»** aparece en H10 y en H11 | Son códigos distintos con el mismo nombre (`HC.H10.01` y `HC.H11.02`). Correcto: uno es de incendios y otro de fontanería. La interfaz muestra siempre el capítulo junto al elemento para evitar confusión `[REC]` |
 | 4 | **«Aljibe»** (H10) y **«Aljibes»** (H11) | Mismo caso que el anterior; se conservan ambos, con su capítulo visible |
 | 5 | **«Acometida»** aparece en H09 (Acometida-CT) y H11 (Acometida) | Ídem |
@@ -360,7 +399,7 @@ color como refuerzo.
 
 > `[PDV]` **Solapamiento detectado.** Tres valores —`Soft Cost`, `Medioambiental` y `ESG`— aparecen a
 > la vez como **concepto** (§3.3.3) y como **categoría del árbol de códigos** (§3.3.4). Una línea
-> podría quedar codificada como `SC.General` con concepto `Soft Cost`, lo que es redundante, o como
+> podría quedar codificada como `SC.S04` con concepto `Soft Cost`, lo que es redundante, o como
 > `HC.H09.10` con concepto `ESG`, lo que es contradictorio.
 >
 > **Propuesta** `[REC]`: mantener ambos campos, porque miden cosas distintas —el código dice *qué

@@ -59,7 +59,7 @@ def test_los_csv_no_divergen_del_documento_de_diseno() -> None:
     [
         ("asset_typology", 6, "tipologías [REQ] P-01"),
         ("zone", 20, "zonas normalizadas"),
-        ("capex_code", 161, "nodos del árbol de códigos"),
+        ("capex_code", 175, "nodos del árbol de códigos"),
         ("risk_level", 4, "grados de riesgo"),
         ("capex_concept", 10, "conceptos"),
         ("time_horizon", 5, "horizontes"),
@@ -82,13 +82,13 @@ def test_la_matriz_tiene_86_relaciones(motor_admin) -> None:
 
 
 def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
-    """6 categorías + 24 capítulos + 131 elementos = 161 nodos.
+    """6 tipos de coste + 28 categorías + 141 objetos = 175 nodos.
 
-    Los recuentos crecieron al cerrar P-03 con la plantilla CAPEX vigente:
-    Medioambiental pasó de 1 elemento a 13, ESG de 1 a 11, y Soft Costs ganó
-    los capítulos `S01`, `S02` y `S03` con su `General` cada uno. Después
-    entraron Operativos e Imprevistos, en cuanto la plantilla tuvo dónde
-    escribirlos."""
+    Es la estructura que mantiene el cliente en su hoja y que entró con la
+    revisión del prototipo. Lo que la hizo crecer respecto de los 161 anteriores
+    fue **el «Otros»**: cada categoría acaba con un objeto «Otros» y cada tipo
+    con una categoría «Otros», que antes se leían como una fila de relleno y se
+    descartaban. Ver `docs/05` §5.3 y `tools/importar_arbol_capex.py`."""
     with motor_admin.connect() as c:
         por_nivel = dict(
             c.execute(
@@ -98,7 +98,7 @@ def test_el_arbol_tiene_la_forma_documentada(motor_admin) -> None:
                 )
             ).all()
         )
-    assert por_nivel == {1: 6, 2: 24, 3: 131}
+    assert por_nivel == {1: 6, 2: 28, 3: 141}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,13 +214,17 @@ def test_el_path_ltree_es_coherente_con_la_jerarquia(motor_admin) -> None:
         n = c.execute(
             text("SELECT count(*) FROM capex_code WHERE path OPERATOR(public.<@) 'HC.H09'")
         ).scalar_one()
-        assert n == 16, "H09 Electricidad: el capítulo y sus 15 elementos"
+        assert n == 17, "H09 Electricidad: el capítulo y sus 16 objetos"
 
 
-def test_las_categorias_que_cerraron_p03_tienen_su_desglose(motor_admin) -> None:
-    """P-03 · MA, ESG y SC se sembraron con un «General» provisional hasta que
-    llegó la plantilla CAPEX vigente. Ahora traen su desglose."""
-    esperado = {"MA": 13, "ESG": 11, "SC": 4, "OP": 2, "IMP": 1}
+def test_cada_tipo_de_coste_trae_los_objetos_de_la_hoja_del_cliente(motor_admin) -> None:
+    """La estructura que mantiene el cliente, comprobada tipo a tipo.
+
+    Los soft costs, operativos e imprevistos **no traen objetos**: sus
+    categorías son la hoja del árbol y ahí se codifica el hallazgo. No es un
+    olvido de la hoja, es cómo trabajan: el concepto —«Honorarios ECLU»— se
+    escribe en la descripción."""
+    esperado = {"MA": 14, "ESG": 12, "SC": 0, "OP": 0, "IMP": 0}
     with motor_admin.connect() as c:
         for cat, cuantos in esperado.items():
             n = c.execute(
@@ -233,24 +237,66 @@ def test_las_categorias_que_cerraron_p03_tienen_su_desglose(motor_admin) -> None
             assert n == cuantos, f"{cat} debe tener {cuantos} elementos, tiene {n}"
 
 
-def test_el_general_de_p03_conserva_su_codigo(motor_admin) -> None:
-    """`[REQ]` §5.3 prometió cerrar P-03 **sin migración de datos**. Si
-    `MA.General.01` dejara de ser «General», toda línea de CAPEX ya codificada
-    pasaría a decir otra cosa sin que nadie la tocara."""
+def test_los_codigos_viejos_se_renombraron_sin_dejar_nada_huerfano(motor_admin) -> None:
+    """`[REQ]` El cliente pidió **sus** códigos, y eso obligó a renombrar.
+
+    Esto sustituye a una prueba anterior que fijaba lo contrario —que
+    `MA.General.01` conservaría su código para siempre—, y la sustituye porque
+    la decisión cambió, no porque estorbara. Lo que hay que seguir garantizando
+    es lo de siempre: **que nada se quede sin código**. Renombrar la fila en vez
+    de crear otra es lo que lo consigue, porque conserva su `id`.
+    """
     with motor_admin.connect() as c:
-        filas = dict(
+        viejos = c.execute(
+            text(
+                "SELECT count(*) FROM capex_code "
+                "WHERE code IN ('MA.General', 'ESG.General', 'OP.C01', 'OP.C02', 'IMP.General')"
+            )
+        ).scalar_one()
+        assert viejos == 0, "los códigos viejos tenían que haberse renombrado"
+
+        nuevos = dict(
             c.execute(
                 text(
                     "SELECT code, name_es FROM capex_code "
-                    "WHERE code IN ('MA.General.01', 'ESG.General.01', 'SC.General.01')"
+                    "WHERE code IN ('MA.MA1', 'ESG.ES1', 'OP.OP1', 'OP.OP2', 'IMP.IM1')"
                 )
             ).all()
         )
-    assert filas == {
-        "MA.General.01": "General",
-        "ESG.General.01": "General",
-        "SC.General.01": "General",
-    }
+        assert nuevos == {
+            "MA.MA1": "Medioambiente",
+            "ESG.ES1": "ESG",
+            "OP.OP1": "Consumos obra",
+            "OP.OP2": "Limpieza",
+            "IMP.IM1": "General",
+        }
+
+        # Y el objeto que ya estaba codificado sigue diciendo lo mismo: cambió
+        # su código, no su significado.
+        assert (
+            c.execute(text("SELECT name_es FROM capex_code WHERE code = 'MA.MA1.07'")).scalar_one()
+            == "Ruido"
+        )
+
+
+def test_cada_categoria_tiene_su_salida_otros(motor_admin) -> None:
+    """`[REQ]` Decisión del cliente: el `-` de su hoja es «Otros» y se modela.
+
+    Antes se descartaba como relleno. Es la salida que necesita un consultor en
+    campo cuando lo que ve no está en la lista, y sin ella acaba metiéndolo en
+    «General», que significa otra cosa.
+    """
+    with motor_admin.connect() as c:
+        sin_salida = c.execute(
+            text(
+                "SELECT count(*) FROM capex_code cat "
+                "WHERE cat.level = 2 AND cat.organization_id IS NULL "
+                "  AND EXISTS (SELECT 1 FROM capex_code o WHERE o.parent_id = cat.id) "
+                "  AND NOT EXISTS (SELECT 1 FROM capex_code o "
+                "                   WHERE o.parent_id = cat.id AND o.name_es = 'Otros')"
+            )
+        ).scalar_one()
+    assert sin_salida == 0, "toda categoría con objetos tiene que ofrecer «Otros»"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

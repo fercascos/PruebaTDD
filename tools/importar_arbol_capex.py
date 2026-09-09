@@ -72,60 +72,64 @@ def leer(hoja: Path) -> list[dict[str, str]]:
 
 
 def arbol(filas: list[dict[str, str]]) -> list[dict[str, str]]:
-    """Las filas del catálogo: `code, name_es, level, parent_code`."""
+    """Las filas del catálogo: `code, name_es, level, parent_code`.
+
+    Los objetos se enganchan a su categoría **por el código y no por el nombre**
+    —`H01.4` cuelga de `H01`—, y esto no es una preferencia: en cuanto los `-`
+    pasaron a ser «Otros», todas las categorías de relleno se llamaron igual y
+    los objetos de una acababan colgando de la última que se hubiera leído. Los
+    dos objetos de `H16` terminaron dentro de Imprevistos.
+    """
     salida: list[dict[str, str]] = []
     capex = [f for f in filas if f["bloque"] == "CAPEX"]
 
     for nombre, code in TIPOS.items():
         salida.append({"code": code, "name_es": nombre, "level": "1", "parent_code": ""})
 
-    #: nombre de la categoría en la hoja → su código completo, para colgar los
-    #: objetos. Se indexa por nombre porque es lo que trae la columna `padre`.
-    por_nombre: dict[str, str] = {}
+    #: código de la hoja —`H01`, `MA1`— → código completo del catálogo.
+    por_codigo: dict[str, str] = {}
 
     for f in capex:
         # Decisión 2: la errata de nivel de H14.
-        es_categoria = f["nivel"] == "Categoría" or (
-            f["nivel"] == "Objeto" and f["codigo"] == "H14"
-        )
+        es_categoria = f["nivel"] == "Categoría" or (f["nivel"] == "Objeto" and f["codigo"] == "H14")
         if not es_categoria:
             continue
-        sufijo = FUSIONAR.get(f["codigo"], f["codigo"])
-        if sufijo in FUSIONAR.values() and any(c["code"].endswith(f".{sufijo}") for c in salida):
-            # Ya existe por la fusión: los objetos de H16 se cuelgan de H15.
-            por_nombre[f["nombre"]] = next(
-                c["code"] for c in salida if c["code"].endswith(f".{sufijo}")
-            )
+        destino = FUSIONAR.get(f["codigo"], f["codigo"])
+        if destino != f["codigo"]:
+            # Decisión 5: `H16` no llega a existir; lo suyo va a `H15`.
+            por_codigo[f["codigo"]] = por_codigo[destino]
             continue
         tipo = TIPOS.get(f["padre"])
         if tipo is None:  # Decisión 6: el tipo «Otros» del final se descarta.
             continue
-        nombre = "Otros" if f["nombre"] == HUECO else f["nombre"]
-        code = f"{tipo}.{sufijo}"
-        salida.append({"code": code, "name_es": nombre, "level": "2", "parent_code": tipo})
-        # Decisión 3: una categoría puede llamarse igual que su tipo, y entonces
-        # los objetos la nombran a ella. El nombre de la hoja manda.
-        por_nombre[f["nombre"]] = code
-        por_nombre.setdefault(nombre, code)
-
-    # Un tipo cuya única categoría se llama como él —Medioambiente, ESG y
-    # Energía— hace que `padre` sea ambiguo. Se resuelve a la categoría, que es
-    # lo que dijo el cliente.
-    for nombre_tipo, code_tipo in TIPOS.items():
-        unicas = [c for c in salida if c["level"] == "2" and c["parent_code"] == code_tipo]
-        if nombre_tipo not in por_nombre and len(unicas) >= 1:
-            por_nombre[nombre_tipo] = unicas[0]["code"]
+        code = f"{tipo}.{destino}"
+        salida.append(
+            {
+                "code": code,
+                "name_es": "Otros" if f["nombre"] == HUECO else f["nombre"],
+                "level": "2",
+                "parent_code": tipo,
+            }
+        )
+        por_codigo[f["codigo"]] = code
 
     contador: dict[str, int] = {}
     for f in capex:
         if f["nivel"] != "Objeto" or f["codigo"] == "H14":
             continue
-        padre = por_nombre.get(f["padre"])
+        # `H01.4` → `H01`; `MA1.14` → `MA1`. La columna `padre` no sirve: desde
+        # que los `-` son «Otros», hay categorías con nombres repetidos.
+        padre = por_codigo.get(f["codigo"].rsplit(".", 1)[0])
         if padre is None:
             print(f"AVISO: objeto sin categoría, se descarta: {f}", file=sys.stderr)
             continue
-        contador[padre] = contador.get(padre, 0) + 1
         nombre = "Otros" if f["nombre"] == HUECO else f["nombre"]
+        # Dos objetos con el mismo nombre dentro de la misma categoría son
+        # indistinguibles en un desplegable. Pasa al fusionar `H16` en `H15`:
+        # los dos traen «General» y «Otros».
+        if any(c["parent_code"] == padre and c["name_es"] == nombre for c in salida):
+            continue
+        contador[padre] = contador.get(padre, 0) + 1
         salida.append(
             {
                 "code": f"{padre}.{contador[padre]:02d}",

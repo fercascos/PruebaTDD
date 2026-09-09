@@ -50,7 +50,7 @@ tdd-inmobiliaria/
 │   │   ├── tipologias.csv
 │   │   ├── zonas.csv
 │   │   ├── zonas_por_tipologia.csv        ← la matriz de §5.2
-│   │   ├── codigos_capex.csv              ← los 125 nodos del árbol
+│   │   ├── codigos_capex.csv              ← los 175 nodos del árbol
 │   │   ├── riesgos.csv                    ← con la definición íntegra
 │   │   ├── conceptos.csv · horizontes.csv
 │   │   ├── sistemas_tecnicos.csv

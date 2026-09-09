@@ -119,14 +119,29 @@ repercutible a inquilinos.
 > cambia **no es el modelo, es la presentación**: hoy es una rejilla plana por
 > proyecto y pasa a ser un árbol por activo. Eso abarata mucho este punto.
 
-`[PDV]` **El árbol de categorías cambia.** El catálogo actual tiene 4 tipos de
-coste y 18 capítulos. El cliente ha precisado que son **6 tipos de coste** —Hard
-Cost, Soft Cost, Operativos, Medioambiente, ESG Energía e Imprevistos— con
-**15 categorías en Hard Cost, 3 en Soft Cost, 2 en Operativos, 1 en
-Medioambiente, 1 en ESG Energía y 1 en Imprevistos**: 23 en total. **Falta el
-listado completo**, que el cliente ha ofrecido. Sin él no se puede resembrar el
-catálogo, y con él hace falta además **remapear los hallazgos existentes**: los
-códigos viejos no desaparecen solos.
+`[REQ]` **El árbol de categorías ya está cambiado** ✅. El cliente mandó su hoja
+y el catálogo se ha regenerado desde ella: **6 tipos de coste · 28 categorías ·
+141 objetos = 175 nodos**, con **sus** códigos. El listado completo está en
+[`05`](./05-catalogos-y-taxonomias.md) §5.3, que es de donde se generan los CSV
+de siembra —no al revés—, y la migración `0020` renombra los códigos viejos.
+
+Costó menos de lo presupuestado, y por un motivo concreto: **no hubo que
+remapear ningún hallazgo**. Se renombra la fila en vez de crear una nueva, así
+que conserva su `id` y todo lo que apuntaba a ella —`finding`, `photo`, las dos
+tablas de memoria— sigue apuntando a lo mismo. Se dan por buenas las 28
+categorías que trae la hoja frente a las 23 que se anunciaron por teléfono: cada
+tipo de coste acaba con una categoría «Otros», y cada categoría con un objeto
+«Otros», que es la salida que necesita un consultor cuando lo que ve no está en
+la lista. En la hoja del cliente ese cajón se escribe `-`.
+
+`[LIM]` Dos cosas quedan abiertas y ninguna bloquea la pantalla: los nombres
+`Placas fotovoltáicas` y `Bies` **traen erratas del cliente** y se copian
+literales —el catálogo tiene que decir lo que dicen sus desplegables—, y la
+categoría `SC.S04 «Otros»` **no tiene tramo en la plantilla de Excel**, cuyo
+total de soft costs suma exactamente las otras tres. Una actuación codificada
+ahí se avisa antes de exportar en vez de sumarse a un subtotal que no es el
+suyo. Arreglarlo es añadir un cuarto tramo a la plantilla, y hace falta que el
+cliente confirme que su plantilla puede cambiar.
 
 ### 3.3. Dashboard ⬜
 
@@ -168,7 +183,7 @@ Con una persona a tiempo completo que ya conoce el código.
 | §1 y §2 · pantallas de entrada | ✅ hecho |
 | §3.3 · Dashboard completo | 5-6 días |
 | §3.2 · el activo con sus cinco secciones | 10-12 días |
-| Resembrar el catálogo a 6 tipos y 23 categorías, con remapeo | 3-4 días **desde que llegue el listado** |
+| ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 | Documentación y visita del activo | por definir |
 
@@ -180,8 +195,10 @@ que es lo que obliga a mover documentación, fotos e inventario de pestaña.
 
 ## 5. Lo que hace falta del cliente
 
-- **El listado de los 6 tipos de coste y sus 23 categorías**, con sus objetos si
-  los hay. Bloquea el árbol del CAPEX y el corte por categoría del Dashboard.
+- ~~El listado de los 6 tipos de coste y sus categorías~~ ✅ **recibido y
+  sembrado**: 28 categorías y 141 objetos. Ya no bloquea nada.
+- **Si su plantilla de Excel puede cambiar**, para darle un tramo propio a la
+  categoría `SC.S04 «Otros»`, que hoy no se puede exportar (§3.2).
 - **Qué estructura sigue la documentación del activo** (§3.2 b).
 - **Qué lleva la visita** además de fecha y fotos (§3.2 c).
 - **Qué roles pueden añadir clientes al catálogo** (§2).

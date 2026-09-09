@@ -109,8 +109,16 @@ GEOMETRIA: tuple[Bloque, ...] = (
         Bloque(f"HC.H{n:02d}", 13 + 12 * (n - 1), 14 + 12 * (n - 1), 23 + 12 * (n - 1))
         for n in range(1, 16)
     ),
-    Bloque("MA.General", 194, 195, 204),
-    Bloque("ESG.General", 207, 208, 217),
+    # `[REQ]` Medioambiente, ESG, Operativos e Imprevistos tienen **un solo
+    # tramo por tipo de coste**, con un subtotal que suma el tipo entero. Por
+    # eso su categoría «Otros» comparte tramo con la de contenido: no hay
+    # subtotal al que atribuirla mal, y es el mismo caso que las dos categorías
+    # de Operativos, que ya lo compartían. Soft costs no puede hacerlo —ver
+    # `SIN_TRAMO`—, porque allí cada categoría tiene subtotal propio.
+    Bloque("MA.MA1", 194, 195, 204),
+    Bloque("MA.MA2", 194, 195, 204),
+    Bloque("ESG.ES1", 207, 208, 217),
+    Bloque("ESG.ES2", 207, 208, 217),
     # `[REQ]` Los bloques por porcentaje **empiezan después de las líneas que
     # trae la plantilla**. `SC.S01` ocupa 221-223 con los honorarios de
     # proyectos, dirección de ejecución y project monitoring; `SC.S02` la 233
@@ -127,13 +135,30 @@ GEOMETRIA: tuple[Bloque, ...] = (
     # `[LIM]` Operativos tiene dos categorías y **comparten el bloque**: sus
     # veinte filas son las mismas diez, porque la plantilla no da más. Se
     # controla con `comprobar_cabida`, que las cuenta juntas.
-    Bloque("OP.C01", 257, 258, 267),
-    Bloque("OP.C02", 257, 258, 267),
+    Bloque("OP.OP1", 257, 258, 267),
+    Bloque("OP.OP2", 257, 258, 267),
+    Bloque("OP.OP3", 257, 258, 267),
     # La 271 es la línea de imprevistos que calcula la plantilla desde el
     # porcentaje de «00 Datos Activo». La aplicación escribe a partir de la 272.
-    Bloque("IMP.General", 270, 272, 280, 1),
+    Bloque("IMP.IM1", 270, 272, 280, 1),
+    Bloque("IMP.IM2", 270, 272, 280, 1),
 )
 POR_CODIGO: dict[str, Bloque] = {b.codigo: b for b in GEOMETRIA}
+
+#: `[LIM]` Categorías del catálogo que **la plantilla no sabe dónde escribir**.
+#:
+#: `SC.S04 «Otros»` llegó con el árbol del cliente y la hoja no tiene tramo para
+#: ella: el total de soft costs es `=J220+J232+J244`, la suma exacta de las tres
+#: categorías que sí trae. Meterla en el tramo de otra la sumaría a un subtotal
+#: que no es el suyo —«Licencias y Tasas» cobrando lo que no es una licencia—, y
+#: ese error no se ve en la hoja: cuadra. Así que no se exporta: se avisa antes,
+#: por la misma vía que un bloque desbordado, y la exportación se niega entera.
+#:
+#: `[PDV]` Resolverlo bien es **añadir un cuarto tramo a la plantilla** y
+#: corregir la fórmula del total, como hizo `tools/anadir_bloques_plantillas.py`
+#: con Operativos e Imprevistos. Hace falta que el cliente confirme que su
+#: plantilla puede cambiar.
+SIN_TRAMO: frozenset[str] = frozenset({"SC.S04"})
 
 #: Columnas de una fila de actuación.
 COL_OBJETO = "E"
@@ -303,14 +328,19 @@ def comprobar_cabida(actuaciones: list[Actuacion]) -> list[Desbordamiento]:
     desaparece de la hoja que se manda al cliente es exactamente el fallo que
     nadie detecta hasta que alguien suma a mano.
     """
-    # Se cuenta por BLOQUE, no por categoría: `OP.C01` y `OP.C02` comparten
+    # Se cuenta por BLOQUE, no por categoría: `OP.OP1` y `OP.OP2` comparten
     # las mismas diez filas —la plantilla no da más—, así que once actuaciones
     # repartidas entre las dos tampoco caben.
     cuenta: dict[int, int] = {}
     etiquetas: dict[int, list[str]] = {}
+    # Las categorías sin tramo se cuentan aparte y se devuelven como un
+    # desbordamiento de cabida cero, que es literalmente lo que son.
+    sin_tramo: dict[str, int] = {}
     for a in actuaciones:
         bloque = POR_CODIGO.get(a.categoria)
         if bloque is None:
+            if a.categoria in SIN_TRAMO:
+                sin_tramo[a.categoria] = sin_tramo.get(a.categoria, 0) + 1
             continue
         cuenta[bloque.primera] = cuenta.get(bloque.primera, 0) + 1
         if a.categoria not in etiquetas.setdefault(bloque.primera, []):
@@ -320,7 +350,7 @@ def comprobar_cabida(actuaciones: list[Actuacion]) -> list[Desbordamiento]:
         Desbordamiento(" + ".join(sorted(etiquetas[primera])), por_primera[primera].cabida, n)
         for primera, n in sorted(cuenta.items())
         if n > por_primera[primera].cabida
-    ]
+    ] + [Desbordamiento(c, 0, n) for c, n in sorted(sin_tramo.items())]
 
 
 class NoCabe(ValueError):
@@ -429,7 +459,7 @@ def _rellenar_activo(
 def _rellenar_capex(bruto: bytes, actuaciones: list[Actuacion]) -> bytes:
     raiz, datos = _arbol(bruto)
     # La cuenta va por BLOQUE y no por categoría: dos categorías que comparten
-    # tramo —`OP.C01` y `OP.C02`— tienen que seguir la misma fila, o la segunda
+    # tramo —`OP.OP1` y `OP.OP2`— tienen que seguir la misma fila, o la segunda
     # empezaría otra vez por arriba y machacaría a la primera.
     siguiente: dict[int, int] = {}
 

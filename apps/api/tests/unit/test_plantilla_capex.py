@@ -118,13 +118,13 @@ def test_cada_actuacion_cae_en_el_bloque_de_su_categoria(proyecto: Proyecto) -> 
         [
             _actuacion("HC.H02", objeto="Cubierta", descripcion="Lámina al final de su vida"),
             _actuacion("HC.H09", objeto="CGBT", descripcion="Cuadro sin diferencial"),
-            _actuacion("MA.General", objeto="Ruido", descripcion="Nivel sonoro en fachada"),
+            _actuacion("MA.MA1", objeto="Ruido", descripcion="Nivel sonoro en fachada"),
         ],
     )
     hoja = load_workbook(BytesIO(datos))["CapEx"]
     assert hoja[f"G{POR_CODIGO['HC.H02'].primera}"].value == "Lámina al final de su vida"
     assert hoja[f"G{POR_CODIGO['HC.H09'].primera}"].value == "Cuadro sin diferencial"
-    assert hoja[f"G{POR_CODIGO['MA.General'].primera}"].value == "Nivel sonoro en fachada"
+    assert hoja[f"G{POR_CODIGO['MA.MA1'].primera}"].value == "Nivel sonoro en fachada"
 
 
 def test_dos_actuaciones_de_la_misma_categoria_van_en_filas_seguidas(proyecto: Proyecto) -> None:
@@ -187,7 +187,8 @@ def test_la_plantilla_admite_diez_filas_por_bloque() -> None:
         "SC.S01": 7,
         "SC.S02": 9,
         "SC.S03": 7,
-        "IMP.General": 9,
+        "IMP.IM1": 9,
+        "IMP.IM2": 9,
     }
 
 
@@ -311,15 +312,48 @@ def test_todo_el_catalogo_tiene_etiqueta_en_las_dos_plantillas() -> None:
         assert faltan == [], f"{idioma}: sin etiqueta para {faltan}"
 
 
-def test_el_general_de_medioambiental_no_se_empareja_por_posicion() -> None:
-    """El caso que rompió el emparejamiento posicional: el catálogo conserva
-    `General` el primero para no renumerar lo ya codificado, y la plantilla lo
-    pone el último de su lista. Por índice, `MA.General.01` habría salido
-    escrito como «Situación legal»."""
-    assert leer("es").objeto("MA.General.01") == "General"
-    assert leer("en").objeto("MA.General.01") == "General"
-    assert leer("es").objeto("MA.General.02") == "Situación legal"
-    assert leer("en").objeto("MA.General.02") == "Legal status"
+def test_el_general_de_medioambiental_se_empareja_por_nombre() -> None:
+    """El emparejamiento es por nombre, no por índice.
+
+    Con los códigos del cliente el orden del catálogo y el de la plantilla
+    vuelven a coincidir en Medioambiente, así que un emparejamiento posicional
+    también acertaría **hoy**. Se comprueba igual: es lo que hace que renumerar
+    una lista —cosa que ya pasó una vez, cuando `General` estaba el primero y la
+    plantilla lo ponía el último— no cambie lo que se escribe en la hoja.
+    """
+    assert leer("es").objeto("MA.MA1.13") == "General"
+    assert leer("en").objeto("MA.MA1.13") == "General"
+    assert leer("es").objeto("MA.MA1.01") == "Situación legal"
+    assert leer("en").objeto("MA.MA1.01") == "Legal status"
+
+
+def test_el_otros_del_catalogo_se_escribe_como_el_guion_de_la_plantilla() -> None:
+    """`[REQ]` El cliente pidió mantener el `-` de sus listas «porque sirve como
+    otros», y la aplicación llama «Otros» a ese nodo. Es la misma casilla con
+    dos nombres: en la hoja tiene que salir `-`, que es lo que admite el
+    desplegable. Escribir la palabra dejaría el valor fuera de lista, y los
+    gráficos de la plantilla no lo contarían."""
+    for idioma in IDIOMAS:
+        v = leer(idioma)
+        assert v.objeto("HC.H01.06") == "-"
+        assert v.objeto("MA.MA1.14") == "-"
+        assert v.objeto("ESG.ES1.12") == "-"
+
+
+def test_la_categoria_otros_de_soft_costs_avisa_en_vez_de_caer_en_otro_subtotal(
+    proyecto: Proyecto,
+) -> None:
+    """`[LIM]` `SC.S04 «Otros»` llegó con el árbol del cliente y la plantilla no
+    tiene tramo para ella. Se avisa antes de exportar —cabida cero— en vez de
+    escribirla en el tramo de otra categoría, donde sumaría a un subtotal que no
+    es el suyo sin que la hoja descuadre."""
+    from tdd.exports.plantilla_capex import SIN_TRAMO
+
+    assert "SC.S04" in SIN_TRAMO
+    una = [_actuacion("SC.S04", descripcion="Un soft cost que no es de los tres")]
+    assert [(d.categoria, d.hay, d.caben) for d in comprobar_cabida(una)] == [("SC.S04", 1, 0)]
+    with pytest.raises(NoCabe, match="SC.S04: 1 de 0"):
+        generar(proyecto, una)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -399,7 +433,7 @@ def test_el_tipo_de_coste_medioambiental_no_choca_con_su_categoria() -> None:
     categorias, capex = libro.worksheets[0], libro["CapEx"]
     assert categorias["F3"].value == "Environmental_Cost"
     assert categorias["F4"].value == "Environmental"
-    bloque = POR_CODIGO["MA.General"]
+    bloque = POR_CODIGO["MA.MA1"]
     for fila in range(bloque.primera, bloque.ultima + 1):
         assert capex[f"C{fila}"].value == "Environmental_Cost"
         assert capex[f"D{fila}"].value == "Environmental"
@@ -484,7 +518,7 @@ def test_la_exportacion_no_pisa_las_lineas_de_honorarios(proyecto: Proyecto) -> 
         proyecto,
         [
             _actuacion("SC.S03", objeto="General", descripcion="Tasa extra"),
-            _actuacion("IMP.General", objeto="General", descripcion="Partida adicional"),
+            _actuacion("IMP.IM1", objeto="General", descripcion="Partida adicional"),
         ],
     )
     hoja = load_workbook(BytesIO(datos))["CapEx"]
@@ -506,8 +540,8 @@ def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
     datos = generar(
         proyecto,
         [
-            _actuacion("OP.C01", objeto="General", descripcion="Consumos de obra"),
-            _actuacion("OP.C02", objeto="General", descripcion="Limpieza final"),
+            _actuacion("OP.OP1", objeto="General", descripcion="Consumos de obra"),
+            _actuacion("OP.OP2", objeto="General", descripcion="Limpieza final"),
         ],
     )
     hoja = load_workbook(BytesIO(datos))["CapEx"]
@@ -517,10 +551,10 @@ def test_las_dos_categorias_de_operativos_comparten_las_mismas_diez_filas(
 
 def test_el_desbordamiento_de_operativos_cuenta_las_dos_categorias_juntas() -> None:
     once = [
-        _actuacion("OP.C01" if i % 2 else "OP.C02", descripcion=f"Actuación {i}") for i in range(11)
+        _actuacion("OP.OP1" if i % 2 else "OP.OP2", descripcion=f"Actuación {i}") for i in range(11)
     ]
     sobra = comprobar_cabida(once)
-    assert [(d.categoria, d.hay, d.caben) for d in sobra] == [("OP.C01 + OP.C02", 11, 10)]
+    assert [(d.categoria, d.hay, d.caben) for d in sobra] == [("OP.OP1 + OP.OP2", 11, 10)]
 
 
 def test_los_capitulos_sin_lista_de_objetos_dan_celda_vacia() -> None:
@@ -529,8 +563,8 @@ def test_los_capitulos_sin_lista_de_objetos_dan_celda_vacia() -> None:
     columna de descripción. Ahí la celda va vacía, no revienta."""
     v = leer("es")
     assert v.objeto("SC.S01.01") is None
-    assert v.objeto("OP.C01.01") is None
-    assert v.objeto("IMP.General.01") is None
+    assert v.objeto("OP.OP1.01") is None
+    assert v.objeto("IMP.IM1.01") is None
 
 
 def test_un_objeto_que_deberia_estar_y_no_esta_si_revienta() -> None:
@@ -538,5 +572,5 @@ def test_un_objeto_que_deberia_estar_y_no_esta_si_revienta() -> None:
     plantilla se han separado, y conviene enterarse antes de exportar."""
     from tdd.exports.vocabulario_capex import FaltaEnLaPlantilla
 
-    with pytest.raises(FaltaEnLaPlantilla, match="MA.General.99"):
-        leer("es").objeto("MA.General.99")
+    with pytest.raises(FaltaEnLaPlantilla, match="MA.MA1.99"):
+        leer("es").objeto("MA.MA1.99")

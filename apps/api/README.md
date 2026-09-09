@@ -207,13 +207,13 @@ puede_saltarse_la_rls`.
 `tools/generar_catalogos.py` lee `docs/05-catalogos-y-taxonomias.md` y produce
 los CSV de `data/catalogos/`. `make catalogs-check` falla si se han desfasado.
 
-No es un capricho: son 86 relaciones zona × tipología y 125 códigos que el
+No es un capricho: son 86 relaciones zona × tipología y 175 códigos que el
 cliente revisa en el documento. Mantener dos copias a mano garantiza que
 divergirán, y una zona mal sembrada obliga a migrar datos reales meses después.
 
 ```
 6 tipologías · 20 zonas · 86 relaciones
-árbol CAPEX: 4 categorías + 18 capítulos + 103 elementos = 125 nodos
+árbol CAPEX: 6 categorías + 28 capítulos + 141 elementos = 175 nodos
 4 grados de riesgo (con su definición íntegra) · 10 conceptos · 5 horizontes
 ```
 

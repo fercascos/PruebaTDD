@@ -16,7 +16,7 @@ obvia —«`HC.H09.02` es el segundo objeto de la fila de H09»— funciona en H
 Costs pero miente en Medioambiental y ESG: el catálogo conserva `General` en la
 primera posición para no renumerar las líneas ya codificadas cuando llegó el
 desglose, mientras que la plantilla lo pone **el último** de su lista. Con un
-emparejamiento por índice, un hallazgo de `MA.General.01` habría salido escrito
+emparejamiento por índice, un hallazgo de `MA.MA1.13` habría salido escrito
 como «Situación legal».
 
 Así que el puente se tiende por el **nombre español**: el catálogo sembrado
@@ -47,12 +47,20 @@ POS_LEYENDA = 3
 #: «00 Datos Objeto»: fila de cada categoría de nivel 2.
 FILA_OBJETO: dict[str, int] = {
     **{f"HC.H{n:02d}": 2 + n for n in range(1, 16)},
-    "MA.General": 20,
-    "ESG.General": 22,
+    "MA.MA1": 20,
+    "ESG.ES1": 22,
 }
 #: Primera columna de la lista de objetos, y cuántas puede haber.
 COL_PRIMER_OBJETO = 3  # C
 MAX_OBJETOS = 16  # C..R
+
+#: `[REQ]` Lo que la plantilla escribe en las casillas que le sobran a cada
+#: lista. **No es relleno: es la salida de la lista.** El cliente lo confirmó al
+#: mandar su árbol —«mantén los `-` porque sirve como *otros*»— y en la
+#: aplicación ese nodo se llama «Otros». La misma casilla con dos nombres: el
+#: catálogo dice «Otros» y el desplegable espera `-`, así que al exportar se
+#: escribe `-`. Traducirlo a la palabra dejaría el valor fuera de lista.
+HUECO = "-"
 
 #: «Leyenda»: los cinco plazos y los cuatro grados de riesgo.
 FILA_PLAZO = {"CORTO": 3, "MEDIO": 4, "LARGO": 5, "MEJORAS": 6, "OTRO": 7}
@@ -175,7 +183,20 @@ def _texto(celda: Any) -> str | None:
     if v is None:
         return None
     v = str(v).strip()
-    return None if v in ("", "-") else v
+    return None if v in ("", HUECO) else v
+
+
+def _texto_o_hueco(celda: Any) -> str | None:
+    """Igual que `_texto`, pero conserva el `-`.
+
+    Solo se usa para las listas de objetos, que son las únicas donde el `-`
+    significa algo —«Otros»— en vez de una casilla sin rellenar.
+    """
+    v = celda.value
+    if v is None:
+        return None
+    v = str(v).strip()
+    return v or None
 
 
 @lru_cache(maxsize=4)
@@ -195,7 +216,7 @@ def leer(idioma: str = "es") -> Vocabulario:
     # la primera posición del catálogo en MA y ESG y la última en la plantilla.
     objetos: dict[str, str] = {}
     for codigo, (fila, columna) in _casillas_de_objeto().items():
-        etiqueta = _texto(objeto.cell(fila, columna))
+        etiqueta = _texto_o_hueco(objeto.cell(fila, columna))
         if etiqueta is not None:
             objetos[codigo] = etiqueta
 
@@ -287,11 +308,17 @@ def _casillas_de_objeto() -> dict[str, tuple[int, int]]:
     hoja = libro.worksheets[POS_OBJETO]
     # (capítulo, nombre normalizado) → casilla
     por_nombre: dict[tuple[str, str], tuple[int, int]] = {}
+    #: capítulo → primera casilla con `-`, que es su «Otros». Ver `HUECO`.
+    hueco: dict[str, tuple[int, int]] = {}
     for capitulo, fila in FILA_OBJETO.items():
         for i in range(MAX_OBJETOS):
             columna = COL_PRIMER_OBJETO + i
-            etiqueta = _texto(hoja.cell(fila, columna))
-            if etiqueta is not None:
+            etiqueta = _texto_o_hueco(hoja.cell(fila, columna))
+            if etiqueta is None:
+                continue
+            if etiqueta == HUECO:
+                hueco.setdefault(capitulo, (fila, columna))
+            else:
                 por_nombre.setdefault((capitulo, _normalizar(etiqueta)), (fila, columna))
     libro.close()
 
@@ -300,6 +327,8 @@ def _casillas_de_objeto() -> dict[str, tuple[int, int]]:
         if capitulo not in FILA_OBJETO:
             continue  # los capítulos de soft costs no tienen lista de objetos
         casilla = por_nombre.get((capitulo, _normalizar(nombre)))
+        if casilla is None and _normalizar(nombre) == "otros":
+            casilla = hueco.get(capitulo)
         if casilla is None:
             raise FaltaEnLaPlantilla(
                 f"el catálogo trae {codigo} «{nombre}» en {capitulo}, y la plantilla "

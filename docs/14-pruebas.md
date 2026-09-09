@@ -77,7 +77,7 @@ Familia nueva, y de las más importantes del modelo revisado:
 | Cambio de tipología | Las líneas conservan su zona y se marcan `REVISAR_ZONA`; **nunca se borra la zona** |
 | Coherencia código ↔ concepto | Código `SC.*` con concepto distinto de `Soft Cost` ⇒ **aviso, no bloqueo** (§5.5) |
 | Valor «–» | `NULL` en zona, riesgo, concepto y recuperabilidad; las agregaciones lo tratan como «sin clasificar», no como una categoría |
-| Integridad del árbol | **4 categorías, 18 capítulos, 103 elementos, 125 nodos**; `path` coherente con `parent_id`; sin ciclos |
+| Integridad del árbol | **6 categorías, 28 capítulos, 141 elementos, 175 nodos** (P-45); `path` coherente con `parent_id`; sin ciclos |
 | Definiciones de riesgo | Las cuatro presentes, no vacías, y expuestas por la API |
 
 ### Motor de fases `[REC]`
