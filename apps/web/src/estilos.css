@@ -1737,6 +1737,31 @@ button.enlace {
 .arbol-capex .anadir-aqui {
   margin: 0.2rem 0 0.8rem 0.6rem;
 }
+/* La franja económica, sombreada. Las cinco columnas de plazo y el total son
+   una unidad —lo que vale dinero— y con once columnas seguidas se leían como
+   una continuación de las descriptivas. El sombreado las agrupa y la línea de
+   la izquierda dice dónde empieza la franja; el total lleva además su propio
+   fondo, porque es la columna que se busca primero. */
+.arbol-capex .tabla .economica {
+  background: #eef3f9;
+}
+.arbol-capex .tabla thead .economica,
+.arbol-capex .tabla tfoot .economica {
+  background: #e2eaf5;
+}
+/* El primero de los cinco plazos: `:nth-of-type` no vale porque la fila mezcla
+   `th` y `td`, así que la marca es el hermano que NO es económico. */
+.arbol-capex .tabla :not(.economica) + .economica {
+  border-left: 2px solid #cbd5e1;
+}
+.arbol-capex .tabla .economica.total {
+  background: #e2eaf5;
+  border-left: 2px solid #cbd5e1;
+}
+.arbol-capex .tabla thead .economica.total,
+.arbol-capex .tabla tfoot .economica.total {
+  background: #d7e1f0;
+}
 
 @media (max-width: 640px) {
   /* A 360 px el resumen no cabe en una línea: el nombre de un objeto —

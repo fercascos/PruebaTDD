@@ -304,8 +304,18 @@ function Rama({
             perder el detalle que el desglose del dashboard iba a enseñar. */}
         {!retirado && nodo.nivel >= 2 && esHoja(nodo.clave) && (
           <p className="anadir-aqui">
-            <button type="button" className="enlace" onClick={() => alCrear(nodo.clave)}>
-              Añadir actuación en {nodo.code}
+            {/* El nombre y no el código: quien recorre el árbol lee «Cubierta»,
+                no «HC.H02.01». El código va en el nombre accesible, porque los
+                nombres se repiten —«General» y «Otros» están en las veintiocho
+                categorías— y en una lista de botones leída en voz alta harían
+                falta veintiocho «Añadir actuación en Otros» distinguibles. */}
+            <button
+              type="button"
+              className="enlace"
+              aria-label={`Añadir actuación en ${nodo.nombre} (${nodo.code})`}
+              onClick={() => alCrear(nodo.clave)}
+            >
+              Añadir actuación en {nodo.nombre}
             </button>
           </p>
         )}
@@ -349,12 +359,18 @@ function TablaDeActuaciones({
             <th scope="col">Riesgo</th>
             <th scope="col">Concepto</th>
             <th scope="col">Repercutible</th>
+            {/* `[REQ]` La franja económica se sombrea para separarla de la
+                descriptiva: en once columnas, «Repercutible» y «Corto» se leían
+                como vecinas cuando son cosas distintas —una clasifica, la otra
+                vale dinero—. La clase la ponen las celdas y no un
+                `nth-last-child`: añadir una columna descriptiva mañana movería
+                el corte sin que nadie se enterase. */}
             {PLAZOS.map(([codigo, etiqueta]) => (
-              <th key={codigo} scope="col" className="numerica">
+              <th key={codigo} scope="col" className="numerica economica">
                 {etiqueta}
               </th>
             ))}
-            <th scope="col" className="numerica">
+            <th scope="col" className="numerica economica total">
               Total
             </th>
           </tr>
@@ -395,12 +411,12 @@ function TablaDeActuaciones({
                 {PLAZOS.map(([codigo]) => {
                   const linea = porPlazo.get(codigo)
                   return (
-                    <td key={codigo} className="numerica">
+                    <td key={codigo} className="numerica economica">
                       {linea ? euros.format(Number(linea.amount)) : '—'}
                     </td>
                   )
                 })}
-                <td className="numerica">
+                <td className="numerica economica total">
                   <strong>{euros.format(Number(h.total_amount))}</strong>
                 </td>
               </tr>
@@ -415,11 +431,11 @@ function TablaDeActuaciones({
             <tr>
               <td colSpan={5}>Total del nodo</td>
               {PLAZOS.map(([codigo]) => (
-                <td key={codigo} className="numerica">
+                <td key={codigo} className="numerica economica">
                   {suma(codigo) ? euros.format(suma(codigo)) : '—'}
                 </td>
               ))}
-              <td className="numerica">
+              <td className="numerica economica total">
                 <strong>{euros.format(suma())}</strong>
               </td>
             </tr>

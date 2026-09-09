@@ -291,7 +291,17 @@ Tres detalles que no son detalles:
   puede codificar de verdad: una hoja **del catálogo**, no del árbol dibujado.
   No son lo mismo — una categoría con quince objetos de los que solo uno tiene
   actuaciones parece aquí tener un único hijo—, y confundirlas ofrecería el alta
-  en el sitio equivocado.
+  en el sitio equivocado. El botón dice el **nombre** del objeto —«Añadir
+  actuación en Cubierta»— y lleva el código en su nombre accesible: los nombres
+  se repiten —«General» y «Otros» están en las veintiocho categorías— y sin el
+  código dos botones distintos se anunciarían igual.
+* **La franja económica va sombreada.** Los cinco plazos y el total son una
+  unidad —lo que vale dinero— y con once columnas seguidas se leían como una
+  continuación de las descriptivas. El sombreado las agrupa, una línea marca
+  dónde empieza la franja y el total lleva su propio tono, porque es la columna
+  que se busca primero. La clase la ponen las celdas y no un `nth-last-child`:
+  añadir mañana una columna descriptiva movería el corte sin que nadie se
+  enterase.
 
 `[REQ]` Y destapó un defecto que no daba ningún error: el alta ofrecía **solo los
 objetos**, y con el árbol del cliente soft costs, operativos e imprevistos **no

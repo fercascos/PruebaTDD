@@ -195,6 +195,33 @@ for (const ausente of ['HC.H07', 'MA', 'IMP']) {
 const soft = await (await rama('SC.S03')).first().innerText()
 if (!soft.includes('Licencias')) fallos.push(`La rama de soft costs no se nombra: ${soft}`)
 
+// 5b · La franja económica está sombreada y separada de la descriptiva.
+const franja = await pagina
+  .locator('.arbol-capex .tabla.actuaciones')
+  .first()
+  .locator('thead th.economica')
+  .allInnerTexts()
+console.log('  franja económica:', franja.join(' / '))
+if (franja.length !== 6) {
+  fallos.push(`La franja económica tiene ${franja.length} columnas y deberían ser 6`)
+}
+const fondos = await pagina
+  .locator('.arbol-capex .tabla.actuaciones')
+  .first()
+  .locator('tbody tr:first-child th, tbody tr:first-child td')
+  .evaluateAll((ns) =>
+    ns.map((n) => ({
+      eco: n.classList.contains('economica'),
+      fondo: getComputedStyle(n).backgroundColor,
+    })),
+  )
+const descriptivas = new Set(fondos.filter((c) => !c.eco).map((c) => c.fondo))
+const economicas = new Set(fondos.filter((c) => c.eco).map((c) => c.fondo))
+console.log('  fondos:', [...descriptivas].join(','), 'vs', [...economicas].join(','))
+if ([...economicas].some((f) => descriptivas.has(f))) {
+  fallos.push('Las columnas económicas se pintan igual que las descriptivas')
+}
+
 // 5 · La ficha de la actuación trae lo que pidió el cliente.
 // La de «Anomalía 1», que es la de riesgo 04: la primera del DOM es la de
 // H02, porque las ramas van por código y H02 va antes que H09.
@@ -221,7 +248,22 @@ for (const dato of ['Comentario del gestor técnico', 'Observada en visita', 'Cu
 }
 
 // 6 · Se puede dar de alta desde el nodo, con su código ya puesto.
-await pagina.getByRole('button', { name: /Añadir actuación en HC\.H09\.01/ }).click()
+// El botón dice el NOMBRE del objeto, y su nombre accesible lleva además el
+// código entre paréntesis: los nombres se repiten en el catálogo —«General» y
+// «Otros» están en las veintiocho categorías— y sin el código dos botones
+// distintos se anunciarían igual.
+const anadir = pagina.getByRole('button', {
+  name: 'Añadir actuación en Acometida-Centro de transformación (HC.H09.01)',
+})
+if ((await anadir.count()) !== 1) {
+  fallos.push('El botón de alta no se llama por el nombre del objeto y su código')
+}
+const visible = await anadir.first().innerText()
+if (visible.includes('HC.H09.01')) {
+  fallos.push(`El botón enseña el código y debería enseñar el nombre: ${visible}`)
+}
+console.log('  botón de alta:', visible.trim())
+await anadir.first().click()
 await pagina.waitForSelector('form', { timeout: 5000 })
 const selector = pagina.getByLabel(/Código CAPEX/)
 // Hay que esperar a que llegue el catálogo: mientras el desplegable solo tiene
