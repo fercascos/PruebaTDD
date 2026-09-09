@@ -127,6 +127,8 @@ class Foto(BaseModel):
     #: `[REQ]` §3.2 · La clasificación transversal. Alimenta el token
     #: `[Sistema]` del renombrado, que sin esto escribía siempre «SinSistema».
     technical_system_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El equipo del inventario que retrata, si retrata uno.
+    equipment_id: uuid.UUID | None = None
     status: str
     origin: str
     original_filename: str
@@ -166,6 +168,8 @@ class ActualizarFoto(BaseModel):
     zone_id: uuid.UUID | None = None
     location_node_id: uuid.UUID | None = None
     technical_system_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · Atar la fotografía de la visita al equipo que retrata.
+    equipment_id: uuid.UUID | None = None
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     caption: str | None = None
     description: str | None = None
@@ -244,7 +248,7 @@ class Enlace(BaseModel):
 # ─────────────────────────────────────────────────────────────────────────────
 
 _COLUMNAS = """
-    id, project_id, asset_id, zone_id, location_node_id, technical_system_id,
+    id, project_id, asset_id, zone_id, location_node_id, technical_system_id, equipment_id,
     status::text AS status, origin::text AS origin,
     original_filename, display_name, file_extension, mime_type, sha256, phash,
     byte_size, width_px, height_px, taken_at, gps_latitude, gps_longitude,
@@ -1301,6 +1305,8 @@ class ActualizacionEnLote(BaseModel):
     #: Clasificar «las de la cubierta» de una vez es lo que hace usable una
     #: visita de 400 fotos, y es justo lo que alimenta el nombre del fichero.
     technical_system_id: uuid.UUID | None = None
+    #: Y atar de una vez las cinco fotos que se hicieron de la misma enfriadora.
+    equipment_id: uuid.UUID | None = None
     photo_category: str | None = Field(default=None, max_length=60)
     include_in_report: bool | None = None
     report_section: str | None = Field(default=None, max_length=60)

@@ -63,6 +63,9 @@ class Equipo(BaseModel):
     unit: str
     has_documentation: bool
     notes: str | None
+    #: `[REQ]` §3.2 d · Marcado para pasar a CAPEX. Es una marca del inventario:
+    #: marcarla no crea ningún hallazgo. Ver `generar_capex_de_equipos`.
+    pasa_a_capex: bool = False
     #: `[REQ]` Mantenimiento preventivo. `next_maintenance_due` la GENERA la
     #: base a partir de las dos anteriores; «está vencido» no, porque depende
     #: del día de hoy y se pregunta con `solo_mantenimiento_vencido`.
@@ -103,6 +106,7 @@ class DatosDeEquipo(BaseModel):
     unit: str = Field(default="ud", min_length=1, max_length=20)
     has_documentation: bool = False
     notes: str | None = None
+    pasa_a_capex: bool = False
     #: En meses y no un enumerado de periodicidades: un plan habla de revisiones
     #: trimestrales, semestrales, anuales y quinquenales, pero un contrato de
     #: mantenimiento puede decir «cada cuatro meses».
@@ -131,6 +135,7 @@ class CambioDeEquipo(BaseModel):
     unit: str | None = Field(default=None, min_length=1, max_length=20)
     has_documentation: bool | None = None
     notes: str | None = None
+    pasa_a_capex: bool | None = None
     maintenance_months: int | None = Field(default=None, gt=0, le=600)
     last_maintenance_date: date | None = None
 
@@ -142,7 +147,7 @@ _CAMPOS = """
     CAST(e.condition AS text) AS condition,
     CAST(e.obsolescence AS text) AS obsolescence,
     CAST(e.criticality AS text) AS criticality,
-    e.quantity, e.unit, e.has_documentation, e.notes, e.row_version,
+    e.quantity, e.unit, e.has_documentation, e.notes, e.pasa_a_capex, e.row_version,
     e.maintenance_months, e.last_maintenance_date, e.next_maintenance_due,
     ts.name_es AS technical_system_name, z.name_es AS zone_name
 """
@@ -300,10 +305,11 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
             "INSERT INTO equipment (organization_id, project_id, asset_id, technical_system_id, "
             "zone_id, tag, equipment_type, manufacturer, model, serial_number, install_year, "
             "expected_life_years, condition, obsolescence, criticality, quantity, unit, "
-            "has_documentation, notes, maintenance_months, last_maintenance_date, created_by) "
+            "has_documentation, notes, pasa_a_capex, maintenance_months, last_maintenance_date, "
+            "created_by) "
             "VALUES (:o, :p, :a, :ts, :z, :tag, :et, :man, :mod, :sn, :iy, :el, "
             "  CAST(:cond AS equipment_condition), CAST(:obs AS equipment_obsolescence), "
-            "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :mm, :lmd, :cb) "
+            "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :pac, :mm, :lmd, :cb) "
             "RETURNING id"
         ),
         {
@@ -326,6 +332,7 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
             "u": cuerpo.unit,
             "hd": cuerpo.has_documentation,
             "n": cuerpo.notes,
+            "pac": cuerpo.pasa_a_capex,
             "mm": cuerpo.maintenance_months,
             "lmd": cuerpo.last_maintenance_date,
             "cb": str(usuario.id),
@@ -397,6 +404,171 @@ def modificar(
     nuevo = _leer(s, equipment_id)
     cc.poner(respuesta, nuevo.get("row_version"))
     return nuevo
+
+
+class EsqueletoDeEquipos(BaseModel):
+    creadas: int
+    omitidas: int
+    marcados: int
+    avisos: list[str]
+
+
+#: `[SUP]` Zona de arranque de las filas generadas. La misma que usa el
+#: esqueleto de la memoria: el inventario dice qué equipo es, no dónde está el
+#: problema, y poner una zona adivinada la haría pasar por sabida.
+ZONA_DE_ARRANQUE = "GENERAL"
+
+
+@router.post(
+    "/assets/{asset_id}/equipment/generar-capex",
+    status_code=status.HTTP_201_CREATED,
+    response_model=EsqueletoDeEquipos,
+)
+def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any:
+    """`[REQ]` §3.2 d · Crea una actuación por cada equipo marcado «pasa a CAPEX».
+
+    La casilla del inventario **no crea nada al marcarla**: el gestor recorre la
+    visita marcando lo que hay que sustituir, y aquí se genera todo de una vez.
+    Crear el hallazgo al pulsar habría llenado el CAPEX de filas vacías cada vez
+    que alguien se equivoca de casilla, y borrarlas después es peor que no
+    haberlas creado.
+
+    **Es idempotente**: la fila se identifica por su título —el mismo que genera
+    esta función— y volver a llamar no duplica ni pisa lo que alguien haya
+    rellenado. Se cuentan como omitidas y se dice cuántas.
+
+    `[LIM]` **El capítulo sale del sistema técnico del equipo, y no siempre
+    resuelve.** `technical_system.capex_chapter` es una pista escrita a mano:
+    dice `H09` para Electricidad, pero dice `H06 + H10` para protección contra
+    incendios y `ESG` para sostenibilidad. Cuando no resuelve a un capítulo
+    único, el equipo **no se genera** y sale en los avisos con su nombre:
+    inventarse uno de los dos sería codificar mal una actuación, y eso no se ve
+    hasta que alguien suma el capítulo equivocado.
+    """
+    activo = (
+        s.execute(
+            text(
+                "SELECT id, project_id, typology_id FROM asset WHERE id = :i AND deleted_at IS NULL"
+            ),
+            {"i": str(asset_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if activo is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activo no encontrado")
+
+    zona = s.execute(
+        text(
+            "SELECT z.id FROM zone z JOIN zone_typology zt ON zt.zone_id = z.id "
+            "WHERE z.code = :c AND zt.typology_id = :t"
+        ),
+        {"c": ZONA_DE_ARRANQUE, "t": str(activo["typology_id"])},
+    ).scalar_one_or_none()
+    if zona is None:  # pragma: no cover - el catálogo la tiene en las seis tipologías
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"La tipología de este activo no admite la zona «{ZONA_DE_ARRANQUE}»",
+        )
+
+    marcados = (
+        s.execute(
+            text(
+                "SELECT e.id, e.tag, e.equipment_type, e.manufacturer, e.model, "
+                "       ts.name_es AS sistema, ts.capex_chapter "
+                "FROM equipment e "
+                "LEFT JOIN technical_system ts ON ts.id = e.technical_system_id "
+                "WHERE e.asset_id = :a AND e.pasa_a_capex AND e.deleted_at IS NULL "
+                "ORDER BY e.tag NULLS LAST, e.equipment_type"
+            ),
+            {"a": str(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+
+    # Los capítulos vivos, por código. La pista del sistema técnico dice `H09`
+    # y el catálogo los llama `HC.H09`.
+    capitulos = {
+        fila[0]: fila[1]
+        for fila in s.execute(
+            text("SELECT code, id FROM capex_code WHERE level = 2 AND deprecated_at IS NULL")
+        ).all()
+    }
+
+    ya_estan = {
+        fila[0]
+        for fila in s.execute(
+            text("SELECT title FROM finding WHERE asset_id = :a AND deleted_at IS NULL"),
+            {"a": str(asset_id)},
+        ).all()
+    }
+
+    creadas = omitidas = 0
+    avisos: list[str] = []
+    for equipo in marcados:
+        codigo = _capitulo_de(equipo["capex_chapter"], capitulos)
+        if codigo is None:
+            avisos.append(
+                f"«{_nombre_de(equipo)}» está marcado, y su sistema técnico "
+                f"({equipo['sistema'] or 'sin sistema'}) no dice a qué capítulo del CAPEX va. "
+                "Codifíquelo a mano desde el árbol del activo."
+            )
+            continue
+        titulo = f"Sustitución o intervención: {_nombre_de(equipo)}"
+        if titulo in ya_estan:
+            omitidas += 1
+            continue
+        s.execute(
+            text(
+                "INSERT INTO finding (organization_id, project_id, asset_id, "
+                "capex_code_id, zone_id, title, description, created_by) "
+                "VALUES (:o, :p, :a, :c, :z, :t, :d, :u)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "p": str(activo["project_id"]),
+                "a": str(asset_id),
+                "c": str(codigo),
+                "z": str(zona),
+                "t": titulo,
+                "d": (
+                    "Generado desde el inventario de equipo, marcado «pasa a CAPEX». "
+                    "Pendiente de valorar."
+                ),
+                "u": str(usuario.id),
+            },
+        )
+        ya_estan.add(titulo)
+        creadas += 1
+
+    return {
+        "creadas": creadas,
+        "omitidas": omitidas,
+        "marcados": len(marcados),
+        "avisos": avisos,
+    }
+
+
+def _nombre_de(equipo: Any) -> str:
+    """Cómo se llama el equipo en una frase: la etiqueta de campo si la tiene."""
+    partes = [p for p in (equipo["tag"], equipo["equipment_type"]) if p]
+    marca = " ".join(p for p in (equipo["manufacturer"], equipo["model"]) if p)
+    if marca:
+        partes.append(f"({marca})")
+    return " · ".join(partes[:2]) + (f" {partes[2]}" if len(partes) > 2 else "")
+
+
+def _capitulo_de(pista: str | None, capitulos: dict[str, Any]) -> Any | None:
+    """El capítulo del catálogo al que apunta `technical_system.capex_chapter`.
+
+    Devuelve `None` cuando la pista está vacía, cuando nombra más de un capítulo
+    —`H06 + H10`— o cuando no corresponde a ninguno vivo. Ver el `[LIM]` de
+    arriba: adivinar aquí es codificar mal una actuación en silencio.
+    """
+    if not pista or "+" in pista:
+        return None
+    return capitulos.get(f"HC.{pista.strip()}")
 
 
 @router.delete("/equipment/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)

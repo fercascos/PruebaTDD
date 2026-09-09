@@ -213,6 +213,8 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 | `GET`/`PUT` | `/assets/{id}/memoria` | La **memoria técnica**: la propuesta de datos del edificio y las categorías del CAPEX con sus objetos. Guardar **no toca el activo** |
 | `POST` | `/assets/{id}/memoria/validar` | **El botón.** Vuelca la propuesta al activo y firma quién y cuándo. `422` sin `confirmar: true` |
 | `POST` | `/assets/{id}/memoria/generar-capex` | El **esqueleto**: un hallazgo en BORRADOR por objeto. Idempotente: no duplica ni pisa lo ya rellenado |
+| `GET`/`PUT` | `/assets/{id}/descriptivos` | `[REQ]` §3.2 d · El **descriptivo de cada objeto de Hard Cost**, editable, con su casilla de validado. El `PUT` manda las filas cambiadas —texto y casilla juntos— y devuelve la rejilla entera. `422` si el código no es de nivel 3, y `422` al validar un descriptivo vacío |
+| `POST` | `/assets/{id}/descriptivos/desde-documentacion` | Los **trae de la memoria técnica**. Idempotente y **no pisa lo validado ni lo escrito**: devuelve cuántos creó, completó y respetó. `409` si el activo no tiene memoria |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
 
 ### Extracción documental `[REQ]`
@@ -464,6 +466,7 @@ no un hueco, y si desapareciera del reparto la suma no cuadraría con el total.
 | `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=&solo_mantenimiento_vencido=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
 | `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al encargo: si no, `404` |
 | `GET`/`PATCH`/`DELETE` | `/equipment/{id}` | `DELETE` es lógico: la ficha se escribió en una visita a la que no se vuelve |
+| `POST` | `/assets/{id}/equipment/generar-capex` | `[REQ]` §3.2 d · Una actuación en BORRADOR **por equipo marcado «pasa a CAPEX»**. Idempotente por título. El capítulo sale de `technical_system.capex_chapter`, y el equipo cuyo sistema apunta a dos —`H06 + H10`— **no se genera**: sale en `avisos` con su nombre |
 | `GET` | `/projects/{id}/equipment/import/plantilla.xlsx` | Libro vacío **con los activos del encargo y los 14 sistemas dentro**, en una hoja aparte |
 | `POST` | `/projects/{id}/equipment/import/preview` | Sube la hoja y devuelve fila a fila qué va a pasar. **No escribe nada** |
 | `POST` | `/projects/{id}/equipment/import` | Aplica. Exige `confirmar=true` y **reanaliza la hoja** en vez de fiarse de lo previsualizado |
@@ -510,9 +513,9 @@ sequenceDiagram
 | `POST` | `/projects/{id}/photos/upload-intents` | Lote ≤ 50. Si el `sha256` ya existe, lo indica **antes** de subir (ahorra datos móviles) `[REC]` |
 | `POST` | `/projects/{id}/photos/commit` | Confirma metadatos y encola. Idempotente |
 | `GET` | `/projects/{id}/photos` | Filtros: `asset_id`, `zone_id`, `location_node_id`, `technical_system_id`, `finding_id`, `capex_item_id`, `category`, `tag[]`, `taken_from/to`, `has_gps`, `include_in_report`, `duplicates_only`, `status`, `trash`, `q` |
-| `GET`/`PATCH` | `/photos/{id}` | **`storage_key` y `sha256` no son escribibles: `422`** |
+| `GET`/`PATCH` | `/photos/{id}` | **`storage_key` y `sha256` no son escribibles: `422`**. `equipment_id` ata la fotografía al **equipo del inventario que retrata** `[REQ]` §3.2 d |
 | `POST` | `/photos/bulk-rename` | `{photo_ids[], template, dry_run}`. Con `dry_run` devuelve la previsualización y las colisiones **sin escribir nada** `[REQ]` |
-| `POST` | `/photos/bulk-update` | Clasificación y etiquetas en lote |
+| `POST` | `/photos/bulk-update` | Clasificación y etiquetas en lote, `equipment_id` incluido: las cinco fotos de la misma enfriadora se atan de una vez |
 | `GET` | `/photos/{id}/download?variante=` | `302` a URL firmada **si el almacén sabe firmar**; el binario si no (adaptador de disco: desarrollo y suite). La autorización se comprueba **antes** de firmar. `403` si la foto está en `CUARENTENA` o `PURGADA`. Se audita `PHOTO_URL_ISSUED`, no `PHOTO_DOWNLOADED`: con la redirección el servidor sabe que **autorizó**, no que el binario saliera |
 | `POST` | `/projects/{id}/photos/download-batch` | `{photo_ids[], strip_metadata, use_display_names}` → `202` ZIP `[REQ]` |
 | `GET`/`POST` | `/photos/{id}/versions` · `POST /versions/{vid}/restore` | |

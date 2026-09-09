@@ -310,6 +310,54 @@ estructura no había forma de dar de alta un soft cost, y no saltaba nada:
 simplemente no estaba en el desplegable. Ahora se ofrecen los objetos y las
 categorías sin objetos, agrupados por tipo de coste.
 
+### El inventario del activo
+
+`src/paginas/InventarioDelActivo.tsx`, encima del árbol del CAPEX dentro de la
+ficha del activo (§3.2 d de `docs/23`). Describe lo que hay, marca lo que hay
+que sustituir y ata las fotos que lo demuestran; de ahí salen actuaciones que
+aparecen en el árbol, y por eso va antes y no después.
+
+**El descriptivo de cada objeto es una rejilla editable con su casilla.** Es
+literal lo que pidió el cliente: que la aplicación traiga de la documentación el
+descriptivo de cada objeto de Hard Cost, que diga que **está pendiente de validar
+por el gestor técnico**, que se pueda editar y que se marque como validado con
+una casilla. Se trae con un botón —abrir la pantalla no escribe en la base—, se
+corrige en la propia celda y se guarda toda la rejilla de una vez: en la pantalla
+corregir el texto y marcar la casilla son un solo gesto, y con dos llamadas
+separadas quien hace las dos cosas tendría dos peticiones capaces de fallar por
+su cuenta y una fila validada con el texto viejo.
+
+Cuatro detalles que no son detalles:
+
+* **El estado se escribe, no se pinta.** «Pendiente de validar · por el gestor
+  técnico» está en su columna; el color acompaña y no informa por sí solo,
+  porque esto se imprime.
+* **Sin texto la casilla está deshabilitada.** El servidor lo rechaza igual, pero
+  un `422` no cuenta que lo que falta es escribir el descriptivo antes de
+  firmarlo.
+* **La firma se enseña.** Una fila validada dice quién y cuándo. La pantalla
+  manda sí o no; que la validación valga algo dentro de seis meses depende de lo
+  otro.
+* **El botón dice «Guardar descriptivos», no «Guardar».** La ficha del activo
+  está en la misma pantalla con su propio botón de guardar, y dos botones con la
+  misma palabra sobre cosas distintas es la mejor forma de que alguien crea que
+  ha guardado lo que no.
+
+**«Pasa a CAPEX» no crea nada al marcarla.** Se recorre el inventario marcando y
+las actuaciones se generan todas de una vez, en BORRADOR y sin importe. Marcar
+mal una casilla no debería dejar rastro en el CAPEX, y borrar filas creadas por
+error es peor que no haberlas creado.
+
+`[REQ]` **Y aquí apareció un defecto de presentación invisible.** Un
+`.oculto-visual` —el texto para lectores de pantalla, que va posicionado en
+absoluto— dentro de una tabla envuelta en `.desbordable` **ensancha la página 61
+px en móvil**: el `overflow-x` del contenedor no lo recorta, porque el bloque
+contenedor de un elemento absoluto sin ancestro posicionado está fuera de él. La
+página se movía de lado sin que se viera nada raro. Se ha resuelto quitando el
+texto oculto: la cabecera de la columna ya dice «Validado» y el `aria-label` de
+cada casilla nombra su fila. **Conviene recordarlo antes de meter otro
+`.oculto-visual` dentro de una tabla que se desplaza.**
+
 ### En una barra apilada el color separa, no identifica
 
 El corte por categoría y objeto es una **barra apilada**: cada categoría del

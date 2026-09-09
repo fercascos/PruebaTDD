@@ -80,6 +80,7 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Informes PPTX** · snapshot, avisos, emisión | ✅ Completo | `test_avisos_de_informe.py` · 22 + `test_informes.py` · 28 |
 | **Memoria técnica** · lectura determinista del PDF | ✅ Completo | `test_extraccion_de_memoria.py` · 16 + `test_memoria_tecnica.py` · 12 |
 | **Esqueleto del CAPEX** desde la memoria | ✅ Completo | `tests/integration/test_memoria_y_esqueleto.py` · 14 |
+| **Inventario del activo** (§3.2 d) · descriptivo por objeto pendiente de validar, «pasa a CAPEX» y foto↔equipo | ✅ Completo | `tests/integration/test_inventario_del_activo.py` · 27 |
 | **Extracción por tipo de documento** · propuesta con procedencia | ⚠️ Dos lectores | `tests/integration/test_extraccion_por_documento.py` · 12 |
 | **Limitaciones que aporta la documentación** · la tercera clase | ✅ Completo | `test_limitaciones_del_plan.py` · 19 + `test_limitaciones_documentales.py` · 16 |
 | **Medios del plan al inventario** · capítulo 4 de la Norma Básica | ✅ Completo | `test_medios_del_plan.py` · 14 + `test_equipos_y_confidencialidad.py` · 15 |

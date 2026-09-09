@@ -1040,6 +1040,14 @@ CREATE TABLE equipment (
     has_documentation   BOOLEAN NOT NULL DEFAULT FALSE,
     notes               TEXT,
 
+    -- [REQ] «Pasa a CAPEX»: este equipo hay que sustituirlo o intervenirlo, y
+    -- tiene que acabar siendo una actuación. Es una MARCA del inventario, no un
+    -- hallazgo: marcarla no crea nada. El gestor marca lo que ve durante la
+    -- visita y después genera de una vez las actuaciones de todo lo marcado.
+    -- Crear el hallazgo al marcar habría llenado el CAPEX de filas vacías cada
+    -- vez que alguien pulsa la casilla equivocada.
+    pasa_a_capex        BOOLEAN NOT NULL DEFAULT FALSE,
+
     -- [REQ] MANTENIMIENTO PREVENTIVO. Faltaba, y es lo primero que pregunta un
     -- inversor de una instalación de protección contra incendios: no «cuántos
     -- extintores hay» sino «cuándo se revisaron por última vez».
@@ -1312,6 +1320,11 @@ CREATE TABLE photo (
     -- propósito): uno clasifica contra el catálogo de 14 y el otro es una
     -- etiqueta suelta del equipo.
     technical_system_id UUID REFERENCES technical_system(id),
+    -- [REQ] §3.2 d · La fotografía de la visita, atada al equipo que retrata.
+    -- `SET NULL` y no `CASCADE`: borrar un equipo del inventario no puede
+    -- borrar la fotografía que lo documenta, que es evidencia de la visita y
+    -- puede estar ya en un informe emitido.
+    equipment_id      UUID REFERENCES equipment(id) ON DELETE SET NULL,
 
     stored_object_id  UUID NOT NULL REFERENCES stored_object(id),
     origin            photo_origin NOT NULL DEFAULT 'ORDENADOR',
@@ -1393,6 +1406,7 @@ CREATE INDEX photo_etiquetas_idx ON photo USING GIN (tags);
 -- Filtrar «las fotos de climatización de este encargo» es lo primero que se
 -- hace al montar el informe, y en una visita de 400 fotos sin índice se nota.
 CREATE INDEX photo_sistema_idx  ON photo (project_id, technical_system_id);
+CREATE INDEX photo_equipo_idx   ON photo (equipment_id);
 
 -- ── Barrera 3 aplicada a la fotografía ──────────────────────────────────────
 -- El disparador de `stored_object` ya protege el binario. Este protege la
@@ -1873,6 +1887,67 @@ CREATE TABLE memoria_objeto (
 );
 
 CREATE INDEX memoria_objeto_categoria_idx ON memoria_objeto (memoria_categoria_id, orden);
+
+-- ── [REQ] El descriptivo de cada objeto, pendiente de validar ──────────────
+--
+-- Lo pidió el cliente sobre el inventario del activo: que la aplicación traiga
+-- de la documentación **el descriptivo de cada objeto de Hard Cost que
+-- encuentre**, lo enseñe como pendiente de validar por el gestor técnico, se
+-- pueda editar y se marque como validado con una casilla.
+--
+-- Es una tabla y no un campo de `memoria_objeto` porque son dos cosas con dos
+-- ciclos de vida. `memoria_objeto` es **lo que la memoria enumeró**, y se
+-- rehace entera cada vez que se vuelve a extraer el documento; el descriptivo
+-- es **texto del gestor técnico**, que lo corrige y lo firma, y perderlo al
+-- reextraer sería tirar el trabajo de una persona por refrescar el de una
+-- máquina.
+--
+-- Una fila por (activo, objeto del catálogo). El UNIQUE no es celo: dos
+-- descriptivos del mismo objeto en el mismo edificio son dos versiones de la
+-- misma frase, y el informe tendría que elegir una sin criterio.
+CREATE TABLE descriptivo_objeto (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_id        UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
+    -- Nivel 3 del árbol. Que lo sea lo comprueba la API y lo cubre una prueba,
+    -- igual que en `memoria_categoria`: un CHECK aquí exigiría un disparador
+    -- que consulte otra tabla en cada escritura.
+    capex_code_id   UUID NOT NULL REFERENCES capex_code(id),
+
+    -- El texto. Arranca con lo que se encontró en la documentación y lo edita
+    -- quien valida.
+    texto           TEXT NOT NULL DEFAULT '',
+
+    -- [REQ] De dónde salió, y si la extracción fue de mentira. Misma regla que
+    -- en la memoria y en la revisión documental: una extracción simulada no
+    -- puede pasar por una de verdad ni en la base ni en la pantalla.
+    document_id     UUID REFERENCES document(id) ON DELETE SET NULL,
+    origen          VARCHAR(60),
+    es_simulada     BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- [REQ] La validación del gestor técnico. Mientras `validado_at` sea nulo,
+    -- la pantalla lo dice y el texto no se puede dar por bueno.
+    validado_at     TIMESTAMPTZ,
+    validado_por    UUID REFERENCES app_user(id),
+
+    created_by      UUID NOT NULL REFERENCES app_user(id),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    row_version     INTEGER NOT NULL DEFAULT 1,
+    updated_by      UUID REFERENCES app_user(id),
+
+    UNIQUE (asset_id, capex_code_id),
+    -- Ni validado sin testigo ni testigo sin validación: son la misma
+    -- afirmación dicha dos veces y tienen que coincidir.
+    CONSTRAINT descriptivo_validado_completo
+        CHECK ((validado_at IS NULL) = (validado_por IS NULL)),
+    -- Un descriptivo validado y vacío no significa nada: alguien habría firmado
+    -- una casilla en blanco.
+    CONSTRAINT descriptivo_validado_no_vacio
+        CHECK (validado_at IS NULL OR length(trim(texto)) > 0)
+);
+
+CREATE INDEX descriptivo_objeto_activo_idx ON descriptivo_objeto (asset_id);
 
 -- ── Secciones de memoria técnica → capítulos CAPEX [REQ] §5.9 ──────────────
 --
@@ -2654,7 +2729,7 @@ DECLARE t TEXT;
 BEGIN
     FOREACH t IN ARRAY ARRAY[
         'finding', 'capex_item', 'asset', 'project', 'doc_request_item', 'equipment',
-        'memoria_tecnica'
+        'memoria_tecnica', 'descriptivo_objeto'
     ] LOOP
         EXECUTE format($f$
             CREATE TRIGGER %1$I_version
@@ -2681,7 +2756,7 @@ BEGIN
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',
         'password_reset_token', 'doc_review', 'doc_review_finding', 'job',
         'report_template', 'template_mapping', 'report_version',
-        'memoria_tecnica', 'memoria_categoria', 'memoria_objeto',
+        'memoria_tecnica', 'memoria_categoria', 'memoria_objeto', 'descriptivo_objeto',
         'propuesta_de_dato', 'limitacion_de_documento', 'propuesta_de_equipo'
     ] LOOP
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);

@@ -2290,3 +2290,85 @@ button.enlace {
   background: var(--aviso, #8f6215);
   margin-left: 0.4rem;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Inventario del activo `[REQ]` §3.2 d de docs/23
+   ───────────────────────────────────────────────────────────────────────── */
+.inventario-activo {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}
+.inventario-activo h4 {
+  margin: 1.4rem 0 0.3rem;
+  font-size: 0.95rem;
+}
+.inventario-activo h4:first-of-type {
+  margin-top: 0.6rem;
+}
+/* El recuento se lee en una sola línea. **No lleva la clase `.alcance`**: dentro
+   de un `.filtro` esa clase es `display: flex; flex-direction: column`, porque
+   la usa el selector de alcance de la exportación para apilar su etiqueta sobre
+   su desplegable. Aquí eso dejaba el «2» en un renglón y «de 2 pendientes de
+   validar» en el siguiente, que se lee como dos datos en vez de como uno. */
+.inventario-activo .filtro > .recuento {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.inventario-activo .recuento {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-suave);
+}
+.inventario-activo .codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  color: var(--tinta-suave);
+}
+
+/* El cuadro editable. El textarea ocupa la celda entera para que se pueda
+   escribir un párrafo sin que la tabla salte de ancho al teclear. */
+.tabla.descriptivos td.editable textarea {
+  width: 100%;
+  min-width: 22rem;
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  resize: vertical;
+}
+.tabla.descriptivos td.editable textarea:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 0;
+}
+.tabla.descriptivos td.capitulo {
+  white-space: nowrap;
+}
+.tabla.descriptivos td.casilla-validado,
+.tabla.equipo-capex td.casilla-marcado {
+  text-align: center;
+}
+/* Pendiente y validado se distinguen por el texto —que está escrito en su
+   columna— y el color solo acompaña: esto se imprime en blanco y negro. */
+.tabla.descriptivos tr.pendiente td.validacion strong {
+  color: var(--aviso);
+}
+.tabla.descriptivos tr.validado td.validacion strong {
+  color: var(--ok);
+}
+.tabla.descriptivos .ayuda.simulada {
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* Una fila marcada se ve de un vistazo al recorrer el inventario, pero la
+   casilla sigue siendo la que informa. */
+.tabla.equipo-capex tr.marcado {
+  background: #eff6ff;
+}
+
+@media (max-width: 640px) {
+  .tabla.descriptivos td.editable textarea {
+    min-width: 0;
+  }
+}

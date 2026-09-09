@@ -550,7 +550,12 @@ ambas coinciden al céntimo. `[REC]`
 `tag` · `equipment_type` · `manufacturer` · `model` · `serial_number` ·
 `install_year` · `expected_life_years` · `end_of_life_year` GENERATED ·
 `condition` ENUM · `obsolescence` ENUM · `criticality` ENUM · `quantity` · `unit` ·
-`has_documentation` · `notes` · `search_vector` GENERATED · auditoría · soft delete.
+`has_documentation` · `notes` · `pasa_a_capex` · `search_vector` GENERATED · auditoría · soft delete.
+
+`[REQ]` §3.2 d · **`pasa_a_capex` es una marca, no un disparador.** Vale `FALSE` por omisión y
+marcarla **no crea nada**: el gestor recorre la visita marcando lo que hay que sustituir y
+`POST /assets/{id}/equipment/generar-capex` genera las actuaciones de una vez. Crear el hallazgo
+al marcar habría llenado el CAPEX de filas vacías con cada casilla pulsada por error.
 
 **Índices:** `(project_id, asset_id)`, `(asset_id, technical_system_id)`, GIN sobre `search_vector`,
 `UNIQUE(asset_id, tag) WHERE tag IS NOT NULL AND deleted_at IS NULL`.
@@ -576,6 +581,29 @@ quien no, no la ve. La vida residual se calcula, no se teclea (P-15).
 
 `[PDV]` `location_node_id` queda fuera: `location_node` no está construido. Cuando exista, el enlace
 se añade como columna anulable sin tocar nada de lo demás.
+
+#### `descriptivo_objeto` — el descriptivo de un objeto, validado por una persona `[REQ]` §3.2 d
+`id` · `organization_id` · `asset_id` · `capex_code_id` · `texto` · `document_id` NULL ·
+`origen` NULL · `es_simulada` · `validado_at` NULL · `validado_por` NULL · auditoría.
+
+**Índices y restricciones:** `UNIQUE(asset_id, capex_code_id)` —un objeto tiene **un** descriptivo
+en un activo—, índice por `asset_id`, `CHECK ((validado_at IS NULL) = (validado_por IS NULL))` y
+`CHECK (validado_at IS NULL OR length(trim(texto)) > 0)`.
+
+Las dos restricciones dicen lo mismo desde dos lados: **una validación es de alguien y de un
+momento**, y **no se firma una casilla en blanco**. La API las comprueba antes para poder
+explicarlas —un `23514` de PostgreSQL no cuenta que lo que falta es escribir el texto—, pero viven
+también aquí porque la importación y cualquier otro camino de escritura tienen que respetarlas.
+
+**Por qué es una tabla y no un campo de `memoria_objeto`.** De ahí sale el texto la primera vez,
+pero son dos cosas con dos ciclos de vida. `memoria_objeto` es *lo que la memoria enumeró* y **se
+rehace entera** cada vez que se vuelve a extraer el documento —`PUT /assets/{id}/memoria` borra y
+reinserta—. El descriptivo es *texto del gestor técnico*: lo corrige, lo firma y responde de él. En
+la misma fila, refrescar el trabajo de una máquina borraría el de una persona.
+
+`document_id`, `origen` y `es_simulada` **se heredan de la memoria de la que salió el texto**. Un
+descriptivo nacido de una extracción simulada nace marcado como simulado y la pantalla lo dice: un
+texto de mentira que pase por bueno es peor que no tener texto.
 
 #### `technical_system` — los 14 sistemas de §3.2 `[REQ]`
 
@@ -670,6 +698,11 @@ Un disparador `BEFORE UPDATE` lanza excepción si se intenta modificarlos.
 
 **Índices:** `(project_id, asset_id)`, `UNIQUE(project_id, sha256) WHERE deleted_at IS NULL`,
 `(project_id, include_in_report, report_order)`, `(phash)`, GIN `search_vector`, GIN `exif_raw`.
+
+`[REQ]` §3.2 d · **`equipment_id` ya está construido**, con `ON DELETE SET NULL` y su índice.
+Ata la fotografía al equipo del inventario que retrata, que es lo que justifica medio año después
+por qué se propone sustituir *esa* máquina y no otra. El `SET NULL` es deliberado: el vínculo es
+una clasificación, y borrar el equipo no puede llevarse la evidencia de la visita.
 
 #### `photo_version`
 `id` · `organization_id` · `photo_id` · `version_number` ·

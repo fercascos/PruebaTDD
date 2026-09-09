@@ -113,7 +113,7 @@ ser secciones **de cada activo**. Cinco:
 | **a) Detalle** | La ficha que ya existe | ✅ existe, se mueve |
 | **b) Documentación** | La del activo | `[PDV]` **estructura por revisar** |
 | **c) Visita** | Fecha de la visita y sus fotografías | `[PDV]` **por definir** |
-| **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo | ⬜ |
+| **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo; y el **descriptivo de cada objeto de Hard Cost**, editable y con su casilla de validado | ✅ |
 | **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
 
 **La ficha de cada objeto del CAPEX** lleva: descripción, zona afectada, riesgo,
@@ -125,6 +125,81 @@ repercutible a inquilinos.
 > la columna de repercutible (`tenant_recoverable`) y los cinco plazos. Lo que
 > cambia **no es el modelo, es la presentación**: hoy es una rejilla plana por
 > proyecto y pasa a ser un árbol por activo. Eso abarata mucho este punto.
+
+#### d) Inventario ✅
+
+`[REQ]` **Está hecho**, dentro del activo, encima del árbol del CAPEX y no
+debajo: describe lo que hay y marca lo que hay que sustituir, y de ahí salen
+actuaciones que aparecen en el árbol. Al revés se leería como un apéndice de
+algo que ya está decidido.
+
+Lleva las tres cosas que pidió el cliente, y una cuarta que pidió con estas
+palabras: *«deberá traer el descriptivo de cada objeto de Hard Cost que
+encuentre en la documentación, que indique que está pendiente de validar por el
+Gestor Técnico, que sea un cuadro editable y que tenga una casilla de check para
+marcar como validado»*.
+
+**El descriptivo de cada objeto.** Se trae con un botón —no al abrir la
+pantalla: escribir en la base por el hecho de mirar una página es un efecto que
+nadie espera—, nace **pendiente de validar**, se edita en la propia rejilla y la
+casilla lo firma. El texto es lo que la memoria dice de ese objeto —sus
+palabras, su cantidad y sus notas—, no el nombre del catálogo: «Enfriadora Marca
+X de 450 kW» es lo que hace falta seis meses después, y «Producción de
+climatización» ya está en la columna de al lado.
+
+Tres decisiones que conviene tener a la vista:
+
+- **Es una tabla propia y no un campo de `memoria_objeto`.** De ahí sale el
+  texto la primera vez, pero son dos cosas con dos ciclos de vida:
+  `memoria_objeto` **se rehace entera** cada vez que se vuelve a extraer el
+  documento —lo hace `PUT /assets/{id}/memoria`, que borra y reinserta—, y el
+  descriptivo es texto del gestor técnico, que lo corrige, lo firma y responde
+  de él. En la misma fila, refrescar el trabajo de una máquina borraría el de
+  una persona.
+- **Traerlo otra vez no pisa trabajo hecho.** Una fila validada no se toca
+  nunca, y una con texto escrito tampoco. La respuesta dice cuántas creó,
+  cuántas completó y cuántas respetó.
+- **La pantalla dice sí o no; la base guarda quién y cuándo.** Validar es un
+  acto de una persona. Y volver a guardar el texto **no mueve la fecha de
+  validación**: guardar no es volver a validar, y moverla borraría cuándo se
+  firmó de verdad.
+
+`[LIM]` **La única documentación que alimenta esto hoy es la memoria técnica.**
+Es el documento que la aplicación sabe leer objeto a objeto; el plan de
+autoprotección declara medios —que van al inventario de equipo— y el resto se
+revisa, no se disecciona. Cuando haya otro extractor que produzca texto por
+objeto, entra por aquí sin tocar la tabla ni la pantalla. Y **hereda la
+procedencia de la memoria, `es_simulada` incluido**: si la extracción fue
+simulada, el descriptivo nace marcado como simulado y la rejilla lo dice, porque
+un texto de mentira que pase por bueno es peor que no tener texto.
+
+**«Pasa a CAPEX».** Marcar la casilla **no crea nada**: el gestor recorre el
+inventario marcando lo que hay que sustituir, y las actuaciones se generan todas
+de una vez con un botón, en BORRADOR y sin importe. Crear el hallazgo al pulsar
+habría llenado el CAPEX de filas vacías cada vez que alguien se equivoca de
+casilla, y borrarlas después es peor que no haberlas creado. Es idempotente por
+título, así que volver a generar tras marcar dos equipos más no duplica ni pisa
+lo ya valorado.
+
+`[LIM]` **El capítulo sale del sistema técnico, y no siempre resuelve.**
+`technical_system.capex_chapter` es una pista escrita a mano: dice `H09` para
+Electricidad y dice **`H06 + H10`** para protección contra incendios. Cuando no
+resuelve a un capítulo único, el equipo **no se genera** y sale en los avisos con
+su nombre. Elegir uno de los dos sería codificar mal una actuación, y eso no se
+ve hasta que alguien suma el capítulo equivocado.
+
+**Las fotos de la visita, atadas al equipo.** `photo.equipment_id`, una a una o
+en lote. Es lo que justifica medio año después por qué se propone sustituir
+**esa** máquina y no otra. El vínculo es una clasificación: borrar el equipo no
+se lleva la fotografía, que vale por sí sola como evidencia de la visita.
+
+`[REQ]` **Y destapó un defecto de presentación que no daba ningún error.** Un
+`.oculto-visual` —el texto para lectores de pantalla, posicionado en absoluto—
+dentro de una tabla que se desplaza en horizontal **ensancha la página 61 px en
+móvil**: el `overflow-x` del contenedor no lo recorta, porque su bloque
+contenedor está fuera de él. No se ve —la página simplemente se mueve de lado—,
+y aquí se ha resuelto quitando el texto oculto: la cabecera de la columna ya
+dice «Validado» y el `aria-label` de la casilla nombra su fila.
 
 `[REQ]` **El árbol ya está** ✅, dentro del activo, que es donde va a acabar
 todo. No hizo falta ni una línea de API: los campos estaban y
@@ -263,7 +338,8 @@ Con una persona a tiempo completo que ya conoce el código.
 | §1 y §2 · pantallas de entrada | ✅ hecho |
 | ~~§3.3 · Dashboard completo~~ | ✅ hecho |
 | ~~§3.2 e · el árbol del CAPEX por activo~~ | ✅ hecho |
-| §3.2 · el resto del activo (detalle, documentación, visita, inventario) | 7-9 días |
+| ~~§3.2 d · el inventario del activo~~ | ✅ hecho |
+| §3.2 · el resto del activo (documentación y visita) | 4-6 días **desde que se definan** |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 | Documentación y visita del activo | por definir |
@@ -273,8 +349,10 @@ Con una persona a tiempo completo que ya conoce el código.
 `[REC]` **Por este orden**: Dashboard primero —enseña resultado pronto y no
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,
 que es lo que obliga a mover documentación, fotos e inventario de pestaña. El
-Dashboard ✅ y el árbol del CAPEX ✅ ya están; queda el resto del activo, y dos
-de sus cinco secciones siguen `[PDV]` a la espera de que el cliente las defina.
+Dashboard ✅, el árbol del CAPEX ✅ y el inventario ✅ ya están. De las cinco
+secciones del activo quedan **dos**, documentación y visita, y las dos siguen
+`[PDV]` a la espera de que el cliente las defina: no es que falte tiempo, es que
+falta el enunciado.
 
 ## 5. Lo que hace falta del cliente
 

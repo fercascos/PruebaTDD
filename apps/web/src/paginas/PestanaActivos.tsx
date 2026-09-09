@@ -5,6 +5,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeActivo } from './FichaDeActivo'
 import { ArbolDeUbicaciones } from './ArbolDeUbicaciones'
 import { ArbolDeCapex } from './ArbolDeCapex'
+import { InventarioDelActivo } from './InventarioDelActivo'
 
 export function PestanaActivos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[] | null>(null)
@@ -52,6 +53,11 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
         {editando !== 'nuevo' && (
           <>
             <ArbolDeUbicaciones assetId={editando.id} />
+            {/* `[REQ]` §3.2 d · El inventario va **antes** que el árbol del
+                CAPEX y no después: describe lo que hay y marca lo que hay que
+                sustituir, y de ahí salen actuaciones que aparecen en el árbol.
+                Al revés se leería como un apéndice de algo que ya está hecho. */}
+            <InventarioDelActivo projectId={projectId} assetId={editando.id} />
             <ArbolDeCapex projectId={projectId} assetId={editando.id} />
           </>
         )}

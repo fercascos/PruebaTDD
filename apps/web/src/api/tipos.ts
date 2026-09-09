@@ -130,6 +130,10 @@ export type Foto = {
   location_node_id: string | null
   /** `[REQ]` §3.2 · Alimenta el token `[Sistema]` del renombrado en lote. */
   technical_system_id: string | null
+  /** `[REQ]` §3.2 d · El equipo del inventario que retrata, si retrata uno. Es
+   *  lo que justifica seis meses después por qué se propone sustituir **esa**
+   *  máquina y no otra. */
+  equipment_id: string | null
   status: string
   origin: string
   original_filename: string
@@ -290,6 +294,51 @@ export type Equipo = {
   horizonte_code: string | null
   horizonte_name: string | null
   vida_resumen: string
+  /** `[REQ]` §3.2 d · La casilla del inventario. **Marcarla no crea nada**: el
+   *  gestor recorre la visita marcando lo que hay que sustituir y las
+   *  actuaciones se generan después, todas de una vez. */
+  pasa_a_capex: boolean
+}
+
+/** `[REQ]` §3.2 d · El descriptivo de un objeto de Hard Cost.
+ *
+ * Nace de la documentación —hoy, de la memoria técnica— **pendiente de validar
+ * por el gestor técnico**, se edita, y la casilla lo da por bueno. `validado_at`
+ * y `validado_por` son la firma: la pantalla enseña sí o no, pero lo que hace
+ * que valga es saber quién y cuándo.
+ */
+export type Descriptivo = {
+  id: string
+  capex_code_id: string
+  capex_code: string
+  capex_name: string
+  chapter_code: string
+  chapter_name: string
+  texto: string
+  document_id: string | null
+  origen: string | null
+  /** `[LIM]` Heredado de la extracción. Un texto simulado que pase por bueno es
+   *  peor que no tener texto, así que la rejilla lo dice. */
+  es_simulada: boolean
+  validado: boolean
+  validado_at: string | null
+  validado_por: string | null
+  validado_por_nombre: string | null
+  row_version: number
+}
+
+export type DescriptivosTraidos = {
+  creados: number
+  completados: number
+  respetados: number
+  avisos: string[]
+}
+
+export type EsqueletoDeEquipos = {
+  creadas: number
+  omitidas: number
+  marcados: number
+  avisos: string[]
 }
 
 export type FilaImportada = {
@@ -328,7 +377,12 @@ export type ResultadoImportacion = {
 //  Solicitud de documentación y su revisión con IA
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type EstadoSolicitud = 'SOLICITADA' | 'RECIBIDA' | 'PARCIAL' | 'NO_DISPONIBLE' | 'NO_APLICA'
+export type EstadoSolicitud =
+  | 'SOLICITADA'
+  | 'RECIBIDA'
+  | 'PARCIAL'
+  | 'NO_DISPONIBLE'
+  | 'NO_APLICA'
 
 export type Solicitud = {
   id: string
@@ -403,7 +457,6 @@ export type RevisionIa = {
 }
 
 export type CriterioDeRevision = { code: string; name_es: string; description_es: string }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  El árbol físico del activo (§8.4)
