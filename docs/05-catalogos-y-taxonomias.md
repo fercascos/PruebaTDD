@@ -595,7 +595,179 @@ los mismos capítulos, no está demostrado.
 
 ---
 
-## 5.10. Resumen de la semilla
+## 5.10. Árbol de documentación del activo `[REQ]` §3.2 b
+
+### De dónde sale
+
+Lo entregó el cliente en su hoja de estructura, **v2**, igual que el árbol del CAPEX y con el
+mismo trato: se transcribe aquí literal y de aquí se genera la semilla —no al revés—. Sus códigos
+son los suyos (P-45), y sus nombres también, con sus paréntesis y sus enumeraciones largas: son
+la frase con la que el gestor reconoce qué tiene que pedir.
+
+### Estructura
+
+Tres niveles, como el CAPEX, y por el mismo motivo: **la hoja del árbol es lo que tiene estado**.
+Una casilla es cualquier nodo sin hijos, esté en el nivel que esté.
+
+```mermaid
+flowchart LR
+    R["Árbol documental"] --> N1["Nivel 1 · TIPO<br/>4 valores"]
+    N1 --> N2["Nivel 2 · CATEGORÍA<br/>25 nodos"]
+    N2 --> N3["Nivel 3 · HOJA<br/>44 nodos"]
+    N3 --> S["La casilla es el nodo SIN HIJOS,<br/>sea de nivel 2 o de nivel 3"]
+
+    style N3 fill:#e8f5e9,stroke:#2e7d32
+```
+
+`[SUP]` **El nivel y el padre salen del propio código.** `S3.1.1` es de nivel 3 y cuelga de
+`S3.1`; no hace falta columna de padre, y así no puede haber un padre que no case con el código.
+Es la diferencia con el árbol del CAPEX, donde los códigos de la hoja del cliente no anidaban.
+
+`[SUP]` **La hoja del cliente llama «Sección» al nivel 3 de `S1` y «Objeto» al de `S3`.** Es el
+mismo nivel con dos nombres; aquí se unifica como nivel 3. Y `S2` y `S4` **no tienen nivel 3**: su
+categoría es la hoja, exactamente igual que los soft costs en el CAPEX.
+
+### El catálogo completo
+
+| Código | Nombre |
+|---|---|
+| `S1` | Documentación urbanística |
+| `S1.1` | Licencias urbanísticas |
+| `S1.1.1` | Licencia de Obras de nueva planta y modificaciones |
+| `S1.1.2` | Licencia de Primera Ocupación |
+| `S1.1.3` | Licencia de Actividad |
+| `S1.1.4` | Licencia de Funcionamiento |
+| `S1.2` | Proyectos con licencias otorgadas |
+| `S1.2.1` | Proyecto Básico |
+| `S1.2.2` | Proyecto de Ejecución |
+| `S1.2.3` | Proyecto de Actividad |
+| `S1.2.4` | Proyectos y DR de ampliaciones y/o montaje de mobilhomes |
+| `S1.3` | Notificaciones del ayuntamiento |
+| `S1.3.1` | Requerimientos |
+| `S1.3.2` | Denegaciones |
+| `S1.3.3` | Expedientes abiertos por Infracción Urbanística |
+| `S2` | Documentación técnica |
+| `S2.1` | Memoria técnica |
+| `S2.2` | Certificado final de obra |
+| `S2.3` | Contratos de mantenimiento a nombre de la propiedad (PCI, electricidad, CT, etc) |
+| `S2.4` | Informes de mantenimiento de las instalaciones a nombre de la propiedad (PCI, electricidad, CT, etc) |
+| `S2.5` | Inspección Técnicas Obligatorias de Instalaciones (PCI, Electricidad, Climatización, Gas, etc…) |
+| `S2.6` | Legalización en Industria de instalaciones eléctricas de Baja Tensión / Boletines eléctricos y Alta Tensión |
+| `S2.7` | Legalización de instalaciones térmicas (AA, calefacción y ACS) |
+| `S2.8` | Legalización en Industria de instalaciones térmicas (solar térmica) |
+| `S2.9` | Legalización en Industria de instalación de PCI |
+| `S2.10` | Legalización de la instalación de gas propano |
+| `S2.11` | Planos en CAD |
+| `S2.12` | Certificado energético |
+| `S2.13` | Informes técnicos previos: due diligences, específicos (fachadas, estructura, instalaciones, …) |
+| `S2.14` | Facturas de consumos eléctricos y agua (sanitaria y de PCI) |
+| `S2.15` | Información del sistema de bombeo del saneamiento y autorización para vertido al alcantarillado público |
+| `S3` | Documentación medioambiental |
+| `S3.1` | Emplazamiento |
+| `S3.1.1` | Dirección |
+| `S3.1.2` | Nota simple del Registro de la propiedad |
+| `S3.1.3` | Planos del emplazamiento |
+| `S3.1.4` | Consumos anuales |
+| `S3.2` | Licencias e inspecciones |
+| `S3.2.1` | Permiso/licencia ambiental de la que se disponga |
+| `S3.2.2` | Proyecto presentado para la obtención de la licencia ambiental |
+| `S3.2.3` | Estudio de Impacto Ambiental |
+| `S3.2.4` | Informes de las inspecciones realizadas por la Administración ambiental o ECA |
+| `S3.2.5` | Correspondencia/comunicaciones que se hayan tenido con la Administración Ambiental relativa a temas ambientales |
+| `S3.3` | Suelos |
+| `S3.3.1` | Informe geotécnico e informe de investigaciones de la calidad/contaminación de suelo que se hayan realizado |
+| `S3.3.2` | Informe Preliminar de la calidad del suelo (IPS) y respuesta de la Administración |
+| `S3.4` | Almacenamiento de sustancias peligrosas |
+| `S3.4.1` | Descripción de los tanques existentes (aéreos y enterrados) – tipo, volumen, contenido, edad, pruebas de estanqueidad, etc.  (incluir tanques de combustible para generadores, bombas contra incendios, etc., e incluir los tanques antiguos que estén fuera de uso o se hayan desmantelado). Adjuntar si se dispone de un plano con su localización |
+| `S3.4.2` | Relación de productos químicos almacenados por tipo de peligrosidad. Cantidades almacenadas (y consumidas anualmente) |
+| `S3.4.3` | Último informe Seveso (si aplica) y respuesta de la Administración |
+| `S3.4.4` | Si importa sustancias químicas desde el exterior del espacio aduanero europeo (>1t), incluir la documentación sobre el Pre-registro de sustancias. Si es usuario intermedio incluir la comunicación con proveedores sobre los pre-registros. Si es importador de artículos, incluir la documentación sobre el control de sustancias SVHC en los mismos |
+| `S3.5` | Emisiones atmosféricas |
+| `S3.5.1` | Inventario de los focos de emisión (incluidas las calderas), clasificación e informes de medición de contaminantes a la atmósfera |
+| `S3.5.2` | Estudios de ruido exterior realizado |
+| `S3.5.3` | Estudio de olores realizado |
+| `S3.5.4` | Si existen equipos de frío, gas que utilizan dichos equipos |
+| `S3.5.5` | Agentes extintores utilizados |
+| `S3.5.6` | Cantidades anuales de disolventes utilizados. Balance de emisiones difusas y Plan de gestión de disolventes |
+| `S3.5.7` | En caso de torres de refrigeración, adjuntar las analíticas y controles realizados relativos al control de legionela |
+| `S3.6` | Abastecimiento de agua y vertidos |
+| `S3.6.1` | En caso de existencia de pozo en el emplazamiento, autorización de extracción de agua y analítica de la misma |
+| `S3.6.2` | Descripción del pretratamiento realizado al agua de abastecimiento (si alguno) |
+| `S3.6.3` | Permiso de vertido de aguas residuales y pluviales (indicar donde vierte, si a cauce o a alcantarillado municipal) |
+| `S3.6.4` | Descripción del tratamiento realizado al agua residual previo al vertido |
+| `S3.6.5` | Analíticas realizadas al agua residual |
+| `S3.7` | Residuos y otros |
+| `S3.7.1` | Documentación relativa a la gestión de los residuos (peligrosos y no peligrosos), número de productor de residuos |
+| `S3.7.2` | Inventario de materiales que contienen asbestos en el emplazamiento |
+| `S3.7.3` | Si existen transformadores eléctricos de aceite o equipos hidráulicos, año de los mismos y analítica del contenido de PCB en el aceite de estos equipos |
+| `S3.7.4` | Plan de inversiones en temas ambientales para los próximos 5 años |
+| `S3.7.5` | Certificados ambientales (ISO 14001, EMAS, etc). Incluir también si se disponen otros certificados (ISO 9001, 18001, etc.) |
+| `S3.7.6` | Accidentes ambientales ocurridos a lo largo de la historia de la planta |
+| `S4` | Q&A |
+
+### Lo que el cliente pidió de esta sección, literal
+
+> «Ninguna celda de documentación debe ser bloqueante. Si no hay documentación se tiene que poder
+> continuar. Que aparezca en verde si hay documentación o en gris si no hay documentación. Debe
+> permitir la subida de varios archivos en un mismo objeto.» — nota de `S1`
+
+> «De todas las licencias sería necesario tanto la licencia descriptiva como la concesión. En caso
+> de estar en tramitación se necesitaría las comunicaciones, instancias y solicitudes
+> presentadas.» — nota de `S1.1`
+
+> «Subir aquí el fichero excel con el Q&A recibido con respuestas de la contraparte/cliente.»
+> — nota de `S4`
+
+`[SUP]` La nota de `S1.1` **no abre un cuarto nivel**. «Descriptiva», «concesión» y «en
+tramitación» son los papeles que puede haber dentro de una misma licencia, y la casilla admite
+varios ficheros con su nombre —que es justo lo que pide la nota de `S1`—. Un nivel más
+multiplicaría por tres las cuatro licencias para que la mayoría quedara siempre en gris.
+
+### Verde y gris son el color; el estado son cuatro
+
+`[REQ]` El cliente pidió dos colores y se le dan dos colores. Por debajo, la casilla guarda un
+estado de cuatro valores, y esto **no es adorno**: el capítulo de limitaciones y salvedades del
+informe necesita distinguir «no nos lo han dado» de «este edificio no tiene instalación de gas
+propano», y en gris las dos se ven igual.
+
+| Estado | Color | Qué significa | ¿Limita el informe? |
+|---|---|---|---|
+| `PENDIENTE` | gris | Se ha pedido y no ha llegado | Sí |
+| `RECIBIDA` | verde | Hay al menos un fichero o una nota | No |
+| `NO_DISPONIBLE` | gris | La propiedad dice que no existe o no lo encuentra | Sí, y con su motivo |
+| `NO_APLICA` | gris | Este activo no tiene esa instalación | **No** |
+
+`[REQ]` **Ninguno bloquea nada**, que es lo primero que pidió el cliente. `NO_DISPONIBLE` y
+`PENDIENTE` alimentan las limitaciones del informe igual que hoy lo hace `doc_request_item`;
+`NO_APLICA` no, porque no tener instalación de gas no es una laguna de la revisión.
+
+### Una casilla admite ficheros **y** una nota
+
+`[REC]` Cuatro nodos del árbol **no son documentos**: `S3.1.1 Dirección`, `S3.1.4 Consumos
+anuales`, y en parte `S3.4.1` y `S3.4.2`, que piden *descripciones* y *relaciones* de lo que hay.
+Exigir un PDF para la dirección de un edificio garantiza que nadie suba nada y que la casilla se
+quede gris para siempre.
+
+Así que toda casilla admite las dos cosas: ficheros y un texto. Verde si hay **cualquiera** de las
+dos. Y la dirección se propone desde la ficha del activo, que ya la tiene, en vez de pedir que se
+teclee dos veces.
+
+### Lo que este árbol sustituye
+
+`[REQ]` **Sustituye al checklist de la fase «Solicitud de documentación»**, decidido por el
+cliente. Las cinco categorías sembradas hasta ahora —licencias urbanísticas · proyectos ·
+contratos de mantenimiento · legalizaciones y certificados · garantías— son un subconjunto pobre
+de estos 73 nodos, y tener las dos cosas produciría dos verdades sobre qué documentación falta.
+
+`[LIM]` **Queda una casilla sin sitio: el plan de autoprotección.** La aplicación ya sabe leerlo
+—de él salen los medios que van al inventario de equipo y las limitaciones del informe— y el árbol
+v2 no tiene ningún nodo donde colgarlo. Encaja en `S2` como una categoría más; **está `[PDV]` a la
+espera de que el cliente lo confirme**, y hasta entonces no se inventa un código que después haya
+que migrar.
+
+---
+
+## 5.11. Resumen de la semilla
 
 Lo que se carga en la migración `seed_catalogs`:
 

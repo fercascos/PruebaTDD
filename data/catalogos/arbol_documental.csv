@@ -1,0 +1,74 @@
+code,name_es,level,parent_code
+S1,Documentación urbanística,1,
+S1.1,Licencias urbanísticas,2,S1
+S1.1.1,Licencia de Obras de nueva planta y modificaciones,3,S1.1
+S1.1.2,Licencia de Primera Ocupación,3,S1.1
+S1.1.3,Licencia de Actividad,3,S1.1
+S1.1.4,Licencia de Funcionamiento,3,S1.1
+S1.2,Proyectos con licencias otorgadas,2,S1
+S1.2.1,Proyecto Básico,3,S1.2
+S1.2.2,Proyecto de Ejecución,3,S1.2
+S1.2.3,Proyecto de Actividad,3,S1.2
+S1.2.4,Proyectos y DR de ampliaciones y/o montaje de mobilhomes,3,S1.2
+S1.3,Notificaciones del ayuntamiento,2,S1
+S1.3.1,Requerimientos,3,S1.3
+S1.3.2,Denegaciones,3,S1.3
+S1.3.3,Expedientes abiertos por Infracción Urbanística,3,S1.3
+S2,Documentación técnica,1,
+S2.1,Memoria técnica,2,S2
+S2.2,Certificado final de obra,2,S2
+S2.3,"Contratos de mantenimiento a nombre de la propiedad (PCI, electricidad, CT, etc)",2,S2
+S2.4,"Informes de mantenimiento de las instalaciones a nombre de la propiedad (PCI, electricidad, CT, etc)",2,S2
+S2.5,"Inspección Técnicas Obligatorias de Instalaciones (PCI, Electricidad, Climatización, Gas, etc…)",2,S2
+S2.6,Legalización en Industria de instalaciones eléctricas de Baja Tensión / Boletines eléctricos y Alta Tensión,2,S2
+S2.7,"Legalización de instalaciones térmicas (AA, calefacción y ACS)",2,S2
+S2.8,Legalización en Industria de instalaciones térmicas (solar térmica),2,S2
+S2.9,Legalización en Industria de instalación de PCI,2,S2
+S2.10,Legalización de la instalación de gas propano,2,S2
+S2.11,Planos en CAD,2,S2
+S2.12,Certificado energético,2,S2
+S2.13,"Informes técnicos previos: due diligences, específicos (fachadas, estructura, instalaciones, …)",2,S2
+S2.14,Facturas de consumos eléctricos y agua (sanitaria y de PCI),2,S2
+S2.15,Información del sistema de bombeo del saneamiento y autorización para vertido al alcantarillado público,2,S2
+S3,Documentación medioambiental,1,
+S3.1,Emplazamiento,2,S3
+S3.1.1,Dirección,3,S3.1
+S3.1.2,Nota simple del Registro de la propiedad,3,S3.1
+S3.1.3,Planos del emplazamiento,3,S3.1
+S3.1.4,Consumos anuales,3,S3.1
+S3.2,Licencias e inspecciones,2,S3
+S3.2.1,Permiso/licencia ambiental de la que se disponga,3,S3.2
+S3.2.2,Proyecto presentado para la obtención de la licencia ambiental,3,S3.2
+S3.2.3,Estudio de Impacto Ambiental,3,S3.2
+S3.2.4,Informes de las inspecciones realizadas por la Administración ambiental o ECA,3,S3.2
+S3.2.5,Correspondencia/comunicaciones que se hayan tenido con la Administración Ambiental relativa a temas ambientales,3,S3.2
+S3.3,Suelos,2,S3
+S3.3.1,Informe geotécnico e informe de investigaciones de la calidad/contaminación de suelo que se hayan realizado,3,S3.3
+S3.3.2,Informe Preliminar de la calidad del suelo (IPS) y respuesta de la Administración,3,S3.3
+S3.4,Almacenamiento de sustancias peligrosas,2,S3
+S3.4.1,"Descripción de los tanques existentes (aéreos y enterrados) – tipo, volumen, contenido, edad, pruebas de estanqueidad, etc.  (incluir tanques de combustible para generadores, bombas contra incendios, etc., e incluir los tanques antiguos que estén fuera de uso o se hayan desmantelado). Adjuntar si se dispone de un plano con su localización",3,S3.4
+S3.4.2,Relación de productos químicos almacenados por tipo de peligrosidad. Cantidades almacenadas (y consumidas anualmente),3,S3.4
+S3.4.3,Último informe Seveso (si aplica) y respuesta de la Administración,3,S3.4
+S3.4.4,"Si importa sustancias químicas desde el exterior del espacio aduanero europeo (>1t), incluir la documentación sobre el Pre-registro de sustancias. Si es usuario intermedio incluir la comunicación con proveedores sobre los pre-registros. Si es importador de artículos, incluir la documentación sobre el control de sustancias SVHC en los mismos",3,S3.4
+S3.5,Emisiones atmosféricas,2,S3
+S3.5.1,"Inventario de los focos de emisión (incluidas las calderas), clasificación e informes de medición de contaminantes a la atmósfera",3,S3.5
+S3.5.2,Estudios de ruido exterior realizado,3,S3.5
+S3.5.3,Estudio de olores realizado,3,S3.5
+S3.5.4,"Si existen equipos de frío, gas que utilizan dichos equipos",3,S3.5
+S3.5.5,Agentes extintores utilizados,3,S3.5
+S3.5.6,Cantidades anuales de disolventes utilizados. Balance de emisiones difusas y Plan de gestión de disolventes,3,S3.5
+S3.5.7,"En caso de torres de refrigeración, adjuntar las analíticas y controles realizados relativos al control de legionela",3,S3.5
+S3.6,Abastecimiento de agua y vertidos,2,S3
+S3.6.1,"En caso de existencia de pozo en el emplazamiento, autorización de extracción de agua y analítica de la misma",3,S3.6
+S3.6.2,Descripción del pretratamiento realizado al agua de abastecimiento (si alguno),3,S3.6
+S3.6.3,"Permiso de vertido de aguas residuales y pluviales (indicar donde vierte, si a cauce o a alcantarillado municipal)",3,S3.6
+S3.6.4,Descripción del tratamiento realizado al agua residual previo al vertido,3,S3.6
+S3.6.5,Analíticas realizadas al agua residual,3,S3.6
+S3.7,Residuos y otros,2,S3
+S3.7.1,"Documentación relativa a la gestión de los residuos (peligrosos y no peligrosos), número de productor de residuos",3,S3.7
+S3.7.2,Inventario de materiales que contienen asbestos en el emplazamiento,3,S3.7
+S3.7.3,"Si existen transformadores eléctricos de aceite o equipos hidráulicos, año de los mismos y analítica del contenido de PCB en el aceite de estos equipos",3,S3.7
+S3.7.4,Plan de inversiones en temas ambientales para los próximos 5 años,3,S3.7
+S3.7.5,"Certificados ambientales (ISO 14001, EMAS, etc). Incluir también si se disponen otros certificados (ISO 9001, 18001, etc.)",3,S3.7
+S3.7.6,Accidentes ambientales ocurridos a lo largo de la historia de la planta,3,S3.7
+S4,Q&A,1,

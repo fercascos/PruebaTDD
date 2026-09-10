@@ -34,9 +34,7 @@ def _slug(texto: str) -> str:
     """
     limpio_previo = re.sub(r"`?\[(REQ|SUP|REC|LIM|PDV)\]`?", "", texto)
     sin_tildes = "".join(
-        c
-        for c in unicodedata.normalize("NFD", limpio_previo)
-        if unicodedata.category(c) != "Mn"
+        c for c in unicodedata.normalize("NFD", limpio_previo) if unicodedata.category(c) != "Mn"
     )
     limpio = re.sub(r"[^A-Za-z0-9]+", "_", sin_tildes).strip("_").upper()
     return re.sub(r"_+", "_", limpio)
@@ -118,6 +116,54 @@ def zonas_y_matriz(doc: str) -> tuple[list[dict[str, str]], list[dict[str, str]]
     if not matriz:
         raise SystemExit("No se ha extraído la matriz de disponibilidad de §5.2")
     return zonas, matriz
+
+
+def arbol_documental(doc: str) -> list[dict[str, str]]:
+    """Extrae el árbol de documentación del activo de §5.10 `[REQ]` §3.2 b.
+
+    Más simple que el del CAPEX porque **los códigos del cliente sí anidan**:
+    `S3.1.1` es de nivel 3 y cuelga de `S3.1`, así que el nivel y el padre se
+    deducen del propio código y no hay columna que pueda dejar de casar con él.
+
+    La tabla es una fila por nodo —y no capítulo + elementos separados por «·»,
+    como en §5.3— porque aquí los nombres son frases largas con paréntesis,
+    comas y puntos: «Legalización en Industria de instalaciones eléctricas de
+    Baja Tensión / Boletines eléctricos y Alta Tensión». Un separador dentro de
+    la celda acabaría partiendo un nombre por la mitad.
+    """
+    cuerpo = _seccion(doc, "5.10.")
+    filas: list[dict[str, str]] = []
+    vistos: set[str] = set()
+    for linea in cuerpo.splitlines():
+        if not linea.startswith("|") or "---" in linea:
+            continue
+        c = _celdas(linea)
+        if len(c) != 2:
+            continue
+        code = c[0].strip("`")
+        if not re.fullmatch(r"S\d+(?:\.\d+){0,2}", code):
+            continue
+        if code in vistos:
+            raise SystemExit(f"El código {code} está dos veces en §5.10")
+        vistos.add(code)
+        nivel = code.count(".") + 1
+        filas.append(
+            {
+                "code": code,
+                "name_es": c[1],
+                "level": str(nivel),
+                "parent_code": code.rsplit(".", 1)[0] if nivel > 1 else "",
+            }
+        )
+    if not filas:
+        raise SystemExit("No se ha extraído ningún nodo del árbol documental de §5.10")
+
+    # Un nodo cuyo padre no está en la tabla dejaría una rama colgando del aire,
+    # y la siembra lo descubriría al insertar, con un error mucho peor de leer.
+    for f in filas:
+        if f["parent_code"] and f["parent_code"] not in vistos:
+            raise SystemExit(f"{f['code']} cuelga de {f['parent_code']}, que no está en §5.10")
+    return filas
 
 
 def codigos_capex(doc: str) -> list[dict[str, str]]:
@@ -335,9 +381,7 @@ def secciones_de_memoria(doc: str) -> list[dict[str, str]]:
             filas.append({"seccion_code": codigo, "name_es": c[1], "capex_code": ""})
             continue
         for capitulo in capitulos:
-            filas.append(
-                {"seccion_code": codigo, "name_es": c[1], "capex_code": f"HC.{capitulo}"}
-            )
+            filas.append({"seccion_code": codigo, "name_es": c[1], "capex_code": f"HC.{capitulo}"})
     if not filas:
         raise SystemExit("No se ha extraído la correspondencia de secciones de §5.9")
     return filas
@@ -377,6 +421,7 @@ def main() -> int:
     hor = horizontes(doc)
     sis = sistemas_tecnicos(doc)
     secciones = secciones_de_memoria(doc)
+    documental = arbol_documental(doc)
 
     ok = all(
         [
@@ -413,15 +458,24 @@ def main() -> int:
                 secciones,
                 args.check,
             ),
+            _escribir(
+                "arbol_documental.csv",
+                ["code", "name_es", "level", "parent_code"],
+                documental,
+                args.check,
+            ),
         ]
     )
 
     niveles = {n: sum(1 for c in codigos if c["level"] == n) for n in ("1", "2", "3")}
+    docn = {n: sum(1 for c in documental if c["level"] == n) for n in ("1", "2", "3")}
     print(
         f"\nResumen: {len(tips)} tipologías · {len(zonas)} zonas · {len(matriz)} relaciones\n"
         f"         árbol CAPEX: {niveles['1']} categorías + {niveles['2']} capítulos + "
         f"{niveles['3']} elementos = {len(codigos)} nodos\n"
-        f"         {len(ries)} grados de riesgo · {len(conc)} conceptos · {len(hor)} horizontes"
+        f"         {len(ries)} grados de riesgo · {len(conc)} conceptos · {len(hor)} horizontes\n"
+        f"         árbol documental: {docn['1']} tipos + {docn['2']} categorías + "
+        f"{docn['3']} hojas = {len(documental)} nodos"
     )
     return 0 if ok else 1
 

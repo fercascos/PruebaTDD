@@ -111,8 +111,8 @@ ser secciones **de cada activo**. Cinco:
 | Sección | Qué lleva | Estado |
 |---|---|---|
 | **a) Detalle** | La ficha que ya existe | ✅ existe, se mueve |
-| **b) Documentación** | La del activo | `[PDV]` **estructura por revisar** |
-| **c) Visita** | Fecha de la visita y sus fotografías | `[PDV]` **por definir** |
+| **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, verde/gris, no bloqueante | ✅ **definida**, por construir |
+| **c) Visita** | Ubicación, fecha, check de realizada, equipo implicado, coste y fotos | ✅ **definida**, por construir |
 | **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo; y el **descriptivo de cada objeto de Hard Cost**, editable y con su casilla de validado | ✅ |
 | **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
 
@@ -125,6 +125,74 @@ repercutible a inquilinos.
 > la columna de repercutible (`tenant_recoverable`) y los cinco plazos. Lo que
 > cambia **no es el modelo, es la presentación**: hoy es una rejilla plana por
 > proyecto y pasa a ser un árbol por activo. Eso abarata mucho este punto.
+
+#### b) Documentación ✅ definida
+
+El cliente entregó la estructura en su hoja **v2**: **73 nodos** —4 tipos · 25 categorías · 44
+hojas— que dejan **60 casillas** por activo. Está transcrita literal en
+[`05`](./05-catalogos-y-taxonomias.md) §5.10, y de ahí sale la semilla, como con todos los
+catálogos. Los cuatro tipos son **S1 urbanística**, **S2 técnica**, **S3 medioambiental** —el
+bloque que añade la v2, con 33 hojas— y **S4 Q&A**.
+
+Cuatro decisiones tomadas con el cliente:
+
+- **Sustituye al checklist de la fase «Solicitud de documentación».** Las cinco categorías
+  sembradas hasta hoy son un subconjunto pobre de estos 73 nodos, y mantener las dos cosas
+  produciría dos verdades sobre qué documentación falta. `[REQ]`
+- **Ninguna casilla bloquea nada**, con sus palabras: *«si no hay documentación se tiene que poder
+  continuar»*. Verde si hay algo, gris si no. `[REQ]`
+- **Dos colores, cuatro estados.** El color es el que pidió; por debajo, `PENDIENTE` ·
+  `RECIBIDA` · `NO_DISPONIBLE` · `NO_APLICA`. El capítulo de limitaciones del informe necesita
+  distinguir «no nos lo han dado» de «este edificio no tiene gas propano», y en gris las dos se
+  ven igual. Solo `NO_APLICA` **no** limita el informe. `[REQ]`
+- **Varios ficheros por casilla**, que lo pide la nota de `S1` — y además una nota de texto, porque
+  cuatro nodos del árbol no son documentos sino datos (`S3.1.1 Dirección`, `S3.1.4 Consumos
+  anuales`). Verde si hay cualquiera de las dos. `[REC]`
+
+`[LIM]` **El plan de autoprotección no tiene casilla en el árbol v2.** La aplicación ya sabe
+leerlo —de él salen los medios que van al inventario de equipo y limitaciones del informe— y no
+hay nodo donde colgarlo. Encaja en `S2`; queda `[PDV]` a la espera del cliente y no se inventa un
+código que después haya que migrar.
+
+`[REC]` **S3 medioambiental casa casi uno a uno con `MA1` del CAPEX.** «Suelos» ↔ `MA1.08
+Contaminación del suelo`, «Residuos» ↔ `MA1.02` y `MA1.03`, «Emisiones» ↔ `MA1.04`… Enlazar la
+casilla documental con el objeto del CAPEX permitiría que *«no hay Informe Preliminar de Suelos»*
+se convierta en una limitación sobre `MA1.08` sin que nadie la teclee. **No se construye sin que
+el cliente lo pida**: es una inferencia sobre su método de trabajo, no un requisito suyo.
+
+#### c) Visita ✅ definida
+
+De la hoja del cliente, sin cambios entre v1 y v2. Tres bloques:
+
+| Bloque | Contenido |
+|---|---|
+| **V1 · Datos de la visita** | Ubicación · Fecha programada · **Check de visita realizada** |
+| **V2 · Equipo implicado** | Responsable 1 a 4 · Coste de la visita |
+| **V3 · Fotos** | *«la sección de fotos que hay actualmente desarrollado»* |
+
+Dos decisiones tomadas con el cliente:
+
+- **Los responsables son usuarios de la aplicación, y los acompañantes texto libre.** Con usuarios
+  se puede preguntar «qué visitó cada uno» y firmar lo que cada uno escribe; con texto libre no.
+  Pero quien acompaña de la propiedad o del mantenedor no tiene cuenta, y perderlo sería perder a
+  quien abrió el cuarto de máquinas. **Cuatro es lo que cabía en la hoja, no un tope.** `[REQ]`
+- **El coste de la visita es coste interno del encargo.** No entra en el CAPEX ni sale en el
+  informe del cliente: los desplazamientos y las horas del consultor no son coste del edificio, y
+  colarlos en los soft costs inflaría la cifra con la que el inversor negocia el precio. `[REQ]`
+
+`[SUP]` **Casi todo esto ya existe en `asset_visit`** —estado, fecha prevista, fecha real,
+`led_by`, `attendees` JSONB, `access_limitations`, `summary`— y el modelo ya admite **varias
+visitas por activo**. La sección no crea una tabla nueva: la enseña, le añade el coste y ata
+`attendees` a usuarios. El «check de visita realizada» es el estado `VISITADO`, que ya exige fecha
+real por restricción de la base.
+
+`[SUP]` **«Ubicación» no es un campo nuevo**: el activo ya tiene dirección, coordenadas y mapa. Se
+propone desde la ficha y admite una nota, que es donde cabe lo que de verdad hace falta el día de
+la visita —«entrada por el muelle 4, preguntar por el jefe de mantenimiento»—.
+
+`[SUP]` **`V1.2` está dos veces en la hoja**, en «Fecha visita programada» y en «Check visita». Se
+renumera el segundo a `V1.3`. Es el mismo tipo de errata que `H14`, que venía marcado como objeto
+siendo categoría.
 
 #### d) Inventario ✅
 
@@ -339,7 +407,8 @@ Con una persona a tiempo completo que ya conoce el código.
 | ~~§3.3 · Dashboard completo~~ | ✅ hecho |
 | ~~§3.2 e · el árbol del CAPEX por activo~~ | ✅ hecho |
 | ~~§3.2 d · el inventario del activo~~ | ✅ hecho |
-| §3.2 · el resto del activo (documentación y visita) | 4-6 días **desde que se definan** |
+| §3.2 b · documentación del activo (73 nodos, 60 casillas) | 3-4 días · **definida** |
+| §3.2 c · visita del activo | 1-2 días · **definida** · casi todo existe en `asset_visit` |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 | Documentación y visita del activo | por definir |
@@ -350,9 +419,10 @@ Con una persona a tiempo completo que ya conoce el código.
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,
 que es lo que obliga a mover documentación, fotos e inventario de pestaña. El
 Dashboard ✅, el árbol del CAPEX ✅ y el inventario ✅ ya están. De las cinco
-secciones del activo quedan **dos**, documentación y visita, y las dos siguen
-`[PDV]` a la espera de que el cliente las defina: no es que falte tiempo, es que
-falta el enunciado.
+secciones del activo quedan **dos**, documentación y visita, y desde la hoja v2
+del cliente **las dos están definidas**: ya no falta enunciado, falta
+construirlas. La visita es la más barata —`asset_visit` ya tiene casi todos sus
+campos— y conviene hacerla primero por eso mismo.
 
 ## 5. Lo que hace falta del cliente
 
@@ -361,7 +431,10 @@ falta el enunciado.
 - ~~Si su plantilla de Excel puede cambiar~~ ✅ **confirmado y aplicado**:
   `SC.S04 «Otros»` ya tiene su tramo. `[PDV]` Queda **abrir el fichero en Excel
   y comprobarlo**: aquí solo se puede verificar el XML.
-- **Qué estructura sigue la documentación del activo** (§3.2 b).
-- **Qué lleva la visita** además de fecha y fotos (§3.2 c).
+- ~~Qué estructura sigue la documentación del activo~~ ✅ **recibida (hoja v2)**: 73 nodos, 60
+  casillas, con el bloque medioambiental que la v1 no traía. Transcrita en [`05`](./05-catalogos-y-taxonomias.md) §5.10.
+- ~~Qué lleva la visita además de fecha y fotos~~ ✅ **recibida**: datos, equipo implicado y coste.
+- **Dónde va el plan de autoprotección** en el árbol documental (§3.2 b): la aplicación ya sabe
+  leerlo y el árbol v2 no tiene casilla para él. Encaja en `S2`, pero el código lo pone el cliente.
 - **Qué roles pueden añadir clientes al catálogo** (§2).
 - Qué más enseña el Resumen del proyecto además de las fases (§3.1).
