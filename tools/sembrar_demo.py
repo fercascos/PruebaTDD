@@ -37,9 +37,7 @@ class Api:
         self.base = base.rstrip("/") + "/api/v1"
         self.token: str | None = None
 
-    def _pedir(
-        self, metodo: str, ruta: str, cuerpo: Any = None, *, campos: Any = None
-    ) -> Any:
+    def _pedir(self, metodo: str, ruta: str, cuerpo: Any = None, *, campos: Any = None) -> Any:
         url = f"{self.base}{ruta}"
         cabeceras = {}
         datos = None
@@ -69,9 +67,7 @@ class Api:
             datos = json.dumps(cuerpo).encode()
             cabeceras["Content-Type"] = "application/json"
 
-        peticion = urllib.request.Request(
-            url, data=datos, headers=cabeceras, method=metodo
-        )
+        peticion = urllib.request.Request(url, data=datos, headers=cabeceras, method=metodo)
         try:
             with urllib.request.urlopen(peticion) as r:
                 texto = r.read().decode()
@@ -92,6 +88,9 @@ class Api:
     def patch(self, ruta: str, cuerpo: Any) -> Any:
         return self._pedir("PATCH", ruta, cuerpo)
 
+    def put(self, ruta: str, cuerpo: Any) -> Any:
+        return self._pedir("PUT", ruta, cuerpo)
+
     # Aquí vivía un `esperar_a_ver()` que reintentaba durante dos segundos
     # cualquier `404` sobre un recurso recién creado. Rodeaba un defecto real:
     # la API confirmaba la transacción **después** de enviar la respuesta, así
@@ -104,9 +103,7 @@ class Api:
     # tapar la regresión el día que alguien deshaga el arreglo.
 
     def entrar(self) -> None:
-        self.token = self.post("/auth/login", {"email": CORREO, "password": CLAVE})[
-            "access_token"
-        ]
+        self.token = self.post("/auth/login", {"email": CORREO, "password": CLAVE})["access_token"]
 
 
 def imagen(color: tuple[int, int, int], texto: str) -> bytes:
@@ -125,37 +122,52 @@ def imagen(color: tuple[int, int, int], texto: str) -> bytes:
 
 
 #: `[REQ]` §15 · Hallazgos inventados, con importes inventados.
+#: `[REQ]` Los hallazgos de la demostración, **con el código exacto del árbol
+#: del cliente**, no con un capítulo que se busca por subcadena.
+#:
+#: Antes esto guardaba «H09» y resolvía con
+#: `next(c for c in codigos if capitulo in c["code"])`. Dos problemas, y los dos
+#: se veían en pantalla: los capítulos eran los del catálogo VIEJO —al adoptar
+#: el árbol del cliente cambió qué es cada número—, así que la demostración
+#: enseñaba **una enfriadora archivada en Electricidad y una cubierta en
+#: Fachadas**; y cuando el código no existía, el `next` caía en `codigos[0]` sin
+#: decir nada. Con el código entero, un fallo de codificación se ve al leer esta
+#: lista, y uno que no exista revienta la siembra en vez de mentir en el árbol.
 HALLAZGOS: tuple[tuple[str, str, str, str, str], ...] = (
-    ("Enfriadora al final de su vida útil", "H09", "MEDIO", "48500.00", "ALTO"),
+    ("Enfriadora al final de su vida útil", "HC.H08.01", "MEDIO", "48500.00", "ALTO"),
     (
         "Lámina de cubierta con ampollas generalizadas",
-        "H03",
+        "HC.H02.01",
         "CORTO",
         "83407.50",
         "ALTO",
     ),
     (
         "Cuadro general sin protección diferencial en dos líneas",
-        "H08",
+        "HC.H09.02",
         "CORTO",
         "6200.00",
         "MUY_ALTO",
     ),
     (
         "Juntas de dilatación abiertas en fachada norte",
-        "H02",
+        "HC.H03.01",
         "MEDIO",
         "14300.00",
         "MEDIO",
     ),
-    ("Luminarias de almacén sin sustituir a LED", "H08", "LARGO", "31000.00", "BAJO"),
+    ("Luminarias de almacén sin sustituir a LED", "HC.H09.10", "LARGO", "31000.00", "BAJO"),
     (
         "Red de PCI sin certificado de mantenimiento vigente",
-        "H10",
+        "HC.H10.12",
         "CORTO",
         "9800.00",
         "ALTO",
     ),
+    # `[REQ]` Un soft cost, que se codifica en la CATEGORÍA porque en el árbol
+    # del cliente los soft costs no tienen objetos. Sin él, la demostración
+    # enseñaría solo Hard Costs y el árbol parecería tener un único tipo.
+    ("Redacción de proyecto y dirección de obra", "SC.S01", "CORTO", "18500.00", "BAJO"),
 )
 
 #: `[REQ]` El encargo de demostración es de **cartera**, no de un edificio.
@@ -165,21 +177,21 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str], ...] = (
 HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str], ...] = (
     (
         "Climatizadora de oficinas fuera de servicio",
-        "H09",
+        "HC.H08.01",
         "CORTO",
         "22400.00",
         "ALTO",
     ),
     (
         "Falso techo con manchas de humedad en dos plantas",
-        "H03",
+        "HC.H04.03",
         "MEDIO",
         "11750.00",
         "MEDIO",
     ),
     (
         "Escalera de emergencia sin señalización fotoluminiscente",
-        "H10",
+        "HC.H06.09",
         "CORTO",
         "4300.00",
         "MUY_ALTO",
@@ -198,12 +210,71 @@ UBICACIONES: tuple[tuple[str, str, str | None], ...] = (
 
 #: `[REQ]` §7 · Inventario. P-15: la vida residual **no se teclea**, se calcula
 #: del año de instalación y la vida esperada.
-EQUIPOS: tuple[tuple[str, str, str, int, int, str], ...] = (
-    ("Enfriadora", "CLIMA-01", "Marca Ficticia", 2004, 20, "MUY_DEFICIENTE"),
-    ("Cuadro general de BT", "ELEC-01", "Marca Ficticia", 2004, 30, "ACEPTABLE"),
-    ("Grupo de presión de PCI", "PCI-01", "Marca Ficticia", 2010, 25, "BUENO"),
-    ("Ascensor de carga", "TRANS-01", "Marca Ficticia", 2004, 25, "ACEPTABLE"),
-    ("UTA de oficinas", "CLIMA-02", "Marca Ficticia", 2015, 18, "BUENO"),
+EQUIPOS: tuple[tuple[str, str, str, int, int, str, str, bool], ...] = (
+    # tipo · etiqueta · marca · año · vida · estado · sistema técnico · pasa a CAPEX
+    ("Enfriadora", "CLIMA-01", "Marca Ficticia", 2004, 20, "MUY_DEFICIENTE", "CLIMA", True),
+    ("Cuadro general de BT", "ELEC-01", "Marca Ficticia", 2004, 30, "ACEPTABLE", "ELEC", False),
+    # `[REQ]` §3.2 d · Marcado, y su sistema apunta a DOS capítulos («H06 + H10»),
+    # así que al generar sale en los avisos en vez de codificarse a ciegas. Es el
+    # caso que hay que poder enseñar: la aplicación se niega y lo dice.
+    ("Grupo de presión de PCI", "PCI-01", "Marca Ficticia", 2010, 25, "BUENO", "PCI", True),
+    ("Ascensor de carga", "TRANS-01", "Marca Ficticia", 2004, 25, "ACEPTABLE", "ASC", True),
+    ("UTA de oficinas", "CLIMA-02", "Marca Ficticia", 2015, 18, "BUENO", "CLIMA", False),
+)
+
+#: `[REQ]` §3.2 c · Quién fue a la visita. El primero es del equipo —se resuelve
+#: contra el usuario administrador, que es el único que existe seguro— y los
+#: demás son acompañantes: gente de la propiedad y del mantenedor que no tiene
+#: cuenta en la aplicación y nunca la va a tener.
+ACOMPANANTES: tuple[tuple[str, str], ...] = (
+    ("Nombre Ficticio Uno", "Property manager de la propiedad"),
+    ("Nombre Ficticio Dos", "Jefe de mantenimiento del centro"),
+    ("Nombre Ficticio Tres", "Mantenedor de PCI"),
+)
+
+#: `[REQ]` La memoria técnica del edificio, de la que salen los descriptivos de
+#: §3.2 d. Categoría (capítulo) → objetos con lo que la memoria dice de ellos.
+MEMORIA: tuple[tuple[str, tuple[tuple[str, str, str | None, str | None], ...]], ...] = (
+    (
+        "HC.H08",
+        (
+            (
+                "HC.H08.01",
+                "Enfriadora aire-agua en cubierta",
+                "2",
+                "Refrigerante R-410A. Sin sustituir desde la construcción.",
+            ),
+            ("HC.H08.05", "Fancoils de oficinas", "34", None),
+            # Sin código: la memoria lo enumera y el catálogo no lo tiene. Sale
+            # en los avisos al traer los descriptivos, y no se inventa ninguno.
+            (None, "Climatizadora de la sala de reuniones", None, None),
+        ),
+    ),
+    (
+        "HC.H02",
+        (
+            (
+                "HC.H02.01",
+                "Cubierta deck con lámina impermeabilizante de PVC",
+                "16400",
+                "Instalada en 2004. Lucernarios de policarbonato celular.",
+            ),
+        ),
+    ),
+    (
+        "HC.H09",
+        (
+            ("HC.H09.02", "Cuadro general de baja tensión", "1", "Potencia contratada 630 kVA."),
+            ("HC.H09.10", "Alumbrado de almacén con luminarias de halogenuros", "220", None),
+        ),
+    ),
+    (
+        "HC.H10",
+        (
+            ("HC.H10.05", "Bocas de incendio equipadas de 25 mm", "18", None),
+            ("HC.H10.10", "Rociadores automáticos en almacén", None, "Sin plano de la red."),
+        ),
+    ),
 )
 
 DOCUMENTOS: tuple[tuple[str, str], ...] = (
@@ -241,9 +312,7 @@ def sembrar(api: Api) -> str:
     print(f"· Encargo {proyecto['internal_code']} · {proyecto['id']}")
 
     tipologia = next(
-        t
-        for t in api.get("/catalogs/asset-typologies")
-        if t["code"] in ("INDUSTRIAL", "OFICINAS")
+        t for t in api.get("/catalogs/asset-typologies") if t["code"] in ("INDUSTRIAL", "OFICINAS")
     )
     activo = api.post(
         f"/projects/{proyecto['id']}/assets",
@@ -284,10 +353,26 @@ def sembrar(api: Api) -> str:
     # ── Hallazgos y CAPEX ───────────────────────────────────────────────────
     zonas = api.get(f"/catalogs/zones?typology_id={tipologia['id']}")
     riesgos = {r["code"]: r["id"] for r in api.get("/catalogs/risk-levels")}
-    codigos = api.get("/catalogs/capex-codes?level=3")
+    # Todos los niveles: un soft cost se codifica en su CATEGORÍA, porque en el
+    # árbol del cliente los soft costs no tienen objetos.
+    codigos = {c["code"]: c for c in api.get("/catalogs/capex-codes")}
+
+    def por_codigo(code: str) -> dict[str, Any]:
+        """El código exacto, o un error que dice cuál falta.
+
+        Caer en el primero de la lista, que es lo que hacía antes, produce una
+        demostración con la enfriadora en el capítulo equivocado y **nada que lo
+        avise**: el árbol se dibuja igual de bien con la rama mal puesta.
+        """
+        if code not in codigos:
+            raise SystemExit(
+                f"El código {code} no está en el catálogo. Regenere la semilla "
+                f"(make catalogs && make db-seed) o corrija la lista de este guion."
+            )
+        return codigos[code]
 
     for titulo, capitulo, plazo, importe, riesgo in HALLAZGOS:
-        codigo = next((c for c in codigos if capitulo in c["code"]), codigos[0])
+        codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
             {
@@ -334,7 +419,7 @@ def sembrar(api: Api) -> str:
     # no es la de una nave, y es justo lo que arregla separar los libros.
     zonas_b = api.get(f"/catalogs/zones?typology_id={oficinas['id']}")
     for titulo, capitulo, plazo, importe, riesgo in HALLAZGOS_SEGUNDO:
-        codigo = next((c for c in codigos if capitulo in c["code"]), codigos[0])
+        codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
             {
@@ -371,13 +456,17 @@ def sembrar(api: Api) -> str:
         )
     print("· 4 fotografías, cada una en su ubicación")
 
-    # ── Inventario de equipo (§7) ───────────────────────────────────────────
-    for i, (tipo, tag, marca, ano, vida, estado) in enumerate(EQUIPOS):
+    # ── Inventario de equipo (§7 · §3.2 d) ──────────────────────────────────
+    # El sistema técnico se elige POR CÓDIGO y no por posición en la lista: de
+    # él sale el capítulo del CAPEX al generar las actuaciones, y repartirlos
+    # por índice colocaba la enfriadora en «Accesibilidad».
+    por_codigo_sistema = {s["code"]: s["id"] for s in sistemas}
+    for tipo, tag, marca, ano, vida, estado, sistema, marcado in EQUIPOS:
         api.post(
             f"/projects/{proyecto['id']}/equipment",
             {
                 "asset_id": activo["id"],
-                "technical_system_id": sistemas[i % len(sistemas)]["id"],
+                "technical_system_id": por_codigo_sistema.get(sistema),
                 "equipment_type": tipo,
                 "tag": tag,
                 "manufacturer": marca,
@@ -386,14 +475,117 @@ def sembrar(api: Api) -> str:
                 "condition": estado,
                 "quantity": "1",
                 "unit": "ud",
+                "pasa_a_capex": marcado,
             },
         )
-    print(f"· {len(EQUIPOS)} equipos en el inventario")
+    marcados = sum(1 for e in EQUIPOS if e[7])
+    print(f"· {len(EQUIPOS)} equipos en el inventario, {marcados} marcados «pasa a CAPEX»")
+
+    # ── La memoria técnica y los descriptivos (§3.2 d) ──────────────────────
+    # `[REQ]` Se deja SIN validar a propósito: la ficha del activo tiene que
+    # enseñarse diciendo «sin validar», que es la mitad que hace que el botón
+    # de validar signifique algo.
+    api.put(
+        f"/assets/{activo['id']}/memoria",
+        {
+            "origen": "MANUAL",
+            "es_simulada": False,
+            "categorias": [
+                {
+                    "capex_code_id": por_codigo(capitulo)["id"],
+                    "objetos": [
+                        {
+                            "capex_code_id": por_codigo(codigo)["id"] if codigo else None,
+                            "nombre": nombre,
+                            "cantidad": cantidad,
+                            "unidad": "ud",
+                            "notes": notas,
+                        }
+                        for codigo, nombre, cantidad, notas in objetos
+                    ],
+                }
+                for capitulo, objetos in MEMORIA
+            ],
+        },
+    )
+    traidos = api.post(f"/assets/{activo['id']}/descriptivos/desde-documentacion", {})
+    print(
+        f"· Memoria técnica con {sum(len(o) for _, o in MEMORIA)} objetos · "
+        f"{traidos['creados']} descriptivos traídos, todos pendientes de validar"
+    )
+    if traidos["avisos"]:
+        print(f"  aviso: {traidos['avisos'][0]}")
+
+    # Uno validado y otro corregido a mano: una rejilla toda igual no enseña
+    # que traer otra vez respeta lo que ya hizo una persona.
+    descriptivos = api.get(f"/assets/{activo['id']}/descriptivos")
+    if len(descriptivos) >= 2:
+        api.put(
+            f"/assets/{activo['id']}/descriptivos",
+            {
+                "lineas": [
+                    {
+                        "capex_code_id": descriptivos[0]["capex_code_id"],
+                        "texto": descriptivos[0]["texto"],
+                        "validado": True,
+                    },
+                    {
+                        "capex_code_id": descriptivos[1]["capex_code_id"],
+                        "texto": (
+                            f"{descriptivos[1]['texto']} Revisado en visita: "
+                            "se confirma el estado descrito."
+                        ),
+                        "validado": False,
+                    },
+                ]
+            },
+        )
+        print("  uno validado por el gestor técnico y otro corregido sin validar")
+
+    # ── La visita, con su equipo implicado (§3.2 c) ─────────────────────────
+    yo = api.get("/auth/me")
+    visita = api.post(
+        f"/projects/{proyecto['id']}/visits",
+        {
+            "asset_id": activo["id"],
+            "scheduled_date": "2026-09-03",
+            "led_by": yo["id"],
+            "meeting_point": (
+                "Entrada por el muelle 4, portón norte. Preguntar por el jefe de "
+                "mantenimiento; hay que firmar el libro de visitas en garita."
+            ),
+        },
+    )
+    api.patch(
+        f"/visits/{visita['id']}",
+        {
+            "status": "VISITADO",
+            "actual_date": "2026-09-03",
+            "access_limitations": (
+                "No se accedió al interior del centro de transformación: la llave la tiene la "
+                "compañía distribuidora. Tampoco a la cubierta del edificio de oficinas por "
+                "lluvia. Lo que se dice de las dos sale de documentación, no de inspección."
+            ),
+            "summary": (
+                "Visita de una jornada con el jefe de mantenimiento. Se recorrieron cubierta, "
+                "sala de máquinas, cuarto eléctrico y muelles."
+            ),
+            "cost_amount": "1450.00",
+        },
+    )
+    api.put(
+        f"/visits/{visita['id']}/attendees",
+        {
+            "asistentes": [
+                {"app_user_id": yo["id"], "role_note": "Responsable de la visita"},
+                *[{"external_name": n, "role_note": r} for n, r in ACOMPANANTES],
+            ]
+        },
+    )
+    print(f"· Visita del 2026-09-03 con {1 + len(ACOMPANANTES)} asistentes y sus limitaciones")
 
     # ── La checklist de documentación ───────────────────────────────────────
-    categorias = {
-        c["code"]: c["id"] for c in api.get("/catalogs/doc-request-categories")
-    }
+    categorias = {c["code"]: c["id"] for c in api.get("/catalogs/doc-request-categories")}
     for i, (categoria, titulo) in enumerate(DOCUMENTOS):
         linea = api.post(
             f"/projects/{proyecto['id']}/doc-requests",

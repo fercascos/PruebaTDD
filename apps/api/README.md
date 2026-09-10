@@ -89,6 +89,35 @@ Dos detalles del `Makefile` que no son cosméticos:
 | **Confidencialidad por tipo** · un RESTRINGIDO no va a ninguna IA | ✅ Completo | `tests/integration/test_equipos_y_confidencialidad.py` |
 | **Cortes del CAPEX** · los cinco del dashboard, que cuadren entre sí con **varios activos elegidos**, y que el de riesgo cuadre con la matriz | ✅ Completo | `tests/integration/test_resumen_capex.py` · 21 |
 
+## Ver la aplicación con datos: `make demo`
+
+`[REQ]` §15 · **Todo lo que siembra es inventado.** Nombres, empresas, direcciones e importes;
+las empresas llevan el sufijo «Ficticia» para que sea evidente en pantalla. Apúntelo **solo** a una
+base de demostración: ejecutarlo contra datos de un cliente los mezclaría con material inventado,
+que es de las cosas más difíciles de deshacer.
+
+```
+make up          # levanta todo en contenedores y espera a que responda
+make up-admin    # crea la organización y el administrador
+make demo        # siembra el encargo: Getafe Norte, dos activos
+```
+
+Deja un encargo de **cartera** —dos activos, que es lo que hace visible la separación por activo—
+con memoria técnica, sus descriptivos traídos y pendientes de validar, inventario con tres equipos
+marcados «pasa a CAPEX», una visita con su equipo implicado y sus limitaciones de acceso, y siete
+actuaciones repartidas por el árbol del cliente.
+
+`[REQ]` **Habla por la API, no por la base**: así lo que se enseña ha pasado por las mismas
+validaciones que usaría una persona, y una captura no puede mostrar un estado que la aplicación no
+sabría producir.
+
+> `[LIM]` Los hallazgos de la demostración llevaban el **capítulo** y se resolvían buscando por
+> subcadena, con `codigos[0]` como salida cuando no había coincidencia. Al adoptar el árbol del
+> cliente cambió qué es cada número, así que la demostración enseñaba una **enfriadora archivada en
+> Electricidad y una cubierta en Fachadas**, y nada lo avisaba: el árbol se dibuja igual de bien con
+> la rama mal puesta. Ahora cada hallazgo lleva su código entero y uno que no exista **detiene la
+> siembra** en vez de mentir en el árbol.
+
 ## El esquema se versiona con Alembic
 
 ```bash

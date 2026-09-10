@@ -22,6 +22,7 @@ APP_PASS ?= prueba-local-sin-valor-real
 # la aplicación.
 ADMIN_DATABASE_URL ?= postgresql+psycopg://postgres@/$(DB)?host=$(PGSOCK)&port=$(PGPORT)
 # La de la SUITE. Otra base: ver el comentario de TEST_DB.
+DEMO_API ?= http://localhost:8000
 TEST_DATABASE_URL ?= postgresql+psycopg://postgres@/$(TEST_DB)?host=$(PGSOCK)&port=$(PGPORT)
 # Conexión de la APLICACIÓN. `tdd_app` no es propietario ni tiene BYPASSRLS:
 # arrancar la API con la de administración dejaría la RLS sin efecto y todo
@@ -90,6 +91,10 @@ db-version:  ## Qué versión del esquema tiene la base
 
 db-seed:  ## Siembra catálogos y fases en la base de desarrollo (idempotente)
 	@cd apps/api && PYTHONPATH=src DATABASE_URL="$(ADMIN_DATABASE_URL)" python3 -m tdd.db.sembrar
+
+demo:  ## Siembra un encargo de DEMOSTRACIÓN con datos ficticios (necesita la API en marcha)
+	@echo "[REQ] Datos inventados. NO lo apunte a una base con datos de un cliente."
+	python3 tools/sembrar_demo.py --api $(DEMO_API)
 
 db-admin:  ## Crea la primera organización y su administrador (pide la clave)
 	@cd apps/api && PYTHONPATH=src DATABASE_URL="$(ADMIN_DATABASE_URL)" python3 -m tdd.db.arranque \
@@ -219,6 +224,6 @@ up-admin:  ## Primera organización y su administrador, dentro del contenedor
 	  'python -m tdd.db.arranque --dsn "$$DATABASE_MIGRATION_URL" \
 	     --org "$(ORG)" --email "$(EMAIL)" --nombre "$(NOMBRE)"'
 
-.PHONY: help install db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
+.PHONY: help install demo db-up db-init db-migrate db-revision db-sql db-version db-seed db-admin catalogs catalogs-check test test-unit test-rls \
         test-catalogs lint typecheck fmt fonts-install no-fonts run ci certificados up down destroy \
         logs ps up-admin

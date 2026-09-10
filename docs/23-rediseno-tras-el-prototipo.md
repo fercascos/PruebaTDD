@@ -447,6 +447,21 @@ del cliente **las dos están definidas**: ya no falta enunciado, falta
 construirlas. La visita es la más barata —`asset_visit` ya tiene casi todos sus
 campos— y conviene hacerla primero por eso mismo.
 
+## 4 bis. El prototipo para validar la forma
+
+`[REQ]` Antes de construir la documentación —3-4 días y la pieza más cara que queda— el cliente
+pidió **ver si lo hecho se corresponde con su idea o hay que pivotar**. Se le dan dos cosas:
+
+- **La aplicación de verdad**, con `make demo`: un encargo de cartera con memoria técnica,
+  descriptivos pendientes de validar, inventario con equipos marcados, visita con su equipo, y
+  siete actuaciones repartidas por su árbol. Datos inventados, con «Ficticia» en los nombres.
+- **Un prototipo navegable** de las cinco secciones del activo, con **Documentación marcada como
+  propuesta**, para que se pueda recorrer el árbol de 60 casillas y decidir antes de construirlo.
+
+`[REC]` **El orden importa**: se enseña la sección que aún no existe junto a las cuatro que sí, en
+la misma ficha. Enseñar solo lo construido invita a aprobar por inercia; enseñar solo la propuesta
+la deja sin el contexto que la hace juzgable.
+
 ## 5. Lo que hace falta del cliente
 
 - ~~El listado de los 6 tipos de coste y sus categorías~~ ✅ **recibido y
