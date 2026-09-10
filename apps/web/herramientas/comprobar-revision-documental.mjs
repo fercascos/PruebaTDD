@@ -44,7 +44,7 @@ await pg.goto(`${BASE}/proyectos/${PID}/documentacion`)
 await pg.waitForSelector('.autorizacion-ia')
 
 // ── 0 · Punto de partida conocido ───────────────────────────────────────────
-// El encargo de pruebas sobrevive entre ejecuciones, así que la autorización
+// El proyecto de pruebas sobrevive entre ejecuciones, así que la autorización
 // puede venir encendida de la anterior. Se apaga antes de empezar: una
 // comprobación que depende del estado que dejó la ejecución previa no prueba
 // nada, y la primera versión de este fichero pasaba por casualidad.

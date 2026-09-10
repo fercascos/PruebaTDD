@@ -37,7 +37,7 @@ flowchart TD
 | Rol | Código | Perfil | Ámbito |
 |---|---|---|---|
 | Administrador | `ADMIN` | Organización, usuarios, catálogos, fuentes de precios | Organización |
-| Director de proyecto | `DIRECTOR_PROYECTO` | Responsable del encargo: equipo, fases, emisión | Proyecto |
+| Director de proyecto | `DIRECTOR_PROYECTO` | Responsable del proyecto: equipo, fases, emisión | Proyecto |
 | Consultor | `CONSULTOR` | Trabajo técnico completo | Proyecto |
 | Técnico especialista | `TECNICO_ESPECIALISTA` | Como consultor, **limitado a sus activos y especialidades** | Activo + especialidad |
 | Revisor | `REVISOR` | Revisa y aprueba; no modifica datos técnicos | Proyecto |

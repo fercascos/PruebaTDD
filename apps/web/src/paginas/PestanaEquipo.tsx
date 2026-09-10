@@ -48,11 +48,20 @@ function nombreDe(lista: readonly { code: string; nombre: string }[], code: stri
  * repuestos y fuera de reglamento— y hay que sustituirla igual. Fundirlas en
  * una sola columna perdería justo el caso que decide la sustitución.
  */
-export function PestanaEquipo({ projectId }: { projectId: string }) {
+export function PestanaEquipo({
+  projectId,
+  assetId,
+}: {
+  projectId: string
+  /** `[REQ]` §3.2 d · Fijado dentro del activo: es SU inventario. */
+  assetId?: string
+}) {
   const [equipos, setEquipos] = useState<Equipo[] | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
   const [sistemas, setSistemas] = useState<SistemaTecnico[]>([])
-  const [activo, setActivo] = useState('')
+  const [elegidoAMano, setElegidoAMano] = useState('')
+  // El activo de la ruta manda sobre el desplegable.
+  const activo = assetId ?? elegidoAMano
   const [sistema, setSistema] = useState('')
   const [busqueda, setBusqueda] = useState('')
   const [soloVencidos, setSoloVencidos] = useState(false)
@@ -149,16 +158,18 @@ export function PestanaEquipo({ projectId }: { projectId: string }) {
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <div className="filtro">
-        <Campo etiqueta="Activo">
-          <select value={activo} onChange={(e) => setActivo(e.target.value)}>
-            <option value="">— todos —</option>
-            {activos.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </Campo>
+        {!assetId && (
+          <Campo etiqueta="Activo">
+            <select value={elegidoAMano} onChange={(e) => setElegidoAMano(e.target.value)}>
+              <option value="">— todos —</option>
+              {activos.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        )}
         <Campo etiqueta="Sistema técnico">
           <select value={sistema} onChange={(e) => setSistema(e.target.value)}>
             <option value="">— todos —</option>

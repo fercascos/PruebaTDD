@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from tdd.projects.state_machine import (
-    EstadoDelEncargo as Enc,
+    EstadoDelProyecto as Enc,
 )
 from tdd.projects.state_machine import (
     GuardaIncumplida,

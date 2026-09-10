@@ -46,7 +46,7 @@ const cli = await api('POST', '/clients', { name: 'Inversora Ficticia S.L.' }, t
 const proyecto = await api(
   'POST',
   '/projects',
-  { client_id: cli.id, internal_code: `2026-${sufijo}`, name: 'Encargo con inventario' },
+  { client_id: cli.id, internal_code: `2026-${sufijo}`, name: 'Proyecto con inventario' },
   tk,
 )
 const tipologias = await api('GET', '/catalogs/asset-typologies', null, tk)
@@ -97,7 +97,7 @@ await api(
   },
   tk,
 )
-console.log(`· Encargo ${proyecto.internal_code}: una enfriadora vencida y un ascensor nuevo`)
+console.log(`· Proyecto ${proyecto.internal_code}: una enfriadora vencida y un ascensor nuevo`)
 
 // ── La pantalla ──────────────────────────────────────────────────────────────
 const navegador = await chromium.launch(

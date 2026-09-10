@@ -1,6 +1,6 @@
 # El camino a producción: qué falta para un go-live
 
-`[REQ]` Qué queda entre el MVP construido y un primer encargo real hecho con esta aplicación,
+`[REQ]` Qué queda entre el MVP construido y un primer proyecto real hecho con esta aplicación,
 con esfuerzo estimado y casillas marcables.
 
 Esto **no es el plan del MVP** —ése es [`15`](./15-mvp-plan-riesgos.md), escrito antes de
@@ -24,7 +24,7 @@ memoria: qué está construido de verdad, qué no lo está, y qué separa una co
 | **Total** | **7-8 semanas-persona** | **5-6 semanas** |
 
 `[REC]` Se puede salir a producción **con el bloque 1 terminado** y hacer el 2 con el primer
-encargo ya dentro —serían unas 4 semanas de calendario—, con una excepción: `axe-core` sale más
+proyecto ya dentro —serían unas 4 semanas de calendario—, con una excepción: `axe-core` sale más
 barato antes que después, porque sus arreglos tocan maquetación que luego hay que volver a
 comprobar en las 19 pantallas.
 
@@ -45,7 +45,7 @@ el hueco vacío, y son las primeras que mira un consultor. Mientras siga así, e
 
 - [ ] Modelo: valoración por `technical_system` y activo, con su migración y su RLS
 - [ ] API: leer, escribir y aceptar/rechazar como el resto de propuestas
-- [ ] Pantalla: un editor por sistema, dentro del encargo
+- [ ] Pantalla: un editor por sistema, dentro del proyecto
 - [ ] Generador: rellenar los seis marcadores desde el snapshot
 - [ ] Prueba de que un informe generado no deja ninguno de los seis vacío
 
@@ -71,7 +71,7 @@ herramienta de verificación existe; falta ejecutarlo.
 - [ ] Bucket creado **con Object Lock desde el origen** (no se puede activar después)
 - [ ] Política del rol con `s3:PutObjectRetention` **aparte** de `s3:PutObject`
 - [ ] `python3 tools/comprobar_almacen.py --escribir` en verde contra el bucket real
-- [ ] Corregido lo que saque, que es la razón de hacerlo antes y no durante el primer encargo
+- [ ] Corregido lo que saque, que es la razón de hacerlo antes y no durante el primer proyecto
 
 ### 1.4. Copias de seguridad y ensayo de restauración · `[REQ]` ≈ 3-4 días
 
@@ -153,17 +153,17 @@ más se usa.
 **No lo comprimas.** Cada vez que esta aplicación se ha puesto delante de datos reales han salido
 defectos que ninguna prueba tenía: la memoria técnica corrigió tres premisas, el plan de
 autoprotección destapó la trampa del índice y las capturas del resumen de CAPEX, cuatro defectos
-de presentación. Un encargo de verdad con un consultor delante vale más que dos semanas de
+de presentación. Un proyecto de verdad con un consultor delante vale más que dos semanas de
 endurecimiento a ciegas.
 
-- [ ] Un encargo real, de principio a fin, con un consultor usándola
+- [ ] Un proyecto real, de principio a fin, con un consultor usándola
 - [ ] Reservada **una semana** para arreglar lo que salga
 
 ---
 
 ## 3. Lo que NO entra en ese número, a propósito
 
-Tiene API o alternativa manual, y se puede vivir con fricción durante los primeros encargos.
+Tiene API o alternativa manual, y se puede vivir con fricción durante los primeros proyectos.
 Meterlo dentro añade `[SUP]` ~4 semanas y retrasa el aprendizaje que da el piloto.
 
 | Hueco | Por qué se puede esperar |

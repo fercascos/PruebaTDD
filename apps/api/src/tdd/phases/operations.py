@@ -345,7 +345,7 @@ class ActualizarVisita(BaseModel):
     access_limitations: str | None = None
     summary: str | None = None
     meeting_point: str | None = None
-    #: `[REQ]` §3.2 c · Coste **interno del encargo**. Ver `COSTE_ES_INTERNO`.
+    #: `[REQ]` §3.2 c · Coste **interno del proyecto**. Ver `COSTE_ES_INTERNO`.
     cost_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
 
 
@@ -399,7 +399,7 @@ _VISITA = """
     FROM asset_visit v JOIN asset a ON a.id = v.asset_id
 """
 
-#: `[REQ]` §3.2 c · **El coste de la visita no sale del encargo.**
+#: `[REQ]` §3.2 c · **El coste de la visita no sale del proyecto.**
 #:
 #: Lo decidió el cliente: es coste interno, no del edificio. No entra en el
 #: CAPEX ni en el informe, y los desplazamientos y las horas del consultor no

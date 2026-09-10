@@ -1,6 +1,6 @@
 # 19. Módulo de Sugerencias
 
-> **Entregable añadido.** No estaba en el encargo original (§14): lo pide el cliente tras cerrar P-06.
+> **Entregable añadido.** No estaba en el proyecto original (§14): lo pide el cliente tras cerrar P-06.
 > Se documenta aquí completo —modelo, API, pantallas, permisos, pruebas y coste— para que la decisión
 > sobre cuándo construirlo se tome con el alcance delante.
 

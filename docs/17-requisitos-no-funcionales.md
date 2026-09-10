@@ -1,4 +1,4 @@
-# Requisitos no funcionales (§10 del encargo)
+# Requisitos no funcionales (§10 del proyecto)
 
 > `[REQ]` «No inventes cifras sin explicarlas como supuestos. Distingue entre requisitos confirmados y
 > recomendaciones.»
@@ -40,7 +40,7 @@ importa no es el tiempo absoluto, sino que **el usuario pueda seguir trabajando 
 
 ### Tiempo máximo para operaciones interactivas
 
-`[REQ]` El encargo lo pide explícitamente:
+`[REQ]` El proyecto lo pide explícitamente:
 
 | Categoría | Aceptable | Límite | Qué se hace al superarlo |
 |---|---|---|---|
@@ -248,7 +248,7 @@ prueba en un dispositivo iOS real, no solo en el emulador.
 
 ## 10. Gestión de grandes volúmenes de fotografías
 
-`[REQ]` El encargo lo pide como requisito no funcional propio.
+`[REQ]` El proyecto lo pide como requisito no funcional propio.
 
 | # | Objetivo | Valor | Origen | Cómo |
 |---|---|---|:--:|---|

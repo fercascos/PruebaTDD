@@ -3,7 +3,7 @@
  *
  * Dos cosas que no se ven en una prueba unitaria:
  *
- * 1. **Que los números de la pantalla cuadren con el CAPEX del encargo.** Es lo
+ * 1. **Que los números de la pantalla cuadren con el CAPEX del proyecto.** Es lo
  *    que sostiene la utilidad de la matriz: si el total no coincide, quien la
  *    lee se pasa el resto del día buscando euros que no faltan.
  * 2. **Que el grado no se identifique solo por color.** Uno de cada doce
@@ -48,7 +48,7 @@ const proyecto = await api(
   {
     client_id: cli.id,
     internal_code: `2026-${Math.random().toString(16).slice(2, 8)}`,
-    name: 'Encargo con riesgos',
+    name: 'Proyecto con riesgos',
   },
   tk,
 )
@@ -64,7 +64,7 @@ const codigos = await api('GET', '/catalogs/capex-codes?level=3', null, tk)
 const riesgos = await api('GET', '/catalogs/risk-levels', null, tk)
 const porCodigo = Object.fromEntries(riesgos.map((r) => [r.code, r.id]))
 
-/** Un encargo con los cuatro grados y una actuación recurrente. */
+/** Un proyecto con los cuatro grados y una actuación recurrente. */
 const REPARTO = [
   { riesgo: '04', lineas: [['CORTO', '412500.00']] },
   { riesgo: '03', lineas: [['CORTO', '271700.00']] },
@@ -95,7 +95,7 @@ console.log(`· ${REPARTO.length} hallazgos, ${esperado.toLocaleString('es-ES')}
 const resumen = await api('GET', `/projects/${proyecto.id}/capex/summary/by-horizon`, null, tk)
 const capex = resumen.reduce((a, f) => a + Number(f.amount), 0)
 if (Math.abs(capex - esperado) > 0.01) {
-  fallos.push(`El CAPEX del encargo (${capex}) no es el que se ha cargado (${esperado})`)
+  fallos.push(`El CAPEX del proyecto (${capex}) no es el que se ha cargado (${esperado})`)
 }
 
 // ── La pantalla ──────────────────────────────────────────────────────────────

@@ -102,8 +102,10 @@ await pagina.fill('input[type="password"]', CLAVE)
 await pagina.click('button[type="submit"]')
 await pagina.waitForURL('**/proyectos', { timeout: 10000 })
 
-await pagina.goto(`${BASE}/proyectos/${proyecto.id}/activos`)
-await pagina.getByRole('button', { name: 'Editar' }).first().click()
+// `[REQ]` §3.2 · Cada sección del activo tiene su propia dirección desde
+// que el espacio del activo existe: se entra por ella y no encadenando
+// clics, que además comprueba que la ruta es la que se anuncia.
+await pagina.goto(`${BASE}/proyectos/${proyecto.id}/activos/${activo.id}/visita`)
 await pagina.waitForSelector('.visita-activo', { timeout: 10000 })
 console.log('· Sección de visita abierta')
 
@@ -212,8 +214,10 @@ if (cabeceras[0] !== 'Sin fecha') {
 // 8 · La página no se ensancha en móvil.
 const movil = await contexto.newPage()
 await movil.setViewportSize({ width: 390, height: 900 })
-await movil.goto(`${BASE}/proyectos/${proyecto.id}/activos`)
-await movil.getByRole('button', { name: 'Editar' }).first().click()
+// `[REQ]` §3.2 · Cada sección del activo tiene su propia dirección desde
+// que el espacio del activo existe: se entra por ella y no encadenando
+// clics, que además comprueba que la ruta es la que se anuncia.
+await movil.goto(`${BASE}/proyectos/${proyecto.id}/activos/${activo.id}/visita`)
 await movil.waitForSelector('.visita-activo .visita', { timeout: 10000 })
 const ancho = await movil.evaluate(() => ({
   doc: document.documentElement.scrollWidth,

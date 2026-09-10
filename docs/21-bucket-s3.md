@@ -125,7 +125,7 @@ permite saltarse la retención a quien tenga ese permiso, así que la aplicació
 
 `[REC]` `s3:ListBucket` permite enumerar las claves del bucket. Es el precio de poder comprobar la
 existencia, y se acota al bucket concreto. Las claves son UUID sin significado, así que enumerarlas
-no revela de qué encargo es cada cosa; el bucket sigue sin acceso público.
+no revela de qué proyecto es cada cosa; el bucket sigue sin acceso público.
 
 `s3:ListBucketVersions` **no** se le da a la aplicación: solo lo necesita
 `tools/comprobar_almacen.py --escribir`, que se ejecuta a mano con credenciales de operación.

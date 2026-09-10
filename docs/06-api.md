@@ -88,7 +88,7 @@ sin lógica duplicada en el frontend. La regla de qué zona aplica a qué tipolo
 | `GET` | `/projects` | **Filtros** `[REQ]`: `q`, `client_id`, `status[]`, `owner_user_id`, `member_user_id`, `asset_city`, `asset_country`, `typology_id[]`, `phase_code`, `phase_status`, `created_from/to`, `due_from/to`, `archived`, `sort`, `cursor` |
 | `POST` | `/projects` | Crea en `BORRADOR`. **El cuerpo incluye `applicable_phases[]`** `[REQ]` §3.1.5. **`internal_code` es opcional**: sin él lo genera el servidor. Cliente por `client_id` **o** por `client_name` |
 | `GET` | `/projects/{id}` | Ficha con contadores y estado de fases |
-| `PATCH` | `/projects/{id}` | `If-Match` obligatorio |
+| `PATCH` | `/projects/{id}` | `[REQ]` §3.1 · Nombre, fechas e **introducción del informe** (`summary_text`). `If-Match` opcional; devuelve `ETag`. **No admite el estado ni el código interno**: el estado va por `POST /transitions`, que comprueba qué falta para cada destino, y admitirlo aquí sería una puerta de atrás a la máquina de estados |
 | `POST` | `/projects/{id}/transitions` | `{to_status}` → `422` con las guardas incumplidas si no procede |
 | `POST` | `/projects/{id}/duplicate` | Cuerpo con qué copiar (§4.6); **nunca** fotos ni importes |
 | `POST` | `/projects/{id}/archive` · `/unarchive` | |
@@ -179,7 +179,7 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET`/`POST` | `/projects/{id}/visits` | Todas las del encargo. Varias por activo |
+| `GET`/`POST` | `/projects/{id}/visits` | Todas las del proyecto. Varias por activo |
 | `GET` | `/assets/{id}/visits` | `[REQ]` §3.2 c · Las de **un activo**, la última primero. `404` si el activo no existe: una lista vacía se leería como «no tiene visitas» |
 | `PATCH` | `/visits/{id}` | Estado (`PENDIENTE_DEFINIR`/`AGENDADO`/`VISITADO`), fechas, punto de encuentro, limitaciones de acceso, resumen y **coste**. Marcar `VISITADO` sin fecha real la fecha hoy: es la fecha que fecha el informe |
 | `PUT` | `/visits/{id}/attendees` | `[REQ]` §3.2 c · El **«Equipo implicado»**, la lista entera de una vez. Cada línea es `app_user_id` **o** `external_name`, nunca las dos ni ninguna: `422`. Sin tope de cuatro |
@@ -188,7 +188,7 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 `/complete`, con un `started_at` que la tabla tampoco tiene. Se quitan al construir §3.2 c. Lo que
 hacían lo hace el `PATCH`: marcar `VISITADO` fecha la visita sola.
 
-`[REQ]` §3.2 c · **El coste de la visita es coste interno del encargo y no sale del encargo.** No
+`[REQ]` §3.2 c · **El coste de la visita es coste interno del proyecto y no sale del proyecto.** No
 entra en el CAPEX ni en el informe: los desplazamientos y las horas del consultor no son coste del
 edificio. El snapshot solo lee `access_limitations` de `asset_visit`, y una prueba comprueba que el
 importe no aparece en ninguna parte del JSON congelado.
@@ -279,20 +279,20 @@ vacías define los recorridos de evacuación suponiendo espacios diáfanos. En
 cuanto entra un inquilino con estanterías, esas longitudes, salidas y
 capacidades dejan de ser las que dice el plan. El documento está entregado y
 completo; sin esto, la limitación solo la ve quien se lo lea entero, y en un
-encargo con doscientos documentos eso no ocurre.
+proyecto con doscientos documentos eso no ocurre.
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET` | `/projects/{id}/limitaciones-documentales?estado=` | Lo que la documentación del encargo dice sobre su propia fiabilidad, con su motivo, su documento y su epígrafe |
+| `GET` | `/projects/{id}/limitaciones-documentales?estado=` | Lo que la documentación del proyecto dice sobre su propia fiabilidad, con su motivo, su documento y su epígrafe |
 | `POST` | `/projects/{id}/limitaciones-documentales/decidir` | `{aceptar: [...], descartar: [...]}`. **Solo las aceptadas llegan al informe**; descartar deja la fila con su testigo, no la borra |
 
 `motivo` es un enumerado cerrado —`CADUCADO`, `INCOMPLETO`, `NO_VIGENTE`,
 `DECLARADA`, `INCONSISTENTE`—. Una lista abierta acabaría con quince
 redacciones del mismo motivo y sin forma de agruparlas en el informe.
 
-**Cuelgan del encargo, no del activo.** Un plan cubre un complejo de seis naves
+**Cuelgan del proyecto, no del activo.** Un plan cubre un complejo de seis naves
 y una reserva sobre la evacuación no es de una nave concreta; el alcance del
-informe es el encargo. `asset_id` queda opcional para cuando sí se sepa.
+informe es el proyecto. `asset_id` queda opcional para cuando sí se sepa.
 
 `GET /projects/{id}/report-limitations` devuelve **las tres clases juntas**, con
 un campo `origen` (`CHECKLIST`, `PREGUNTA`, `DOCUMENTO`) que las distingue: «no
@@ -389,13 +389,13 @@ enumerar catorce tipos para decir lo mismo de trece haría que la excepción no 
 viera.
 
 `[REQ]` **Un documento `RESTRINGIDO` no se envía a ningún proveedor de IA**, ni
-con la revisión del encargo activada. Esto faltaba: la comprobación de
+con la revisión del proyecto activada. Esto faltaba: la comprobación de
 confidencialidad estaba en `descargar()` y no en la revisión, así que un
 documento que un consultor del equipo no puede ni abrir sí se podía mandar a un
-tercero con solo el interruptor del encargo encendido. `POST
+tercero con solo el interruptor del proyecto encendido. `POST
 /documents/{id}/ai-review` responde `403` diciendo qué hacer.
 
-`[REC]` **No hay un segundo interruptor.** Si en un encargo concreto hay que
+`[REC]` **No hay un segundo interruptor.** Si en un proyecto concreto hay que
 revisarlo, se baja su clasificación a mano —lo cual queda en `audit_log` con
 quién y cuándo— y entonces se revisa. Una decisión así tiene que dejar rastro; un
 interruptor más lo convertiría en un clic sin memoria.
@@ -430,7 +430,7 @@ Esa prueba encontró uno: `by-horizon` **no excluía los hallazgos borrados**. E
 borrado es lógico —`deleted_at`, porque borrar del informe algo que se llegó a
 valorar deja a nadie sabiendo que existió—, así que sus líneas siguen en la
 tabla; la consulta unía `capex_item` con `time_horizon` sin pasar por `finding`
-y las contaba. El mismo encargo sumaba una cosa por horizonte y otra por activo.
+y las contaba. El mismo proyecto sumaba una cosa por horizonte y otra por activo.
 No se veía porque nada ponía los dos cortes en la misma pantalla.
 
 `[REQ]` `asset_id` está **en los tres cortes que reparten, y no en el cuarto**.
@@ -446,11 +446,11 @@ una prueba que lo impone.
 
 `[REQ]` **`by-asset` no acepta `asset_id`, a propósito.** Filtrarlo por un
 edificio lo dejaría con una fila: deja de ser un reparto. Es además el que da la
-lista con la que la pantalla construye el desplegable y el total del encargo
+lista con la que la pantalla construye el desplegable y el total del proyecto
 contra el que se calcula «qué parte del CAPEX es este activo».
 
 Y es lo que permite que su bloque, «Distribución por activo», **siga en pantalla con el
-filtro puesto**, enseñando el encargo entero mientras los otros tres enseñan una
+filtro puesto**, enseñando el proyecto entero mientras los otros tres enseñan una
 sola nave: es la referencia contra la que se leen —dice si el edificio que se
 está mirando es el caro o uno de los baratos— y el mando con el que se pasa de
 uno a otro sin salir de la vista, que es lo que se hace en una reunión. Sus
@@ -461,9 +461,9 @@ El activo se filtra por el **hallazgo**, no por la línea: `[REQ]` P-44, una
 actuación recurrente tiene varias líneas y un solo edificio.
 
 `[REC]` `asset_id` **solo filtra**, como en la matriz de riesgos: un activo de
-otro encargo devuelve una lista vacía, no un `404`. Es la convención de la casa
+otro proyecto devuelve una lista vacía, no un `404`. Es la convención de la casa
 para los filtros de lectura, y la pantalla construye el desplegable con los
-activos del propio encargo.
+activos del propio proyecto.
 
 `[LIM]` `SIN_CONCEPTO` **no es un código del catálogo**: es la etiqueta con la
 que se agrupa lo que nadie clasificó. Que nadie lo haya clasificado es un dato,
@@ -474,10 +474,10 @@ no un hueco, y si desapareciera del reparto la suma no cuadraría con el total.
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/projects/{id}/equipment?asset_id=&technical_system_id=&q=&solo_vencidos=&solo_mantenimiento_vencido=` | `q` busca sobre etiqueta, tipo, fabricante, modelo, nº de serie y notas (GIN sobre `search_vector`). `solo_vencidos` compara contra el **año en curso en SQL**, no contra un valor guardado |
-| `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al encargo: si no, `404` |
+| `POST` | `/projects/{id}/equipment` | El activo debe pertenecer al proyecto: si no, `404` |
 | `GET`/`PATCH`/`DELETE` | `/equipment/{id}` | `DELETE` es lógico: la ficha se escribió en una visita a la que no se vuelve |
 | `POST` | `/assets/{id}/equipment/generar-capex` | `[REQ]` §3.2 d · Una actuación en BORRADOR **por equipo marcado «pasa a CAPEX»**. Idempotente por título. El capítulo sale de `technical_system.capex_chapter`, y el equipo cuyo sistema apunta a dos —`H06 + H10`— **no se genera**: sale en `avisos` con su nombre |
-| `GET` | `/projects/{id}/equipment/import/plantilla.xlsx` | Libro vacío **con los activos del encargo y los 14 sistemas dentro**, en una hoja aparte |
+| `GET` | `/projects/{id}/equipment/import/plantilla.xlsx` | Libro vacío **con los activos del proyecto y los 14 sistemas dentro**, en una hoja aparte |
 | `POST` | `/projects/{id}/equipment/import/preview` | Sube la hoja y devuelve fila a fila qué va a pasar. **No escribe nada** |
 | `POST` | `/projects/{id}/equipment/import` | Aplica. Exige `confirmar=true` y **reanaliza la hoja** en vez de fiarse de lo previsualizado |
 
@@ -492,7 +492,7 @@ El plazo de reposición sale de los rangos de `time_horizon`, no de umbrales pro
 
 **La importación no sobrescribe nada por su cuenta.** Una fila cuya etiqueta ya existe en ese activo
 sale como `YA_EXISTE` y se omite; actualizarla exige `actualizar_existentes=true`, que es una casilla
-que alguien marca. Un activo que no está en el encargo es un **error de fila**, no una invitación a
+que alguien marca. Un activo que no está en el proyecto es un **error de fila**, no una invitación a
 crearlo, y un sistema técnico que no casa con el catálogo **no se aproxima al más parecido**: el
 equipo entra sin clasificar y el aviso lo cuenta. Las columnas que no se reconocen se enumeran en la
 respuesta en vez de ignorarse: una cabecera mal escrita perdería el dato sin que nadie se enterase.

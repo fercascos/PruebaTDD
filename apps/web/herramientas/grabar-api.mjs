@@ -9,7 +9,7 @@
  *
  *  `[REQ]` Apúntelo **solo a una base de demostración con datos ficticios**: lo
  *  que grabe acaba dentro de un fichero que se puede compartir. Con datos de un
- *  cliente sería publicar su encargo.
+ *  cliente sería publicar su proyecto.
  *
  *      TDD_PROYECTO=<uuid> node apps/web/herramientas/grabar-api.mjs
  *
@@ -27,7 +27,7 @@ const PID = process.env.TDD_PROYECTO
 const SALIDA = process.env.TDD_GRABACION ?? 'prototipo/grabacion.json'
 
 if (!PID) {
-  console.error('Falta TDD_PROYECTO: el identificador del encargo de demostración.')
+  console.error('Falta TDD_PROYECTO: el identificador del proyecto de demostración.')
   process.exit(1)
 }
 
@@ -169,8 +169,8 @@ for (const [clave, r] of Object.entries(grabacion)) {
 }
 if (rellenados) console.log(`· rellenados ${rellenados} cuerpos que el navegador dejó vacíos`)
 
-// ── La lista de encargos se queda en el que sí se ha grabado ────────────────
-// La base de demostración arrastra 45 encargos de pruebas antiguas. En el
+// ── La lista de proyectos se queda en el que sí se ha grabado ────────────────
+// La base de demostración arrastra 45 proyectos de pruebas antiguas. En el
 // prototipo salían todos y **pulsar cualquiera llevaba a una pantalla rota**,
 // porque de ésos no hay nada grabado. Un prototipo en el que la mayoría de los
 // clics no lleva a ninguna parte no es un prototipo: es una trampa.
@@ -180,7 +180,7 @@ if (listado?.texto) {
   const lista = Array.isArray(todos) ? todos : (todos.items ?? [])
   const solo = lista.filter((p) => p.id === PID)
   listado.texto = JSON.stringify(Array.isArray(todos) ? solo : { ...todos, items: solo })
-  console.log(`· la lista de encargos pasa de ${lista.length} a ${solo.length}`)
+  console.log(`· la lista de proyectos pasa de ${lista.length} a ${solo.length}`)
 }
 
 await mkdir(dirname(SALIDA), { recursive: true })

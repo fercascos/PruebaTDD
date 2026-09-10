@@ -215,9 +215,10 @@ export function FichaDeHallazgo({
 
       <section>
         <h3>Líneas de CAPEX</h3>
+        {/* `[REQ]` P-44. La etiqueta se queda aquí y no en la pantalla. */}
         <p className="ayuda">
-          `[REQ]` P-44 · Una actuación recurrente lleva <strong>una línea por plazo</strong>, no dos
-          en el mismo. El plazo ya usado no aparece en la lista.
+          Una actuación recurrente lleva <strong>una línea por plazo</strong>, no dos en el mismo.
+          El plazo ya usado no aparece en la lista.
         </p>
 
         {hallazgo.capex_lines.length === 0 && (

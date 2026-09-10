@@ -171,9 +171,10 @@ export function FichaDeActivo({
           </span>
         )}
       </h3>
+      {/* `[REQ]` P-02. La etiqueta se queda aquí y no en la pantalla. */}
       <p className="ayuda">
-        `[REQ]` P-02 · Estos campos se guardan siempre. Reclasificar el activo no los borra: si
-        mañana vuelve a ser una nave, la altura de almacén sigue ahí.
+        Estos campos se guardan siempre. Reclasificar el activo no los borra: si mañana vuelve a
+        ser una nave, la altura de almacén sigue ahí.
       </p>
       <Rejilla>
         {CAMPOS_DE_ALMACEN.map((clave) => (

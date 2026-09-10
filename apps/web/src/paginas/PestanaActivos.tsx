@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { borrar, obtener } from '../api/cliente'
 import type { Activo } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { FichaDeActivo } from './FichaDeActivo'
-import { ArbolDeUbicaciones } from './ArbolDeUbicaciones'
-import { ArbolDeCapex } from './ArbolDeCapex'
-import { InventarioDelActivo } from './InventarioDelActivo'
-import { VisitaDelActivo } from './VisitaDelActivo'
+
+/**
+ * La **lista** de activos del proyecto, y solo la lista.
+ *
+ * `[REQ]` §3.2 · Antes esta pantalla apilaba, al abrir un activo, la ficha y
+ * las cuatro secciones una debajo de otra: siete mil píxeles de alto, y para
+ * llegar al CAPEX había que pasar por delante de todo lo demás. Ahora abrir un
+ * activo **entra en su espacio** —`/activos/:assetId`—, que tiene sus propias
+ * cinco pestañas y una dirección web por sección.
+ *
+ * Aquí solo queda dar de alta, que sí es una ficha suelta: un activo que aún no
+ * existe no tiene visita, ni inventario, ni actuaciones que enseñar.
+ */
 
 export function PestanaActivos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[] | null>(null)
-  const [editando, setEditando] = useState<Activo | 'nuevo' | null>(null)
+  const [creando, setCreando] = useState(false)
+  const navegar = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
   const recargar = useCallback(() => {
@@ -33,48 +44,25 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
 
-  if (editando) {
+  // Solo el alta usa la ficha suelta. Editar uno que existe entra en su
+  // espacio, que es donde está todo lo suyo.
+  if (creando) {
     return (
-      <>
-        <FichaDeActivo
-          projectId={projectId}
-          activo={editando === 'nuevo' ? undefined : editando}
-          alGuardar={() => {
-            setEditando(null)
-            recargar()
-          }}
-          alCancelar={() => setEditando(null)}
-        />
-        {/* Los dos árboles solo tienen sentido sobre un activo que ya existe:
-            sus nodos y sus actuaciones cuelgan de un `asset_id`. En el alta no
-            se muestran.
-            `[REQ]` §3.2 de `docs/23` · El de CAPEX vive **dentro del activo**,
-            que es donde va a acabar todo. Es el primer trozo de esa mudanza:
-            está aquí, y no en una pestaña del proyecto, desde el primer día. */}
-        {editando !== 'nuevo' && (
-          <>
-            <ArbolDeUbicaciones assetId={editando.id} />
-            {/* `[REQ]` §3.2 c · La visita va antes que el inventario porque es
-                de donde sale: se recorre el edificio y se apunta lo que hay.
-                Y sus limitaciones de acceso explican por qué el inventario de
-                más abajo puede estar incompleto. */}
-            <VisitaDelActivo activo={editando} />
-            {/* `[REQ]` §3.2 d · El inventario va **antes** que el árbol del
-                CAPEX y no después: describe lo que hay y marca lo que hay que
-                sustituir, y de ahí salen actuaciones que aparecen en el árbol.
-                Al revés se leería como un apéndice de algo que ya está hecho. */}
-            <InventarioDelActivo projectId={projectId} assetId={editando.id} />
-            <ArbolDeCapex projectId={projectId} assetId={editando.id} />
-          </>
-        )}
-      </>
+      <FichaDeActivo
+        projectId={projectId}
+        alGuardar={() => {
+          setCreando(false)
+          recargar()
+        }}
+        alCancelar={() => setCreando(false)}
+      />
     )
   }
 
   return (
     <>
       <div className="filtro">
-        <button type="button" onClick={() => setEditando('nuevo')}>
+        <button type="button" onClick={() => setCreando(true)}>
           Añadir activo
         </button>
       </div>
@@ -111,8 +99,12 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
                       : '—'}
                   </td>
                   <td className="acciones">
-                    <button type="button" className="secundario" onClick={() => setEditando(a)}>
-                      Editar
+                    <button
+                      type="button"
+                      className="secundario"
+                      onClick={() => navegar(`/proyectos/${projectId}/activos/${a.id}`)}
+                    >
+                      Abrir
                     </button>
                     <button
                       type="button"

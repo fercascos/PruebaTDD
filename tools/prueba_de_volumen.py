@@ -4,7 +4,7 @@
 40 hallazgos, 60 líneas y 35 fotografías**».
 
 Ese criterio llevaba desde el principio sin marcar, y no por olvido: hasta ahora
-no había ni las tipografías corporativas ni una forma de montar un encargo de
+no había ni las tipografías corporativas ni una forma de montar un proyecto de
 ese tamaño. Esto lo hace y **da los números**: cuántas diapositivas salen, cuánto
 tarda, cuánto ocupa y qué avisos de desbordamiento se emiten **midiendo con la
 Gotham real**, que es lo único que hace que ese aviso valga algo.
@@ -62,7 +62,7 @@ PARRAFO = (
 def _sembrar(
     s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID
 ) -> uuid.UUID:
-    """Un encargo del tamaño del criterio. Devuelve su identificador."""
+    """Un proyecto del tamaño del criterio. Devuelve su identificador."""
     proyecto = s.execute(
         text(
             "INSERT INTO project (organization_id, client_id, internal_code, name, status) "

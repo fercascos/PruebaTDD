@@ -1,7 +1,7 @@
 # 23. Estructura inicial de carpetas del proyecto
 
 > Este documento **describe** la estructura que se creará al ejecutar el entregable 24 (código inicial
-> del MVP). Se presenta ahora para su validación, conforme a §16 del encargo. Todavía no existe en el
+> del MVP). Se presenta ahora para su validación, conforme a §16 del proyecto. Todavía no existe en el
 > repositorio.
 
 ---

@@ -618,3 +618,94 @@ def test_y_la_base_lo_impide_tambien_por_sql(como, datos_base):
             ),
             {"o": datos_base["org_a"], "c": datos_base["cliente_a"]},
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Corregir un proyecto ya creado `[REQ]` §3.1
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Hasta ahora un proyecto **no se podía tocar después de crearlo**: solo había
+# alta, lectura y transición de estado. Un nombre mal tecleado obligaba a crear
+# otro proyecto y mover el trabajo a mano.
+
+
+def test_la_introduccion_del_proyecto_se_guarda_y_se_lee(cliente, cab, proyecto) -> None:
+    """`[REQ]` §3.1 · «Un cuadro de texto que recoja la información básica del
+    proyecto, que sirva como introducción en el informe final»."""
+    texto = "Due diligence técnica de dos naves logísticas. Visita el 3 de septiembre."
+
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"summary_text": texto},
+    )
+
+    assert r.status_code == 200, r.text
+    assert r.json()["summary_text"] == texto
+    leido = cliente.get(f"/api/v1/projects/{proyecto['id']}", headers=cab("consultor_a")).json()
+    assert leido["summary_text"] == texto
+
+
+def test_una_introduccion_en_blanco_se_borra_en_vez_de_guardar_espacios(
+    cliente, cab, proyecto
+) -> None:
+    """Un texto de solo espacios se lee como «hay introducción» en cualquier
+    comprobación posterior, y no la hay."""
+    cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"summary_text": "Algo"},
+    )
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"summary_text": "   "},
+    )
+    assert r.json()["summary_text"] is None
+
+
+def test_el_patch_no_admite_el_estado(cliente, cab, proyecto) -> None:
+    """`[REQ]` El estado va por `POST /transitions`, que comprueba qué falta
+    para cada destino. Admitirlo aquí sería una puerta de atrás a la máquina de
+    estados: se saldría de BORRADOR sin activos y sin hallazgos."""
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"status": "EN_CURSO"},
+    )
+    assert r.status_code == 422
+
+
+def test_el_patch_no_admite_cambiar_el_codigo_interno(cliente, cab, proyecto) -> None:
+    """El código identifica el proyecto en los documentos ya enviados al
+    cliente. Cambiarlo después rompe la referencia sin dejar rastro."""
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"internal_code": "OTRO-1"},
+    )
+    assert r.status_code == 422
+
+
+def test_el_cierre_no_puede_quedar_antes_del_arranque_al_corregir(cliente, cab, proyecto) -> None:
+    """La misma regla que en el alta. La restricción de la tabla es la barrera,
+    pero contesta con un 500: un error de tecleo merece un 422 que diga cuál."""
+    cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"start_date": "2026-06-01"},
+    )
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}",
+        headers=cab("consultor_a"),
+        json={"close_date": "2026-01-01"},
+    )
+    assert r.status_code == 422
+    assert "cierre" in r.json()["detail"]
+
+
+def test_un_proyecto_de_otra_organizacion_no_se_corrige(cliente, cab, proyecto) -> None:
+    r = cliente.patch(
+        f"/api/v1/projects/{proyecto['id']}", headers=cab("admin_b"), json={"name": "Mío ahora"}
+    )
+    assert r.status_code == 404

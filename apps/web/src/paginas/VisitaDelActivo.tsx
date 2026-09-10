@@ -34,7 +34,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * nunca la van a tener. Perderlos sería perder a quien abrió el cuarto de
  * máquinas.
  *
- * ## El coste no sale del encargo
+ * ## El coste no sale del proyecto
  *
  * `[REQ]` Lo decidió el cliente: es **coste interno**. No entra en el CAPEX ni
  * en el informe, y la pantalla lo dice para que nadie lo teclee esperando otra
@@ -318,7 +318,7 @@ function FichaDeVisita({
 
         <Campo
           etiqueta="Coste de la visita"
-          ayuda="Coste interno del encargo: NO entra en el CAPEX del edificio ni sale en el informe del cliente"
+          ayuda="Coste interno del proyecto: NO entra en el CAPEX del edificio ni sale en el informe del cliente"
         >
           <input type="number" step="0.01" min={0} {...campo('cost_amount')} />
         </Campo>

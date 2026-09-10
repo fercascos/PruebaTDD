@@ -1,11 +1,11 @@
-/** Captura las pantallas de un encargo de DEMOSTRACIÓN, para enseñar la
+/** Captura las pantallas de un proyecto de DEMOSTRACIÓN, para enseñar la
  *  aplicación sin tener que montarla.
  *
  *  No es una comprobación: no afirma nada y no falla si algo está mal. Para eso
  *  están las `comprobar-*.mjs` de esta misma carpeta.
  *
  *  `[REQ]` Apúntelo **solo** a una base de datos de demostración con datos
- *  ficticios. Genera un informe de verdad en el encargo indicado, así que
+ *  ficticios. Genera un informe de verdad en el proyecto indicado, así que
  *  ejecutarlo contra datos reales de un cliente crearía una versión que no
  *  pidió nadie.
  *
@@ -19,7 +19,7 @@ const PID = process.env.TDD_PROYECTO
 const SALIDA = process.env.TDD_CAPTURAS ?? '/tmp/capturas'
 
 if (!PID) {
-  console.error('Falta TDD_PROYECTO: el identificador del encargo de demostración.')
+  console.error('Falta TDD_PROYECTO: el identificador del proyecto de demostración.')
   process.exit(1)
 }
 
@@ -52,7 +52,7 @@ await pg.waitForURL('**/proyectos',{timeout:15000})
 await foto('03-proyectos')
 
 // Las cifras de la portada de la página salen de AQUÍ y no escritas a mano en
-// el montador: estaban escritas a mano, el encargo de demostración creció a dos
+// el montador: estaban escritas a mano, el proyecto de demostración creció a dos
 // activos y la portada siguió diciendo uno. Una cifra falsa en la primera
 // pantalla desmiente todo lo que viene detrás.
 //
@@ -132,7 +132,7 @@ if (await resumen.count()) {
 }
 
 // 11b · El árbol de ubicaciones, dentro de la ficha del activo (§8.4)
-// Se abre el activo que TIENE árbol, no «el primero de la tabla»: el encargo de
+// Se abre el activo que TIENE árbol, no «el primero de la tabla»: el proyecto de
 // demostración es de cartera y la tabla ordena por nombre, así que el primero
 // puede ser el que no tiene ubicaciones y la lámina saldría vacía.
 // El nombre sale de `tools/sembrar_demo.py`, que es quien crea las ubicaciones;
@@ -152,7 +152,7 @@ await foto('11b-ubicaciones', { completa:true, espera:600 })
 // 12 · Ficha de hallazgo con el comparador abierto
 await pg.goto(`${BASE}/proyectos/${PID}/capex`)
 await pg.waitForSelector('.tabla.capex')
-// `:not(.cabecera-grupo)` porque en un encargo de cartera la tabla va separada
+// `:not(.cabecera-grupo)` porque en un proyecto de cartera la tabla va separada
 // por activo, y la fila de cabecera de cada grupo lleva su propio
 // `button.enlace` —«Exportar este activo»—: sin excluirla se pulsaba ése y la
 // ficha del hallazgo no llegaba a abrirse.

@@ -8,7 +8,7 @@ se comprueba aquí es lo que se ha añadido, y una promesa hecha al cliente:
   aplicación y gente de fuera que nunca va a tener cuenta, y cada línea es una
   cosa o la otra, nunca las dos;
 * **cuatro «Responsable» no es un tope**, es lo que cabía en una hoja de cálculo;
-* **el coste de la visita NO sale en el informe**. Es coste interno del encargo,
+* **el coste de la visita NO sale en el informe**. Es coste interno del proyecto,
   y esa promesa no se sostiene con un comentario: se sostiene mirando el
   snapshot.
 """
@@ -352,7 +352,7 @@ def test_otra_organizacion_no_ve_las_visitas_ajenas(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  El coste, y por qué no sale del encargo
+#  El coste, y por qué no sale del proyecto
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -384,7 +384,7 @@ def test_un_coste_negativo_se_rechaza(
 def test_el_coste_de_la_visita_no_entra_en_el_capex_del_activo(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
-    """`[REQ]` **Lo decidió el cliente: es coste interno del encargo.**
+    """`[REQ]` **Lo decidió el cliente: es coste interno del proyecto.**
 
     Los desplazamientos y las horas del consultor no son coste del edificio, y
     colarlos en los soft costs inflaría la cifra con la que el inversor negocia

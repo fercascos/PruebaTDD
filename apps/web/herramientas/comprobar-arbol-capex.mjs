@@ -136,8 +136,10 @@ await pagina.fill('input[type="password"]', CLAVE)
 await pagina.click('button[type="submit"]')
 await pagina.waitForURL('**/proyectos', { timeout: 10000 })
 
-await pagina.goto(`${BASE}/proyectos/${proyecto.id}/activos`)
-await pagina.getByRole('button', { name: 'Editar' }).first().click()
+// `[REQ]` §3.2 · Cada sección del activo tiene su propia dirección desde
+// que el espacio del activo existe: se entra por ella y no encadenando
+// clics, que además comprueba que la ruta es la que se anuncia.
+await pagina.goto(`${BASE}/proyectos/${proyecto.id}/activos/${activo.id}/capex`)
 await pagina.waitForSelector('.arbol-capex', { timeout: 10000 })
 console.log('· Árbol abierto')
 

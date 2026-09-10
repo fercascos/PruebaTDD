@@ -63,12 +63,30 @@ function chincheta(resaltada: boolean): L.DivIcon {
  * la vista. La fecha y las coordenadas no se infieren jamás: si no vinieron en
  * el EXIF, no están.
  */
-export function PestanaMapa({ projectId }: { projectId: string }) {
+export function PestanaMapa({
+  projectId,
+  assetId,
+}: {
+  projectId: string
+  /**
+   * `[REQ]` §3.1 y §3.2 a · Con `assetId` el mapa es **de un solo activo** y no
+   * ofrece desplegable: dentro del espacio del activo, elegir otro edificio
+   * sería salirse de la pantalla en la que se está.
+   *
+   * Sin él, el mapa es el del proyecto entero, que es lo que pidió el cliente
+   * para el Resumen: «todas las ubicaciones de todos los activos del proyecto
+   * en un mismo mapa».
+   */
+  assetId?: string
+}) {
   const mapaRef = useRef<L.Map | null>(null)
   const capaRef = useRef<L.LayerGroup | null>(null)
   const [datos, setDatos] = useState<Mapa | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
-  const [filtro, setFiltro] = useState('')
+  const [filtroPropio, setFiltroPropio] = useState('')
+  // El activo fijado manda sobre el desplegable: si viene por propiedad, el
+  // filtro no es del usuario y no hay estado que sincronizar.
+  const filtro = assetId ?? filtroPropio
   const [elegida, setElegida] = useState<string | null>(null)
   //: Fuerza el repintado de las chinchetas en cuanto el mapa existe: si no, la
   //: primera tanda de datos podía llegar antes que el mapa y no pintarse.
@@ -166,17 +184,19 @@ export function PestanaMapa({ projectId }: { projectId: string }) {
   return (
     <>
       <div className="filtro">
-        <label>
-          Activo
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos</option>
-            {activos.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!assetId && (
+          <label>
+            Activo
+            <select value={filtroPropio} onChange={(e) => setFiltroPropio(e.target.value)}>
+              <option value="">Todos</option>
+              {activos.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <span className="ayuda">
           {datos.puntos.length} situadas
           {datos.sin_coordenadas > 0 && ` · ${datos.sin_coordenadas} sin coordenadas`}

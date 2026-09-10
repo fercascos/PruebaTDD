@@ -213,7 +213,7 @@ fallidas con su motivo. Es lo que un consultor espera: 38 de 40 es mejor que 0 d
 | **Casi duplicado** `[REC]` | dHash 64 bits + Hamming ≤ 8 | Dos disparos de la misma escena | Se agrupan visualmente; **nunca** se borra nada |
 
 Índice único parcial `UNIQUE(project_id, sha256) WHERE deleted_at IS NULL`: el mismo archivo puede
-existir en dos proyectos (dos encargos sobre el mismo edificio es legítimo), pero no dos veces en el
+existir en dos proyectos (dos proyectos sobre el mismo edificio es legítimo), pero no dos veces en el
 mismo.
 
 `[REQ]` **En ningún caso se borra automáticamente un duplicado.** Una foto aparentemente redundante

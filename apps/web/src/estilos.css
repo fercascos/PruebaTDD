@@ -2478,3 +2478,96 @@ button.enlace {
     margin-left: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   El espacio del activo `[REQ]` §3.2 de docs/23
+   ───────────────────────────────────────────────────────────────────────── */
+.cabecera-activo {
+  margin-bottom: 0.6rem;
+}
+.cabecera-activo h2 {
+  margin: 0.2rem 0 0;
+  font-size: 1.25rem;
+}
+.cabecera-activo h2 .codigo {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.72em;
+  color: var(--tinta-suave);
+  font-weight: 400;
+}
+.cabecera-activo .ayuda {
+  margin: 0.15rem 0 0;
+}
+button.enlace.volver {
+  padding: 0;
+  font-size: 0.86rem;
+}
+
+/* Las pestañas de dentro del activo se distinguen de las del proyecto: son un
+   nivel más abajo, y con el mismo aspecto se leerían como las mismas. Van sobre
+   fondo, más compactas, y el activo elegido se marca con relleno y no con una
+   línea inferior, que es lo que ya usa el nivel de arriba. */
+.pestanas.secundarias {
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0.25rem;
+  gap: 0.15rem;
+  margin-bottom: 1.2rem;
+}
+.pestanas.secundarias a {
+  padding: 0.35rem 0.8rem;
+  border-bottom: 0;
+  border-radius: 6px;
+  font-size: 0.92rem;
+}
+.pestanas.secundarias a:hover {
+  color: var(--tinta);
+}
+.pestanas.secundarias a.active {
+  background: var(--papel);
+  color: var(--acento);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.mapa-del-activo,
+.mapa-de-fotos,
+.fotos-del-activo,
+.equipo-del-activo,
+.documentacion-activo .desbordable {
+  margin-top: 1.5rem;
+}
+.mapa-del-activo,
+.mapa-de-fotos,
+.fotos-del-activo,
+.equipo-del-activo {
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}
+
+/* ── El Resumen del proyecto `[REQ]` §3.1 ────────────────────────────────── */
+.resumen-proyecto > section + section {
+  margin-top: 1.8rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1.1rem;
+}
+.texto-introduccion {
+  width: 100%;
+  font: inherit;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  resize: vertical;
+  line-height: 1.6;
+}
+.texto-introduccion:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 0;
+}
+.resumen-proyecto .filtro > .recuento {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 0.86rem;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}

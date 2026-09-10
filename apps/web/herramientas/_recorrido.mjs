@@ -33,7 +33,7 @@ await pg.fill('input[type="password"]','cubierta invertida 2026')
 await pg.click('button[type="submit"]')
 await pg.waitForURL('**/proyectos')
 
-// 02 · Los encargos
+// 02 · Los proyectos
 await foto('02-proyectos')
 
 // 03..11 · Las pestañas del proyecto

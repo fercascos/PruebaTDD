@@ -10,8 +10,10 @@ Tres decisiones del alta que se ven al leer el código:
 año. Se dejó de teclear porque un código que escribe una persona se repite, y el
 segundo que lo intenta se lleva un `409` a mitad del alta. Sigue admitiéndose en
 el cuerpo —una migración desde otro sistema trae los suyos— pero la pantalla no
-lo ofrece: lo enseña bloqueado. Y **no hay forma de cambiarlo después**: este
-módulo no tiene `PATCH`.
+lo ofrece: lo enseña bloqueado. Y **el código no se cambia después**: el
+`PATCH` de este módulo admite el nombre, las fechas y la introducción, pero no
+el código interno ni el estado —el estado va por `POST /transitions`, que
+comprueba qué falta para cada destino—.
 
 **El cliente que no está en la lista no bloquea.** Se elige de un catálogo que
 mantiene la administración; si no está, se escribe el nombre, el proyecto se
@@ -30,16 +32,17 @@ import uuid
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
+from tdd.core import concurrencia as cc
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 from tdd.phases.repository import contar_para_transicion
 from tdd.projects.state_machine import (
-    EstadoDelEncargo,
+    EstadoDelProyecto,
     GuardaIncumplida,
     ProjectStatus,
     TransicionNoPermitida,
@@ -104,6 +107,9 @@ class Proyecto(BaseModel):
     start_date: Any | None = None
     close_date: Any | None = None
     report_due_date: Any | None = None
+    #: `[REQ]` §3.1 · La introducción que abre el informe final. La redacta una
+    #: persona: sale tal cual en el documento que se entrega al cliente.
+    summary_text: str | None = None
 
 
 #: Las columnas del proyecto con su cliente al lado, escritas una vez: estaban
@@ -113,7 +119,7 @@ _COLUMNAS = (
     "p.id, p.internal_code, p.name, CAST(p.status AS text) AS status, p.currency, "
     "p.client_id, c.name AS client_name, "
     "COALESCE(c.pending_validation, FALSE) AS client_pending_validation, "
-    "p.start_date, p.close_date, p.report_due_date"
+    "p.start_date, p.close_date, p.report_due_date, p.summary_text"
 )
 _DESDE = "FROM project p LEFT JOIN client c ON c.id = p.client_id"
 
@@ -361,6 +367,95 @@ def obtener(project_id: uuid.UUID, s: SesionDep) -> Any:
     return dict(fila)
 
 
+class CambioDeProyecto(BaseModel):
+    """Lo que se puede corregir de un proyecto ya creado.
+
+    `extra="forbid"`: un campo que la API ignorase en silencio produciría una
+    pantalla que dice haber guardado algo que no se guardó.
+
+    **El estado NO está aquí.** Se cambia por `POST /transitions`, que comprueba
+    qué falta para cada destino; admitirlo en un `PATCH` sería una puerta de
+    atrás a la máquina de estados.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    start_date: Any | None = None
+    close_date: Any | None = None
+    report_due_date: Any | None = None
+    #: `[REQ]` §3.1 · Vacío la borra; es texto libre y no hay nada que conservar.
+    summary_text: str | None = None
+
+
+@router.patch("/projects/{project_id}", response_model=Proyecto)
+def modificar(
+    project_id: uuid.UUID,
+    cuerpo: CambioDeProyecto,
+    s: SesionDep,
+    request: Request,
+    respuesta: Response,
+) -> Any:
+    """Corrige el proyecto. `[REQ]` §3.1 · Es lo que hace editable la introducción.
+
+    Hasta ahora un proyecto **no se podía tocar después de crearlo**: solo había
+    alta, lectura y transición de estado. Un nombre mal tecleado obligaba a
+    crear otro proyecto y mover el trabajo a mano.
+    """
+    actual = (
+        s.execute(
+            text(
+                "SELECT row_version, start_date, close_date FROM project "
+                "WHERE id = :i AND deleted_at IS NULL"
+            ),
+            {"i": str(project_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if actual is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Proyecto no encontrado")
+    cc.comprobar(
+        request,
+        s,
+        tabla="project",
+        fila_id=project_id,
+        version_actual=actual["row_version"],
+        que="un proyecto",
+    )
+
+    cambios = cuerpo.model_dump(exclude_unset=True)
+    if not cambios:
+        cc.poner(respuesta, actual["row_version"])
+        return obtener(project_id, s)
+
+    # La misma comprobación que en el alta, y por el mismo motivo: la
+    # restricción de la tabla es la barrera, pero contesta con un 500 y un error
+    # de tecleo merece un 422 que diga qué fecha está mal.
+    arranque = cambios.get("start_date", actual["start_date"])
+    cierre = cambios.get("close_date", actual["close_date"])
+    if arranque and cierre and str(cierre) < str(arranque):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "La fecha de cierre no puede ser anterior a la de arranque",
+        )
+    if "summary_text" in cambios:
+        cambios["summary_text"] = (cambios["summary_text"] or "").strip() or None
+    if "name" in cambios:
+        cambios["name"] = (cambios["name"] or "").strip()
+
+    s.execute(
+        text(  # noqa: S608
+            f"UPDATE project SET {', '.join(f'{c} = :{c}' for c in cambios)}, "
+            "updated_at = now() WHERE id = :_i"
+        ),
+        {**cambios, "_i": str(project_id)},
+    )
+    nuevo = obtener(project_id, s)
+    cc.poner(respuesta, actual["row_version"] + 1)
+    return nuevo
+
+
 class DestinoPosible(BaseModel):
     to: ProjectStatus
     permitida: bool
@@ -381,7 +476,7 @@ def transiciones_disponibles(project_id: uuid.UUID, s: SesionDep) -> Any:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Proyecto no encontrado")
 
     c = contar_para_transicion(s, project_id)
-    proyecto = EstadoDelEncargo(
+    proyecto = EstadoDelProyecto(
         clientes=c["clientes"],
         activos=c["activos"],
         visitas_agendadas=c["agendadas"],
@@ -404,7 +499,7 @@ def transicionar(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Proyecto no encontrado")
 
     c = contar_para_transicion(s, project_id)
-    proyecto = EstadoDelEncargo(
+    proyecto = EstadoDelProyecto(
         clientes=c["clientes"],
         activos=c["activos"],
         visitas_agendadas=c["agendadas"],

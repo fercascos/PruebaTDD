@@ -10,14 +10,14 @@ aplicación pasa de nueve pestañas planas colgando del proyecto a cuatro, con e
 y conviene leerlo entero antes de tocar nada.
 
 > **Vocabulario.** El cliente ha decidido que se diga **proyecto** y no
-> «encargo» en toda la aplicación. Ya está aplicado a todo el texto que ve el
+> «proyecto» en toda la aplicación. Ya está aplicado a todo el texto que ve el
 > usuario. `[LIM]` Quedan identificadores internos —`EstadoDelEncargo`, la
 > columna `context_project_id`, algún parámetro de la API— que siguen diciendo
-> encargo: renombrarlos es una migración con su riesgo y ninguno se ve desde la
+> proyecto: renombrarlos es una migración con su riesgo y ninguno se ve desde la
 > pantalla. Ver §5.
 >
 > `[LIM]` Los documentos `docs/01` a `docs/22` **conservan la palabra
-> «encargo»**: son el registro de decisiones tomadas cuando ese era el término,
+> «proyecto»**: son el registro de decisiones tomadas cuando ese era el término,
 > y reescribirlos haría que las citas del cliente dejaran de coincidir con lo
 > que dijo. Del `README` en adelante —lo que alguien lee para entender el
 > producto hoy— sí está cambiado.
@@ -49,7 +49,7 @@ Es más simple que un bloqueo y falla del lado seguro.
 |---|---|
 | Filas alineadas **por arriba** | ✅ `align-items: start` |
 | Código interno **bloqueado**, con el aviso de que es único e inalterable | ✅ |
-| «Nombre del encargo» → **«Nombre del proyecto»** | ✅ |
+| «Nombre del proyecto» → **«Nombre del proyecto»** | ✅ |
 | Cliente **de una lista** que mantiene la administración | ✅ |
 | Un cliente que no está **no bloquea**: avisa al administrador | ✅ |
 | **Fecha de arranque** y **fecha de cierre** | ✅ |
@@ -95,12 +95,87 @@ activo**, que es §3.2 y el trabajo grande. Añadir la pestaña ahora y recoloca
 después no cuesta nada; hacerlo al revés habría dejado el dashboard escondido
 hasta el final.
 
-### 3.1. Resumen ⬜
+### 3.1. Resumen ✅
 
-Hoy es la lista de fases con su estado. Tiene que pasar a ser **el resumen del
-proyecto**: las fases de la due diligence y en qué punto está cada una.
-`[PDV]` Qué más lleva —cifras del proyecto, avisos, próximos hitos— está sin
-definir.
+`[REQ]` **Definido y construido.** El cliente lo cerró al revisar el prototipo:
+*«habrá que meter un cuadro de texto que recoja la información básica del
+proyecto, que sirva como introducción en el informe final y muestre todas las
+ubicaciones de todos los activos del proyecto en un mismo mapa»*.
+
+Tres bloques, en este orden:
+
+1. **La introducción**, `project.summary_text`. Es lo primero que se lee del
+   informe, así que es lo primero que se escribe. **Texto y no una ficha de
+   campos**: se pide un párrafo de contexto, y trocearlo obligaría a inventar
+   una plantilla que nadie ha pedido y a volver a unirla en prosa para el
+   informe. La redacta una persona: sale tal cual en el documento del cliente.
+2. **El mapa de todos los activos.** Es lo que convierte una lista de nombres en
+   una cartera: dos naves en el mismo polígono y una oficina a treinta
+   kilómetros no se gestionan igual.
+3. **Las fases**, que era lo único que había aquí antes.
+
+`[LIM]` **La introducción todavía no llega al PPTX.** Se guarda y se lee; que
+salga en el informe es un marcador de la plantilla y su mapeo, y no se afirma
+que funcione algo que no se ha probado.
+
+`[REQ]` **Y hubo que añadir `PATCH /projects/{id}`**, que no existía: un
+proyecto solo tenía alta, lectura y transición de estado, así que un nombre mal
+tecleado obligaba a crear otro y mover el trabajo a mano. El estado sigue fuera
+del `PATCH` —va por `POST /transitions`, que comprueba qué falta para cada
+destino—, y el código interno tampoco se toca.
+
+### 3.0. Una errata de vocabulario, y de las importantes
+
+`[REQ]` **Se llama «proyecto», no «encargo».** Lo corrigió el cliente revisando
+el prototipo, y tenía razón dos veces: la aplicación **nunca dijo «encargo»**
+—su modelo es `project` desde el primer día—, pero los documentos y los
+comentarios lo usaban como sinónimo en 162 sitios, incluido el prototipo que se
+le enseñó. Un vocabulario que se bifurca en la documentación acaba bifurcándose
+en la pantalla.
+
+Corregido en todo el código vivo, los documentos y las comprobaciones; las
+**migraciones ya aplicadas no se tocan**, porque su texto es el registro de lo
+que se hizo el día que se hizo. Una comprobación de navegador recorre cinco
+pantallas y falla si alguna vuelve a decirlo.
+
+### 3.0 bis. El orden de la aplicación, tal como lo pidió el cliente
+
+`[REQ]` Al revisar el prototipo dio la estructura entera: primero el Resumen,
+después **un espacio por cada activo**, y al final la parte general. Eso reduce
+las pestañas del proyecto **de diez a cinco**:
+
+| | Pestaña | Qué lleva |
+|:--:|---|---|
+| 1 | **Resumen** | Introducción del informe · mapa de todos los activos · fases |
+| 2 | **Activos** | La lista, y dentro de cada uno su espacio de cinco secciones |
+| 3 | **Dashboard** | Los cinco cortes del CAPEX |
+| 4 | **Riesgos** | Grado × horizonte |
+| 5 | **Informe final** | Avisos previos, generación y versiones |
+
+**Documentación, Fotografías, Mapa, Inventario y Hallazgos y CAPEX dejan de ser
+pestañas del proyecto.** No se reescriben: las mismas pantallas reciben el
+activo fijado y esconden su desplegable, porque dentro de un edificio elegir
+otro edificio es salirse de la pantalla en la que se está. El mapa del proyecto
+entero pasa a ser un bloque del Resumen.
+
+`[REQ]` **Y el activo deja de ser una ficha larguísima.** La primera versión
+apilaba las cinco secciones una debajo de otra: **siete mil píxeles de alto**, y
+llegar al CAPEX exigía pasar por delante de todo lo demás. Ahora es un espacio
+con cinco pestañas y **una dirección por sección**, que es lo que permite
+mandarle a alguien «mira la visita de la Nave A».
+
+`[REC]` **Dos mapas, y no son el mismo.** `PestanaMapa` existe desde §15.9 y
+pinta **fotografías**: contesta «¿la visita cubrió el edificio o se quedó en la
+fachada?», así que su sitio es la Visita. Reutilizarlo para las ubicaciones
+producía una pantalla que decía «0 situadas · 4 sin coordenadas» sobre un
+proyecto con dos activos perfectamente localizados. `MapaDeActivos` es el otro:
+pinta las coordenadas del activo, en el Resumen todas y en el Detalle una.
+
+`[REQ]` **Y quitó de la pantalla las etiquetas de convención.** Cuatro ayudas
+llegaban al usuario con los acentos graves puestos —«`[REQ]` P-02 · Estos campos
+se guardan siempre»—. `[REQ]`, `[SUP]` y las demás son para los documentos y el
+código, no para quien usa la aplicación: el motivo se queda en un comentario
+justo encima.
 
 ### 3.2. Activos ⬜ · el cambio de fondo
 
@@ -110,8 +185,8 @@ ser secciones **de cada activo**. Cinco:
 
 | Sección | Qué lleva | Estado |
 |---|---|---|
-| **a) Detalle** | La ficha que ya existe | ✅ existe, se mueve |
-| **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, verde/gris, no bloqueante | ✅ **definida**, por construir |
+| **a) Detalle** | La ficha, **su mapa** y el árbol de ubicaciones | ✅ |
+| **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, verde/gris, no bloqueante | ✅ **definida**, ⬜ por construir |
 | **c) Visita** | Ubicación, fecha, check de realizada, equipo implicado, coste y fotos | ✅ |
 | **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo; y el **descriptivo de cada objeto de Hard Cost**, editable y con su casilla de validado | ✅ |
 | **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
@@ -176,7 +251,7 @@ Dos decisiones tomadas con el cliente:
   se puede preguntar «qué visitó cada uno» y firmar lo que cada uno escribe; con texto libre no.
   Pero quien acompaña de la propiedad o del mantenedor no tiene cuenta, y perderlo sería perder a
   quien abrió el cuarto de máquinas. **Cuatro es lo que cabía en la hoja, no un tope.** `[REQ]`
-- **El coste de la visita es coste interno del encargo.** No entra en el CAPEX ni sale en el
+- **El coste de la visita es coste interno del proyecto.** No entra en el CAPEX ni sale en el
   informe del cliente: los desplazamientos y las horas del consultor no son coste del edificio, y
   colarlos en los soft costs inflaría la cifra con la que el inversor negocia el precio. `[REQ]`
 
@@ -198,7 +273,7 @@ siendo categoría.
 porque `asset_visit` ya traía seis de los ocho campos. Lo nuevo es `meeting_point`, `cost_amount` y
 la tabla `visit_attendee`; lo demás es enseñarlo dentro del activo.
 
-`[REQ]` **El coste no sale del encargo, y eso está fijado por una prueba.** Una nota en el código
+`[REQ]` **El coste no sale del proyecto, y eso está fijado por una prueba.** Una nota en el código
 no impide que alguien añada mañana el importe al snapshot del informe. `test_visita_del_activo.py`
 congela el snapshot y busca la cifra **en el JSON entero**, no solo en el trozo de las visitas: un
 campo nuevo en cualquier otra parte se colaría igual, y así no se cuela sin que salte la suite.
@@ -452,7 +527,7 @@ campos— y conviene hacerla primero por eso mismo.
 `[REQ]` Antes de construir la documentación —3-4 días y la pieza más cara que queda— el cliente
 pidió **ver si lo hecho se corresponde con su idea o hay que pivotar**. Se le dan dos cosas:
 
-- **La aplicación de verdad**, con `make demo`: un encargo de cartera con memoria técnica,
+- **La aplicación de verdad**, con `make demo`: un proyecto de cartera con memoria técnica,
   descriptivos pendientes de validar, inventario con equipos marcados, visita con su equipo, y
   siete actuaciones repartidas por su árbol. Datos inventados, con «Ficticia» en los nombres.
 - **Un prototipo navegable** de las cinco secciones del activo, con **Documentación marcada como

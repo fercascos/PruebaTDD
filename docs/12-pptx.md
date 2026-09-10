@@ -490,7 +490,7 @@ pendientes de validación». La marca **solo** se inserta si la plantilla lo pre
 diseño sin permiso.
 
 `[REC]` `DRAFT_FINDINGS_EXCLUDED` es el mismo caso visto desde el otro lado. El snapshot solo publica
-los hallazgos en `EN_REVISION` y `VALIDADO` (§17.2), así que un encargo cuyos hallazgos siguen todos
+los hallazgos en `EN_REVISION` y `VALIDADO` (§17.2), así que un proyecto cuyos hallazgos siguen todos
 en borrador genera un documento con la tabla de CAPEX **vacía** y un total de `0,00 €`. Es correcto
 —un borrador no se entrega al cliente— pero un cero se lee como «no hay nada que hacer», no como
 «esto todavía no se ha revisado». El aviso dice cuántos hallazgos se quedan fuera y **cuánto dinero

@@ -181,7 +181,7 @@ CREATE TABLE catalog_i18n (
 -- ── Cliente, proyecto y activo ──────────────────────────────────────────────
 
 -- Los nombres son los de docs/02 §5.1. El `estado` describe el ciclo
--- administrativo del encargo; las **fases** describen el trabajo real y son un
+-- administrativo del proyecto; las **fases** describen el trabajo real y son un
 -- eje independiente (ver `project_phase`). Mezclarlos en un solo campo sería el
 -- error de modelado más caro de este proyecto.
 CREATE TYPE project_status AS ENUM (
@@ -195,7 +195,7 @@ CREATE TABLE client (
     name            VARCHAR(200) NOT NULL,
     -- [REQ] El cliente se elige de una lista que mantiene la administración.
     -- Escribir uno que no está NO bloquea el alta del proyecto —quien lo da de
-    -- alta suele tener el encargo por correo y el alta del cliente va por otro
+    -- alta suele tener el proyecto por correo y el alta del cliente va por otro
     -- circuito—, pero tampoco entra al catálogo como si lo hubiera validado
     -- alguien: nace pendiente y se avisa en el buzón de sugerencias, que solo
     -- ven los administradores.
@@ -220,7 +220,15 @@ CREATE TABLE project (
     close_date       DATE,
     report_due_date  DATE,
 
-    -- [REQ] La revisión de documentación con IA es OPT-IN POR ENCARGO y nace
+    -- [REQ] §3.1 · La INTRODUCCIÓN del proyecto: la información básica que
+    -- redacta el gestor y que abre el informe final. Es texto y no una ficha de
+    -- campos porque lo que se pide es un párrafo de contexto —qué se compra,
+    -- para qué, qué alcance tiene la revisión—, y trocearlo en campos obligaría
+    -- a inventarse una plantilla que nadie ha pedido. Sale tal cual en el
+    -- informe, así que lo escribe una persona y no se genera.
+    summary_text     TEXT,
+
+    -- [REQ] La revisión de documentación con IA es OPT-IN POR PROYECTO y nace
     -- apagada. La restricción del cliente exige «autorización expresa y
     -- verificable»: la restricción de abajo es lo que la hace verificable, al
     -- impedir que el interruptor esté encendido sin que conste quién lo
@@ -288,7 +296,7 @@ CREATE TABLE asset (
     year_last_refurb    SMALLINT,
     -- [REQ] Los datos que aporta la MEMORIA TÉCNICA del activo. Se separan de
     -- los de arriba porque tienen otro origen: los de arriba los teclea quien
-    -- da de alta el encargo; éstos salen del documento que entrega la
+    -- da de alta el proyecto; éstos salen del documento que entrega la
     -- propiedad, y por eso llevan `memoria_validada_at` como testigo de que
     -- alguien los miró antes de darlos por buenos.
     cadastral_reference VARCHAR(30),
@@ -502,7 +510,7 @@ CREATE TABLE asset_assignment (
 --  * `zone` es la **clasificación normalizada** que exige el CAPEX
 --    («Cubierta», «Cuartos Técnicos»): común a todos los proyectos y
 --    dependiente de la tipología. Es lo que permite agregar por zona en el
---    informe y comparar entre encargos.
+--    informe y comparar entre proyectos.
 --  * `location_node` es la **ubicación concreta de este edificio**
 --    («Cubierta / Sala de máquinas 2»). Es lo que permite volver a encontrar
 --    algo seis meses después.
@@ -593,7 +601,7 @@ CREATE TRIGGER location_node_ruta
 -- ── Fases del proceso [REQ] §3.1.5 ──────────────────────────────────────────
 --
 -- El otro eje del proyecto. Se crean SOLO las fases que el usuario marca al dar
--- de alta el encargo: un proyecto sin Q&A no arrastra una fase vacía.
+-- de alta el proyecto: un proyecto sin Q&A no arrastra una fase vacía.
 
 CREATE TYPE phase_status AS ENUM (
     'NO_APLICA', 'PENDIENTE', 'EN_CURSO', 'COMPLETADA', 'BLOQUEADA'
@@ -668,7 +676,7 @@ CREATE TABLE doc_request_item (
     unavailable_reason TEXT,
     -- [REC] Alimenta automáticamente el apartado de limitaciones del informe.
     -- Declarar qué no se ha podido revisar es una obligación profesional en una
-    -- TDD, y hoy suele reconstruirse de memoria al final del encargo.
+    -- TDD, y hoy suele reconstruirse de memoria al final del proyecto.
     affects_report_limitations BOOLEAN
         GENERATED ALWAYS AS (status IN ('NO_DISPONIBLE', 'PARCIAL')) STORED,
     display_order      SMALLINT NOT NULL DEFAULT 0,
@@ -726,7 +734,7 @@ CREATE TABLE asset_visit (
 
     -- [REQ] §3.2 c · «Costes visita»: monto económico total de la visita.
     --
-    -- Es COSTE INTERNO DEL ENCARGO y lo decidió el cliente: no entra en el
+    -- Es COSTE INTERNO DEL PROYECTO y lo decidió el cliente: no entra en el
     -- CAPEX ni sale en el informe. Los desplazamientos y las horas del
     -- consultor no son coste del edificio, y colarlos en los soft costs
     -- inflaría la cifra con la que el inversor negocia el precio de compra.
@@ -1455,7 +1463,7 @@ CREATE TABLE photo (
 );
 
 -- [REQ] §15.5 · El mismo fichero no entra dos veces en el mismo proyecto, pero
--- sí puede existir en dos proyectos: dos encargos sobre el mismo edificio es
+-- sí puede existir en dos proyectos: dos proyectos sobre el mismo edificio es
 -- legítimo. Parcial por `deleted_at` para que la papelera no bloquee una
 -- resubida.
 CREATE UNIQUE INDEX photo_sha256_uniq
@@ -1466,7 +1474,7 @@ CREATE INDEX photo_informe_idx  ON photo (project_id, include_in_report, report_
 CREATE INDEX photo_phash_idx    ON photo (project_id, phash) WHERE phash IS NOT NULL;
 CREATE INDEX photo_exif_idx     ON photo USING GIN (exif_raw);
 CREATE INDEX photo_etiquetas_idx ON photo USING GIN (tags);
--- Filtrar «las fotos de climatización de este encargo» es lo primero que se
+-- Filtrar «las fotos de climatización de este proyecto» es lo primero que se
 -- hace al montar el informe, y en una visita de 400 fotos sin índice se nota.
 CREATE INDEX photo_sistema_idx  ON photo (project_id, technical_system_id);
 CREATE INDEX photo_equipo_idx   ON photo (equipment_id);
@@ -2119,12 +2127,12 @@ CREATE INDEX propuesta_documento_idx ON propuesta_de_dato (document_id);
 -- naves vacías define recorridos de evacuación suponiendo espacios diáfanos.
 -- En cuanto entra un inquilino con estanterías, esos recorridos ya no son los
 -- que dice el plan. El documento está entregado y completo; la limitación solo
--- la ve quien se lo lee entero, y en un encargo con doscientos documentos eso
+-- la ve quien se lo lee entero, y en un proyecto con doscientos documentos eso
 -- no ocurre.
 --
 -- Va por documento y NO por activo: un plan cubre un complejo entero, y una
 -- limitación sobre la evacuación no es de una nave concreta. Se cuelga del
--- encargo, que es el alcance del informe.
+-- proyecto, que es el alcance del informe.
 
 CREATE TYPE limitacion_motivo AS ENUM (
     -- El documento existe pero está fuera de su plazo de vigencia o revisión.
@@ -2196,7 +2204,7 @@ CREATE INDEX limitacion_documento_idx ON limitacion_de_documento (document_id);
 --  1. **No lleva activo.** Un plan cubre un complejo de seis naves y dice
 --     «dieciséis hidrantes distribuidos por el perímetro» sin decir de cuál
 --     son. El activo lo elige quien ACEPTA la propuesta: adivinarlo lo haría
---     pasar por sabido. Por eso cuelga del encargo, como las limitaciones.
+--     pasar por sabido. Por eso cuelga del proyecto, como las limitaciones.
 --  2. **La cantidad puede ser NULL.** «Dieciséis hidrantes» son dieciséis;
 --     «rociadores sobre la superficie de almacenamiento» son rociadores sin
 --     número. Poner un 1 por omisión metería un uno en un inventario que

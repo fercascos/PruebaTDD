@@ -44,7 +44,7 @@ TRANSICIONES: dict[ProjectStatus, frozenset[ProjectStatus]] = {
 
 
 @dataclass(frozen=True, slots=True)
-class EstadoDelEncargo:
+class EstadoDelProyecto:
     """Los hechos contra los que se comprueban las guardas."""
 
     clientes: int = 0
@@ -68,7 +68,7 @@ class GuardaIncumplida(ValueError):
     """
 
 
-def _guardas(actual: ProjectStatus, destino: ProjectStatus, e: EstadoDelEncargo) -> list[str]:
+def _guardas(actual: ProjectStatus, destino: ProjectStatus, e: EstadoDelProyecto) -> list[str]:
     """Devuelve la lista de motivos que impiden la transición. Vacía si procede."""
     faltan: list[str] = []
 
@@ -108,7 +108,7 @@ def _guardas(actual: ProjectStatus, destino: ProjectStatus, e: EstadoDelEncargo)
 
 
 def validar_transicion(
-    actual: ProjectStatus, destino: ProjectStatus, estado: EstadoDelEncargo
+    actual: ProjectStatus, destino: ProjectStatus, estado: EstadoDelProyecto
 ) -> None:
     """Comprueba que la transición existe y que sus guardas se cumplen."""
     if actual == destino:
@@ -127,7 +127,7 @@ def validar_transicion(
 
 
 def destinos_posibles(
-    actual: ProjectStatus, estado: EstadoDelEncargo
+    actual: ProjectStatus, estado: EstadoDelProyecto
 ) -> dict[ProjectStatus, list[str]]:
     """Qué transiciones se ofrecen y qué falta para cada una.
 

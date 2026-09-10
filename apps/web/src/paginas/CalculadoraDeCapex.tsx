@@ -139,9 +139,11 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
         </Campo>
       </Rejilla>
 
+      {/* `[SUP]` La etiqueta de convención se queda en el código: al usuario
+          le llegaba a pantalla con los acentos graves puestos. */}
       <p className="ayuda">
-        `[SUP]` Porcentajes de la convención española. <strong>Editables</strong>: P-06 quedó sin
-        fuente de precios externa y el acuerdo fue ajustar esta parte a mano hasta que la haya.
+        Porcentajes de la convención española, y <strong>editables</strong>: no hay fuente de
+        precios externa, así que esta parte se ajusta a mano hasta que la haya.
       </p>
       <Rejilla>
         {Object.entries(pcts).map(([clave, valor]) => (

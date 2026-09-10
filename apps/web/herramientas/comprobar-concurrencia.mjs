@@ -54,21 +54,21 @@ luis.on('pageerror', (e) => errores.push(e.message))
 
 // ── Un hallazgo para pelearse por él ────────────────────────────────────────
 // Tiene que existir antes: crearlo aquí por API exigiría el token, que vive en
-// memoria del módulo y no es accesible desde `evaluate`. El encargo de pruebas
+// memoria del módulo y no es accesible desde `evaluate`. El proyecto de pruebas
 // lleva al menos uno.
 for (const pg of [marta, luis]) {
   await pg.goto(`${BASE}/proyectos/${PID}/capex`)
   // Se espera a que la tabla pinte: contar antes daba siempre cero y hacía
-  // parecer que el encargo no tenía hallazgos.
+  // parecer que el proyecto no tenía hallazgos.
   await pg.waitForSelector('.tabla.capex tbody tr, .vacio', { timeout: 20000 })
-  // `:not(.cabecera-grupo)` porque en un encargo de cartera la tabla va
+  // `:not(.cabecera-grupo)` porque en un proyecto de cartera la tabla va
   // separada por activo, y la fila de cabecera de cada grupo lleva su propio
   // `button.enlace` —«Exportar este activo»—. Sin excluirla, `.first()` pulsaba
   // ese botón: se descargaba un Excel y la ficha del hallazgo no se abría nunca.
   const hallazgos = pg.locator('.tabla.capex tbody tr:not(.cabecera-grupo) button.enlace')
   const hay = await hallazgos.count()
   if (hay === 0) {
-    console.error('El encargo de pruebas no tiene ningún hallazgo. Cree uno antes.')
+    console.error('El proyecto de pruebas no tiene ningún hallazgo. Cree uno antes.')
     process.exit(1)
   }
   await hallazgos.first().click()

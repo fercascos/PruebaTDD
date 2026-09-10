@@ -310,6 +310,41 @@ estructura no había forma de dar de alta un soft cost, y no saltaba nada:
 simplemente no estaba en el desplegable. Ahora se ofrecen los objetos y las
 categorías sin objetos, agrupados por tipo de coste.
 
+### La forma de la aplicación: cinco pestañas y un espacio por activo
+
+`src/paginas/FichaDeProyecto.tsx` y `src/paginas/EspacioDelActivo.tsx`. Es el
+cambio de fondo del rediseño, y lo fijó el cliente al revisar el prototipo.
+
+**Las pestañas del proyecto pasan de diez a cinco**: Resumen · Activos ·
+Dashboard · Riesgos · Informe final. Documentación, Fotografías, Mapa,
+Inventario y Hallazgos y CAPEX **se mudan dentro del activo**. No se
+reescriben: reciben ahora un `assetId` opcional que fija el filtro y esconde el
+desplegable, porque dentro de un edificio elegir otro edificio es salirse de la
+pantalla en la que se está.
+
+**El activo deja de ser una ficha larguísima.** Apilaba sus cinco secciones una
+debajo de otra —siete mil píxeles— y llegar al CAPEX exigía pasar por delante de
+todo. Ahora es un espacio con cinco pestañas y **una dirección por sección**
+(`/activos/:assetId/visita`), que es lo que permite mandarle a alguien «mira la
+visita de la Nave A».
+
+**Dos mapas, y no son el mismo.** `PestanaMapa` pinta **fotografías** desde
+§15.9: contesta «¿la visita cubrió el edificio o se quedó en la fachada?», así
+que vive en la Visita. `MapaDeActivos` pinta **coordenadas de activos**: todas
+en el Resumen, una en el Detalle. Reutilizar el primero para lo segundo producía
+una pantalla que decía «0 situadas · 4 sin coordenadas» sobre un proyecto con
+dos activos perfectamente localizados — contestaba otra pregunta.
+
+`[REQ]` **Ninguna pantalla dice «encargo»: se llama proyecto.** La aplicación
+nunca lo dijo —el modelo es `project` desde el principio— pero los comentarios y
+los documentos lo usaban como sinónimo, y de ahí pasó al prototipo que se enseñó
+al cliente. `npm run test:estructura` recorre cinco pantallas y falla si vuelve.
+
+`[REQ]` **Y las etiquetas de convención no salen a pantalla.** Cuatro ayudas
+llegaban al usuario con los acentos graves puestos —«`[REQ]` P-02 · Estos campos
+se guardan siempre»—. Son para los documentos y el código; el motivo se queda en
+un comentario justo encima del texto.
+
 ### La visita del activo
 
 `src/paginas/VisitaDelActivo.tsx`, dentro de la ficha del activo y **encima del
@@ -336,7 +371,7 @@ Cuatro decisiones que no son de detalle:
   invita a rellenarla con la prevista, y esa es la fecha que acaba fechando el
   informe.
 * **El coste dice dónde NO acaba, antes de teclearlo.** «Coste interno del
-  encargo: NO entra en el CAPEX del edificio ni sale en el informe del cliente»
+  proyecto: NO entra en el CAPEX del edificio ni sale en el informe del cliente»
   está en la ayuda del campo, no en un comentario del código. Quien teclea un
   importe tiene derecho a saber a dónde va.
 

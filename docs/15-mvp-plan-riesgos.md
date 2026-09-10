@@ -9,7 +9,7 @@
 `[REC]` El MVP se define por un objetivo verificable, no por una lista:
 
 > **Un consultor debe poder llevar a cabo una due diligence técnica real de principio a fin —desde
-> abrir el encargo y pedir la documentación hasta emitir el PPTX— sin salirse de la herramienta ni una
+> abrir el proyecto y pedir la documentación hasta emitir el PPTX— sin salirse de la herramienta ni una
 > sola vez.**
 
 Si tiene que abrir Excel para el CAPEX o retocar el PPTX a mano, no hemos entregado nada.

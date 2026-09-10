@@ -91,7 +91,7 @@ Retardo progresivo tras 3 intentos, bloqueo temporal tras 8, con aviso por corre
 ```
 
 `[REC]` El panel abre con «lo que te bloquea», no con gráficos. Un consultor entra a desatascar algo,
-no a contemplar métricas. La columna **Fases** convierte el estado del encargo en información de un
+no a contemplar métricas. La columna **Fases** convierte el estado del proyecto en información de un
 vistazo, que es lo que la especificación revisada pide de fondo con §3.1.5.
 
 ---
@@ -209,7 +209,7 @@ PASO ④ · FASES DEL PROCESO  ← nuevo respecto de una herramienta genérica
 │ │   ⓘ Las fases 5 y 6 tienen estado calculado automáticamente.          │  │
 │ └────────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
-│ ┌── ESTADO DEL ENCARGO ──────────────────────────────────────────────────┐  │
+│ ┌── ESTADO DEL PROYECTO ──────────────────────────────────────────────────┐  │
 │ │ Borrador ✓ ─ Preparación ✓ ─ V.progr. ✓ ─ V.realiz. ✓ ─ ●ANÁLISIS ─   │  │
 │ │ Revisión ─ Emitido ─ Cerrado          [ Pasar a «En revisión» → ]      │  │
 │ │ ⚠ Pendiente: 12 precios sin validar · 8 zonas a revisar                │  │

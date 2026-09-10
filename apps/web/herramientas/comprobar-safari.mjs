@@ -53,7 +53,7 @@ pg.on('pageerror', (e) => errores.push(e.message))
 // ── 1 · La pantalla de acceso cabe en el alto del teléfono ─────────────────
 //
 // Se mide ANTES de entrar, y no después: con la sesión abierta `/entrar`
-// redirige a la lista de encargos, así que volver aquí más tarde no mide la
+// redirige a la lista de proyectos, así que volver aquí más tarde no mide la
 // pantalla de acceso, mide otra cosa. La primera versión de esta comprobación
 // entraba dos veces y se colgaba esperando un campo que ya no estaba.
 //

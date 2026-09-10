@@ -728,7 +728,7 @@ hoja del cliente.
 **Resuelto sin tocar la plantilla: un libro por activo.** La salida está en no meter tres
 edificios en una hoja que describe uno, sino en rellenar la hoja del cliente **una vez por
 activo**. `separar_por_activo()` trocea el snapshot y cada parte se rellena por el mismo camino
-que el encargo entero —no hay una segunda ruta de código que pueda divergir—; la descarga sale en
+que el proyecto entero —no hay una segunda ruta de código que pueda divergir—; la descarga sale en
 ZIP con un libro por edificio y un `LEEME.txt` que nombra los que se quedaron sin libro por no
 tener todavía ninguna actuación.
 

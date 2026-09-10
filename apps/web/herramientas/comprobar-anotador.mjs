@@ -25,7 +25,7 @@ const CLAVE = process.env.TDD_PASSWORD ?? 'cubierta invertida 2026'
 
 const fallos = []
 
-// ── Preparar un encargo con una foto, por API ────────────────────────────────
+// ── Preparar un proyecto con una foto, por API ────────────────────────────────
 async function api(metodo, ruta, cuerpo, token) {
   const r = await fetch(API + ruta, {
     method: metodo,
@@ -49,7 +49,7 @@ const proyecto = await api(
   {
     client_id: cliente.id,
     internal_code: `2026-${Math.random().toString(16).slice(2, 8)}`,
-    name: 'Encargo para anotar',
+    name: 'Proyecto para anotar',
   },
   tk,
 )
@@ -74,7 +74,7 @@ const subida = await fetch(`${API}/projects/${proyecto.id}/photos`, {
 })
 if (!subida.ok) throw new Error(`subida -> ${subida.status}: ${(await subida.text()).slice(0, 300)}`)
 const foto = await subida.json()
-console.log('· Encargo y fotografía preparados')
+console.log('· Proyecto y fotografía preparados')
 
 // ── Entrar y llegar al lienzo ────────────────────────────────────────────────
 const navegador = await chromium.launch(

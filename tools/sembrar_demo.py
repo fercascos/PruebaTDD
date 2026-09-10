@@ -1,4 +1,4 @@
-"""Un encargo de demostración con datos ficticios, para enseñar la aplicación.
+"""Un proyecto de demostración con datos ficticios, para enseñar la aplicación.
 
     python tools/sembrar_demo.py --api http://localhost:8000
 
@@ -96,7 +96,7 @@ class Api:
     # la API confirmaba la transacción **después** de enviar la respuesta, así
     # que un `201` podía devolver un identificador que la petición siguiente no
     # veía todavía. Este guion fue quien lo destapó, dando 404 al dar de alta un
-    # activo sobre un encargo recién creado.
+    # activo sobre un proyecto recién creado.
     #
     # El defecto está arreglado —`SesionDep` usa `scope="function"`— y el rodeo
     # sobra. Se quita a propósito y no «por si acaso»: dejarlo puesto volvería a
@@ -174,7 +174,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("Redacción de proyecto y dirección de obra", "SC.S01", "CORTO", "18500.00", "01", "SOFT_COST"),
 )
 
-#: `[REQ]` El encargo de demostración es de **cartera**, no de un edificio.
+#: `[REQ]` El proyecto de demostración es de **cartera**, no de un edificio.
 #: La plantilla CAPEX del cliente describe un solo activo, así que la separación
 #: por activo —un libro para cada uno— solo se ve con más de uno. Con un único
 #: activo la demostración enseñaba el caso fácil y escondía el que importa.
@@ -316,7 +316,7 @@ def sembrar(api: Api) -> str:
             ],
         },
     )
-    print(f"· Encargo {proyecto['internal_code']} · {proyecto['id']}")
+    print(f"· Proyecto {proyecto['internal_code']} · {proyecto['id']}")
 
     tipologia = next(
         t for t in api.get("/catalogs/asset-typologies") if t["code"] in ("INDUSTRIAL", "OFICINAS")

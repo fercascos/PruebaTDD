@@ -8,10 +8,19 @@ import { Subida } from '../fotos/Subida'
 import { Mensaje, Vacio } from '../ui/Marco'
 import { NuevoHallazgo } from './NuevoHallazgo'
 
-export function PestanaFotos({ projectId }: { projectId: string }) {
+export function PestanaFotos({
+  projectId,
+  assetId,
+}: {
+  projectId: string
+  /** `[REQ]` §3.2 c · Fijado dentro del activo: son «las fotos de la visita». */
+  assetId?: string
+}) {
   const [fotos, setFotos] = useState<Foto[] | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
-  const [activoElegido, setActivoElegido] = useState('')
+  const [elegidoAMano, setElegidoAMano] = useState('')
+  // El activo de la ruta manda sobre el desplegable.
+  const activoElegido = assetId ?? elegidoAMano
   const [filtroActivo, setFiltroActivo] = useState('')
   const [sistemas, setSistemas] = useState<SistemaTecnico[]>([])
   const [sistemaElegido, setSistemaElegido] = useState('')
@@ -85,17 +94,19 @@ export function PestanaFotos({ projectId }: { projectId: string }) {
   return (
     <>
       <div className="filtro">
-        <label>
-          Activo al que asignar lo que se suba
-          <select value={activoElegido} onChange={(e) => setActivoElegido(e.target.value)}>
-            <option value="">Sin asignar (se avisa, no se bloquea)</option>
-            {activos.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!assetId && (
+          <label>
+            Activo al que asignar lo que se suba
+            <select value={elegidoAMano} onChange={(e) => setElegidoAMano(e.target.value)}>
+              <option value="">Sin asignar (se avisa, no se bloquea)</option>
+              {activos.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {/* [REQ] §3.2 · El sistema técnico es la clasificación transversal, y
             además es lo que alimenta el token `[Sistema]` del nombre de
             fichero: sin él, el renombrado en lote escribe «SinSistema». */}

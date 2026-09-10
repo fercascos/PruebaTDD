@@ -99,10 +99,10 @@ que es de las cosas más difíciles de deshacer.
 ```
 make up          # levanta todo en contenedores y espera a que responda
 make up-admin    # crea la organización y el administrador
-make demo        # siembra el encargo: Getafe Norte, dos activos
+make demo        # siembra el proyecto: Getafe Norte, dos activos
 ```
 
-Deja un encargo de **cartera** —dos activos, que es lo que hace visible la separación por activo—
+Deja un proyecto de **cartera** —dos activos, que es lo que hace visible la separación por activo—
 con memoria técnica, sus descriptivos traídos y pendientes de validar, inventario con tres equipos
 marcados «pasa a CAPEX», una visita con su equipo implicado y sus limitaciones de acceso, y siete
 actuaciones repartidas por el árbol del cliente.

@@ -8,7 +8,7 @@ contra un servidor de verdad, que es la única donde el síntoma se ve.
 
     python tools/apretar_lectura_tras_escritura.py [vueltas]
 
-`[REQ]` Apúntelo **solo** a una base de demostración: crea un encargo por vuelta.
+`[REQ]` Apúntelo **solo** a una base de demostración: crea un proyecto por vuelta.
 
 `[LIM]` No sirve de prueba automática y por eso no está en la suite: con un solo
 proceso de `uvicorn` casi nunca falla —el bucle de eventos confirma antes de

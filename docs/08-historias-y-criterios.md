@@ -749,7 +749,7 @@ Escenario: La fase Red Flag/CAPEX no se completa con precios sin validar
 
 ## HU-12 · Cargar una plantilla PPTX — P0
 
-> **Como** director de proyecto **quiero** subir la plantilla PowerPoint de este encargo y ver su
+> **Como** director de proyecto **quiero** subir la plantilla PowerPoint de este proyecto y ver su
 > estructura **para** generar el informe con la imagen corporativa correcta.
 
 ```gherkin
@@ -1105,7 +1105,7 @@ Escenario: Checklist sembrado al activar la fase
   Entonces veo cinco líneas: licencias urbanísticas, proyectos,
      contratos de mantenimiento, legalizaciones y certificados, y garantías
   Y todas están en estado "SOLICITADA"
-  Y puedo añadir líneas propias del encargo
+  Y puedo añadir líneas propias del proyecto
 
 Escenario: Registrar recepción y adjuntar documentos
   Cuando marco "Licencias urbanísticas" como "RECIBIDA" y adjunto 3 PDF

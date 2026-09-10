@@ -27,6 +27,9 @@ export type Proyecto = {
   start_date: string | null
   close_date: string | null
   report_due_date: string | null
+  /** `[REQ]` §3.1 · La introducción que abre el informe final. La escribe una
+   *  persona: sale tal cual en el documento que se entrega al cliente. */
+  summary_text: string | null
 }
 
 export type Fase = {
@@ -371,7 +374,7 @@ export type Visita = {
   summary: string | null
   /** El punto de encuentro, no la dirección del activo: esa está en su ficha. */
   meeting_point: string | null
-  /** `[REQ]` Coste **interno del encargo**: no entra en el CAPEX ni en el informe. */
+  /** `[REQ]` Coste **interno del proyecto**: no entra en el CAPEX ni en el informe. */
   cost_amount: string | null
   asistentes: AsistenteDeVisita[]
 }

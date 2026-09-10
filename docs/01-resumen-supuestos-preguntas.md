@@ -17,14 +17,14 @@
 ### 1.1. Qué se propone
 
 Una aplicación web empresarial, multi-organización, para gestionar el ciclo completo de una
-**due diligence técnica inmobiliaria (TDD)**: desde la apertura del encargo y la solicitud de
+**due diligence técnica inmobiliaria (TDD)**: desde la apertura del proyecto y la solicitud de
 documentación, hasta la defensa del informe frente a la otra parte.
 
 El producto se articula en cinco dominios:
 
 | Dominio | Función | Valor para el consultor |
 |---|---|---|
-| **Encargo** | Proyecto, cliente, activos, equipo y **fases del proceso** | Un único lugar de verdad, con el estado real del trabajo a la vista |
+| **Proyecto** | Proyecto, cliente, activos, equipo y **fases del proceso** | Un único lugar de verdad, con el estado real del trabajo a la vista |
 | **Evidencia** | Fotografías y documentos clasificados y versionados | Se acaba el «carpetas en el escritorio + WhatsApp» |
 | **Diagnóstico y CAPEX** | Hallazgos codificados por zona, riesgo, concepto y horizonte | La tabla de CAPEX deja de ser un Excel huérfano y sin trazabilidad |
 | **Precios** | Referencias con procedencia y validación humana | Cada importe se puede defender ante el cliente |
@@ -33,7 +33,7 @@ El producto se articula en cinco dominios:
 ### 1.2. Las cinco decisiones que sostienen el diseño
 
 1. **Estado y fases son ejes distintos.** El `estado` del proyecto (borrador → archivado) describe el
-   ciclo administrativo del encargo. Las **fases** (§3.1.5: solicitud de documentación, VDR, visita,
+   ciclo administrativo del proyecto. Las **fases** (§3.1.5: solicitud de documentación, VDR, visita,
    Q&A, Red Flag/CAPEX, Full Report, presentación, defensa) describen el trabajo real, **se eligen a
    la carta al dar de alta el proyecto** y avanzan en paralelo. Mezclarlas en un solo campo sería el
    error de modelado más caro de este proyecto. `[REC]`
@@ -171,7 +171,7 @@ calculadora de medición, que afecta a una herramienta de apoyo y no al dato que
 | **P-12** | ¿El **Q&A** debe ser un gestor de preguntas y respuestas dentro de la aplicación, o basta adjuntar el Excel? | S-13: repositorio de ficheros versionados |
 | **P-13** | ¿Qué **VDR** se usa y hace falta más que guardar el enlace (por ejemplo, control de qué se ha subido)? | S-12: enlace + notas |
 | **P-14** | ¿Los **conceptos** (mantenimiento, reparación, normativa…) y los grados de riesgo son cerrados o el cliente los amplía? ¿Y el solapamiento entre concepto y categoría del árbol (*Soft Cost*, *Medioambiental*, *ESG*) se mantiene? | Catálogo editable con los valores dados como semilla; ambos campos se conservan con una regla de coherencia que avisa sin bloquear |
-| **P-15** | ¿Se sigue queriendo **inventario de equipos** con ficha propia (fabricante, modelo, nº de serie, vida útil)? La especificación revisada ya no detalla sus campos, pero §7 mantiene la entidad `Equipment` | **Construido** como ficha **opcional**: nada en la aplicación la exige y un encargo se entrega sin ella. La vida residual se calcula, nunca se teclea; ver la `[LIM]` de [`04`](./04-modelo-de-datos.md) sobre por qué no puede ser una columna generada |
+| **P-15** | ¿Se sigue queriendo **inventario de equipos** con ficha propia (fabricante, modelo, nº de serie, vida útil)? La especificación revisada ya no detalla sus campos, pero §7 mantiene la entidad `Equipment` | **Construido** como ficha **opcional**: nada en la aplicación la exige y un proyecto se entrega sin ella. La vida residual se calcula, nunca se teclea; ver la `[LIM]` de [`04`](./04-modelo-de-datos.md) sobre por qué no puede ser una columna generada |
 | ~~**P-16**~~ ✅ | ~~¿Sobre qué base se aplica cada porcentaje de la cascada de costes?~~ **CERRADA:** *«se queda así»*. Se adopta la convención española PEM → PEC → honorarios → contingencia | Ver §3.1 y [`11`](./11-capex-precios.md) §16.3 |
 | **P-17** | ¿Es obligatorio **SSO corporativo** desde el primer despliegue? | S-17: auth propia, interfaz OIDC-ready |
 
@@ -268,4 +268,4 @@ contraria. Detalle en [`19`](./19-sugerencias.md) §19.4.
 | [`19`](./19-sugerencias.md) | **Módulo de Sugerencias** | añadido |
 
 El entregable **24 (código inicial del MVP)** se aborda tras la validación de este diseño,
-conforme a §16 del encargo.
+conforme a §16 del proyecto.

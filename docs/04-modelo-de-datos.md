@@ -96,7 +96,7 @@ ascensores, sostenibilidad, accesibilidad, envolvente.
 | `status` | ENUM(`BORRADOR`,`EN_PREPARACION`,`VISITA_PROGRAMADA`,`VISITA_REALIZADA`,`EN_ANALISIS`,`EN_REVISION`,`INFORME_EMITIDO`,`CERRADO`,`ARCHIVADO`) | `[REQ]` |
 | `dd_type` | TEXT (catálogo) | tipo de due diligence |
 | `scope_of_work` | TEXT | |
-| `visit_planned_date` | DATE NULL | fecha prevista a nivel de encargo |
+| `visit_planned_date` | DATE NULL | fecha prevista a nivel de proyecto |
 | `report_due_date` | DATE NULL | |
 | `currency` | CHAR(3) NOT NULL | |
 | `cost_profile_id` | UUID FK NULL | porcentajes por defecto del CAPEX |
@@ -222,7 +222,7 @@ sus coordenadas: es el punto de encuentro y lo que hace falta el día de la visi
 muelle 4, preguntar por el jefe de mantenimiento»—. La pantalla lo propone desde la ficha del
 activo, porque pedirlo en blanco garantiza que casi siempre quede vacío.
 
-`[REQ]` §3.2 c · **`cost_amount` es coste interno del encargo.** Lo decidió el cliente: no entra en
+`[REQ]` §3.2 c · **`cost_amount` es coste interno del proyecto.** Lo decidió el cliente: no entra en
 el CAPEX ni sale en el informe. Los desplazamientos y las horas del consultor no son coste del
 edificio, y colarlos en los soft costs inflaría la cifra con la que el inversor negocia el precio de
 compra. El snapshot del informe solo lee `access_limitations` de esta tabla, y una prueba comprueba
@@ -297,7 +297,7 @@ Unión de §3.1.3 y §3.3.1 (ver P-02).
 | *auditoría · soft delete · `version`* | | |
 
 **Lo que aporta la memoria técnica** `[REQ]`. Son de otro origen que los de
-arriba —los de arriba los teclea quien da de alta el encargo; éstos salen del
+arriba —los de arriba los teclea quien da de alta el proyecto; éstos salen del
 documento que entrega la propiedad— y por eso llevan su propio testigo de
 validación:
 
@@ -808,7 +808,7 @@ auditoría · soft delete.
 `current_version_id` · `status` ENUM · auditoría · soft delete.
 
 `[REC]` `report_type` incluye `RED_FLAG` y `FULL_REPORT` porque las fases de §3.1.5 los distinguen:
-son dos entregables distintos del mismo encargo, y el Red Flag suele emitirse antes.
+son dos entregables distintos del mismo proyecto, y el Red Flag suele emitirse antes.
 
 `report_version`: `id` · `organization_id` · `report_id` · `version_number` · `report_template_id` ·
 `template_mapping_id` · **`output_locale`** (idioma del informe, C-5) · `storage_key` ·
@@ -920,7 +920,7 @@ identificador, tipo, fecha y orden que lo autorizó, sin contenido personal.
 
 ## 9. Diagrama entidad-relación
 
-### 9.1. Encargo, fases, activos y equipo
+### 9.1. Proyecto, fases, activos y equipo
 
 ```mermaid
 erDiagram
@@ -1520,7 +1520,7 @@ erDiagram
 
 ### 9.5. Entidades añadidas respecto al listado de §7
 
-El encargo pide 28 entidades como mínimo. Se añaden 17, todas justificadas por la especificación
+El proyecto pide 28 entidades como mínimo. Se añaden 17, todas justificadas por la especificación
 revisada:
 
 | Añadida | Por qué |

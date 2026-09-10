@@ -50,7 +50,7 @@ const proyecto = await api(
   {
     client_id: cliente.id,
     internal_code: `2026-${Math.random().toString(16).slice(2, 8)}`,
-    name: 'Encargo con mapa',
+    name: 'Proyecto con mapa',
   },
   tk,
 )

@@ -43,7 +43,7 @@ await pg.waitForURL('**/proyectos', { timeout: 15000 })
 // ── 0 · ¿En qué activo están las fotografías? ───────────────────────────────
 // La cadena que se comprueba abajo —sala → foto → nombre del fichero— exige que
 // la sala y la foto sean **del mismo activo**. Antes se cogía «el primero de la
-// tabla» y funcionaba de casualidad, porque el encargo de demostración tenía
+// tabla» y funcionaba de casualidad, porque el proyecto de demostración tenía
 // uno solo; en cuanto pasó a ser de cartera, la tabla ordena por nombre y el
 // primero dejó de ser el que tiene las fotos. Aquí se busca cuál es.
 await pg.goto(`${BASE}/proyectos/${PID}/fotos`)
@@ -65,7 +65,7 @@ for (const c of candidatos) {
   }
 }
 if (!activo) {
-  console.error('Ningún activo del encargo de pruebas tiene fotografías. Suba una antes.')
+  console.error('Ningún activo del proyecto de pruebas tiene fotografías. Suba una antes.')
   process.exit(1)
 }
 comprobar(true, `las fotografías están en «${activo.nombre}»`)

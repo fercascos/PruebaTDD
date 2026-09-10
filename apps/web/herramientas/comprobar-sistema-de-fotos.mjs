@@ -48,7 +48,7 @@ const cli = await api('POST', '/clients', { name: 'Inversora Ficticia S.L.' }, t
 const proyecto = await api(
   'POST',
   '/projects',
-  { client_id: cli.id, internal_code: `2026-${sufijo}`, name: 'Encargo con fotos' },
+  { client_id: cli.id, internal_code: `2026-${sufijo}`, name: 'Proyecto con fotos' },
   tk,
 )
 const tipologias = await api('GET', '/catalogs/asset-typologies', null, tk)

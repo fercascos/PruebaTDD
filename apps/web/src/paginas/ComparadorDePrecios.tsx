@@ -386,8 +386,8 @@ function ActualizacionPorIndice({
         </button>
       </div>
       <p className="ayuda">
-        `[LIM]` No hay catálogo de índices en la aplicación: los dos valores los introduce usted.
-        Publicar una cifra que nadie ha verificado sería inventar una fuente de precios.
+        No hay catálogo de índices en la aplicación: los dos valores los introduce usted. Publicar
+        una cifra que nadie ha verificado sería inventar una fuente de precios.
       </p>
       <Rejilla>
         <Campo etiqueta="Índice en la fecha del precio">

@@ -45,7 +45,7 @@ ficha del activo (+ memoria_validada_at / _por)
 esqueleto: un hallazgo en BORRADOR por objeto
         │  el gestor técnico completa, corrige y AÑADE lo que no estaba
         ▼
-CAPEX del encargo
+CAPEX del proyecto
 ```
 
 ### El botón, y por qué existe `[REQ]`
@@ -157,11 +157,11 @@ plan se redactó **con las naves vacías**, así que define los recorridos de
 evacuación suponiendo espacios diáfanos. En cuanto entra un inquilino con
 estanterías, esas longitudes, salidas y capacidades dejan de ser las que dice el
 plan. El documento está entregado y completo; sin esto, la limitación solo la ve
-quien se lo lea entero, y en un encargo con doscientos documentos eso no ocurre.
+quien se lo lea entero, y en un proyecto con doscientos documentos eso no ocurre.
 
 | Decisión | Por qué |
 |---|---|
-| **Cuelgan del encargo**, no del activo | Un plan cubre un complejo de seis naves; una reserva sobre la evacuación no es de una nave concreta. El alcance del informe es el encargo |
+| **Cuelgan del proyecto**, no del activo | Un plan cubre un complejo de seis naves; una reserva sobre la evacuación no es de una nave concreta. El alcance del informe es el proyecto |
 | **Nada llega al informe sin que alguien lo acepte** | Mismo ciclo que una propuesta de dato. Una limitación inventada por una máquina y colada en un entregable es peor que una que falte: la que falta se echa en falta; la inventada se firma |
 | **Descartar no borra** | La fila se queda con su testigo. Si el cliente pregunta por qué el informe no menciona que el plan se redactó con las naves vacías, la respuesta está en la base y no en la memoria de nadie |
 | El motivo es un **enumerado cerrado** | `CADUCADO`, `INCOMPLETO`, `NO_VIGENTE`, `DECLARADA`, `INCONSISTENTE`. Una lista abierta daría quince redacciones del mismo motivo sin forma de agruparlas |
@@ -870,17 +870,17 @@ eso la hoja `CAPEX` debe **parecerse a la tabla del informe**, no a un volcado d
 `[REC]` Ese tercer caso es el que evita la incidencia clásica: «el Excel que me mandaste no cuadra con
 el PowerPoint». Se marca en la propia hoja `Resumen`, con la versión y la fecha de emisión.
 
-### Encargos de cartera: **un libro por activo** `[REQ]`
+### Proyectos de cartera: **un libro por activo** `[REQ]`
 
 La plantilla CAPEX del cliente describe **un** edificio: un nombre, unas superficies y un tipo que
-además decide qué zonas ofrece el desplegable. Un encargo de tres naves no cabe en ella, y meterlo
+además decide qué zonas ofrece el desplegable. Un proyecto de tres naves no cabe en ella, y meterlo
 a la fuerza produce una hoja que se abre bien y engaña, que es la peor forma de fallar.
 
 La salida no es rediseñar la hoja del cliente, es rellenarla **una vez por activo**:
 
 | Descarga | Ruta | Cuándo |
 |---|---|---|
-| Encargo entero, un libro | `GET …/capex/export.xlsx` | Un solo activo, o cuando se quiere el total en una hoja. Sigue siendo lo que sale por omisión en la API |
+| Proyecto entero, un libro | `GET …/capex/export.xlsx` | Un solo activo, o cuando se quiere el total en una hoja. Sigue siendo lo que sale por omisión en la API |
 | **Un libro por activo, en ZIP** | `GET …/capex/export.zip` | Lo que ofrece la pantalla cuando hay más de un activo. Incluye un `LEEME.txt` con los activos que se quedaron sin libro **y por qué** |
 | Un activo suelto | `GET …/capex/export.xlsx?asset_id=…` | El caso cotidiano: mandar el CAPEX de una nave, no el de la cartera |
 

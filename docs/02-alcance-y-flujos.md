@@ -9,7 +9,7 @@
 ```mermaid
 mindmap
   root((TDD Inmobiliaria))
-    Encargo
+    Proyecto
       Ficha y estado administrativo
       Cliente y contactos
       Activos multi-sede
@@ -62,13 +62,13 @@ La decisión de modelado más importante de este bloque. `[REC]`
 
 | | **Estado del proyecto** (§3.1.1) | **Fases del proceso** (§3.1.5) |
 |---|---|---|
-| Qué describe | El ciclo administrativo del encargo | El trabajo técnico real |
+| Qué describe | El ciclo administrativo del proyecto | El trabajo técnico real |
 | Valores | Borrador, en preparación, visita programada, visita realizada, en análisis, en revisión, informe emitido, cerrado, archivado | Solicitud de documentación, VDR, Visita, Q&A, Red Flag/CAPEX, Full Report, Presentación, Defensa |
 | Cardinalidad | **Uno solo** en cada momento | **Varias activas a la vez** |
 | Se elige | No: se transita según reglas | **Sí: se marcan al dar de alta el proyecto** |
 | Quién lo cambia | Director de proyecto / revisor | Cada responsable de fase |
 
-Meterlas en un solo campo produciría un sistema que no sabe representar la realidad: un encargo puede
+Meterlas en un solo campo produciría un sistema que no sabe representar la realidad: un proyecto puede
 estar simultáneamente con la documentación pendiente, la visita ya hecha y el Q&A en curso.
 
 #### 4.1.2. Ficha del proyecto
@@ -81,7 +81,7 @@ observaciones generales.
 
 Razón social, persona de contacto, cargo, correo, teléfono, dirección y notas internas. `[REC]` El
 cliente se modela como entidad reutilizable de la organización, no como campos embebidos: permite ver
-la cartera de encargos por cliente sin duplicar datos.
+la cartera de proyectos por cliente sin duplicar datos.
 
 #### 4.1.4. Activos
 
@@ -243,13 +243,13 @@ Detalle y **limitaciones técnicas reales** en [`12-pptx.md`](./12-pptx.md).
 
 ### 4.6. Duplicación de proyectos
 
-`[REC]` Duplicado **selectivo**: copiar un encargo entero arrastra fotos y precios de otro edificio.
+`[REC]` Duplicado **selectivo**: copiar un proyecto entero arrastra fotos y precios de otro edificio.
 
 | Elemento | Por defecto | Motivo |
 |---|:--:|---|
-| Ficha (sin fechas ni código) | ✅ | Base del nuevo encargo |
+| Ficha (sin fechas ni código) | ✅ | Base del nuevo proyecto |
 | Cliente y contactos | ✅ | Suele ser el mismo |
-| **Selección de fases** | ✅ | Alto valor: el mismo tipo de encargo repite fases |
+| **Selección de fases** | ✅ | Alto valor: el mismo tipo de proyecto repite fases |
 | Miembros del equipo y roles | ✅ | Ahorra lo más tedioso |
 | Plantilla PPTX y su mapeo | ✅ | El mapeo es costoso de rehacer |
 | Activos (ficha, sin fotos) | ☐ opcional | Puede ser el mismo edificio en otra fase |
@@ -260,7 +260,7 @@ Detalle y **limitaciones técnicas reales** en [`12-pptx.md`](./12-pptx.md).
 
 ### 4.7. Fuera de alcance
 
-No se incluye, sin ampliación de encargo: valoración financiera del activo (DCF, yield), gestión de
+No se incluye, sin ampliación de proyecto: valoración financiera del activo (DCF, yield), gestión de
 obra, modelado BIM/IFC, GMAO, certificación energética oficial ni firma electrónica cualificada.
 
 ---
@@ -334,11 +334,11 @@ flowchart LR
 **Estados de fase** `[SUP]` S-07: `NO_APLICA` · `PENDIENTE` · `EN_CURSO` · `COMPLETADA` · `BLOQUEADA`.
 Las fases *Red Flag/CAPEX* y *Full Report* tienen estado **calculado** a partir del trabajo real.
 
-### 5.3. Flujo maestro: del encargo a la defensa
+### 5.3. Flujo maestro: del proyecto a la defensa
 
 ```mermaid
 flowchart TD
-    A[Encargo recibido] --> B["Crear proyecto · BORRADOR<br/>+ marcar fases aplicables"]
+    A[Proyecto recibido] --> B["Crear proyecto · BORRADOR<br/>+ marcar fases aplicables"]
     B --> C[Alta o selección de cliente]
     C --> D[Alta de activos 1..N<br/>con tipología]
     D --> E{¿Cliente y ≥1 activo?}
@@ -491,7 +491,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     A["Fase activada<br/>al crear el proyecto"] --> B["Checklist semilla:<br/>licencias · proyectos ·<br/>contratos · legalizaciones ·<br/>garantías"]
-    B --> C["Añadir líneas propias<br/>del encargo"]
+    B --> C["Añadir líneas propias<br/>del proyecto"]
     C --> D["Enviar solicitud al cliente<br/>(exportable a XLSX)"]
     D --> E{"Por cada línea"}
     E --> F["SOLICITADA"]

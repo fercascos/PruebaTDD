@@ -103,7 +103,7 @@ for (const ancho of ANCHOS) {
 
     // Que se haya llegado a la pantalla, antes de medirla. El enrutador manda
     // lo que no reconoce a `/proyectos`, así que una ruta mal escrita mediría
-    // la lista de encargos y pasaría sin haber visitado nada. Es exactamente lo
+    // la lista de proyectos y pasaría sin haber visitado nada. Es exactamente lo
     // que dejó pasar este defecto durante semanas.
     const llegada = new URL(pg.url()).pathname
     if (llegada !== ruta) {
@@ -137,7 +137,7 @@ for (const ancho of ANCHOS) {
           ? `documentacion cabe también con «${ahora}»`
           : `documentacion desborda ${otro.sobra}px con «${ahora}» — ${otro.culpables.join(', ')}`,
       )
-      await boton.click() // se deja el encargo como estaba
+      await boton.click() // se deja el proyecto como estaba
       await pg.waitForTimeout(1200)
       if ((await boton.textContent())?.trim() !== antes) {
         comprobar(false, 'la autorización de IA no ha vuelto a su estado inicial')

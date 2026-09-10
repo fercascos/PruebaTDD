@@ -1,7 +1,7 @@
 """Arma la página de previsualización del mockup con las capturas incrustadas.
 
 No inventa nada: cada lámina es una captura real de la aplicación en marcha
-sobre el encargo de DEMOSTRACIÓN, con datos ficticios. Las capturas las produce
+sobre el proyecto de DEMOSTRACIÓN, con datos ficticios. Las capturas las produce
 `apps/web/herramientas/capturar-pantallas.mjs`; esto solo las monta.
 
     python tools/mockup/construir.py --capturas /tmp/capturas --salida /tmp/mockup.html
@@ -71,18 +71,18 @@ BLOQUES = [
     ),
     (
         "Bloque 1",
-        "El encargo, sus fases y sus activos",
+        "El proyecto, sus fases y sus activos",
         [
             (
                 "03-proyectos",
-                "Los encargos",
+                "Los proyectos",
                 "El punto de partida: código interno, cliente, estado y moneda. Cada fila "
-                "abre un encargo completo.",
+                "abre un proyecto completo.",
                 None,
             ),
             (
                 "04-fases",
-                "Fases del encargo",
+                "Fases del proyecto",
                 "Las fases de la TDD con su estado. El estado sugerido lo calcula el "
                 "servidor a partir de lo que hay hecho; avanzarla la decide una persona.",
                 None,
@@ -123,12 +123,12 @@ BLOQUES = [
                 (
                     "LIM",
                     "Arriba, la revisión con IA aparece <strong>apagada</strong>, que es "
-                    "como está por defecto: se autoriza encargo a encargo y queda "
+                    "como está por defecto: se autoriza proyecto a proyecto y queda "
                     "constancia de quién lo hizo. Aun autorizada, hoy la revisión está "
                     "<strong>simulada</strong> —no hay proveedor elegido y ningún modelo "
                     "ha leído nada— y cada observación va marcada como simulada en la "
                     "base de datos, en la API y en pantalla. En esta lámina los paneles "
-                    "de extracción salen <strong>vacíos</strong>: el encargo de "
+                    "de extracción salen <strong>vacíos</strong>: el proyecto de "
                     "demostración no tiene ningún documento subido.",
                 ),
             ),
@@ -183,7 +183,7 @@ BLOQUES = [
         [
             (
                 "09-capex",
-                "CAPEX del encargo",
+                "CAPEX del proyecto",
                 "Hallazgos y su coste por horizonte temporal, con impuestos separados. "
                 "Exportable a Excel.",
                 None,
@@ -211,7 +211,7 @@ BLOQUES = [
                 "El mismo resumen, de un solo edificio",
                 "El selector de activo alcanza los cuatro bloques a la vez, porque en la "
                 "reunión las cuatro preguntas se hacen del mismo edificio. Las tarjetas "
-                "cambian con él: la cuarta pasa a decir qué parte del CAPEX del encargo "
+                "cambian con él: la cuarta pasa a decir qué parte del CAPEX del proyecto "
                 "representa este activo.",
                 (
                     "REQ",
@@ -345,7 +345,7 @@ OPCIONES = argumentos.parse_args()
 IMGS = cargar(OPCIONES.capturas)
 
 #: Las cifras de la portada las deja `capturar-pantallas.mjs` preguntándoselas a
-#: la API. **No se escriben aquí**: estuvieron escritas a mano, el encargo de
+#: la API. **No se escriben aquí**: estuvieron escritas a mano, el proyecto de
 #: demostración creció a dos activos y la portada siguió diciendo uno durante
 #: semanas. Una cifra falsa en la primera pantalla desmiente lo que viene detrás.
 _CIFRAS = OPCIONES.capturas / "cifras.json"
@@ -369,7 +369,7 @@ def img(clave: str) -> str:
 partes: list[str] = []
 indice: list[str] = []
 # Numeración corrida 01…22 y no «bloque.lámina»: los bloques funcionales ya
-# tienen su propio número en el encargo (Bloque 1 … Bloque 4) y usar dos
+# tienen su propio número en el proyecto (Bloque 1 … Bloque 4) y usar dos
 # numeraciones distintas a la vez haría que la lámina 2.5 estuviera dentro del
 # «Bloque 1». El recorrido es una secuencia real, así que se numera como tal.
 lamina_n = 0
@@ -627,12 +627,12 @@ HTML = f"""<title>Due diligence técnica</title>
     <p class="entradilla">
       Estas no son maquetas dibujadas: son <strong>capturas de la aplicación
       corriendo</strong> —API, base de datos, proceso trabajador e interfaz— sobre un
-      encargo de demostración con datos ficticios. Recorren la TDD en el orden en que
-      ocurre: el encargo, la evidencia de campo, el CAPEX y el informe.
+      proyecto de demostración con datos ficticios. Recorren la TDD en el orden en que
+      ocurre: el proyecto, la evidencia de campo, el CAPEX y el informe.
     </p>
 
     <dl class="ficha">
-      <div><dt>Encargo</dt><dd>Plataforma logística Getafe Norte</dd></div>
+      <div><dt>Proyecto</dt><dd>Plataforma logística Getafe Norte</dd></div>
       <div><dt>Activos</dt><dd>{CIFRAS["activos"]}</dd></div>
       <div><dt>Ubicaciones</dt><dd>{CIFRAS["ubicaciones"]}</dd></div>
       <div><dt>Hallazgos</dt><dd>{CIFRAS["hallazgos"]}</dd></div>
@@ -642,10 +642,10 @@ HTML = f"""<title>Due diligence técnica</title>
 
     <div class="aviso">
       <p><b>Todos los datos son ficticios.</b> No hay ningún dato real de cliente,
-      ninguna dirección real ni ninguna fotografía de un activo real. El encargo se
+      ninguna dirección real ni ninguna fotografía de un activo real. El proyecto se
       sembró a propósito para poder enseñar la aplicación.</p>
       <p><b>La revisión documental con IA no tiene proveedor.</b> Lo construido es el
-      puerto, la autorización por encargo y la pantalla; ningún modelo ha leído nada.
+      puerto, la autorización por proyecto y la pantalla; ningún modelo ha leído nada.
       Lo que hoy produce está simulado y va marcado como simulado en la base de datos,
       en la API y en pantalla.</p>
     </div>
@@ -665,7 +665,7 @@ HTML = f"""<title>Due diligence técnica</title>
   <div class="envoltura">
     <h2>Qué se ve aquí y qué no</h2>
     <ul>
-      <li><strong>Funciona de verdad</strong> lo que aparece en las láminas: el encargo,
+      <li><strong>Funciona de verdad</strong> lo que aparece en las láminas: el proyecto,
       las fases, los activos y su árbol de ubicaciones, las fotografías con su
       clasificación y detección de duplicados, el inventario con su importación desde
       Excel, el CAPEX con su comparador de precios, y la generación del PPTX, que en la

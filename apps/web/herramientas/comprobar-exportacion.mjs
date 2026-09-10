@@ -1,5 +1,5 @@
 /** Comprueba que el botón de exportar CAPEX descarga la plantilla del cliente,
- *  que el selector de idioma cambia de plantilla de verdad, y que en un encargo
+ *  que el selector de idioma cambia de plantilla de verdad, y que en un proyecto
  *  de cartera la descarga sale **separada por activo**.
  *
  *  Las pruebas de la API ya cubren el fichero. Lo que solo se ve aquí es que el
