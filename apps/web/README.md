@@ -310,6 +310,42 @@ estructura no había forma de dar de alta un soft cost, y no saltaba nada:
 simplemente no estaba en el desplegable. Ahora se ofrecen los objetos y las
 categorías sin objetos, agrupados por tipo de coste.
 
+### La visita del activo
+
+`src/paginas/VisitaDelActivo.tsx`, dentro de la ficha del activo y **encima del
+inventario** (§3.2 c de `docs/23`): la visita es de donde sale el inventario —se
+recorre el edificio y se apunta lo que hay—, y sus limitaciones de acceso
+explican por qué lo de abajo puede estar incompleto.
+
+**Casi nada de esto es nuevo.** `asset_visit` ya tenía estado, fecha prevista,
+fecha real, quién la dirigió, limitaciones de acceso y resumen, y ya admitía
+varias visitas por activo. La pantalla lo enseña donde el cliente lo quiere y
+añade lo que faltaba: punto de encuentro, coste y la lista de asistentes.
+
+Cuatro decisiones que no son de detalle:
+
+* **«Check visita» es el estado, no una casilla aparte.** La hoja pide «marcar
+  si la visita ha sido realizada» y eso ya existe: es `VISITADO`, y la base
+  exige fecha real para aceptarlo. Una casilla booleana al lado habría creado
+  dos verdades sobre lo mismo, y «¿cuál manda?» no tiene buena respuesta.
+* **El punto de encuentro llega propuesto** con la dirección del activo. Es lo
+  que se sabe, y quien programa lo corrige con por dónde se entra de verdad;
+  pedirlo en blanco garantiza que casi siempre quede vacío, y entonces el día de
+  la visita nadie sabe por dónde se entra.
+* **La fecha real solo se pide cuando la visita ya está hecha.** Pedirla antes
+  invita a rellenarla con la prevista, y esa es la fecha que acaba fechando el
+  informe.
+* **El coste dice dónde NO acaba, antes de teclearlo.** «Coste interno del
+  encargo: NO entra en el CAPEX del edificio ni sale en el informe del cliente»
+  está en la ayuda del campo, no en un comentario del código. Quien teclea un
+  importe tiene derecho a saber a dónde va.
+
+**El equipo implicado son dos listas en una.** Del equipo se elige de un
+desplegable de personas —y su nombre **no es editable**, porque sale de su
+cuenta—; quien acompaña se escribe, porque no tiene cuenta en la aplicación y
+nunca la va a tener. Los cuatro «Responsable» de la hoja del cliente eran los que
+cabían en una hoja de cálculo: aquí la lista no tiene tope.
+
 ### El inventario del activo
 
 `src/paginas/InventarioDelActivo.tsx`, encima del árbol del CAPEX dentro de la

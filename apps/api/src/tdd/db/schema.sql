@@ -716,13 +716,76 @@ CREATE TABLE asset_visit (
     led_by             UUID REFERENCES app_user(id),
     access_limitations TEXT,
     summary            TEXT,
+
+    -- [REQ] §3.2 c · «Ubicación» de la hoja del cliente. NO repite la dirección
+    -- del activo, que ya está en `asset` con sus coordenadas: es el punto de
+    -- encuentro y lo que hace falta saber el día de la visita —«entrada por el
+    -- muelle 4, preguntar por el jefe de mantenimiento»—. Se propone desde la
+    -- ficha del activo y se corrige aquí.
+    meeting_point      TEXT,
+
+    -- [REQ] §3.2 c · «Costes visita»: monto económico total de la visita.
+    --
+    -- Es COSTE INTERNO DEL ENCARGO y lo decidió el cliente: no entra en el
+    -- CAPEX ni sale en el informe. Los desplazamientos y las horas del
+    -- consultor no son coste del edificio, y colarlos en los soft costs
+    -- inflaría la cifra con la que el inversor negocia el precio de compra.
+    -- Lo fija una prueba sobre el snapshot del informe, no solo esta nota.
+    cost_amount        NUMERIC(12,2) CHECK (cost_amount IS NULL OR cost_amount >= 0),
+
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT agendado_exige_fecha
         CHECK (status <> 'AGENDADO' OR scheduled_date IS NOT NULL),
     CONSTRAINT visitado_exige_fecha_real
         CHECK (status <> 'VISITADO' OR actual_date IS NOT NULL)
 );
 CREATE INDEX asset_visit_proyecto_idx ON asset_visit (project_id, status);
+CREATE INDEX asset_visit_activo_idx ON asset_visit (asset_id, scheduled_date DESC);
+
+-- ── [REQ] §3.2 c · Quién fue a la visita ────────────────────────────────────
+--
+-- La hoja del cliente trae «Responsable 1» a «Responsable 4». Son cuatro
+-- porque es lo que cabía en una hoja de cálculo, no porque a una visita vayan
+-- cuatro personas: aquí es una lista sin tope.
+--
+-- Y son DOS COSAS distintas en la misma lista:
+--
+--   * el equipo, que son USUARIOS de la aplicación. Con la clave ajena se
+--     puede preguntar «qué activos visitó cada uno» y firmar lo que cada uno
+--     escribe; con un nombre tecleado, no.
+--   * quien acompaña —el jefe de mantenimiento, el property manager, el
+--     mantenedor de PCI—, que NO tiene cuenta y nunca la va a tener. Perderlo
+--     sería perder a quien abrió el cuarto de máquinas, que es justo la
+--     persona a la que se vuelve a llamar seis meses después.
+CREATE TABLE visit_attendee (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organization(id),
+    asset_visit_id  UUID NOT NULL REFERENCES asset_visit(id) ON DELETE CASCADE,
+
+    -- Una de las dos y solo una. Un asistente es del equipo o es de fuera.
+    app_user_id     UUID REFERENCES app_user(id),
+    external_name   VARCHAR(200),
+
+    -- En calidad de qué vino. Vale para los dos: «responsable de la visita»,
+    -- «jefe de mantenimiento», «mantenedor de PCI».
+    role_note       VARCHAR(200),
+    display_order   SMALLINT NOT NULL DEFAULT 0,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT asistente_es_del_equipo_o_de_fuera
+        CHECK ((app_user_id IS NULL) <> (external_name IS NULL)),
+    -- Un nombre en blanco deja una fila que ocupa sitio y no dice nada.
+    CONSTRAINT asistente_externo_con_nombre
+        CHECK (external_name IS NULL OR length(trim(external_name)) > 0)
+);
+
+-- La misma persona del equipo no se apunta dos veces a la misma visita. Los
+-- externos sí pueden repetir nombre: dos «Juan» de dos empresas distintas son
+-- dos personas, y no hay forma de distinguirlas salvo por el `role_note`.
+CREATE UNIQUE INDEX visit_attendee_usuario_uniq
+    ON visit_attendee (asset_visit_id, app_user_id) WHERE app_user_id IS NOT NULL;
+CREATE INDEX visit_attendee_visita_idx ON visit_attendee (asset_visit_id, display_order);
 
 CREATE TYPE qa_round_status AS ENUM ('ABIERTA', 'ENVIADA', 'RESPONDIDA', 'CERRADA');
 
@@ -2750,7 +2813,7 @@ BEGIN
         'cost_profile',
         'price_source', 'price_reference', 'finding', 'capex_item', 'equipment',
         'stored_object', 'audit_log', 'suggestion_comment',
-        'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit',
+        'project_phase', 'doc_request_item', 'vdr_link', 'asset_visit', 'visit_attendee',
         'qa_round', 'phase_event',
         'photo', 'photo_version', 'photo_derivative', 'photo_link', 'location_node',
         'user_session', 'project_member', 'asset_assignment', 'qa_question', 'document',

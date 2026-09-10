@@ -195,23 +195,63 @@ la nota de a quién pedir acceso bastan. `[SUP]` S-12: no se replica el contenid
 
 **Índices:** `(project_phase_id)`; `UNIQUE(project_phase_id) WHERE is_active AND deleted_at IS NULL`.
 
-#### `asset_visit` — fase «Visita al activo»
+#### `asset_visit` — fase «Visita al activo» y §3.2 c del activo
 `id` · `organization_id` · `project_id` · `asset_id` FK ·
 `status` ENUM(`PENDIENTE_DEFINIR`,`AGENDADO`,`VISITADO`) `[REQ]` ·
-`scheduled_date` DATE NULL · `actual_date` DATE NULL · `started_at` · `ended_at` ·
-`led_by` FK NULL · `attendees` JSONB · `weather_conditions` TEXT ·
-`access_limitations` TEXT · `summary` TEXT · auditoría · soft delete.
+`scheduled_date` DATE NULL · `actual_date` DATE NULL · `led_by` FK NULL ·
+`access_limitations` TEXT · `summary` TEXT · `meeting_point` TEXT ·
+`cost_amount` NUMERIC(12,2) · `created_at` · `updated_at`.
 
 **Restricciones:** `CHECK (status <> 'AGENDADO' OR scheduled_date IS NOT NULL)`;
-`CHECK (status <> 'VISITADO' OR actual_date IS NOT NULL)`.
-**Índices:** `(project_id, status)`, `(asset_id, actual_date)`.
+`CHECK (status <> 'VISITADO' OR actual_date IS NOT NULL)`;
+`CHECK (cost_amount IS NULL OR cost_amount >= 0)`.
+**Índices:** `(project_id, status)`, `(asset_id, scheduled_date DESC)`.
+
+> `[LIM]` **Esta ficha describía cuatro columnas que la tabla nunca tuvo** —`started_at`,
+> `ended_at`, `attendees` JSONB y `weather_conditions`— además de auditoría y borrado lógico. Se
+> corrige al construir §3.2 c, que es cuando se ha mirado la tabla de verdad. Los asistentes, que
+> era la única de las cuatro que hacía falta, son ahora una tabla propia y no un JSONB: ver
+> `visit_attendee`.
 
 `[SUP]` S-11 / P-10: la visita se registra **por activo** y puede haber varias por activo. El estado
 de la fase `VISITA` del proyecto se deriva: `COMPLETADA` cuando todas las visitas aplicables están en
 `VISITADO`.
 
+`[REQ]` §3.2 c · **`meeting_point` no repite la dirección del activo**, que ya está en `asset` con
+sus coordenadas: es el punto de encuentro y lo que hace falta el día de la visita —«entrada por el
+muelle 4, preguntar por el jefe de mantenimiento»—. La pantalla lo propone desde la ficha del
+activo, porque pedirlo en blanco garantiza que casi siempre quede vacío.
+
+`[REQ]` §3.2 c · **`cost_amount` es coste interno del encargo.** Lo decidió el cliente: no entra en
+el CAPEX ni sale en el informe. Los desplazamientos y las horas del consultor no son coste del
+edificio, y colarlos en los soft costs inflaría la cifra con la que el inversor negocia el precio de
+compra. El snapshot del informe solo lee `access_limitations` de esta tabla, y una prueba comprueba
+que el importe no aparece **en ninguna parte** del JSON congelado.
+
 `[REC]` `access_limitations` es un campo que en TDD vale oro: siempre hay zonas no accesibles y hay
 que declararlo en el informe.
+
+#### `visit_attendee` — el «Equipo implicado» `[REQ]` §3.2 c
+`id` · `organization_id` · `asset_visit_id` FK · `app_user_id` FK NULL · `external_name` NULL ·
+`role_note` · `display_order` · `created_at`.
+
+**Restricciones:** `CHECK ((app_user_id IS NULL) <> (external_name IS NULL))`;
+`CHECK (external_name IS NULL OR length(trim(external_name)) > 0)`.
+**Índices:** `UNIQUE(asset_visit_id, app_user_id) WHERE app_user_id IS NOT NULL`,
+`(asset_visit_id, display_order)`.
+
+La hoja del cliente trae «Responsable 1» a «Responsable 4». **Cuatro es lo que cabía en una hoja de
+cálculo**, no lo que va a una visita: aquí la lista no tiene tope.
+
+Y son **dos cosas en la misma lista**, que es lo que explica el primer `CHECK`. El equipo son
+usuarios de la aplicación, con clave ajena, y eso es lo que permite preguntar «qué activos visitó
+cada uno» y firmar lo que cada uno escribe. Quien acompaña —el jefe de mantenimiento, el property
+manager, el mantenedor de PCI— **no tiene cuenta y nunca la va a tener**, y perderlo sería perder a
+quien abrió el cuarto de máquinas: justo la persona a la que se vuelve a llamar seis meses después.
+
+`[SUP]` El único índice sin excepciones es el de usuarios: dos acompañantes **sí** pueden llamarse
+igual, porque dos «Juan» de dos empresas distintas son dos personas y lo único que los distingue es
+el `role_note`.
 
 #### `qa_round` · `qa_document` — fase «Q&A»
 `qa_round`: `id` · `organization_id` · `project_phase_id` · `round_number` · `title` · `sent_at` ·

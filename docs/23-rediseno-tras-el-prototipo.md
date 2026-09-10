@@ -112,7 +112,7 @@ ser secciones **de cada activo**. Cinco:
 |---|---|---|
 | **a) Detalle** | La ficha que ya existe | ✅ existe, se mueve |
 | **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, verde/gris, no bloqueante | ✅ **definida**, por construir |
-| **c) Visita** | Ubicación, fecha, check de realizada, equipo implicado, coste y fotos | ✅ **definida**, por construir |
+| **c) Visita** | Ubicación, fecha, check de realizada, equipo implicado, coste y fotos | ✅ |
 | **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo; y el **descriptivo de cada objeto de Hard Cost**, editable y con su casilla de validado | ✅ |
 | **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
 
@@ -160,7 +160,7 @@ casilla documental con el objeto del CAPEX permitiría que *«no hay Informe Pre
 se convierta en una limitación sobre `MA1.08` sin que nadie la teclee. **No se construye sin que
 el cliente lo pida**: es una inferencia sobre su método de trabajo, no un requisito suyo.
 
-#### c) Visita ✅ definida
+#### c) Visita ✅
 
 De la hoja del cliente, sin cambios entre v1 y v2. Tres bloques:
 
@@ -193,6 +193,29 @@ la visita —«entrada por el muelle 4, preguntar por el jefe de mantenimiento»
 `[SUP]` **`V1.2` está dos veces en la hoja**, en «Fecha visita programada» y en «Check visita». Se
 renumera el segundo a `V1.3`. Es el mismo tipo de errata que `H14`, que venía marcado como objeto
 siendo categoría.
+
+**Lo construido, y lo que costó menos de lo previsto.** Media jornada en vez de uno o dos días,
+porque `asset_visit` ya traía seis de los ocho campos. Lo nuevo es `meeting_point`, `cost_amount` y
+la tabla `visit_attendee`; lo demás es enseñarlo dentro del activo.
+
+`[REQ]` **El coste no sale del encargo, y eso está fijado por una prueba.** Una nota en el código
+no impide que alguien añada mañana el importe al snapshot del informe. `test_visita_del_activo.py`
+congela el snapshot y busca la cifra **en el JSON entero**, no solo en el trozo de las visitas: un
+campo nuevo en cualquier otra parte se colaría igual, y así no se cuela sin que salte la suite.
+
+`[LIM]` **Construir esto destapó dos divergencias entre los documentos y el código**, las dos del
+mismo tipo: documentación escrita por delante que nunca se corrigió cuando se construyó menos de lo
+previsto.
+
+- [`04`](./04-modelo-de-datos.md) describía cuatro columnas de `asset_visit` que la tabla nunca ha
+  tenido —`started_at`, `ended_at`, `attendees` JSONB y `weather_conditions`— más auditoría y
+  borrado lógico.
+- [`06`](./06-api.md) documentaba dos endpoints que no existen, `POST /visits/{id}/start` y
+  `/complete`.
+
+Las dos fichas se corrigen a lo que hay. De las cuatro columnas, la única que hacía falta eran los
+asistentes, y son ahora una tabla propia y no un JSONB: un JSONB no puede tener clave ajena a
+`app_user`, y sin ella «qué activos visitó cada uno» no se puede preguntar.
 
 #### d) Inventario ✅
 
@@ -408,7 +431,7 @@ Con una persona a tiempo completo que ya conoce el código.
 | ~~§3.2 e · el árbol del CAPEX por activo~~ | ✅ hecho |
 | ~~§3.2 d · el inventario del activo~~ | ✅ hecho |
 | §3.2 b · documentación del activo (73 nodos, 60 casillas) | 3-4 días · **definida** |
-| §3.2 c · visita del activo | 1-2 días · **definida** · casi todo existe en `asset_visit` |
+| ~~§3.2 c · visita del activo~~ | ✅ hecho · **medio día**, no 1-2: `asset_visit` ya tenía casi todo |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 | Documentación y visita del activo | por definir |

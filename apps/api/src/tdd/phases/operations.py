@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
@@ -326,6 +327,9 @@ class Visita(BaseModel):
     asset_id: uuid.UUID
     scheduled_date: date | None = None
     led_by: uuid.UUID | None = None
+    #: `[REQ]` §3.2 c · La «Ubicación» de la hoja del cliente: el punto de
+    #: encuentro, no la dirección del activo —que ya está en su ficha—.
+    meeting_point: str | None = None
 
 
 class ActualizarVisita(BaseModel):
@@ -340,6 +344,37 @@ class ActualizarVisita(BaseModel):
     #: afirmar sobre ella.
     access_limitations: str | None = None
     summary: str | None = None
+    meeting_point: str | None = None
+    #: `[REQ]` §3.2 c · Coste **interno del encargo**. Ver `COSTE_ES_INTERNO`.
+    cost_amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
+
+
+class Asistente(BaseModel):
+    """Una línea del «Equipo implicado», ya resuelta para la pantalla."""
+
+    id: uuid.UUID
+    app_user_id: uuid.UUID | None
+    #: El nombre que se enseña, venga de la cuenta o esté tecleado.
+    nombre: str
+    #: Verdadero si es del equipo. La pantalla los agrupa por esto.
+    es_del_equipo: bool
+    role_note: str | None
+
+
+class LineaDeAsistente(BaseModel):
+    """Una línea tal como la manda la pantalla: usuario **o** nombre suelto."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    app_user_id: uuid.UUID | None = None
+    external_name: str | None = Field(default=None, max_length=200)
+    role_note: str | None = Field(default=None, max_length=200)
+
+
+class Asistentes(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    asistentes: list[LineaDeAsistente] = Field(max_length=50)
 
 
 class VisitaLeida(BaseModel):
@@ -352,13 +387,69 @@ class VisitaLeida(BaseModel):
     led_by: uuid.UUID | None
     access_limitations: str | None
     summary: str | None
+    meeting_point: str | None
+    cost_amount: Decimal | None
+    asistentes: list[Asistente] = Field(default_factory=list)
 
 
 _VISITA = """
     SELECT v.id, v.asset_id, a.name AS asset_name, CAST(v.status AS text) AS status,
-           v.scheduled_date, v.actual_date, v.led_by, v.access_limitations, v.summary
+           v.scheduled_date, v.actual_date, v.led_by, v.access_limitations, v.summary,
+           v.meeting_point, v.cost_amount
     FROM asset_visit v JOIN asset a ON a.id = v.asset_id
 """
+
+#: `[REQ]` §3.2 c · **El coste de la visita no sale del encargo.**
+#:
+#: Lo decidió el cliente: es coste interno, no del edificio. No entra en el
+#: CAPEX ni en el informe, y los desplazamientos y las horas del consultor no
+#: pueden inflar la cifra con la que el inversor negocia el precio de compra.
+#: Aquí no hay nada que hacer para conseguirlo —el snapshot del informe solo lee
+#: `access_limitations` de esta tabla—, pero sí algo que **no** hacer: no
+#: añadirlo al snapshot. Lo fija `test_visita_del_activo.py`.
+COSTE_ES_INTERNO = True
+
+
+def _asistentes(s: Session, visit_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Los asistentes de varias visitas, en una sola consulta.
+
+    De golpe y no visita a visita: la sección de un activo con cuatro visitas
+    haría cinco consultas donde basta con dos, y el listado del proyecto una por
+    cada activo.
+    """
+    if not visit_ids:
+        return {}
+    filas = (
+        s.execute(
+            text(
+                "SELECT va.id, va.asset_visit_id, va.app_user_id, va.role_note, "
+                "       COALESCE(u.full_name, va.external_name) AS nombre, "
+                "       va.app_user_id IS NOT NULL AS es_del_equipo "
+                "FROM visit_attendee va "
+                "LEFT JOIN app_user u ON u.id = va.app_user_id "
+                "WHERE va.asset_visit_id = ANY(CAST(:ids AS uuid[])) "
+                # Primero el equipo y después los de fuera, y dentro de cada
+                # grupo por el orden en que se apuntaron: es como se lee una
+                # lista de asistentes en un acta.
+                "ORDER BY va.app_user_id IS NULL, va.display_order, nombre"
+            ),
+            {"ids": visit_ids},
+        )
+        .mappings()
+        .all()
+    )
+    por_visita: dict[str, list[dict[str, Any]]] = {}
+    for f in filas:
+        d = dict(f)
+        por_visita.setdefault(str(d.pop("asset_visit_id")), []).append(d)
+    return por_visita
+
+
+def _con_asistentes(s: Session, filas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    por_visita = _asistentes(s, [str(f["id"]) for f in filas])
+    for f in filas:
+        f["asistentes"] = por_visita.get(str(f["id"]), [])
+    return filas
 
 
 @router.post(
@@ -381,8 +472,8 @@ def programar_visita(
     nuevo = s.execute(
         text(
             "INSERT INTO asset_visit (organization_id, project_id, asset_id, status, "
-            "scheduled_date, led_by) "
-            "VALUES (:o, :p, :a, CAST(:e AS visit_status), :f, :l) RETURNING id"
+            "scheduled_date, led_by, meeting_point) "
+            "VALUES (:o, :p, :a, CAST(:e AS visit_status), :f, :l, :m) RETURNING id"
         ),
         {
             "o": str(usuario.organization_id),
@@ -391,9 +482,25 @@ def programar_visita(
             "e": "AGENDADO" if cuerpo.scheduled_date else "PENDIENTE_DEFINIR",
             "f": cuerpo.scheduled_date,
             "l": str(cuerpo.led_by) if cuerpo.led_by else None,
+            "m": (cuerpo.meeting_point or "").strip() or None,
         },
     ).scalar_one()
-    return dict(s.execute(text(f"{_VISITA} WHERE v.id = :i"), {"i": str(nuevo)}).mappings().one())  # noqa: S608
+    fila = dict(
+        s.execute(text(f"{_VISITA} WHERE v.id = :i"), {"i": str(nuevo)}).mappings().one()  # noqa: S608
+    )
+    # Quien dirige la visita entra en la lista de asistentes: estuvo allí, y
+    # tenerlo solo en `led_by` obligaría a la pantalla a sumarlo aparte y a
+    # acordarse de no duplicarlo cuando además se le apunte a mano.
+    if cuerpo.led_by:
+        s.execute(
+            text(
+                "INSERT INTO visit_attendee (organization_id, asset_visit_id, app_user_id, "
+                "  role_note) VALUES (:o, :v, :u, 'Responsable de la visita') "
+                "ON CONFLICT DO NOTHING"
+            ),
+            {"o": str(usuario.organization_id), "v": str(nuevo), "u": str(cuerpo.led_by)},
+        )
+    return _con_asistentes(s, [fila])[0]
 
 
 @router.get("/projects/{project_id}/visits", response_model=list[VisitaLeida])
@@ -406,7 +513,40 @@ def listar_visitas(project_id: uuid.UUID, s: SesionDep) -> Any:
         .mappings()
         .all()
     )
-    return [dict(f) for f in filas]
+    return _con_asistentes(s, [dict(f) for f in filas])
+
+
+@router.get("/assets/{asset_id}/visits", response_model=list[VisitaLeida])
+def listar_visitas_del_activo(asset_id: uuid.UUID, s: SesionDep) -> Any:
+    """Las visitas de **un activo** `[REQ]` §3.2 c de `docs/23`.
+
+    La sección de visita vive dentro del activo, y filtrar el listado del
+    proyecto en el navegador traería las de los otros edificios para tirarlas.
+
+    **Varias por activo, y en orden inverso.** Un activo se visita más de una
+    vez —se vuelve con el instalador, o a ver la cubierta que llovía—, y la
+    última es la que se está rellenando. Ponerla arriba evita bajar hasta el
+    final de la lista cada vez que se abre la ficha.
+    """
+    existe = s.execute(
+        text("SELECT 1 FROM asset WHERE id = :a AND deleted_at IS NULL"),
+        {"a": str(asset_id)},
+    ).first()
+    if existe is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Activo no encontrado")
+    filas = (
+        s.execute(
+            text(  # noqa: S608
+                f"{_VISITA} WHERE v.asset_id = :a "
+                "ORDER BY COALESCE(v.actual_date, v.scheduled_date) DESC NULLS FIRST, "
+                "         v.created_at DESC"
+            ),
+            {"a": str(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return _con_asistentes(s, [dict(f) for f in filas])
 
 
 @router.patch("/visits/{visit_id}", response_model=VisitaLeida)
@@ -438,12 +578,107 @@ def actualizar_visita(visit_id: uuid.UUID, cuerpo: ActualizarVisita, s: SesionDe
         for c in cambios
     ]
     s.execute(
-        text(f"UPDATE asset_visit SET {', '.join(piezas)} WHERE id = :_id"),  # noqa: S608
+        text(  # noqa: S608
+            f"UPDATE asset_visit SET {', '.join(piezas)}, updated_at = now() WHERE id = :_id"
+        ),
         {**cambios, "_id": str(visit_id)},
     )
-    return dict(
-        s.execute(text(f"{_VISITA} WHERE v.id = :i"), {"i": str(visit_id)}).mappings().one()
-    )  # noqa: S608
+    fila = dict(
+        s.execute(text(f"{_VISITA} WHERE v.id = :i"), {"i": str(visit_id)}).mappings().one()  # noqa: S608
+    )
+    return _con_asistentes(s, [fila])[0]
+
+
+@router.put("/visits/{visit_id}/attendees", response_model=VisitaLeida)
+def guardar_asistentes(
+    visit_id: uuid.UUID, cuerpo: Asistentes, s: SesionDep, usuario: UsuarioDep
+) -> Any:
+    """El «Equipo implicado» de una visita `[REQ]` §3.2 c.
+
+    **La lista entera de una vez**, y no un alta y una baja por persona. Es como
+    se rellena: se abre la visita y se apunta quién fue, en un gesto. Con
+    endpoints por línea, quitar a uno y añadir a dos serían tres peticiones
+    capaces de fallar por separado y dejar la lista a medias.
+
+    Cada línea es **un usuario o un nombre suelto**, nunca las dos cosas. El
+    equipo va con clave ajena porque es lo que permite preguntar «qué activos
+    visitó cada uno»; quien acompaña —el jefe de mantenimiento, el mantenedor de
+    PCI— no tiene cuenta y nunca la va a tener, y perderlo sería perder a quien
+    abrió el cuarto de máquinas.
+
+    `[REQ]` **Cuatro no es un tope.** La hoja del cliente trae cuatro casillas de
+    «Responsable» porque es lo que cabía en una hoja de cálculo; el límite real
+    es el de una lista razonable, cincuenta.
+    """
+    visita = s.execute(
+        text("SELECT id FROM asset_visit WHERE id = :i"), {"i": str(visit_id)}
+    ).first()
+    if visita is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Visita no encontrada")
+
+    vistos: set[uuid.UUID] = set()
+    for linea in cuerpo.asistentes:
+        nombre = (linea.external_name or "").strip()
+        if bool(linea.app_user_id) == bool(nombre):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Cada asistente es una persona del equipo (`app_user_id`) o alguien de fuera "
+                "(`external_name`), nunca las dos cosas ni ninguna.",
+            )
+        if linea.app_user_id:
+            if linea.app_user_id in vistos:
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "La misma persona del equipo está dos veces en la lista.",
+                )
+            vistos.add(linea.app_user_id)
+
+    if vistos:
+        # Un usuario de otra organización no puede figurar en una visita de
+        # esta. La RLS no lo impide sola: `app_user_id` es una clave ajena a una
+        # tabla que la política de aislamiento **no** filtra por organización
+        # cuando se lee desde aquí, así que se comprueba explícitamente.
+        propios = {
+            f[0]
+            for f in s.execute(
+                text(
+                    "SELECT id FROM app_user WHERE id = ANY(CAST(:ids AS uuid[])) "
+                    "  AND organization_id = :o"
+                ),
+                {"ids": [str(u) for u in vistos], "o": str(usuario.organization_id)},
+            ).all()
+        }
+        ajenos = vistos - propios
+        if ajenos:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                f"{len(ajenos)} de los asistentes no son personas de esta organización.",
+            )
+
+    # Sustituir y no reconciliar: la lista es corta, se manda entera, y comparar
+    # línea a línea para conservar unos `created_at` que nadie mira sería
+    # complicar el código a cambio de nada.
+    s.execute(text("DELETE FROM visit_attendee WHERE asset_visit_id = :v"), {"v": str(visit_id)})
+    for orden, linea in enumerate(cuerpo.asistentes):
+        s.execute(
+            text(
+                "INSERT INTO visit_attendee (organization_id, asset_visit_id, app_user_id, "
+                "  external_name, role_note, display_order) "
+                "VALUES (:o, :v, :u, :n, :r, :d)"
+            ),
+            {
+                "o": str(usuario.organization_id),
+                "v": str(visit_id),
+                "u": str(linea.app_user_id) if linea.app_user_id else None,
+                "n": (linea.external_name or "").strip() or None,
+                "r": (linea.role_note or "").strip() or None,
+                "d": orden,
+            },
+        )
+    fila = dict(
+        s.execute(text(f"{_VISITA} WHERE v.id = :i"), {"i": str(visit_id)}).mappings().one()  # noqa: S608
+    )
+    return _con_asistentes(s, [fila])[0]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

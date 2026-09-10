@@ -6,6 +6,7 @@ import { FichaDeActivo } from './FichaDeActivo'
 import { ArbolDeUbicaciones } from './ArbolDeUbicaciones'
 import { ArbolDeCapex } from './ArbolDeCapex'
 import { InventarioDelActivo } from './InventarioDelActivo'
+import { VisitaDelActivo } from './VisitaDelActivo'
 
 export function PestanaActivos({ projectId }: { projectId: string }) {
   const [activos, setActivos] = useState<Activo[] | null>(null)
@@ -53,6 +54,11 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
         {editando !== 'nuevo' && (
           <>
             <ArbolDeUbicaciones assetId={editando.id} />
+            {/* `[REQ]` §3.2 c · La visita va antes que el inventario porque es
+                de donde sale: se recorre el edificio y se apunta lo que hay.
+                Y sus limitaciones de acceso explican por qué el inventario de
+                más abajo puede estar incompleto. */}
+            <VisitaDelActivo activo={editando} />
             {/* `[REQ]` §3.2 d · El inventario va **antes** que el árbol del
                 CAPEX y no después: describe lo que hay y marca lo que hay que
                 sustituir, y de ahí salen actuaciones que aparecen en el árbol.

@@ -2372,3 +2372,109 @@ button.enlace {
     min-width: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Visita del activo `[REQ]` §3.2 c de docs/23
+   ───────────────────────────────────────────────────────────────────────── */
+.visita-activo {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--borde);
+  padding-top: 1rem;
+}
+.visita-activo h4 {
+  margin: 1.4rem 0 0.3rem;
+  font-size: 0.95rem;
+}
+.visita-activo .recuento {
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-suave);
+}
+.visita-activo .filtro > .recuento {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.visitas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.visita {
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--papel);
+  padding: 0.2rem 0.9rem 0.9rem;
+}
+/* Una visita hecha se distingue de una pendiente por el borde, pero el estado
+   está escrito en su pastilla: el color acompaña y no informa por sí solo. */
+.visita.realizada {
+  border-left: 3px solid var(--ok);
+}
+.visita > details > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.6rem 0.1rem;
+  cursor: pointer;
+}
+.visita > details > summary:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+}
+.visita summary .cifra {
+  margin-left: auto;
+  color: var(--tinta-suave);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Los asistentes: quién, en calidad de qué, y quitar. Es una lista corta y no
+   una tabla, porque la mitad de las filas son un campo de texto. */
+.asistentes {
+  list-style: none;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.asistentes li {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(9rem, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radio);
+  background: var(--fondo);
+}
+/* Del equipo o de fuera se ve en el peso del nombre y en el borde, y la
+   diferencia de verdad la dice el propio control: el del equipo NO es
+   editable, porque su nombre sale de su cuenta. */
+.asistentes li.equipo {
+  border-left: 3px solid var(--acento);
+}
+.asistentes li.externo {
+  border-left: 3px dashed var(--borde);
+}
+.asistentes .quien {
+  font-weight: 600;
+}
+.asistentes .quien input,
+.asistentes .calidad {
+  width: 100%;
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .asistentes li {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .visita summary .cifra {
+    margin-left: 0;
+  }
+}

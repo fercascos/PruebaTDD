@@ -179,9 +179,19 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET`/`POST` | `/projects/{id}/visits` | Una por activo, varias posibles |
-| `PATCH` | `/visits/{id}` | Estado (`PENDIENTE_DEFINIR`/`AGENDADO`/`VISITADO`), fechas, limitaciones de acceso |
-| `POST` | `/visits/{id}/start` · `/complete` | Atajos de campo: fijan `started_at`/`actual_date` |
+| `GET`/`POST` | `/projects/{id}/visits` | Todas las del encargo. Varias por activo |
+| `GET` | `/assets/{id}/visits` | `[REQ]` §3.2 c · Las de **un activo**, la última primero. `404` si el activo no existe: una lista vacía se leería como «no tiene visitas» |
+| `PATCH` | `/visits/{id}` | Estado (`PENDIENTE_DEFINIR`/`AGENDADO`/`VISITADO`), fechas, punto de encuentro, limitaciones de acceso, resumen y **coste**. Marcar `VISITADO` sin fecha real la fecha hoy: es la fecha que fecha el informe |
+| `PUT` | `/visits/{id}/attendees` | `[REQ]` §3.2 c · El **«Equipo implicado»**, la lista entera de una vez. Cada línea es `app_user_id` **o** `external_name`, nunca las dos ni ninguna: `422`. Sin tope de cuatro |
+
+`[LIM]` **Aquí se documentaban dos endpoints que no existen**, `POST /visits/{id}/start` y
+`/complete`, con un `started_at` que la tabla tampoco tiene. Se quitan al construir §3.2 c. Lo que
+hacían lo hace el `PATCH`: marcar `VISITADO` fecha la visita sola.
+
+`[REQ]` §3.2 c · **El coste de la visita es coste interno del encargo y no sale del encargo.** No
+entra en el CAPEX ni en el informe: los desplazamientos y las horas del consultor no son coste del
+edificio. El snapshot solo lee `access_limitations` de `asset_visit`, y una prueba comprueba que el
+importe no aparece en ninguna parte del JSON congelado.
 
 ### Q&A
 

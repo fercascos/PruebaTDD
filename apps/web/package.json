@@ -17,6 +17,7 @@
     "test:comparador": "node herramientas/comprobar-comparador.mjs",
     "test:inventario": "node herramientas/comprobar-inventario.mjs",
     "test:inventario-activo": "node herramientas/comprobar-inventario-del-activo.mjs",
+    "test:visita-activo": "node herramientas/comprobar-visita-del-activo.mjs",
     "test:importacion": "node herramientas/comprobar-importacion.mjs",
     "test:exportacion": "node herramientas/comprobar-exportacion.mjs",
     "test:ancho": "node herramientas/comprobar-ancho.mjs",

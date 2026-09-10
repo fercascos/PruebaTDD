@@ -341,6 +341,50 @@ export type EsqueletoDeEquipos = {
   avisos: string[]
 }
 
+/** `[REQ]` §3.2 c · Una línea del «Equipo implicado» de una visita.
+ *
+ *  Son dos cosas en la misma lista: el equipo, que son usuarios de la
+ *  aplicación, y quien acompaña —el jefe de mantenimiento, el mantenedor de
+ *  PCI—, que no tiene cuenta y nunca la va a tener. `nombre` viene ya resuelto
+ *  del servidor para las dos, así que la pantalla no tiene que ir a buscarlo.
+ */
+export type AsistenteDeVisita = {
+  id: string
+  app_user_id: string | null
+  nombre: string
+  es_del_equipo: boolean
+  role_note: string | null
+}
+
+/** `[REQ]` §3.2 c · Una visita al activo. Puede haber varias. */
+export type Visita = {
+  id: string
+  asset_id: string
+  asset_name: string
+  /** `VISITADO` es el «check visita realizada» de la hoja del cliente. */
+  status: 'PENDIENTE_DEFINIR' | 'AGENDADO' | 'VISITADO'
+  scheduled_date: string | null
+  actual_date: string | null
+  led_by: string | null
+  /** Lo que no se pudo ver. De lo que más pesa en el informe. */
+  access_limitations: string | null
+  summary: string | null
+  /** El punto de encuentro, no la dirección del activo: esa está en su ficha. */
+  meeting_point: string | null
+  /** `[REQ]` Coste **interno del encargo**: no entra en el CAPEX ni en el informe. */
+  cost_amount: string | null
+  asistentes: AsistenteDeVisita[]
+}
+
+/** Una persona del directorio de la organización, para los desplegables. */
+export type Persona = {
+  id: string
+  full_name: string
+  email: string
+  org_role: string
+  is_active: boolean
+}
+
 export type FilaImportada = {
   /** Número de fila tal como se ve en Excel: decir «fila 3» y que sea la 3. */
   fila: number
