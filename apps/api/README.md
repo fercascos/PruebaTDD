@@ -111,6 +111,14 @@ actuaciones repartidas por el árbol del cliente.
 validaciones que usaría una persona, y una captura no puede mostrar un estado que la aplicación no
 sabría producir.
 
+> `[LIM]` **El dashboard de la demostración salía vacío de clasificación.** Los hallazgos se
+> sembraban con `riesgos.get("ALTO")` y el catálogo codifica los grados `01`..`04`, así que la
+> búsqueda no casaba nunca: las diez actuaciones aparecían **«Sin clasificar»** en la matriz de
+> riesgos, y el concepto de gasto no se ponía siquiera. El queso de «Distribución por concepto»
+> tenía una sola porción del 100 %, que es justo lo contrario de lo que esa pantalla existe para
+> enseñar. Ahora cada hallazgo lleva su grado y su concepto por código, y uno que no exista detiene
+> la siembra.
+
 > `[LIM]` Los hallazgos de la demostración llevaban el **capítulo** y se resolvían buscando por
 > subcadena, con `codigos[0]` como salida cuando no había coincidencia. Al adoptar el árbol del
 > cliente cambió qué es cada número, así que la demostración enseñaba una **enfriadora archivada en

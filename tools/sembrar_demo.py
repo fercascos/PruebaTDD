@@ -133,68 +133,75 @@ def imagen(color: tuple[int, int, int], texto: str) -> bytes:
 #: Fachadas**; y cuando el código no existía, el `next` caía en `codigos[0]` sin
 #: decir nada. Con el código entero, un fallo de codificación se ve al leer esta
 #: lista, y uno que no exista revienta la siembra en vez de mentir en el árbol.
-HALLAZGOS: tuple[tuple[str, str, str, str, str], ...] = (
-    ("Enfriadora al final de su vida útil", "HC.H08.01", "MEDIO", "48500.00", "ALTO"),
+HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
+    ("Enfriadora al final de su vida útil", "HC.H08.01", "MEDIO", "48500.00", "03", "VIDA_UTIL"),
     (
         "Lámina de cubierta con ampollas generalizadas",
         "HC.H02.01",
         "CORTO",
         "83407.50",
-        "ALTO",
+        "03",
+        "REPARACION",
     ),
     (
         "Cuadro general sin protección diferencial en dos líneas",
         "HC.H09.02",
         "CORTO",
         "6200.00",
-        "MUY_ALTO",
+        "04",
+        "SEGURIDAD",
     ),
     (
         "Juntas de dilatación abiertas en fachada norte",
         "HC.H03.01",
         "MEDIO",
         "14300.00",
-        "MEDIO",
+        "02",
+        "REPARACION",
     ),
-    ("Luminarias de almacén sin sustituir a LED", "HC.H09.10", "LARGO", "31000.00", "BAJO"),
+    ("Luminarias de almacén sin sustituir a LED", "HC.H09.10", "LARGO", "31000.00", "01", "ESG"),
     (
         "Red de PCI sin certificado de mantenimiento vigente",
         "HC.H10.12",
         "CORTO",
         "9800.00",
-        "ALTO",
+        "03",
+        "NORMATIVA",
     ),
     # `[REQ]` Un soft cost, que se codifica en la CATEGORÍA porque en el árbol
     # del cliente los soft costs no tienen objetos. Sin él, la demostración
     # enseñaría solo Hard Costs y el árbol parecería tener un único tipo.
-    ("Redacción de proyecto y dirección de obra", "SC.S01", "CORTO", "18500.00", "BAJO"),
+    ("Redacción de proyecto y dirección de obra", "SC.S01", "CORTO", "18500.00", "01", "SOFT_COST"),
 )
 
 #: `[REQ]` El encargo de demostración es de **cartera**, no de un edificio.
 #: La plantilla CAPEX del cliente describe un solo activo, así que la separación
 #: por activo —un libro para cada uno— solo se ve con más de uno. Con un único
 #: activo la demostración enseñaba el caso fácil y escondía el que importa.
-HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str], ...] = (
+HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str], ...] = (
     (
         "Climatizadora de oficinas fuera de servicio",
         "HC.H08.01",
         "CORTO",
         "22400.00",
-        "ALTO",
+        "03",
+        "VIDA_UTIL",
     ),
     (
         "Falso techo con manchas de humedad en dos plantas",
         "HC.H04.03",
         "MEDIO",
         "11750.00",
-        "MEDIO",
+        "02",
+        "REPARACION",
     ),
     (
         "Escalera de emergencia sin señalización fotoluminiscente",
         "HC.H06.09",
         "CORTO",
         "4300.00",
-        "MUY_ALTO",
+        "04",
+        "NORMATIVA",
     ),
 )
 
@@ -353,6 +360,25 @@ def sembrar(api: Api) -> str:
     # ── Hallazgos y CAPEX ───────────────────────────────────────────────────
     zonas = api.get(f"/catalogs/zones?typology_id={tipologia['id']}")
     riesgos = {r["code"]: r["id"] for r in api.get("/catalogs/risk-levels")}
+    conceptos = {c["code"]: c["id"] for c in api.get("/catalogs/capex-concepts")}
+
+    def clasificacion(riesgo: str, concepto: str) -> dict[str, Any]:
+        """Grado de riesgo y concepto de gasto, **exigiendo que existan**.
+
+        `[REQ]` Antes esto era `riesgos.get(riesgo)` con palabras —«ALTO»,
+        «MUY_ALTO»— y el catálogo los codifica `01`..`04`: la búsqueda no casaba
+        nunca, así que las diez actuaciones salían **«Sin clasificar»** en la
+        matriz de riesgos y el concepto no se ponía siquiera. El dashboard de la
+        demostración enseñaba un queso de una sola porción del 100 % y una
+        exposición por riesgo con todo a cero, que es justo lo contrario de lo
+        que esas pantallas existen para enseñar.
+        """
+        if riesgo not in riesgos:
+            raise SystemExit(f"El grado de riesgo {riesgo} no está en el catálogo")
+        if concepto not in conceptos:
+            raise SystemExit(f"El concepto {concepto} no está en el catálogo")
+        return {"risk_level_id": riesgos[riesgo], "capex_concept_id": conceptos[concepto]}
+
     # Todos los niveles: un soft cost se codifica en su CATEGORÍA, porque en el
     # árbol del cliente los soft costs no tienen objetos.
     codigos = {c["code"]: c for c in api.get("/catalogs/capex-codes")}
@@ -371,7 +397,7 @@ def sembrar(api: Api) -> str:
             )
         return codigos[code]
 
-    for titulo, capitulo, plazo, importe, riesgo in HALLAZGOS:
+    for titulo, capitulo, plazo, importe, riesgo, concepto in HALLAZGOS:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
@@ -379,7 +405,7 @@ def sembrar(api: Api) -> str:
                 "asset_id": activo["id"],
                 "capex_code_id": codigo["id"],
                 "zone_id": zonas[hash(titulo) % len(zonas)]["id"],
-                "risk_level_id": riesgos.get(riesgo),
+                **clasificacion(riesgo, concepto),
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
                 "capex_lines": [{"time_horizon_code": plazo, "amount": importe}],
@@ -418,7 +444,7 @@ def sembrar(api: Api) -> str:
     # Las zonas se piden para SU tipología: la lista de un edificio de oficinas
     # no es la de una nave, y es justo lo que arregla separar los libros.
     zonas_b = api.get(f"/catalogs/zones?typology_id={oficinas['id']}")
-    for titulo, capitulo, plazo, importe, riesgo in HALLAZGOS_SEGUNDO:
+    for titulo, capitulo, plazo, importe, riesgo, concepto in HALLAZGOS_SEGUNDO:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
@@ -426,7 +452,7 @@ def sembrar(api: Api) -> str:
                 "asset_id": segundo["id"],
                 "capex_code_id": codigo["id"],
                 "zone_id": zonas_b[hash(titulo) % len(zonas_b)]["id"],
-                "risk_level_id": riesgos.get(riesgo),
+                **clasificacion(riesgo, concepto),
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
                 "capex_lines": [{"time_horizon_code": plazo, "amount": importe}],
