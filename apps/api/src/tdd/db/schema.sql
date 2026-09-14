@@ -1077,6 +1077,26 @@ CREATE TABLE equipment (
     project_id          UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
     asset_id            UUID NOT NULL REFERENCES asset(id) ON DELETE CASCADE,
     technical_system_id UUID REFERENCES technical_system(id),
+
+    -- [REQ] §3.2 d · El OBJETO del árbol al que pertenece este equipo: nivel 3,
+    -- dentro de Hard Cost. Es lo que reestructura el inventario en «categorías
+    -- y dentro de cada categoría sus objetos», y lo que hace que generar la
+    -- actuación de un equipo marcado ya no tenga que adivinar dónde colgarla.
+    --
+    -- Convive con `technical_system_id` y no lo sustituye: el sistema es la
+    -- clasificación transversal que usa el renombrado de fotografías, y además
+    -- NO sirve para colgar del árbol. El sistema «Protección contra incendios»
+    -- vale `H06 + H10` en la hoja del cliente —protección pasiva y activa, dos
+    -- capítulos—, así que de él no se deduce una categoría única. Al preguntar
+    -- el objeto mientras se inventaría, con el equipo delante, esa ambigüedad se
+    -- resuelve donde hay alguien que sabe la respuesta.
+    --
+    -- Anulable: las filas que ya existen no tienen objeto y no se les puede
+    -- inventar uno. La pantalla las reúne aparte, en «sin clasificar».
+    -- Que sea de nivel 3 lo comprueba la API y lo cubre una prueba, igual que en
+    -- `descriptivo_objeto`: un CHECK exigiría un disparador que consulte otra
+    -- tabla en cada escritura.
+    capex_code_id       UUID REFERENCES capex_code(id),
     zone_id             UUID REFERENCES zone(id),
 
     -- Etiqueta de campo: «CL-01», «AS-Norte». Es como el equipo aparece
@@ -1175,6 +1195,10 @@ CREATE TABLE equipment (
 );
 CREATE INDEX equipment_activo_idx ON equipment (project_id, asset_id);
 CREATE INDEX equipment_sistema_idx ON equipment (asset_id, technical_system_id);
+-- La pantalla del inventario pide los equipos de un objeto concreto una vez por
+-- cada objeto abierto: sin este índice son ciento cuarenta y un recorridos de la
+-- tabla entera.
+CREATE INDEX equipment_objeto_idx ON equipment (asset_id, capex_code_id);
 CREATE INDEX equipment_busqueda_idx ON equipment USING GIN (search_vector);
 -- La etiqueta identifica al equipo DENTRO del activo: dos edificios pueden
 -- tener los dos su «CL-01». Se ignora lo borrado para que reutilizar una
@@ -1989,6 +2013,15 @@ CREATE TABLE descriptivo_objeto (
     -- quien valida.
     texto           TEXT NOT NULL DEFAULT '',
 
+    -- [REQ] §3.2 d · La VALORACIÓN, que es otra cosa y por eso es otra columna.
+    -- El descriptivo dice QUÉ HAY y sale de la memoria técnica: es dato leído de
+    -- un documento. La valoración dice EN QUÉ ESTADO ESTÁ y no la dice ningún
+    -- documento: la escribe quien ha ido a verlo. Guardarlas en el mismo párrafo
+    -- es lo que hace que medio año después nadie sepa qué se observó y qué se
+    -- copió, y además impediría volver a traer el descriptivo sin arrastrar por
+    -- delante el juicio del técnico.
+    valoracion      TEXT NOT NULL DEFAULT '',
+
     -- [REQ] De dónde salió, y si la extracción fue de mentira. Misma regla que
     -- en la memoria y en la revisión documental: una extracción simulada no
     -- puede pasar por una de verdad ni en la base ni en la pantalla.
@@ -2012,10 +2045,16 @@ CREATE TABLE descriptivo_objeto (
     -- afirmación dicha dos veces y tienen que coincidir.
     CONSTRAINT descriptivo_validado_completo
         CHECK ((validado_at IS NULL) = (validado_por IS NULL)),
-    -- Un descriptivo validado y vacío no significa nada: alguien habría firmado
-    -- una casilla en blanco.
+    -- Un objeto validado y vacío no significa nada: alguien habría firmado una
+    -- casilla en blanco. Basta con que haya UNA de las dos cosas: hay objetos
+    -- que se valoran sin describir —una fachada que se ve y no está en ninguna
+    -- memoria— y objetos que se describen antes de visitarlos.
     CONSTRAINT descriptivo_validado_no_vacio
-        CHECK (validado_at IS NULL OR length(trim(texto)) > 0)
+        CHECK (
+            validado_at IS NULL
+            OR length(trim(texto)) > 0
+            OR length(trim(valoracion)) > 0
+        )
 );
 
 CREATE INDEX descriptivo_objeto_activo_idx ON descriptivo_objeto (asset_id);

@@ -53,7 +53,7 @@ def catalogo(motor_admin: Engine) -> dict[str, Any]:
             for code, id_ in conn.execute(
                 text(
                     "SELECT code, id FROM capex_code WHERE level = 3 "
-                    "AND code IN ('HC.H08.01', 'HC.H02.01')"
+                    "AND code IN ('HC.H08.01', 'HC.H02.01', 'HC.H10.05')"
                 )
             ).all()
         }
@@ -763,3 +763,236 @@ def test_borrar_el_equipo_no_se_lleva_la_foto(
     r = cliente.get(f"{RUTA}/photos/{foto['id']}", headers=cab("consultor_a"))
     assert r.status_code == 200
     assert r.json()["equipment_id"] is None
+
+
+# ── §3.2 d · Los dos textos del objeto ────────────────────────────────────────
+#
+# «En cada objeto debe existir dos cuadros de texto editables, el primero se
+# llama Descriptivo y debe traerse la información de la memoria técnica
+# referente a ese objeto y otra que se llama Valoración, que ahí el gestor
+# deberá hacer su valoración respecto al estado del objeto».
+
+
+def test_el_objeto_lleva_descriptivo_y_valoracion_y_son_dos_cosas(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    con_memoria(cliente, cab, activo, catalogo)
+    cliente.post(
+        f"{RUTA}/assets/{activo}/descriptivos/desde-documentacion", headers=cab("consultor_a")
+    )
+    fila = cliente.get(f"{RUTA}/assets/{activo}/descriptivos", headers=cab("consultor_a")).json()[0]
+    # Lo traído de la memoria va al descriptivo; la valoración nace vacía porque
+    # no sale de ningún documento.
+    assert fila["texto"]
+    assert fila["valoracion"] == ""
+
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": fila["capex_code_id"],
+                    "texto": fila["texto"],
+                    "valoracion": "22 años de servicio, por encima de su vida útil estimada.",
+                }
+            ]
+        },
+    )
+    assert r.status_code == 200, r.text
+    guardada = r.json()[0]
+    assert guardada["valoracion"].startswith("22 años")
+    assert guardada["texto"] == fila["texto"]
+
+
+def test_traer_de_la_memoria_no_toca_la_valoracion(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """El descriptivo se puede volver a traer; la valoración es de una persona.
+
+    Es la razón de que sean dos columnas: si compartieran una, refrescar el
+    documento borraría por delante el juicio del técnico.
+    """
+    con_memoria(cliente, cab, activo, catalogo)
+    cliente.post(
+        f"{RUTA}/assets/{activo}/descriptivos/desde-documentacion", headers=cab("consultor_a")
+    )
+    fila = cliente.get(f"{RUTA}/assets/{activo}/descriptivos", headers=cab("consultor_a")).json()[0]
+    cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": fila["capex_code_id"],
+                    "texto": "",
+                    "valoracion": "Deficiente. Se propone sustitución.",
+                }
+            ]
+        },
+    )
+
+    cliente.post(
+        f"{RUTA}/assets/{activo}/descriptivos/desde-documentacion", headers=cab("consultor_a")
+    )
+
+    otra_vez = cliente.get(
+        f"{RUTA}/assets/{activo}/descriptivos", headers=cab("consultor_a")
+    ).json()[0]
+    assert otra_vez["valoracion"] == "Deficiente. Se propone sustitución."
+    assert otra_vez["texto"], "el descriptivo vacío sí se completa"
+
+
+def test_se_puede_validar_un_objeto_que_solo_tiene_valoracion(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """Una fachada se ve y se valora aunque no esté en ninguna memoria."""
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": catalogo["objetos"]["HC.H02.01"],
+                    "texto": "",
+                    "valoracion": "Lámina con ampollas generalizadas.",
+                    "validado": True,
+                }
+            ]
+        },
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["validado"] is True
+
+
+def test_no_se_valida_un_objeto_sin_ninguno_de_los_dos_textos(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": catalogo["objetos"]["HC.H02.01"],
+                    "texto": "   ",
+                    "valoracion": "",
+                    "validado": True,
+                }
+            ]
+        },
+    )
+    assert r.status_code == 422
+    assert "en blanco" in r.json()["detail"]
+
+
+# ── §3.2 d · Cada equipo cuelga de su objeto ──────────────────────────────────
+
+
+def test_el_equipo_se_ata_a_un_objeto_del_arbol(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, catalogo: dict[str, Any]
+) -> None:
+    maquina = equipo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        tag="CL-10",
+        capex_code_id=catalogo["objetos"]["HC.H08.01"],
+    )
+    assert maquina["capex_code_id"] == catalogo["objetos"]["HC.H08.01"]
+    assert maquina["capex_code"] == "HC.H08.01"
+    assert maquina["chapter_code"] == "HC.H08"
+
+
+def test_un_equipo_no_cuelga_de_un_capitulo_entero(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """Nivel 3 o nada: un equipo es una cosa concreta, no un capítulo."""
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/equipment",
+        headers=cab("consultor_a"),
+        json={
+            "asset_id": activo,
+            "equipment_type": "Enfriadora",
+            "capex_code_id": catalogo["capitulos"]["HC.H08"],
+        },
+    )
+    assert r.status_code == 422
+    assert "nivel 3" in r.json()["detail"]
+
+
+def test_un_equipo_sin_objeto_sigue_siendo_valido(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Las filas que ya existían no tienen objeto y no se les inventa uno."""
+    maquina = equipo(cliente, cab, proyecto, activo, tag="CL-11")
+    assert maquina["capex_code_id"] is None
+
+
+def test_el_objeto_de_un_equipo_se_corrige_despues(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, catalogo: dict[str, Any]
+) -> None:
+    maquina = equipo(cliente, cab, proyecto, activo, tag="CL-12")
+    r = cliente.patch(
+        f"{RUTA}/equipment/{maquina['id']}",
+        headers=cab("consultor_a"),
+        json={"capex_code_id": catalogo["objetos"]["HC.H02.01"]},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["capex_code"] == "HC.H02.01"
+
+
+def test_el_objeto_del_equipo_manda_sobre_su_sistema_al_generar(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """Es la ganancia de fondo de inventariar por objetos.
+
+    Un equipo de protección contra incendios no se podía generar: su sistema
+    vale «H06 + H10» —pasiva y activa, dos capítulos— y adivinar uno habría
+    codificado mal la actuación. Con el objeto puesto al inventariarlo, con el
+    equipo delante, la ambigüedad ya está resuelta y la actuación cuelga de donde
+    alguien dijo.
+    """
+    pci = sistema(cliente, cab, "PCI")
+    equipo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        tag="BIE-02",
+        equipment_type="BIE",
+        technical_system_id=pci["id"],
+        capex_code_id=catalogo["objetos"]["HC.H10.05"],
+        pasa_a_capex=True,
+    )
+
+    r = cliente.post(f"{RUTA}/assets/{activo}/equipment/generar-capex", headers=cab("consultor_a"))
+
+    assert r.json()["creadas"] == 1, r.text
+    assert r.json()["avisos"] == []
+    hallazgos = cliente.get(
+        f"{RUTA}/projects/{proyecto}/findings?asset_id={activo}", headers=cab("consultor_a")
+    ).json()
+    assert len(hallazgos) == 1
+    assert hallazgos[0]["capex_code_id"] == catalogo["objetos"]["HC.H10.05"]
+
+
+def test_sin_objeto_el_aviso_dice_que_hay_que_ponerlo(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    pci = sistema(cliente, cab, "PCI")
+    equipo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        tag="BIE-03",
+        technical_system_id=pci["id"],
+        pasa_a_capex=True,
+    )
+
+    r = cliente.post(f"{RUTA}/assets/{activo}/equipment/generar-capex", headers=cab("consultor_a"))
+
+    assert r.json()["creadas"] == 0
+    assert any("de qué objeto cuelga" in a for a in r.json()["avisos"])

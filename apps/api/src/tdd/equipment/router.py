@@ -40,6 +40,10 @@ from tdd.equipment import importacion, service
 
 router = APIRouter(tags=["Inventario de equipo"])
 
+#: `[REQ]` Un equipo es una parte física del edificio, así que su objeto vive
+#: bajo Hard Cost. Un soft cost es un honorario y no se inventaría.
+TIPO_DE_COSTE_FISICO = "HC"
+
 
 class Equipo(BaseModel):
     id: uuid.UUID
@@ -47,6 +51,14 @@ class Equipo(BaseModel):
     asset_id: uuid.UUID
     technical_system_id: uuid.UUID | None
     technical_system_name: str | None
+    #: `[REQ]` §3.2 d · El OBJETO del árbol del que cuelga este equipo, que es lo
+    #: que ordena el inventario por categorías. Nulo mientras nadie lo haya
+    #: clasificado: no se adivina desde el sistema técnico.
+    capex_code_id: uuid.UUID | None = None
+    capex_code: str | None = None
+    capex_name: str | None = None
+    chapter_code: str | None = None
+    chapter_name: str | None = None
     zone_id: uuid.UUID | None
     zone_name: str | None
     tag: str | None
@@ -92,6 +104,10 @@ class DatosDeEquipo(BaseModel):
     asset_id: uuid.UUID
     equipment_type: str = Field(min_length=1, max_length=120)
     technical_system_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El objeto del árbol (nivel 3, dentro de Hard Cost) del
+    #: que cuelga el equipo. Es lo que ordena el inventario y lo que evita que
+    #: generar su actuación tenga que adivinar el capítulo.
+    capex_code_id: uuid.UUID | None = None
     zone_id: uuid.UUID | None = None
     tag: str | None = Field(default=None, max_length=40)
     manufacturer: str | None = Field(default=None, max_length=120)
@@ -121,6 +137,10 @@ class CambioDeEquipo(BaseModel):
 
     equipment_type: str | None = Field(default=None, min_length=1, max_length=120)
     technical_system_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El objeto del árbol (nivel 3, dentro de Hard Cost) del
+    #: que cuelga el equipo. Es lo que ordena el inventario y lo que evita que
+    #: generar su actuación tenga que adivinar el capítulo.
+    capex_code_id: uuid.UUID | None = None
     zone_id: uuid.UUID | None = None
     tag: str | None = Field(default=None, max_length=40)
     manufacturer: str | None = Field(default=None, max_length=120)
@@ -149,13 +169,17 @@ _CAMPOS = """
     CAST(e.criticality AS text) AS criticality,
     e.quantity, e.unit, e.has_documentation, e.notes, e.pasa_a_capex, e.row_version,
     e.maintenance_months, e.last_maintenance_date, e.next_maintenance_due,
-    ts.name_es AS technical_system_name, z.name_es AS zone_name
+    ts.name_es AS technical_system_name, z.name_es AS zone_name,
+    e.capex_code_id, cc.code AS capex_code, cc.name_es AS capex_name,
+    cap.code AS chapter_code, cap.name_es AS chapter_name
 """
 
 _DESDE = """
     FROM equipment e
     LEFT JOIN technical_system ts ON ts.id = e.technical_system_id
     LEFT JOIN zone z ON z.id = e.zone_id
+    LEFT JOIN capex_code cc ON cc.id = e.capex_code_id
+    LEFT JOIN capex_code cap ON cap.id = cc.parent_id
 """
 
 #: Las enumeraciones de la base. Se repiten aquí para poder devolver un 422 que
@@ -299,15 +323,17 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
         is None
     ):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "El activo no pertenece a este proyecto")
+    _comprobar_objeto(s, cuerpo.capex_code_id)
 
     nuevo = s.execute(
         text(
             "INSERT INTO equipment (organization_id, project_id, asset_id, technical_system_id, "
+            "capex_code_id, "
             "zone_id, tag, equipment_type, manufacturer, model, serial_number, install_year, "
             "expected_life_years, condition, obsolescence, criticality, quantity, unit, "
             "has_documentation, notes, pasa_a_capex, maintenance_months, last_maintenance_date, "
             "created_by) "
-            "VALUES (:o, :p, :a, :ts, :z, :tag, :et, :man, :mod, :sn, :iy, :el, "
+            "VALUES (:o, :p, :a, :ts, :obj, :z, :tag, :et, :man, :mod, :sn, :iy, :el, "
             "  CAST(:cond AS equipment_condition), CAST(:obs AS equipment_obsolescence), "
             "  CAST(:crit AS equipment_criticality), :qty, :u, :hd, :n, :pac, :mm, :lmd, :cb) "
             "RETURNING id"
@@ -317,6 +343,7 @@ def crear(project_id: uuid.UUID, cuerpo: DatosDeEquipo, s: SesionDep, usuario: U
             "p": str(project_id),
             "a": str(cuerpo.asset_id),
             "ts": str(cuerpo.technical_system_id) if cuerpo.technical_system_id else None,
+            "obj": str(cuerpo.capex_code_id) if cuerpo.capex_code_id else None,
             "z": str(cuerpo.zone_id) if cuerpo.zone_id else None,
             "tag": (cuerpo.tag or "").strip() or None,
             "et": cuerpo.equipment_type.strip(),
@@ -373,6 +400,8 @@ def modificar(
         cc.poner(respuesta, actual.get("row_version"))
         return actual
     _comprobar_enumerados(cambios)
+    if "capex_code_id" in cambios:
+        _comprobar_objeto(s, cambios["capex_code_id"])
 
     enumerados = {
         "condition": "equipment_condition",
@@ -437,11 +466,17 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
     esta función— y volver a llamar no duplica ni pisa lo que alguien haya
     rellenado. Se cuentan como omitidas y se dice cuántas.
 
-    `[LIM]` **El capítulo sale del sistema técnico del equipo, y no siempre
-    resuelve.** `technical_system.capex_chapter` es una pista escrita a mano:
-    dice `H09` para Electricidad, pero dice `H06 + H10` para protección contra
-    incendios y `ESG` para sostenibilidad. Cuando no resuelve a un capítulo
-    único, el equipo **no se genera** y sale en los avisos con su nombre:
+    **De dónde sale el código.** Si el equipo tiene objeto —`capex_code_id`, que
+    es lo que se rellena al inventariarlo por categorías—, la actuación cuelga
+    de ahí y no hay nada que adivinar. Es la ganancia de fondo de preguntar el
+    objeto mientras se inventaría: con el equipo delante hay alguien que sabe la
+    respuesta.
+
+    `[LIM]` **Sin objeto se cae al sistema técnico, y eso no siempre resuelve.**
+    `technical_system.capex_chapter` es una pista escrita a mano: dice `H09` para
+    Electricidad, pero dice `H06 + H10` para protección contra incendios y `ESG`
+    para sostenibilidad. Cuando no resuelve a un capítulo único, el equipo **no
+    se genera** y sale en los avisos con su nombre y con qué le falta:
     inventarse uno de los dos sería codificar mal una actuación, y eso no se ve
     hasta que alguien suma el capítulo equivocado.
     """
@@ -475,7 +510,7 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
         s.execute(
             text(
                 "SELECT e.id, e.tag, e.equipment_type, e.manufacturer, e.model, "
-                "       ts.name_es AS sistema, ts.capex_chapter "
+                "       e.capex_code_id, ts.name_es AS sistema, ts.capex_chapter "
                 "FROM equipment e "
                 "LEFT JOIN technical_system ts ON ts.id = e.technical_system_id "
                 "WHERE e.asset_id = :a AND e.pasa_a_capex AND e.deleted_at IS NULL "
@@ -507,12 +542,14 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
     creadas = omitidas = 0
     avisos: list[str] = []
     for equipo in marcados:
-        codigo = _capitulo_de(equipo["capex_chapter"], capitulos)
+        # El objeto del inventario primero: es un dato que alguien puso mirando
+        # el equipo, y gana a cualquier pista deducida de su sistema.
+        codigo = equipo["capex_code_id"] or _capitulo_de(equipo["capex_chapter"], capitulos)
         if codigo is None:
             avisos.append(
-                f"«{_nombre_de(equipo)}» está marcado, y su sistema técnico "
-                f"({equipo['sistema'] or 'sin sistema'}) no dice a qué capítulo del CAPEX va. "
-                "Codifíquelo a mano desde el árbol del activo."
+                f"«{_nombre_de(equipo)}» está marcado y no tiene objeto del árbol; su sistema "
+                f"técnico ({equipo['sistema'] or 'sin sistema'}) tampoco dice a qué capítulo "
+                "del CAPEX va. Ábralo en el Inventario y dígale de qué objeto cuelga."
             )
             continue
         titulo = f"Sustitución o intervención: {_nombre_de(equipo)}"
@@ -557,6 +594,49 @@ def _nombre_de(equipo: Any) -> str:
     if marca:
         partes.append(f"({marca})")
     return " · ".join(partes[:2]) + (f" {partes[2]}" if len(partes) > 2 else "")
+
+
+def _comprobar_objeto(s: Session, capex_code_id: uuid.UUID | None) -> None:
+    """El objeto de un equipo es de **nivel 3 y dentro de Hard Cost**, o no es.
+
+    Nivel 3 porque un equipo es una cosa concreta y cuelga de un objeto, no de
+    un capítulo entero. Hard Cost porque un equipo es una parte física del
+    edificio: un honorario o un imprevisto no se inventarían.
+
+    Se comprueba aquí y no con un CHECK por lo mismo que en `descriptivo_objeto`:
+    un CHECK exigiría un disparador que consulte otra tabla en cada escritura.
+    """
+    if capex_code_id is None:
+        return
+    fila = (
+        s.execute(
+            text(
+                "SELECT cc.level, raiz.code AS raiz FROM capex_code cc "
+                "LEFT JOIN capex_code cap ON cap.id = cc.parent_id "
+                "LEFT JOIN capex_code raiz ON raiz.id = cap.parent_id "
+                "WHERE cc.id = :i"
+            ),
+            {"i": str(capex_code_id)},
+        )
+        .mappings()
+        .first()
+    )
+    if fila is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"El código {capex_code_id} no existe"
+        )
+    if fila["level"] != 3:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Un equipo cuelga de un **objeto** del árbol (nivel 3). El código "
+            f"{capex_code_id} es de nivel {fila['level']}.",
+        )
+    if fila["raiz"] != TIPO_DE_COSTE_FISICO:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            f"Un equipo es una parte física del edificio y va en «{TIPO_DE_COSTE_FISICO}». "
+            f"El código {capex_code_id} cuelga de «{fila['raiz']}».",
+        )
 
 
 def _capitulo_de(pista: str | None, capitulos: dict[str, Any]) -> Any | None:

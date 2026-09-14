@@ -339,6 +339,55 @@ procedencia de la memoria, `es_simulada` incluido**: si la extracción fue
 simulada, el descriptivo nace marcado como simulado y la rejilla lo dice, porque
 un texto de mentira que pase por bueno es peor que no tener texto.
 
+## 3.2 d bis · El inventario, reestructurado por categorías y objetos
+
+`[REQ]` Al revisar el prototipo el cliente lo dijo así: *«que aparezca todo el
+inventario dividido por las distintas categorías y dentro de cada categoría
+incluir todos sus objetos»*, y que cada objeto lleve **dos cuadros de texto**
+—Descriptivo y Valoración—, su inventario de equipos debajo y sus fotografías.
+
+**Por qué era un cambio de fondo y no de presentación.** Antes esto eran tres
+listas planas —descriptivos por un lado, equipos por otro, fotos por otro— y
+nada ataba una cosa con la otra: había que saberse de memoria que la enfriadora
+de la tabla de equipos era el objeto `HC.H08.01` de la rejilla de descriptivos.
+Ahora **el árbol es el índice del trabajo**: se recorre categoría a categoría y
+dentro de cada objeto está todo lo que se sabe de él.
+
+**Dos textos, y no uno.** El **descriptivo** es *qué hay* y sale de la memoria
+técnica, así que se trae con un botón: es dato leído de un documento. La
+**valoración** es *en qué estado está*, y eso no lo dice ningún documento: la
+escribe quien ha ido a verlo. En el mismo párrafo nadie sabría medio año después
+qué se observó y qué se copió, y volver a traer el descriptivo borraría por
+delante el juicio del técnico. Son dos columnas, y `desde-documentacion` **solo
+toca la primera**.
+
+Validar pasa a exigir **uno de los dos**, no el descriptivo: hay objetos que se
+valoran sin describir —una fachada que se ve y no está en ninguna memoria— y
+objetos que se describen antes de visitarlos.
+
+**Qué se abre y qué no.** Las categorías nacen plegadas y se abren solas las que
+ya tienen trabajo hecho. El árbol completo son 141 objetos: abiertos de golpe es
+una pantalla de varios metros donde no se encuentra nada, y todos cerrados
+obliga a buscar a ciegas lo que uno ya había escrito.
+
+**Cada equipo cuelga de un objeto**, y eso **hace desaparecer el `[LIM]` de
+abajo.** `equipment.capex_code_id` es de nivel 3 y dentro de Hard Cost. Con el
+objeto puesto al inventariar —con el equipo delante y alguien mirándolo—,
+`generar-capex` ya no deduce el capítulo del sistema técnico, así que el caso de
+`H06 + H10` deja de bloquear: el equipo de protección contra incendios se genera
+y cuelga de donde alguien dijo. El sistema técnico se queda, porque es la
+clasificación transversal que usa el renombrado de fotografías.
+
+`[LIM]` **Los equipos anteriores no tienen objeto y no se les inventa uno.** Un
+capítulo tiene once objetos y elegir por consulta sería adivinar dónde está la
+máquina. Salen agrupados al final, en «sin clasificar», con su desplegable para
+colocarlos: se sale de ahí mirando el equipo, no desde una migración.
+
+**Las fotografías del objeto son las mismas de la visita.** Las que se ataron a
+uno de sus equipos salen solas —atar la foto a la máquina ya dice de qué objeto
+es— y pedir el dato dos veces es pedirlo dos veces. `photo.capex_code_id` queda
+para las que no retratan ninguna máquina: una cubierta, una fachada.
+
 **«Pasa a CAPEX».** Marcar la casilla **no crea nada**: el gestor recorre el
 inventario marcando lo que hay que sustituir, y las actuaciones se generan todas
 de una vez con un botón, en BORRADOR y sin importe. Crear el hallazgo al pulsar
@@ -347,12 +396,13 @@ casilla, y borrarlas después es peor que no haberlas creado. Es idempotente por
 título, así que volver a generar tras marcar dos equipos más no duplica ni pisa
 lo ya valorado.
 
-`[LIM]` **El capítulo sale del sistema técnico, y no siempre resuelve.**
-`technical_system.capex_chapter` es una pista escrita a mano: dice `H09` para
-Electricidad y dice **`H06 + H10`** para protección contra incendios. Cuando no
-resuelve a un capítulo único, el equipo **no se genera** y sale en los avisos con
-su nombre. Elegir uno de los dos sería codificar mal una actuación, y eso no se
-ve hasta que alguien suma el capítulo equivocado.
+`[LIM]` **Sin objeto, el capítulo sale del sistema técnico y no siempre
+resuelve.** `technical_system.capex_chapter` es una pista escrita a mano: dice
+`H09` para Electricidad y dice **`H06 + H10`** para protección contra incendios.
+Cuando no resuelve a un capítulo único, el equipo **no se genera** y sale en los
+avisos con su nombre y con qué le falta. Elegir uno de los dos sería codificar
+mal una actuación, y eso no se ve hasta que alguien suma el capítulo equivocado.
+Es el camino de respaldo: con el objeto puesto no se recorre.
 
 **Las fotos de la visita, atadas al equipo.** `photo.equipment_id`, una a una o
 en lote. Es lo que justifica medio año después por qué se propone sustituir

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
+import { porTipoDeCoste } from '../api/tipos'
 import type {
+  CodigoCapex,
   Descriptivo,
   DescriptivosTraidos,
   Equipo,
@@ -10,52 +12,62 @@ import type {
 import { Mensaje, Vacio } from '../ui/Marco'
 
 /**
- * El inventario **de un activo** `[REQ]` §3.2 d de `docs/23`.
+ * El inventario **de un activo**, por categorías y objetos `[REQ]` §3.2 d.
  *
- * Tres cosas que el cliente pidió juntas, y que juntas tienen sentido: lo que
- * la documentación dice que hay, lo que se vio en la visita, y la foto que lo
- * demuestra.
+ * ## Por qué es un árbol y no una rejilla
  *
- * ## a) El descriptivo de cada objeto, pendiente de validar
+ * Lo pidió el cliente al revisar el prototipo: *«que aparezca todo el inventario
+ * dividido por las distintas categorías y dentro de cada categoría incluir todos
+ * sus objetos»*. Antes esto eran tres listas planas —descriptivos por un lado,
+ * equipos por otro, fotos por otro— y nada ataba una cosa con la otra: había que
+ * saberse de memoria que la enfriadora de la tabla de equipos era el objeto
+ * `HC.H08.01` de la rejilla de descriptivos.
  *
- * `[REQ]` Literal: *«deberá traer el descriptivo de cada objeto de Hard Cost que
- * encuentre en la documentación, que indique que está pendiente de validar por
- * el Gestor Técnico, que sea un cuadro editable y que tenga una casilla de check
- * para marcar como validado»*.
+ * Ahora **el árbol es el índice del trabajo**. Se recorre categoría a categoría
+ * y dentro de cada objeto está todo lo que se sabe de él.
  *
- * La rejilla es exactamente eso. Se trae con un botón —no al abrir la pantalla:
- * escribir en la base al mirar una página es la clase de efecto que nadie
- * espera—, nace **pendiente**, se edita, y la casilla la firma. Lo que la
- * pantalla enseña como sí o no, la base lo guarda como quién y cuándo, que es lo
- * que hace que la validación valga algo seis meses después.
+ * ## Dos textos, y por qué no son uno
  *
- * **Traerlo otra vez no pisa trabajo hecho.** Ampliar la memoria y volver a
- * traer es lo normal; que eso borrara lo que alguien corrigió o firmó sería
- * indefendible. Lo respeta el servidor, y lo dice al terminar.
+ * * **Descriptivo** — *qué hay*. Sale de la memoria técnica, así que se trae con
+ *   un botón: es dato leído de un documento.
+ * * **Valoración** — *en qué estado está*. Eso no lo dice ningún documento: lo
+ *   escribe quien ha ido a verlo.
  *
- * ## b) La casilla «pasa a CAPEX»
+ * En el mismo párrafo nadie sabría medio año después qué se observó y qué se
+ * copió, y traer el descriptivo otra vez borraría por delante el juicio del
+ * técnico. Por eso son dos, y **traer solo toca el primero**.
  *
- * Marcarla **no crea nada**. Se recorre el inventario marcando lo que hay que
- * sustituir y las actuaciones se generan después, todas de una vez, con el botón
- * de abajo. Crear el hallazgo al pulsar habría llenado el CAPEX de filas vacías
- * cada vez que alguien se equivoca de casilla, y borrarlas después es peor que
- * no haberlas creado.
+ * ## Qué se abre y qué no
  *
- * `[LIM]` El capítulo sale del sistema técnico del equipo, y **no siempre
- * resuelve**: «Protección contra incendios» apunta a `H06 + H10`. Cuando no
- * resuelve a uno solo, el equipo no se genera y sale en los avisos con su
- * nombre. Elegir uno de los dos sería codificar mal una actuación, y eso no se
- * ve hasta que alguien suma el capítulo equivocado.
+ * Las categorías nacen plegadas y **se abren solas las que ya tienen trabajo
+ * hecho**. El árbol completo son ciento cuarenta y un objetos; abrirlos todos de
+ * golpe es una pantalla de varios metros donde no se encuentra nada, y abrirlos
+ * todos cerrados obliga a buscar a ciegas lo que uno ya había escrito.
  *
- * ## c) Vincular las fotos de la visita a cada equipo
+ * ## «Pasa a CAPEX», ahora sin adivinar
  *
- * Es lo que justifica, medio año después, por qué se propone sustituir **esa**
- * máquina y no otra. El vínculo es una clasificación: borrar el equipo no se
- * lleva la fotografía, que vale por sí sola como evidencia de la visita.
+ * Marcar sigue sin crear nada: se recorre el inventario marcando y las
+ * actuaciones se generan todas de una vez. Lo que cambia es que ahora **cada
+ * equipo cuelga de un objeto**, así que la actuación sabe dónde va. Antes el
+ * capítulo se deducía del sistema técnico, y «Protección contra incendios» vale
+ * `H06 + H10` —dos capítulos—: esos equipos no se podían generar. Preguntar el
+ * objeto mientras se inventaría, con el equipo delante, resuelve la ambigüedad
+ * donde hay alguien que sabe la respuesta.
+ *
+ * `[LIM]` Los equipos dados de alta antes de esto **no tienen objeto** y no se
+ * les inventa uno: un capítulo tiene once objetos y elegir por ellos sería
+ * adivinar dónde está la máquina. Salen agrupados al final, en «sin clasificar»,
+ * con su desplegable para colocarlos.
  */
 
-/** Lo que la pantalla guarda de una fila mientras se teclea. */
-type Borrador = { texto: string; validado: boolean }
+/** Lo que la pantalla guarda de un objeto mientras se teclea. */
+type Borrador = { texto: string; valoracion: string; validado: boolean }
+
+const VACIO: Borrador = { texto: '', valoracion: '', validado: false }
+
+/** `[REQ]` Un equipo es una parte física del edificio: su objeto vive bajo Hard
+ *  Cost. Un honorario o un imprevisto no se inventarían. */
+const TIPO_DE_COSTE_FISICO = 'HC'
 
 export function InventarioDelActivo({
   projectId,
@@ -64,17 +76,23 @@ export function InventarioDelActivo({
   projectId: string
   assetId: string
 }) {
+  const [codigos, setCodigos] = useState<CodigoCapex[] | null>(null)
   const [descriptivos, setDescriptivos] = useState<Descriptivo[] | null>(null)
   const [equipos, setEquipos] = useState<Equipo[] | null>(null)
   const [fotos, setFotos] = useState<Foto[]>([])
   const [borradores, setBorradores] = useState<Record<string, Borrador>>({})
+  const [abiertos, setAbiertos] = useState<Set<string> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string[] | null>(null)
   const [hecho, setHecho] = useState<string | null>(null)
   const [trabajando, setTrabajando] = useState(false)
 
+  // Devuelve una promesa **a propósito**: «traer de la documentación» tiene que
+  // esperarla antes de decir que ha terminado. Sin eso, la pantalla anunciaba
+  // «hecho» con la rejilla todavía enseñando lo de antes, que es decirle a
+  // alguien que su trabajo está guardado mientras mira datos viejos.
   const recargar = useCallback(() => {
-    obtener<Descriptivo[]>(`/assets/${assetId}/descriptivos`)
+    const descriptivos = obtener<Descriptivo[]>(`/assets/${assetId}/descriptivos`)
       .then((lista) => {
         setDescriptivos(lista)
         // Los borradores se rehacen desde lo guardado: dejar los de antes
@@ -82,31 +100,166 @@ export function InventarioDelActivo({
         // creerse que algo está guardado.
         setBorradores(
           Object.fromEntries(
-            lista.map((d) => [d.capex_code_id, { texto: d.texto, validado: d.validado }]),
+            lista.map((d) => [
+              d.capex_code_id,
+              { texto: d.texto, valoracion: d.valoracion, validado: d.validado },
+            ]),
           ),
         )
       })
       .catch((e: Error) => setError(e.message))
-    obtener<Equipo[]>(`/projects/${projectId}/equipment?asset_id=${assetId}`)
+    const equipos = obtener<Equipo[]>(`/projects/${projectId}/equipment?asset_id=${assetId}`)
       .then(setEquipos)
       .catch((e: Error) => setError(e.message))
-    obtener<Foto[]>(`/projects/${projectId}/photos?asset_id=${assetId}`)
+    const fotos = obtener<Foto[]>(`/projects/${projectId}/photos?asset_id=${assetId}`)
       .then(setFotos)
       .catch(() => setFotos([]))
+    return Promise.all([descriptivos, equipos, fotos])
   }, [projectId, assetId])
 
-  useEffect(recargar, [recargar])
+  useEffect(() => {
+    void recargar()
+  }, [recargar])
 
-  /** Las filas cuyo texto o casilla difieren de lo guardado. */
-  const sucias = useMemo(() => {
-    if (!descriptivos) return []
-    return descriptivos.filter((d) => {
-      const b = borradores[d.capex_code_id]
-      return b && (b.texto !== d.texto || b.validado !== d.validado)
+  useEffect(() => {
+    obtener<CodigoCapex[]>('/catalogs/capex-codes')
+      .then(setCodigos)
+      .catch((e: Error) => setError(e.message))
+  }, [])
+
+  /** El árbol: raíces con objetos → capítulos con objetos → objetos. */
+  const arbol = useMemo(() => {
+    if (!codigos) return []
+    const porPadre = new Map<string | null, CodigoCapex[]>()
+    for (const c of codigos) {
+      const clave = c.parent_id
+      if (!porPadre.has(clave)) porPadre.set(clave, [])
+      porPadre.get(clave)!.push(c)
+    }
+    const ordenar = (l: CodigoCapex[]) => [...l].sort((a, b) => a.code.localeCompare(b.code))
+    // Las raíces, en el orden de la hoja del cliente: alfabéticamente ESG queda
+    // delante de Hard Cost, que no es como el cliente lee su árbol. Del nivel 2
+    // hacia abajo los códigos van con dos cifras, así que el orden alfabético ya
+    // es el bueno.
+    const raices = [...(porPadre.get(null) ?? [])].sort((a, b) =>
+      porTipoDeCoste(a.code, b.code),
+    )
+    return raices
+      .map((raiz) => ({
+        raiz,
+        capitulos: ordenar(porPadre.get(raiz.id) ?? [])
+          .map((cap) => ({ cap, objetos: ordenar(porPadre.get(cap.id) ?? []) }))
+          // Un capítulo sin objetos no se inventaría: los soft costs, los
+          // operativos y los imprevistos son costes, no cosas del edificio.
+          .filter((c) => c.objetos.length > 0),
+      }))
+      .filter((r) => r.capitulos.length > 0)
+  }, [codigos])
+
+  const porObjeto = useMemo(() => {
+    const d = new Map<string, Descriptivo>()
+    for (const x of descriptivos ?? []) d.set(x.capex_code_id, x)
+    return d
+  }, [descriptivos])
+
+  const equiposDe = useCallback(
+    (codeId: string) => (equipos ?? []).filter((e) => e.capex_code_id === codeId),
+    [equipos],
+  )
+
+  /** Las fotografías de un objeto son las que lo señalan **y** las que retratan
+   *  uno de sus equipos: atar la foto a la máquina ya dice de qué objeto es, y
+   *  pedir el dato dos veces es pedirlo dos veces. */
+  const fotosDe = useCallback(
+    (codeId: string) => {
+      const suyos = new Set(equiposDe(codeId).map((e) => e.id))
+      return fotos.filter(
+        (f) => f.capex_code_id === codeId || (f.equipment_id && suyos.has(f.equipment_id)),
+      )
+    },
+    [fotos, equiposDe],
+  )
+
+  const conAlgo = useCallback(
+    (codeId: string) => {
+      const b = borradores[codeId] ?? VACIO
+      return (
+        b.texto.trim() !== '' ||
+        b.valoracion.trim() !== '' ||
+        equiposDe(codeId).length > 0 ||
+        fotosDe(codeId).length > 0
+      )
+    },
+    [borradores, equiposDe, fotosDe],
+  )
+
+  // Se abre lo que ya tiene trabajo hecho, una sola vez y cuando hay de qué.
+  useEffect(() => {
+    if (abiertos !== null || !arbol.length || descriptivos === null || equipos === null) return
+    const puestos = new Set<string>()
+    for (const { raiz, capitulos } of arbol) {
+      for (const { cap, objetos } of capitulos) {
+        const vivos = objetos.filter((o) => conAlgo(o.id))
+        if (!vivos.length) continue
+        puestos.add(raiz.id)
+        puestos.add(cap.id)
+        for (const o of vivos) puestos.add(o.id)
+      }
+    }
+    // Las raíces siempre abiertas: son seis y esconderlas no ahorra nada.
+    for (const { raiz } of arbol) puestos.add(raiz.id)
+    setAbiertos(puestos)
+  }, [abiertos, arbol, descriptivos, equipos, conAlgo])
+
+  const alternar = (id: string) =>
+    setAbiertos((previos) => {
+      const s = new Set(previos ?? [])
+      if (s.has(id)) s.delete(id)
+      else s.add(id)
+      return s
     })
-  }, [descriptivos, borradores])
 
-  const pendientes = descriptivos?.filter((d) => !d.validado).length ?? 0
+  const sucias = useMemo(() => {
+    const fuera: { capex_code_id: string; borrador: Borrador }[] = []
+    for (const [codeId, b] of Object.entries(borradores)) {
+      const d = porObjeto.get(codeId)
+      const guardado: Borrador = d
+        ? { texto: d.texto, valoracion: d.valoracion, validado: d.validado }
+        : VACIO
+      if (
+        b.texto !== guardado.texto ||
+        b.valoracion !== guardado.valoracion ||
+        b.validado !== guardado.validado
+      ) {
+        fuera.push({ capex_code_id: codeId, borrador: b })
+      }
+    }
+    return fuera
+  }, [borradores, porObjeto])
+
+  const conContenido = useMemo(
+    () =>
+      arbol
+        .flatMap((r) => r.capitulos)
+        .flatMap((c) => c.objetos)
+        .filter((o) => conAlgo(o.id)),
+    [arbol, conAlgo],
+  )
+  const totalObjetos = useMemo(
+    () => arbol.flatMap((r) => r.capitulos).reduce((n, c) => n + c.objetos.length, 0),
+    [arbol],
+  )
+  const revisados = conContenido.filter((o) => (borradores[o.id] ?? VACIO).validado).length
+  const marcados = equipos?.filter((e) => e.pasa_a_capex).length ?? 0
+  const sinObjeto = equipos?.filter((e) => !e.capex_code_id) ?? []
+  const objetosDelCatalogo = useMemo(
+    () =>
+      arbol
+        .filter((r) => r.raiz.code === TIPO_DE_COSTE_FISICO)
+        .flatMap((r) => r.capitulos)
+        .flatMap((c) => c.objetos.map((o) => ({ cap: c.cap, o }))),
+    [arbol],
+  )
 
   async function conAviso(hacer: () => Promise<void>) {
     setError(null)
@@ -130,19 +283,17 @@ export function InventarioDelActivo({
       )
       setHecho(
         `${r.creados} descriptivo(s) nuevo(s), ${r.completados} completado(s) y ` +
-          `${r.respetados} respetado(s) porque ya tenían texto o estaban validados.`,
+          `${r.respetados} respetado(s) porque ya tenían texto o estaban validados. ` +
+          'Las valoraciones no se tocan: no salen de ningún documento.',
       )
       if (r.avisos.length) setAviso(r.avisos)
-      recargar()
+      await recargar()
     })
   }
 
   function guardar() {
     return conAviso(async () => {
-      const lineas = sucias.map((d) => ({
-        capex_code_id: d.capex_code_id,
-        ...borradores[d.capex_code_id],
-      }))
+      const lineas = sucias.map((s) => ({ capex_code_id: s.capex_code_id, ...s.borrador }))
       const actualizados = await enviar<Descriptivo[]>(
         `/assets/${assetId}/descriptivos`,
         { lineas },
@@ -151,10 +302,13 @@ export function InventarioDelActivo({
       setDescriptivos(actualizados)
       setBorradores(
         Object.fromEntries(
-          actualizados.map((d) => [d.capex_code_id, { texto: d.texto, validado: d.validado }]),
+          actualizados.map((d) => [
+            d.capex_code_id,
+            { texto: d.texto, valoracion: d.valoracion, validado: d.validado },
+          ]),
         ),
       )
-      setHecho(`${lineas.length} descriptivo(s) guardado(s).`)
+      setHecho(`${lineas.length} objeto(s) guardado(s).`)
     })
   }
 
@@ -167,6 +321,20 @@ export function InventarioDelActivo({
     })
   }
 
+  function colocar(equipo: Equipo, capexCodeId: string) {
+    return conAviso(async () => {
+      const actualizado = await enviar<Equipo>(
+        `/equipment/${equipo.id}`,
+        { capex_code_id: capexCodeId || null },
+        'PATCH',
+      )
+      setEquipos((previos) =>
+        (previos ?? []).map((e) => (e.id === equipo.id ? actualizado : e)),
+      )
+      if (capexCodeId) setAbiertos((p) => new Set(p ?? []).add(capexCodeId))
+    })
+  }
+
   function generar() {
     return conAviso(async () => {
       const r = await enviar<EsqueletoDeEquipos>(
@@ -174,29 +342,39 @@ export function InventarioDelActivo({
         {},
       )
       setHecho(
-        `${r.creadas} actuación(es) creada(s) de ${r.marcados} equipo(s) marcado(s). ` +
+        `${r.creadas} actuación(es) creada(s) de ${r.marcados} equipo(s) marcado(s), ` +
+          `cada una colgando de la categoría de su objeto. ` +
           `${r.omitidas} ya existían y no se han duplicado.`,
       )
       if (r.avisos.length) setAviso(r.avisos)
     })
   }
 
-  function atar(foto: Foto, equipmentId: string) {
-    return conAviso(async () => {
-      const actualizada = await enviar<Foto>(
-        `/photos/${foto.id}`,
-        { equipment_id: equipmentId || null },
-        'PATCH',
-      )
-      setFotos((previas) => previas.map((f) => (f.id === foto.id ? actualizada : f)))
-    })
+  function escribir(codeId: string, campo: keyof Borrador, valor: string | boolean) {
+    setBorradores((previos) => ({
+      ...previos,
+      [codeId]: { ...(previos[codeId] ?? VACIO), [campo]: valor },
+    }))
   }
 
-  const marcados = equipos?.filter((e) => e.pasa_a_capex).length ?? 0
+  if (!codigos || !descriptivos || !equipos) {
+    return <p className="cargando">Cargando el inventario…</p>
+  }
 
   return (
-    <section className="inventario-activo">
+    // `aria-busy` mientras se guarda o se trae: un lector de pantalla anuncia
+    // que la región está trabajando en vez de leer a medias lo que va a cambiar.
+    // Es además lo único a lo que se puede esperar desde fuera sin adivinar,
+    // porque un mensaje de «hecho» puede ser el de la operación anterior.
+    <section className="inventario-activo" aria-busy={trabajando}>
       <h3>Inventario del activo</h3>
+      <p className="ayuda">
+        El árbol del cliente, categoría a categoría, y dentro de cada objeto lo que se sabe de
+        él: <strong>qué hay</strong> (Descriptivo, que sale de la memoria técnica) y{' '}
+        <strong>en qué estado está</strong> (Valoración, que la escribe quien lo ha visto), con
+        sus equipos y sus fotografías. Las categorías nacen plegadas; se abren solas las que ya
+        tienen trabajo hecho.
+      </p>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       {hecho && <Mensaje tipo="ok">{hecho}</Mensaje>}
@@ -206,12 +384,9 @@ export function InventarioDelActivo({
         </Mensaje>
       ))}
 
-      {/* ── a) Los descriptivos ─────────────────────────────────────────── */}
-      <h4>Descriptivo de cada objeto</h4>
-      <p className="ayuda">
-        Sale de la documentación del activo y <strong>nace pendiente de validar</strong>: lo ha
-        leído una máquina, no un técnico. Corrija el texto y marque la casilla cuando lo dé por
-        bueno. Volver a traerlo no pisa lo que ya haya escrito o validado.
+      <p className="recuento">
+        <strong>{conContenido.length}</strong> de {totalObjetos} objetos con contenido ·{' '}
+        {revisados} validados · {equipos.length} equipos · {marcados} marcados para CAPEX
       </p>
 
       <div className="filtro">
@@ -221,273 +396,339 @@ export function InventarioDelActivo({
           disabled={trabajando}
           onClick={() => void traer()}
         >
-          Traer de la documentación
+          Traer descriptivos de la documentación
         </button>
         <button
           type="button"
           disabled={trabajando || sucias.length === 0}
           onClick={() => void guardar()}
         >
-          {/* «Guardar descriptivos» y no «Guardar» a secas: la ficha del activo
-              está en la misma pantalla con su propio botón de guardar, y dos
-              botones que dicen lo mismo sobre cosas distintas es la mejor forma
-              de que alguien crea que ha guardado lo que no. */}
-          Guardar descriptivos {sucias.length > 0 ? `(${sucias.length})` : ''}
+          Guardar el inventario {sucias.length > 0 ? `(${sucias.length})` : ''}
         </button>
-        {descriptivos && descriptivos.length > 0 && (
-          <span className="recuento">
-            <strong>{pendientes}</strong> de {descriptivos.length} pendientes de validar
-          </span>
-        )}
+        <button
+          type="button"
+          disabled={trabajando || marcados === 0}
+          onClick={() => void generar()}
+        >
+          Generar actuaciones de los marcados ({marcados})
+        </button>
       </div>
 
-      {!descriptivos ? (
-        <p className="cargando">Cargando los descriptivos…</p>
-      ) : descriptivos.length === 0 ? (
-        <Vacio>
-          Todavía no hay descriptivos. Se traen de la memoria técnica del edificio con el botón
-          de arriba; si el activo no tiene memoria cargada, no hay nada que traer y la
-          aplicación no se lo va a inventar.
-        </Vacio>
-      ) : (
-        <div className="desbordable">
-          <table className="tabla descriptivos">
-            <thead>
-              <tr>
-                <th scope="col">Capítulo</th>
-                <th scope="col">Objeto</th>
-                <th scope="col">Descriptivo</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Validado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {descriptivos.map((d) => {
-                const b = borradores[d.capex_code_id] ?? {
-                  texto: d.texto,
-                  validado: d.validado,
-                }
-                const cambiado = b.texto !== d.texto || b.validado !== d.validado
+      {arbol.map(({ raiz, capitulos }) => (
+        <section key={raiz.id} className="rama-inventario">
+          <Cabecera
+            abierto={abiertos?.has(raiz.id) ?? false}
+            alAlternar={() => alternar(raiz.id)}
+            codigo={raiz.code}
+            nombre={raiz.name_es}
+            nivel={1}
+            marca={`${capitulos.reduce(
+              (n, c) => n + c.objetos.filter((o) => conAlgo(o.id)).length,
+              0,
+            )}/${capitulos.reduce((n, c) => n + c.objetos.length, 0)} objetos`}
+          />
+          {(abiertos?.has(raiz.id) ?? false) && (
+            <ul className="arbol-inventario">
+              {capitulos.map(({ cap, objetos }) => {
+                const vivos = objetos.filter((o) => conAlgo(o.id)).length
+                const equiposDelCap = objetos.reduce((n, o) => n + equiposDe(o.id).length, 0)
                 return (
-                  <tr key={d.id} className={d.validado ? 'validado' : 'pendiente'}>
-                    <td className="capitulo">
-                      <span className="codigo">{d.chapter_code}</span>
-                      <div className="ayuda">{d.chapter_name}</div>
-                    </td>
-                    <td>
-                      <span className="codigo">{d.capex_code}</span>
-                      <div className="ayuda">{d.capex_name}</div>
-                    </td>
-                    <td className="editable">
-                      <textarea
-                        rows={2}
-                        maxLength={4000}
-                        aria-label={`Descriptivo de ${d.capex_name} (${d.capex_code})`}
-                        value={b.texto}
-                        onChange={(e) =>
-                          setBorradores((previos) => ({
-                            ...previos,
-                            [d.capex_code_id]: { ...b, texto: e.target.value },
-                          }))
-                        }
-                      />
-                      {cambiado && <span className="ayuda">sin guardar</span>}
-                    </td>
-                    <td className="validacion">
-                      {/* El estado se ESCRIBE, no se pinta: el color acompaña y
-                          no informa por sí solo. */}
-                      {d.validado ? (
-                        <>
-                          <strong>Validado</strong>
-                          <div className="ayuda">
-                            {d.validado_por_nombre ?? 'alguien'} · {d.validado_at?.slice(0, 10)}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <strong>Pendiente de validar</strong>
-                          <div className="ayuda">por el gestor técnico</div>
-                        </>
-                      )}
-                      {d.es_simulada && (
-                        <div className="ayuda simulada">
-                          extracción SIMULADA: léalo en el documento antes de validarlo
-                        </div>
-                      )}
-                    </td>
-                    {/* La casilla va suelta, sin `<label>` ni texto oculto: la
-                        cabecera de la columna ya dice «Validado» y el
-                        `aria-label` nombra la fila entera. Un `.oculto-visual`
-                        aquí sería además un elemento posicionado dentro de una
-                        tabla que se desplaza en horizontal, y eso ensancha la
-                        página en móvil aunque no se vea. */}
-                    <td className="casilla-validado">
-                      <input
-                        type="checkbox"
-                        checked={b.validado}
-                        // Sin texto no hay nada que firmar, y el servidor lo
-                        // rechaza igualmente: deshabilitarla lo explica antes
-                        // de que alguien se lleve un 422.
-                        disabled={!b.texto.trim()}
-                        aria-label={`Marcar como validado ${d.capex_name} (${d.capex_code})`}
-                        onChange={(e) =>
-                          setBorradores((previos) => ({
-                            ...previos,
-                            [d.capex_code_id]: { ...b, validado: e.target.checked },
-                          }))
-                        }
-                      />
-                    </td>
-                  </tr>
+                  <li key={cap.id}>
+                    <Cabecera
+                      abierto={abiertos?.has(cap.id) ?? false}
+                      alAlternar={() => alternar(cap.id)}
+                      codigo={cap.code}
+                      nombre={cap.name_es}
+                      nivel={2}
+                      marca={
+                        `${vivos}/${objetos.length} objetos` +
+                        (equiposDelCap ? ` · ${equiposDelCap} eq.` : '')
+                      }
+                    />
+                    {(abiertos?.has(cap.id) ?? false) && (
+                      <ul className="arbol-inventario">
+                        {objetos.map((o) => (
+                          <li key={o.id}>
+                            <Cabecera
+                              abierto={abiertos?.has(o.id) ?? false}
+                              alAlternar={() => alternar(o.id)}
+                              codigo={o.code}
+                              nombre={o.name_es}
+                              nivel={3}
+                              conAlgo={conAlgo(o.id)}
+                              marca={marcasDe(
+                                borradores[o.id] ?? VACIO,
+                                equiposDe(o.id),
+                                fotosDe(o.id).length,
+                              )}
+                            />
+                            {(abiertos?.has(o.id) ?? false) && (
+                              <FichaDeObjeto
+                                codigo={o}
+                                guardado={porObjeto.get(o.id) ?? null}
+                                borrador={borradores[o.id] ?? VACIO}
+                                equipos={equiposDe(o.id)}
+                                fotos={fotosDe(o.id)}
+                                trabajando={trabajando}
+                                alEscribir={(campo, valor) => escribir(o.id, campo, valor)}
+                                alMarcar={marcar}
+                              />
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </ul>
+          )}
+        </section>
+      ))}
 
-      {/* ── b) «Pasa a CAPEX» ───────────────────────────────────────────── */}
-      <h4>Equipo del activo</h4>
-      <p className="ayuda">
-        Marque lo que hay que sustituir o intervenir. <strong>Marcar no crea nada</strong>: las
-        actuaciones se generan todas de una vez con el botón, en borrador y sin importe, para
-        valorarlas después desde el árbol del CAPEX.
-      </p>
-
-      {!equipos ? (
-        <p className="cargando">Cargando el inventario de equipo…</p>
-      ) : equipos.length === 0 ? (
-        <Vacio>
-          Este activo no tiene equipos en el inventario. Se dan de alta desde «Inventario de
-          equipo», uno a uno o importando la hoja de la visita.
-        </Vacio>
-      ) : (
-        <>
-          <div className="filtro">
-            <button
-              type="button"
-              disabled={trabajando || marcados === 0}
-              onClick={() => void generar()}
-            >
-              Generar actuaciones de los marcados ({marcados})
-            </button>
-          </div>
+      {sinObjeto.length > 0 && (
+        <section className="sin-clasificar">
+          <h4>Equipos sin objeto ({sinObjeto.length})</h4>
+          <p className="ayuda">
+            Se dieron de alta antes de que el inventario preguntara de qué objeto cuelga cada
+            equipo. <strong>No se les ha puesto uno automáticamente</strong>: un capítulo tiene
+            once objetos y elegir por usted sería adivinar dónde está la máquina. Colóquelos y
+            dejarán de estar aquí —y su actuación sabrá dónde ir.
+          </p>
           <div className="desbordable">
-            <table className="tabla equipo-capex">
+            <table className="tabla">
               <thead>
                 <tr>
-                  <th scope="col">Pasa a CAPEX</th>
                   <th scope="col">Etiqueta</th>
                   <th scope="col">Equipo</th>
                   <th scope="col">Sistema</th>
-                  <th scope="col">Vida residual</th>
-                  <th scope="col" className="numerica">
-                    Fotos
-                  </th>
+                  <th scope="col">Objeto del árbol</th>
                 </tr>
               </thead>
               <tbody>
-                {equipos.map((e) => (
-                  <tr key={e.id} className={e.pasa_a_capex ? 'marcado' : ''}>
-                    <td className="casilla-marcado">
-                      <input
-                        type="checkbox"
-                        checked={e.pasa_a_capex}
-                        disabled={trabajando}
-                        aria-label={`Pasa a CAPEX: ${e.tag ?? e.equipment_type}`}
-                        onChange={(ev) => void marcar(e, ev.target.checked)}
-                      />
-                    </td>
+                {sinObjeto.map((e) => (
+                  <tr key={e.id}>
                     <td>{e.tag ?? '—'}</td>
+                    <td>{e.equipment_type}</td>
+                    <td>{e.technical_system_name ?? '—'}</td>
                     <td>
-                      {e.equipment_type}
-                      {e.manufacturer && (
-                        <div className="ayuda">
-                          {e.manufacturer} {e.model ?? ''}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      {e.technical_system_name ?? (
-                        <span className="ayuda">sin sistema: no se sabe a qué capítulo va</span>
-                      )}
-                    </td>
-                    <td title={e.vida_resumen}>
-                      {e.remaining_life_years === null ? (
-                        <span className="ayuda">sin datos</span>
-                      ) : e.remaining_life_years < 0 ? (
-                        <strong>vencida hace {Math.abs(e.remaining_life_years)} años</strong>
-                      ) : (
-                        `${e.remaining_life_years} años`
-                      )}
-                    </td>
-                    <td className="numerica">
-                      {fotos.filter((f) => f.equipment_id === e.id).length}
+                      <select
+                        value=""
+                        disabled={trabajando}
+                        aria-label={`Objeto de ${e.tag ?? e.equipment_type}`}
+                        onChange={(ev) => void colocar(e, ev.target.value)}
+                      >
+                        <option value="">— elija el objeto —</option>
+                        {objetosDelCatalogo.map(({ cap, o }) => (
+                          <option key={o.id} value={o.id}>
+                            {o.code} · {cap.name_es} › {o.name_es}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </>
+        </section>
       )}
 
-      {/* ── c) Fotos de la visita ───────────────────────────────────────── */}
-      <h4>Fotografías de la visita</h4>
-      <p className="ayuda">
-        Ate cada fotografía al equipo que retrata. Es lo que justifica medio año después por qué
-        se propone sustituir esa máquina y no otra. Desatarla no borra la foto, y borrar el
-        equipo tampoco: la fotografía es evidencia de la visita y vale por sí sola.
-      </p>
-
-      {fotos.length === 0 ? (
+      {totalObjetos === 0 && (
         <Vacio>
-          Este activo no tiene fotografías todavía. Se suben desde «Fotografías», también desde
-          el móvil durante la visita.
+          El catálogo del CAPEX no tiene objetos cargados, así que no hay árbol que recorrer.
+          Siembre los catálogos y vuelva a entrar.
         </Vacio>
-      ) : !equipos || equipos.length === 0 ? (
-        <Mensaje tipo="aviso">
-          Hay {fotos.length} fotografía(s), pero ningún equipo al que atarlas. Dé de alta el
-          inventario primero.
-        </Mensaje>
+      )}
+    </section>
+  )
+}
+
+/** Las marcas de un objeto: lo que lleva dentro, sin abrirlo. */
+function marcasDe(b: Borrador, equipos: Equipo[], fotos: number): string {
+  const trozos: string[] = []
+  if (b.texto.trim()) trozos.push('descriptivo')
+  if (b.valoracion.trim()) trozos.push('valoración')
+  if (equipos.length) trozos.push(`${equipos.length} equipo${equipos.length === 1 ? '' : 's'}`)
+  const capex = equipos.filter((e) => e.pasa_a_capex).length
+  if (capex) trozos.push(`${capex} a CAPEX`)
+  if (fotos) trozos.push(`${fotos} foto${fotos === 1 ? '' : 's'}`)
+  if (b.validado) trozos.push('validado')
+  return trozos.length ? trozos.join(' · ') : 'vacío'
+}
+
+function Cabecera({
+  abierto,
+  alAlternar,
+  codigo,
+  nombre,
+  nivel,
+  marca,
+  conAlgo,
+}: {
+  abierto: boolean
+  alAlternar: () => void
+  codigo: string
+  nombre: string
+  nivel: 1 | 2 | 3
+  marca: string
+  conAlgo?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      className={`cabecera-inv n${nivel} ${conAlgo ? 'con-algo' : ''}`}
+      aria-expanded={abierto}
+      onClick={alAlternar}
+    >
+      <span aria-hidden="true" className="flecha">
+        {abierto ? '▾' : '▸'}
+      </span>
+      <span className="codigo">{codigo}</span>
+      <span className="nombre-inv">{nombre}</span>
+      <span className="marca-inv">{marca}</span>
+    </button>
+  )
+}
+
+function FichaDeObjeto({
+  codigo,
+  guardado,
+  borrador,
+  equipos,
+  fotos,
+  trabajando,
+  alEscribir,
+  alMarcar,
+}: {
+  codigo: CodigoCapex
+  guardado: Descriptivo | null
+  borrador: Borrador
+  equipos: Equipo[]
+  fotos: Foto[]
+  trabajando: boolean
+  alEscribir: (campo: keyof Borrador, valor: string | boolean) => void
+  alMarcar: (equipo: Equipo, pasa: boolean) => Promise<void>
+}) {
+  const hayAlgo = borrador.texto.trim() !== '' || borrador.valoracion.trim() !== ''
+  return (
+    <div className="ficha-objeto">
+      <div className="dos-textos">
+        <label className="campo">
+          Descriptivo
+          <textarea
+            rows={4}
+            maxLength={4000}
+            placeholder="Qué hay: tipo, cantidad, características. Sale de la memoria técnica."
+            aria-label={`Descriptivo de ${codigo.name_es} (${codigo.code})`}
+            value={borrador.texto}
+            onChange={(e) => alEscribir('texto', e.target.value)}
+          />
+          <span className="nota">Qué hay. Dato de documento, no de observación</span>
+        </label>
+        <label className="campo">
+          Valoración
+          <textarea
+            rows={4}
+            maxLength={4000}
+            placeholder="En qué estado está, qué se ha observado y qué se concluye."
+            aria-label={`Valoración de ${codigo.name_es} (${codigo.code})`}
+            value={borrador.valoracion}
+            onChange={(e) => alEscribir('valoracion', e.target.value)}
+          />
+          <span className="nota">En qué estado está. Lo escribe quien lo ha visto</span>
+        </label>
+      </div>
+
+      <div className="filtro">
+        <label className="marca-revision">
+          <input
+            type="checkbox"
+            checked={borrador.validado}
+            // Sin ninguno de los dos textos no hay nada que firmar, y el
+            // servidor lo rechaza igualmente: deshabilitarla lo explica antes de
+            // que alguien se lleve un 422.
+            disabled={!hayAlgo}
+            onChange={(e) => alEscribir('validado', e.target.checked)}
+          />
+          Validado por un técnico
+        </label>
+        <span className="recuento">
+          {guardado?.validado ? (
+            <>
+              {guardado.validado_por_nombre ?? 'alguien'} · {guardado.validado_at?.slice(0, 10)}
+            </>
+          ) : (
+            'Mientras no se marque, el informe lo da por sin validar'
+          )}
+        </span>
+        {guardado?.es_simulada && (
+          <span className="recuento simulada">
+            extracción SIMULADA: léalo en el documento antes de validarlo
+          </span>
+        )}
+      </div>
+
+      <h5>Inventario relacionado</h5>
+      {equipos.length === 0 ? (
+        <Vacio>
+          Este objeto no tiene equipos inventariados. No siempre hace falta: una cubierta o una
+          fachada se describen y se valoran, pero no tienen máquinas que fichar.
+        </Vacio>
       ) : (
         <div className="desbordable">
-          <table className="tabla fotos-equipo">
+          <table className="tabla equipo-capex">
             <thead>
               <tr>
-                <th scope="col">Fotografía</th>
-                <th scope="col">Tomada</th>
-                <th scope="col">Equipo que retrata</th>
+                <th scope="col">Pasa a CAPEX</th>
+                <th scope="col">Etiqueta</th>
+                <th scope="col">Equipo</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Vida residual</th>
               </tr>
             </thead>
             <tbody>
-              {fotos.map((f) => (
-                <tr key={f.id}>
-                  <td>{f.display_name}</td>
-                  <td>
-                    {f.taken_at?.slice(0, 10) ?? <span className="ayuda">sin fecha</span>}
-                  </td>
-                  <td>
-                    <select
-                      value={f.equipment_id ?? ''}
+              {equipos.map((e) => (
+                <tr key={e.id} className={e.pasa_a_capex ? 'marcado' : ''}>
+                  <td className="casilla-marcado">
+                    <input
+                      type="checkbox"
+                      checked={e.pasa_a_capex}
                       disabled={trabajando}
-                      aria-label={`Equipo que retrata ${f.display_name}`}
-                      onChange={(e) => void atar(f, e.target.value)}
-                    >
-                      <option value="">— ninguno —</option>
-                      {equipos.map((e) => (
-                        <option key={e.id} value={e.id}>
-                          {e.tag ? `${e.tag} · ${e.equipment_type}` : e.equipment_type}
-                        </option>
-                      ))}
-                    </select>
+                      aria-label={`Pasa a CAPEX: ${e.tag ?? e.equipment_type}`}
+                      onChange={(ev) => void alMarcar(e, ev.target.checked)}
+                    />
                   </td>
+                  <td>{e.tag ?? '—'}</td>
+                  <td>{e.equipment_type}</td>
+                  <td>{e.condition ?? '—'}</td>
+                  <td>{e.vida_resumen}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </section>
+
+      <h5>Fotografías de este objeto</h5>
+      {fotos.length === 0 ? (
+        <p className="ayuda">
+          Todavía no hay ninguna. Salen solas al atar una fotografía de la visita a uno de estos
+          equipos, o al clasificarla en este objeto.
+        </p>
+      ) : (
+        <ul className="fotos-del-objeto">
+          {fotos.map((f) => (
+            <li key={f.id}>
+              <strong>{f.display_name}</strong>
+              <span className="recuento">
+                {f.taken_at?.slice(0, 10) ?? 'sin fecha'}
+                {f.equipment_id && ' · atada a un equipo'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

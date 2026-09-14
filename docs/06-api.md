@@ -223,8 +223,8 @@ importe no aparece en ninguna parte del JSON congelado.
 | `GET`/`PUT` | `/assets/{id}/memoria` | La **memoria técnica**: la propuesta de datos del edificio y las categorías del CAPEX con sus objetos. Guardar **no toca el activo** |
 | `POST` | `/assets/{id}/memoria/validar` | **El botón.** Vuelca la propuesta al activo y firma quién y cuándo. `422` sin `confirmar: true` |
 | `POST` | `/assets/{id}/memoria/generar-capex` | El **esqueleto**: un hallazgo en BORRADOR por objeto. Idempotente: no duplica ni pisa lo ya rellenado |
-| `GET`/`PUT` | `/assets/{id}/descriptivos` | `[REQ]` §3.2 d · El **descriptivo de cada objeto de Hard Cost**, editable, con su casilla de validado. El `PUT` manda las filas cambiadas —texto y casilla juntos— y devuelve la rejilla entera. `422` si el código no es de nivel 3, y `422` al validar un descriptivo vacío |
-| `POST` | `/assets/{id}/descriptivos/desde-documentacion` | Los **trae de la memoria técnica**. Idempotente y **no pisa lo validado ni lo escrito**: devuelve cuántos creó, completó y respetó. `409` si el activo no tiene memoria |
+| `GET`/`PUT` | `/assets/{id}/descriptivos` | `[REQ]` §3.2 d · El **descriptivo y la valoración de cada objeto de Hard Cost**, editables, con su casilla de validado. `texto` es *qué hay* y sale de la memoria; `valoracion` es *en qué estado está* y la escribe quien lo ha visto. El `PUT` manda las filas cambiadas —los dos textos y la casilla juntos— y devuelve la rejilla entera. `422` si el código no es de nivel 3, y `422` al validar un objeto **sin ninguno de los dos textos** |
+| `POST` | `/assets/{id}/descriptivos/desde-documentacion` | Trae **los descriptivos** de la memoria técnica. Idempotente y **no pisa lo validado ni lo escrito**, y **no toca la valoración**: devuelve cuántos creó, completó y respetó. `409` si el activo no tiene memoria |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
 
 ### Extracción documental `[REQ]`

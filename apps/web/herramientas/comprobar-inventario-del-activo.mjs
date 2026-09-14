@@ -1,20 +1,24 @@
 /**
  * ¿Hace el inventario del activo lo que pidió el cliente? `[REQ]` §3.2 d.
  *
- * Seis cosas que no se ven en una prueba de API:
+ * Ocho cosas que no se ven en una prueba de API:
  *
- * 1. **Que el descriptivo se traiga de la documentación** y salga en la rejilla
- *    con el texto que dice la memoria, no con el nombre del catálogo.
- * 2. **Que nazca diciendo que está pendiente de validar por el gestor
- *    técnico.** Escrito, no insinuado con un color: esto se imprime.
- * 3. **Que el cuadro sea editable y se guarde.** Es literalmente lo que se
- *    pidió, y una rejilla que parece editable y no persiste es peor que una de
- *    solo lectura.
- * 4. **Que la casilla valide, y que no deje validar un descriptivo vacío**:
- *    sería firmar una casilla en blanco.
- * 5. **Que «pasa a CAPEX» no cree nada al marcarla** y que el botón genere las
- *    actuaciones de golpe, avisando del equipo cuyo capítulo no resuelve.
- * 6. **Que una fotografía se ate al equipo que retrata.**
+ * 1. **Que el inventario sea el árbol**: categorías, y dentro de cada categoría
+ *    sus objetos. Es lo que se pidió al revisar el prototipo.
+ * 2. **Que se abra solo lo que ya tiene trabajo hecho.** Ciento cuarenta y un
+ *    objetos abiertos de golpe es una pantalla donde no se encuentra nada.
+ * 3. **Que el descriptivo se traiga de la documentación** con el texto que dice
+ *    la memoria, no con el nombre del catálogo.
+ * 4. **Que la valoración sea otro cuadro y no se toque al traer.** Es la razón
+ *    de que sean dos: refrescar el documento no puede borrar el juicio de una
+ *    persona.
+ * 5. **Que la casilla valide, y que no deje validar un objeto vacío**: sería
+ *    firmar una casilla en blanco.
+ * 6. **Que «pasa a CAPEX» no cree nada al marcarla** y que el botón genere las
+ *    actuaciones de golpe.
+ * 7. **Que un equipo de PCI YA se genere.** Su sistema vale «H06 + H10» y antes
+ *    no se podía codificar; con el objeto puesto al inventariarlo, sí.
+ * 8. **Que un equipo sin objeto salga aparte** y se pueda colocar desde ahí.
  *
  *     npm run build && npx vite preview --port 4173 &
  *     node herramientas/comprobar-inventario-del-activo.mjs
@@ -42,7 +46,10 @@ async function api(metodo, ruta, cuerpo, token) {
   return texto ? JSON.parse(texto) : null
 }
 
-const { access_token: tk } = await api('POST', '/auth/login', { email: CORREO, password: CLAVE })
+const { access_token: tk } = await api('POST', '/auth/login', {
+  email: CORREO,
+  password: CLAVE,
+})
 const cli = await api('POST', '/clients', { name: 'Inversora Ficticia S.L.' }, tk)
 const proyecto = await api(
   'POST',
@@ -87,7 +94,9 @@ await api(
       },
       {
         capex_code_id: porCodigo['HC.H02'],
-        objetos: [{ capex_code_id: porCodigo['HC.H02.01'], nombre: 'Lámina impermeabilizante' }],
+        objetos: [
+          { capex_code_id: porCodigo['HC.H02.01'], nombre: 'Lámina impermeabilizante' },
+        ],
       },
     ],
   },
@@ -105,6 +114,7 @@ const enfriadora = await api(
     equipment_type: 'Enfriadora',
     manufacturer: 'Fabricante Ficticio',
     technical_system_id: porSistema.CLIMA.id,
+    capex_code_id: porCodigo['HC.H08.01'],
     install_year: 1998,
     expected_life_years: 20,
   },
@@ -118,7 +128,17 @@ await api(
     tag: 'BIE-01',
     equipment_type: 'BIE',
     technical_system_id: porSistema.PCI.id,
+    // `[REQ]` El objeto, que es lo que resuelve la ambigüedad: el sistema de
+    // este equipo vale «H06 + H10» y de ahí no sale un capítulo único.
+    capex_code_id: porCodigo['HC.H10.05'],
   },
+  tk,
+)
+// Y uno sin objeto ni sistema: tiene que salir aparte, en «sin clasificar».
+const suelto = await api(
+  'POST',
+  `/projects/${proyecto.id}/equipment`,
+  { asset_id: activo.id, tag: 'XX-01', equipment_type: 'Equipo sin clasificar' },
   tk,
 )
 
@@ -154,79 +174,116 @@ await pagina.fill('input[type="password"]', CLAVE)
 await pagina.click('button[type="submit"]')
 await pagina.waitForURL('**/proyectos', { timeout: 10000 })
 
-// `[REQ]` §3.2 · Cada sección del activo tiene su propia dirección desde
-// que el espacio del activo existe: se entra por ella y no encadenando
-// clics, que además comprueba que la ruta es la que se anuncia.
+// `[REQ]` §3.2 · Cada sección del activo tiene su propia dirección: se entra por
+// ella y no encadenando clics, que además comprueba que la ruta es la que se
+// anuncia.
 await pagina.goto(`${BASE}/proyectos/${proyecto.id}/activos/${activo.id}/inventario`)
-await pagina.waitForSelector('.inventario-activo', { timeout: 10000 })
+await pagina.waitForSelector('.inventario-activo .cabecera-inv', { timeout: 10000 })
 console.log('· Inventario abierto')
 
-// 1 · Traer de la documentación.
-await pagina.getByRole('button', { name: 'Traer de la documentación' }).click()
-await pagina.waitForSelector('.tabla.descriptivos tbody tr', { timeout: 10000 })
-const filas = pagina.locator('.tabla.descriptivos tbody tr')
-const cuantas = await filas.count()
-console.log(`  ${cuantas} descriptivos traídos`)
-if (cuantas !== 2) {
-  fallos.push(`Se han traído ${cuantas} descriptivos y la memoria codifica 2 objetos`)
-}
-
-/** La fila de un objeto, por su código. */
-function fila(code) {
-  return filas.filter({
+/** La cabecera de un nodo del árbol, por su código. */
+function nodo(code) {
+  return pagina.locator('.cabecera-inv').filter({
     has: pagina.locator('.codigo', { hasText: new RegExp(`^${code.replace(/\./g, '\\.')}$`) }),
   })
 }
 
-const texto = await fila('HC.H08.01')
-  .locator('textarea')
+/** La ficha abierta de un objeto: el `<li>` que lo contiene. */
+function ficha(code) {
+  return pagina
+    .locator('li')
+    .filter({ has: nodo(code) })
+    .locator('.ficha-objeto')
+    .first()
+}
+
+/** Pulsa y **espera a que la pantalla termine**.
+ *
+ * Esperar a `.mensaje.ok` no vale: el de la operación anterior sigue ahí, así
+ * que `waitForSelector` vuelve al instante y lo siguiente que haga la prueba
+ * pisa una petición en vuelo. `aria-busy` es el estado de verdad.
+ */
+async function pulsar(nombre) {
+  await pagina.getByRole('button', { name: nombre }).click()
+  await pagina.waitForSelector('.inventario-activo[aria-busy="false"]', { timeout: 15000 })
+}
+
+async function abrir(code) {
+  const cabecera = nodo(code)
+  if ((await cabecera.getAttribute('aria-expanded')) === 'false') await cabecera.click()
+}
+
+// 1 · Es un árbol: raíces, categorías y objetos.
+const raices = await pagina.locator('.cabecera-inv.n1').count()
+console.log(`  ${raices} raíces del árbol`)
+if (raices < 1) fallos.push('El inventario no enseña las raíces del árbol')
+// Hard Cost tiene que estar, y con sus capítulos dentro.
+if ((await nodo('HC').count()) !== 1) fallos.push('No está la raíz Hard Cost')
+await abrir('HC')
+if ((await nodo('HC.H08').count()) !== 1) {
+  fallos.push('Abrir Hard Cost no enseña sus capítulos')
+}
+
+// 2 · Los equipos ya colocan su objeto, así que su categoría se abre sola.
+await pagina.waitForSelector('.cabecera-inv.con-algo', { timeout: 10000 })
+const conAlgo = await pagina.locator('.cabecera-inv.con-algo').count()
+console.log(`  ${conAlgo} objeto(s) marcados como «con contenido»`)
+// Dos: los objetos de los dos equipos que se han inventariado con su objeto.
+if (conAlgo !== 2) {
+  fallos.push(`${conAlgo} objeto(s) se distinguen por tener trabajo hecho, se esperaban 2`)
+}
+
+// 3 · Traer de la documentación.
+await pulsar(/Traer descriptivos/)
+await abrir('HC.H08')
+await abrir('HC.H08.01')
+const texto = await ficha('HC.H08.01')
+  .getByRole('textbox', { name: /^Descriptivo de/ })
   .inputValue()
 console.log('  descriptivo:', texto)
-// Las palabras de la memoria, no el nombre del catálogo: «Producción de
-// climatización» ya está en la columna de al lado.
+// Las palabras de la memoria, no el nombre del catálogo.
 if (!texto.includes('Enfriadora de la cubierta') || !texto.includes('R-410A')) {
   fallos.push(`El descriptivo no trae lo que dice la memoria: «${texto}»`)
 }
 if (texto.includes('2,00')) {
   fallos.push(`La cantidad se escribe con la escala de la columna: «${texto}»`)
 }
-
-// 1b · El objeto sin código sale avisado y no se inventa un descriptivo.
 const avisos = await pagina.locator('.inventario-activo .mensaje.aviso').allInnerTexts()
-console.log('  avisos:', avisos.length)
 if (!avisos.some((a) => a.includes('no están codificados'))) {
   fallos.push('El objeto sin código del catálogo no se avisa')
 }
 
-// 2 · Nace pendiente de validar, y lo dice con letras.
-const estado = await fila('HC.H08.01').locator('td.validacion').innerText()
-console.log('  estado:', estado.replace(/\s+/g, ' ').trim())
-if (!/pendiente de validar/i.test(estado)) {
-  fallos.push(`La fila no dice que está pendiente de validar: «${estado}»`)
-}
-if (!/gestor técnico/i.test(estado)) {
-  fallos.push(`No dice quién tiene que validarlo: «${estado}»`)
-}
-
-// 3 · El cuadro es editable y se guarda.
-const CORRECCION = 'Dos enfriadoras aire-agua de 2004; el compresor de la nº2 está sustituido.'
-await fila('HC.H08.01').locator('textarea').fill(CORRECCION)
-await pagina.getByRole('button', { name: /^Guardar descriptivos/ }).click()
-await pagina.waitForSelector('.inventario-activo .mensaje.ok', { timeout: 10000 })
-const guardados = await api('GET', `/assets/${activo.id}/descriptivos`, null, tk)
-const enBase = guardados.find((d) => d.capex_code === 'HC.H08.01')
-if (enBase.texto !== CORRECCION) {
-  fallos.push(`Lo editado no llega a la base: «${enBase.texto}»`)
+// 4 · La valoración es otro cuadro, y traer no la toca.
+const VALORACION = 'Refrigerante en calendario de retirada. Sustitución a medio plazo.'
+await ficha('HC.H08.01')
+  .getByRole('textbox', { name: /^Valoración de/ })
+  .fill(VALORACION)
+await pulsar(/^Guardar el inventario/)
+let enBase = (await api('GET', `/assets/${activo.id}/descriptivos`, null, tk)).find(
+  (d) => d.capex_code === 'HC.H08.01',
+)
+if (enBase.valoracion !== VALORACION) {
+  fallos.push(`La valoración no llega a la base: «${enBase.valoracion}»`)
 } else {
-  console.log('  la corrección se ha guardado')
+  console.log('  la valoración se guarda aparte del descriptivo')
 }
 
-// 4 · La casilla valida. Y sobre un descriptivo vacío no se puede marcar.
-await fila('HC.H08.01')
-  .getByRole('checkbox', { name: /Marcar como validado/ })
+await pulsar(/Traer descriptivos/)
+enBase = (await api('GET', `/assets/${activo.id}/descriptivos`, null, tk)).find(
+  (d) => d.capex_code === 'HC.H08.01',
+)
+if (enBase.valoracion !== VALORACION) {
+  fallos.push('Volver a traer la documentación ha pisado la valoración')
+} else {
+  console.log('  y volver a traer no la toca')
+}
+
+// 5 · La casilla valida; un objeto vacío no se puede firmar.
+await abrir('HC.H08.01')
+await ficha('HC.H08.01')
+  .getByRole('checkbox', { name: /Validado por un técnico/ })
   .check()
-await pagina.getByRole('button', { name: /^Guardar descriptivos/ }).click()
-await pagina.waitForSelector('.tabla.descriptivos tr.validado', { timeout: 10000 })
+await pulsar(/^Guardar el inventario/)
 const firmado = (await api('GET', `/assets/${activo.id}/descriptivos`, null, tk)).find(
   (d) => d.capex_code === 'HC.H08.01',
 )
@@ -235,27 +292,31 @@ if (!firmado.validado_at || !firmado.validado_por) {
 } else {
   console.log(`  validado por ${firmado.validado_por_nombre}`)
 }
-const conFirma = await fila('HC.H08.01').locator('td.validacion').innerText()
-if (!/Validado/.test(conFirma) || !/\d{4}-\d{2}-\d{2}/.test(conFirma)) {
-  fallos.push(`La fila validada no enseña la firma: «${conFirma.replace(/\s+/g, ' ')}»`)
-}
 
-// La otra fila se vacía: su casilla tiene que quedar deshabilitada.
-await fila('HC.H02.01').locator('textarea').fill('   ')
-const casillaVacia = fila('HC.H02.01').getByRole('checkbox', { name: /Marcar como validado/ })
+await abrir('HC.H02')
+await abrir('HC.H02.01')
+await ficha('HC.H02.01')
+  .getByRole('textbox', { name: /^Descriptivo de/ })
+  .fill('   ')
+const casillaVacia = ficha('HC.H02.01').getByRole('checkbox', {
+  name: /Validado por un técnico/,
+})
 if (await casillaVacia.isEnabled()) {
-  fallos.push('Se puede marcar como validado un descriptivo vacío: sería firmar en blanco')
+  fallos.push('Se puede validar un objeto vacío: sería firmar en blanco')
 } else {
-  console.log('  un descriptivo vacío no se puede validar')
+  console.log('  un objeto vacío no se puede validar')
 }
 
-// 5 · «Pasa a CAPEX»: marcar no crea nada, el botón genera de golpe.
+// 6 · «Pasa a CAPEX»: marcar no crea nada.
 // `click()` y no `check()`: la casilla es controlada y solo se marca cuando
-// vuelve el PATCH, así que `check()` —que verifica el estado nada más pulsar—
-// da por fallado un guardado que sí está en camino. Se espera por la clase de
-// la fila, que es lo que de verdad dice que el servidor lo aceptó.
-for (const etiqueta of ['CL-01', 'BIE-01']) {
-  await pagina
+// vuelve el PATCH, así que `check()` daría por fallado un guardado en camino.
+await abrir('HC.H10')
+await abrir('HC.H10.05')
+for (const [code, etiqueta] of [
+  ['HC.H08.01', 'CL-01'],
+  ['HC.H10.05', 'BIE-01'],
+]) {
+  await ficha(code)
     .locator('.tabla.equipo-capex tbody tr')
     .filter({ hasText: etiqueta })
     .getByRole('checkbox')
@@ -266,49 +327,74 @@ await pagina.waitForFunction(
   null,
   { timeout: 10000 },
 )
-const sinGenerar = await api('GET', `/projects/${proyecto.id}/findings?asset_id=${activo.id}`, null, tk)
+const sinGenerar = await api(
+  'GET',
+  `/projects/${proyecto.id}/findings?asset_id=${activo.id}`,
+  null,
+  tk,
+)
 if (sinGenerar.length !== 0) {
   fallos.push(`Marcar la casilla ya ha creado ${sinGenerar.length} actuación(es): no debería`)
 } else {
   console.log('  marcar no crea nada')
 }
 
-await pagina.getByRole('button', { name: /Generar actuaciones de los marcados/ }).click()
-await pagina.waitForSelector('.inventario-activo .mensaje.ok', { timeout: 10000 })
-const generadas = await api('GET', `/projects/${proyecto.id}/findings?asset_id=${activo.id}`, null, tk)
+// 7 · Generar: ahora el de PCI también, porque tiene objeto.
+await pulsar(/Generar actuaciones de los marcados/)
+const generadas = await api(
+  'GET',
+  `/projects/${proyecto.id}/findings?asset_id=${activo.id}`,
+  null,
+  tk,
+)
 console.log(`  ${generadas.length} actuación(es) generada(s)`)
-// Solo la enfriadora: la BIE va a «H06 + H10» y elegir uno sería codificarla mal.
-if (generadas.length !== 1 || !generadas[0].title.includes('CL-01')) {
+if (generadas.length !== 2) {
   fallos.push(
-    `Se esperaba una sola actuación, la de CL-01: ${generadas.map((h) => h.title).join(' / ')}`,
+    `Se esperaban dos actuaciones —CL-01 y BIE-01—: ${generadas.map((h) => h.title).join(' / ')}`,
   )
 }
-const avisosCapex = await pagina.locator('.inventario-activo .mensaje.aviso').allInnerTexts()
-if (!avisosCapex.some((a) => a.includes('BIE-01'))) {
-  fallos.push('El equipo cuyo capítulo no resuelve no sale en los avisos')
+const bie = generadas.find((h) => h.title.includes('BIE-01'))
+if (!bie) {
+  fallos.push('El equipo de PCI sigue sin generarse pese a tener objeto')
+} else if (bie.capex_code_id !== porCodigo['HC.H10.05']) {
+  fallos.push('La actuación del equipo de PCI no cuelga del objeto que se le puso')
 } else {
-  console.log('  el equipo sin capítulo único se avisa en vez de codificarse a ciegas')
+  console.log('  el de PCI se genera y cuelga de su objeto: «H06 + H10» ya no bloquea')
 }
 
-// 6 · La fotografía se ata al equipo.
-await pagina
-  .locator('.tabla.fotos-equipo tbody tr')
-  .first()
-  .locator('select')
-  .selectOption(enfriadora.id)
-await pagina.waitForFunction(
-  (id) => {
-    const celda = document.querySelector('.tabla.equipo-capex tbody tr td:last-child')
-    return celda && celda.textContent.trim() !== '0' && id
-  },
-  enfriadora.id,
-  { timeout: 10000 },
-)
-const atada = await api('GET', `/photos/${foto.id}`, null, tk)
-if (atada.equipment_id !== enfriadora.id) {
-  fallos.push(`La fotografía no ha quedado atada al equipo: ${atada.equipment_id}`)
+// 8 · El equipo sin objeto sale aparte y se coloca desde ahí.
+const sinClasificar = pagina.locator('.sin-clasificar')
+if ((await sinClasificar.count()) !== 1) {
+  fallos.push('El equipo sin objeto no sale agrupado aparte')
 } else {
-  console.log('  la fotografía queda atada a CL-01')
+  await sinClasificar
+    .locator('tbody tr')
+    .filter({ hasText: 'XX-01' })
+    .locator('select')
+    .selectOption(porCodigo['HC.H02.01'])
+  await pagina.waitForFunction(() => !document.querySelector('.sin-clasificar'), null, {
+    timeout: 10000,
+  })
+  const colocado = await api('GET', `/equipment/${suelto.id}`, null, tk)
+  if (colocado.capex_code !== 'HC.H02.01') {
+    fallos.push(`Colocar el equipo no ha guardado su objeto: ${colocado.capex_code}`)
+  } else {
+    console.log('  un equipo sin objeto se coloca desde «sin clasificar»')
+  }
+}
+
+// La fotografía sigue atándose al equipo desde la visita: es donde vive la
+// galería. Aquí se comprueba que, atada, aparece en el objeto de su equipo.
+await api('PATCH', `/photos/${foto.id}`, { equipment_id: enfriadora.id }, tk)
+await pagina.reload()
+await pagina.waitForSelector('.inventario-activo .cabecera-inv', { timeout: 10000 })
+await abrir('HC.H08')
+await abrir('HC.H08.01')
+const fotosDelObjeto = await ficha('HC.H08.01').locator('.fotos-del-objeto li').count()
+if (fotosDelObjeto !== 1) {
+  fallos.push(`El objeto enseña ${fotosDelObjeto} fotografías y su equipo tiene una`)
+} else {
+  console.log('  la foto atada al equipo aparece en su objeto sin clasificarla dos veces')
 }
 
 await navegador.close()
@@ -320,6 +406,6 @@ if (fallos.length) {
   process.exit(1)
 }
 console.log(
-  'Los descriptivos se traen pendientes, se editan y se validan; «pasa a CAPEX» genera de una vez '
-    + 'y la fotografía se ata al equipo.',
+  'El inventario es el árbol del cliente; cada objeto lleva su descriptivo y su valoración, ' +
+    'sus equipos y sus fotos; y «pasa a CAPEX» genera sabiendo dónde cuelga cada actuación.',
 )

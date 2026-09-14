@@ -258,16 +258,64 @@ UBICACIONES: tuple[tuple[str, str, str | None], ...] = (
 
 #: `[REQ]` §7 · Inventario. P-15: la vida residual **no se teclea**, se calcula
 #: del año de instalación y la vida esperada.
-EQUIPOS: tuple[tuple[str, str, str, int, int, str, str, bool], ...] = (
-    # tipo · etiqueta · marca · año · vida · estado · sistema técnico · pasa a CAPEX
-    ("Enfriadora", "CLIMA-01", "Marca Ficticia", 2004, 20, "MUY_DEFICIENTE", "CLIMA", True),
-    ("Cuadro general de BT", "ELEC-01", "Marca Ficticia", 2004, 30, "ACEPTABLE", "ELEC", False),
-    # `[REQ]` §3.2 d · Marcado, y su sistema apunta a DOS capítulos («H06 + H10»),
-    # así que al generar sale en los avisos en vez de codificarse a ciegas. Es el
-    # caso que hay que poder enseñar: la aplicación se niega y lo dice.
-    ("Grupo de presión de PCI", "PCI-01", "Marca Ficticia", 2010, 25, "BUENO", "PCI", True),
-    ("Ascensor de carga", "TRANS-01", "Marca Ficticia", 2004, 25, "ACEPTABLE", "ASC", True),
-    ("UTA de oficinas", "CLIMA-02", "Marca Ficticia", 2015, 18, "BUENO", "CLIMA", False),
+#: `[REQ]` §3.2 d · Cada equipo cuelga de su **objeto** del árbol, que es lo que
+#: ordena el inventario por categorías. El sistema técnico se queda: es la
+#: clasificación transversal que usa el renombrado de fotografías.
+#:
+#: El de PCI lleva objeto **a propósito**: su sistema vale «H06 + H10» —pasiva y
+#: activa, dos capítulos— y antes no se podía generar su actuación. Con el objeto
+#: puesto al inventariarlo, sí. Es la diferencia que hay que poder enseñar.
+#:
+#: Y uno se deja SIN objeto, también a propósito: es el caso de las filas que ya
+#: existían antes de que el inventario preguntara, y la pantalla las reúne aparte
+#: en «sin clasificar» en vez de inventarles un sitio.
+EQUIPOS: tuple[tuple[str, str, str, int, int, str, str, str | None, bool], ...] = (
+    # tipo · etiqueta · marca · año · vida · estado · sistema · objeto · a CAPEX
+    (
+        "Enfriadora",
+        "CLIMA-01",
+        "Marca Ficticia",
+        2004,
+        20,
+        "MUY_DEFICIENTE",
+        "CLIMA",
+        "HC.H08.01",
+        True,
+    ),
+    (
+        "Cuadro general de BT",
+        "ELEC-01",
+        "Marca Ficticia",
+        2004,
+        30,
+        "ACEPTABLE",
+        "ELEC",
+        "HC.H09.02",
+        False,
+    ),
+    (
+        "Grupo de presión de PCI",
+        "PCI-01",
+        "Marca Ficticia",
+        2010,
+        25,
+        "BUENO",
+        "PCI",
+        "HC.H10.01",
+        True,
+    ),
+    (
+        "Ascensor de carga",
+        "TRANS-01",
+        "Marca Ficticia",
+        2004,
+        25,
+        "ACEPTABLE",
+        "ASC",
+        "HC.H12.01",
+        True,
+    ),
+    ("UTA de oficinas", "CLIMA-02", "Marca Ficticia", 2015, 18, "BUENO", "CLIMA", None, False),
 )
 
 #: `[REQ]` §3.2 c · Quién fue a la visita. El primero es del equipo —se resuelve
@@ -547,12 +595,13 @@ def sembrar(api: Api) -> str:
     # él sale el capítulo del CAPEX al generar las actuaciones, y repartirlos
     # por índice colocaba la enfriadora en «Accesibilidad».
     por_codigo_sistema = {s["code"]: s["id"] for s in sistemas}
-    for tipo, tag, marca, ano, vida, estado, sistema, marcado in EQUIPOS:
+    for tipo, tag, marca, ano, vida, estado, sistema, objeto, marcado in EQUIPOS:
         api.post(
             f"/projects/{proyecto['id']}/equipment",
             {
                 "asset_id": activo["id"],
                 "technical_system_id": por_codigo_sistema.get(sistema),
+                "capex_code_id": por_codigo(objeto)["id"] if objeto else None,
                 "equipment_type": tipo,
                 "tag": tag,
                 "manufacturer": marca,
@@ -564,8 +613,12 @@ def sembrar(api: Api) -> str:
                 "pasa_a_capex": marcado,
             },
         )
-    marcados = sum(1 for e in EQUIPOS if e[7])
-    print(f"· {len(EQUIPOS)} equipos en el inventario, {marcados} marcados «pasa a CAPEX»")
+    marcados = sum(1 for e in EQUIPOS if e[8])
+    sin_objeto = sum(1 for e in EQUIPOS if e[7] is None)
+    print(
+        f"· {len(EQUIPOS)} equipos en el inventario, {marcados} marcados «pasa a CAPEX», "
+        f"{sin_objeto} sin objeto del árbol"
+    )
 
     # ── La memoria técnica y los descriptivos (§3.2 d) ──────────────────────
     # `[REQ]` Se deja SIN validar a propósito: la ficha del activo tiene que

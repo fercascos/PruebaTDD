@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { obtener } from '../api/cliente'
+import { porTipoDeCoste } from '../api/tipos'
 import type { CodigoCapex, ElementoCatalogo, Hallazgo } from '../api/tipos'
 import { euros } from '../graficos/formato'
 import { Mensaje, Vacio } from '../ui/Marco'
@@ -61,16 +62,6 @@ const PLAZOS = [
   ['MEJORAS', 'Mejoras'],
   ['OTRO', 'Otro'],
 ] as const
-
-/**
- * `[SUP]` El orden de los tipos de coste, que es el de la hoja del cliente.
- *
- * `capex_code` **no tiene columna de orden** y la API los devuelve por código,
- * que alfabéticamente pone ESG delante de Hard Cost. Añadir la columna sería una
- * migración por un asunto de presentación; los que no estén aquí van al final,
- * por código, así que un tipo nuevo no desaparece.
- */
-const ORDEN_DE_TIPO = ['HC', 'SC', 'OP', 'MA', 'ESG', 'IMP']
 
 /** La rama de los códigos que ya no están en el catálogo. Ver la cabecera. */
 const RETIRADO = 'RETIRADO'
@@ -546,13 +537,12 @@ function padreDe(
  */
 function ordenar(nodos: Nodo[]): void {
   nodos.sort((a, b) => {
+    // Los tipos de coste van en el orden de la hoja del cliente; el resto, por
+    // código. `porTipoDeCoste` vive en `tipos.ts` porque el inventario ordena
+    // su árbol igual, y dos copias acaban enseñando dos árboles distintos.
     if (a.nivel === 1) {
-      const ia = ORDEN_DE_TIPO.indexOf(a.code)
-      const ib = ORDEN_DE_TIPO.indexOf(b.code)
-      // Los que no están en la lista —un tipo nuevo, la rama de retirados— al
-      // final, y entre ellos por código.
-      if (ia !== ib)
-        return (ia < 0 ? ORDEN_DE_TIPO.length : ia) - (ib < 0 ? ORDEN_DE_TIPO.length : ib)
+      const porTipo = porTipoDeCoste(a.code, b.code)
+      if (porTipo !== 0) return porTipo
     }
     return a.code.localeCompare(b.code, 'es')
   })

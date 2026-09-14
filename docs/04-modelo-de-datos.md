@@ -586,18 +586,36 @@ ambas coinciden al céntimo. `[REC]`
 > ya había incluido.
 
 #### `equipment` — inventario opcional `[REQ]` §7 / P-15
-`id` · `organization_id` · `project_id` · `asset_id` · `technical_system_id` · `zone_id` NULL ·
-`tag` · `equipment_type` · `manufacturer` · `model` · `serial_number` ·
+`id` · `organization_id` · `project_id` · `asset_id` · `technical_system_id` · `capex_code_id`
+NULL · `zone_id` NULL · `tag` · `equipment_type` · `manufacturer` · `model` · `serial_number` ·
 `install_year` · `expected_life_years` · `end_of_life_year` GENERATED ·
 `condition` ENUM · `obsolescence` ENUM · `criticality` ENUM · `quantity` · `unit` ·
 `has_documentation` · `notes` · `pasa_a_capex` · `search_vector` GENERATED · auditoría · soft delete.
+
+`[REQ]` §3.2 d · **`capex_code_id` es el objeto del árbol del que cuelga el equipo** (nivel 3,
+dentro de Hard Cost), y es lo que ordena el inventario en «categorías y dentro de cada categoría
+sus objetos».
+
+Convive con `technical_system_id` y no lo sustituye. El sistema es la clasificación transversal que
+usa el renombrado de fotografías, y además **no sirve para colgar del árbol**: el sistema
+«Protección contra incendios» vale `H06 + H10` en la hoja del cliente —pasiva y activa, dos
+capítulos—, así que de él no se deduce una categoría única. Preguntando el objeto **mientras se
+inventaría**, con el equipo delante, esa ambigüedad se resuelve donde hay alguien que sabe la
+respuesta, y `generar-capex` deja de tener que adivinar.
+
+Es **anulable**, y no se rellena hacia atrás: las filas anteriores se quedan sin objeto y la
+pantalla las reúne aparte, en «sin clasificar». Un capítulo tiene once objetos y elegir uno por
+consulta sería inventarse dónde está la máquina. Que sea de nivel 3 y de Hard Cost lo comprueba la
+API y lo cubre una prueba, igual que en `descriptivo_objeto`.
 
 `[REQ]` §3.2 d · **`pasa_a_capex` es una marca, no un disparador.** Vale `FALSE` por omisión y
 marcarla **no crea nada**: el gestor recorre la visita marcando lo que hay que sustituir y
 `POST /assets/{id}/equipment/generar-capex` genera las actuaciones de una vez. Crear el hallazgo
 al marcar habría llenado el CAPEX de filas vacías con cada casilla pulsada por error.
 
-**Índices:** `(project_id, asset_id)`, `(asset_id, technical_system_id)`, GIN sobre `search_vector`,
+**Índices:** `(project_id, asset_id)`, `(asset_id, technical_system_id)`,
+`(asset_id, capex_code_id)` —la pantalla del inventario pide los equipos de un objeto una vez por
+cada objeto abierto—, GIN sobre `search_vector`,
 `UNIQUE(asset_id, tag) WHERE tag IS NOT NULL AND deleted_at IS NULL`.
 
 `[REC]` La especificación revisada ya no detalla los campos del inventario, pero §7 mantiene la
@@ -622,18 +640,27 @@ quien no, no la ve. La vida residual se calcula, no se teclea (P-15).
 `[PDV]` `location_node_id` queda fuera: `location_node` no está construido. Cuando exista, el enlace
 se añade como columna anulable sin tocar nada de lo demás.
 
-#### `descriptivo_objeto` — el descriptivo de un objeto, validado por una persona `[REQ]` §3.2 d
-`id` · `organization_id` · `asset_id` · `capex_code_id` · `texto` · `document_id` NULL ·
-`origen` NULL · `es_simulada` · `validado_at` NULL · `validado_por` NULL · auditoría.
+#### `descriptivo_objeto` — el descriptivo y la valoración de un objeto `[REQ]` §3.2 d
+`id` · `organization_id` · `asset_id` · `capex_code_id` · `texto` · `valoracion` ·
+`document_id` NULL · `origen` NULL · `es_simulada` · `validado_at` NULL · `validado_por` NULL ·
+auditoría.
+
+**Dos textos, y no uno.** `texto` es el **descriptivo** —*qué hay*— y sale de la memoria técnica,
+así que se puede volver a traer con un botón. `valoracion` es *en qué estado está*, y no la dice
+ningún documento: la escribe quien ha ido a verlo. En la misma columna nadie sabría medio año
+después qué se observó y qué se copió, y traer el descriptivo otra vez borraría por delante el
+juicio del técnico. `desde-documentacion` **solo toca `texto`**.
 
 **Índices y restricciones:** `UNIQUE(asset_id, capex_code_id)` —un objeto tiene **un** descriptivo
 en un activo—, índice por `asset_id`, `CHECK ((validado_at IS NULL) = (validado_por IS NULL))` y
-`CHECK (validado_at IS NULL OR length(trim(texto)) > 0)`.
+`CHECK (validado_at IS NULL OR length(trim(texto)) > 0 OR length(trim(valoracion)) > 0)`.
 
 Las dos restricciones dicen lo mismo desde dos lados: **una validación es de alguien y de un
-momento**, y **no se firma una casilla en blanco**. La API las comprueba antes para poder
-explicarlas —un `23514` de PostgreSQL no cuenta que lo que falta es escribir el texto—, pero viven
-también aquí porque la importación y cualquier otro camino de escritura tienen que respetarlas.
+momento**, y **no se firma una casilla en blanco**. Basta con que haya **uno** de los dos textos:
+hay objetos que se valoran sin describir —una fachada que se ve y no está en ninguna memoria— y
+objetos que se describen antes de visitarlos. La API las comprueba antes para poder explicarlas
+—un `23514` de PostgreSQL no cuenta que lo que falta es escribir el texto—, pero viven también
+aquí porque la importación y cualquier otro camino de escritura tienen que respetarlas.
 
 **Por qué es una tabla y no un campo de `memoria_objeto`.** De ahí sale el texto la primera vez,
 pero son dos cosas con dos ciclos de vida. `memoria_objeto` es *lo que la memoria enumeró* y **se

@@ -112,6 +112,28 @@ export type ElementoCatalogo = { id: string; code: string; name_es: string }
  */
 export type CodigoCapex = ElementoCatalogo & { level: number; parent_id: string | null }
 
+/**
+ * `[SUP]` El orden de los tipos de coste, que es el de la hoja del cliente.
+ *
+ * `capex_code` **no tiene columna de orden** y la API los devuelve por código,
+ * que alfabéticamente pone ESG delante de Hard Cost. Añadir la columna sería una
+ * migración por un asunto de presentación; los que no estén aquí van al final,
+ * por código, así que un tipo nuevo no desaparece.
+ *
+ * Vive aquí y no en una pantalla porque lo usan dos —el árbol del CAPEX y el
+ * inventario— y dos copias del mismo orden acaban enseñando dos árboles
+ * distintos del mismo catálogo.
+ */
+export const ORDEN_DE_TIPO = ['HC', 'SC', 'OP', 'MA', 'ESG', 'IMP']
+
+/** Compara dos códigos de nivel 1 por el orden de la hoja del cliente. */
+export function porTipoDeCoste(a: string, b: string): number {
+  const ia = ORDEN_DE_TIPO.indexOf(a)
+  const ib = ORDEN_DE_TIPO.indexOf(b)
+  if (ia < 0 && ib < 0) return a.localeCompare(b, 'es')
+  return (ia < 0 ? ORDEN_DE_TIPO.length : ia) - (ib < 0 ? ORDEN_DE_TIPO.length : ib)
+}
+
 export type Duplicado = {
   tipo: 'EXACTO' | 'CASI'
   photo_id: string
@@ -137,6 +159,10 @@ export type Foto = {
    *  lo que justifica seis meses después por qué se propone sustituir **esa**
    *  máquina y no otra. */
   equipment_id: string | null
+  /** `[REQ]` §3.2 d · El objeto del árbol que retrata, para las fotografías que
+   *  no son de una máquina: una cubierta, una fachada. Las que sí tienen equipo
+   *  heredan su objeto y no hace falta decirlo dos veces. */
+  capex_code_id: string | null
   status: string
   origin: string
   original_filename: string
@@ -265,6 +291,14 @@ export type Equipo = {
   asset_id: string
   technical_system_id: string | null
   technical_system_name: string | null
+  /** `[REQ]` §3.2 d · El objeto del árbol (nivel 3) del que cuelga el equipo, que
+   *  es lo que ordena el inventario por categorías. Nulo mientras nadie lo haya
+   *  clasificado: no se deduce del sistema técnico. */
+  capex_code_id: string | null
+  capex_code: string | null
+  capex_name: string | null
+  chapter_code: string | null
+  chapter_name: string | null
   zone_id: string | null
   zone_name: string | null
   tag: string | null
@@ -317,7 +351,11 @@ export type Descriptivo = {
   capex_name: string
   chapter_code: string
   chapter_name: string
+  /** Qué hay. Sale de la memoria técnica y `desde-documentacion` lo rellena. */
   texto: string
+  /** `[REQ]` §3.2 d · En qué estado está. No sale de ningún documento: lo escribe
+   *  quien ha ido a verlo, y por eso nada lo rellena solo. */
+  valoracion: string
   document_id: string | null
   origen: string | null
   /** `[LIM]` Heredado de la extracción. Un texto simulado que pase por bueno es

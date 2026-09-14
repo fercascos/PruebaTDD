@@ -2326,6 +2326,128 @@ button.enlace {
   color: var(--tinta-suave);
 }
 
+/* ── El árbol: raíz → categoría → objeto ─────────────────────────────────── */
+.arbol-inventario {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 0.9rem;
+  border-left: 2px solid var(--borde);
+}
+.cabecera-inv {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.35rem 0.4rem;
+  margin: 0.15rem 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--borde);
+  cursor: pointer;
+  color: inherit;
+}
+.cabecera-inv:hover {
+  background: var(--marcado, #eff6ff);
+}
+.cabecera-inv:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+}
+.cabecera-inv.n1 {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.cabecera-inv.n2 {
+  font-weight: 600;
+}
+.cabecera-inv .flecha {
+  flex: 0 0 auto;
+  color: var(--tinta-suave);
+}
+.cabecera-inv .nombre-inv {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* La marca dice qué lleva dentro sin abrirlo. En pantalla estrecha baja a su
+   propia línea: en `nowrap` empujaba la página entera a lo ancho. */
+.cabecera-inv .marca-inv {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+/* Un objeto con trabajo hecho se distingue del que sigue en blanco sin abrirlo:
+   el ojo recorre la columna y sabe por dónde va. El borde acompaña al texto de
+   la marca, que es el que informa. */
+.cabecera-inv.con-algo {
+  border-left: 3px solid var(--ok);
+  padding-left: 0.5rem;
+}
+
+.ficha-objeto {
+  padding: 0.5rem 0 0.9rem 0.75rem;
+  margin: 0 0 0.6rem;
+  border-left: 2px solid var(--borde);
+}
+.ficha-objeto h5 {
+  margin: 1.1rem 0 0.35rem;
+  font-size: 0.9rem;
+}
+.dos-textos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.75rem 1.1rem;
+}
+.dos-textos .campo textarea {
+  width: 100%;
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  resize: vertical;
+}
+.dos-textos .campo textarea:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 0;
+}
+.marca-revision {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.fotos-del-objeto {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.fotos-del-objeto li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  align-items: baseline;
+  font-size: 0.88rem;
+  padding: 0.3rem 0.5rem;
+  border-left: 3px solid var(--ok);
+  background: var(--fondo);
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+.sin-clasificar {
+  margin-top: 1.6rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--borde);
+}
+.recuento.simulada {
+  color: var(--error);
+  font-weight: 600;
+}
+
 /* El cuadro editable. El textarea ocupa la celda entera para que se pueda
    escribir un párrafo sin que la tabla salte de ancho al teclear. */
 .tabla.descriptivos td.editable textarea {
@@ -2370,6 +2492,14 @@ button.enlace {
 @media (max-width: 640px) {
   .tabla.descriptivos td.editable textarea {
     min-width: 0;
+  }
+  /* La marca de un objeto —«descriptivo · valoración · 1 equipo · 1 a CAPEX»—
+     no cabe en una línea de teléfono al lado del nombre. */
+  .cabecera-inv {
+    flex-wrap: wrap;
+  }
+  .cabecera-inv .marca-inv {
+    flex: 1 0 100%;
   }
 }
 

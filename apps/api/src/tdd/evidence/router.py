@@ -129,6 +129,10 @@ class Foto(BaseModel):
     technical_system_id: uuid.UUID | None = None
     #: `[REQ]` §3.2 d · El equipo del inventario que retrata, si retrata uno.
     equipment_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El OBJETO del árbol que retrata, para las fotografías que
+    #: no son de una máquina: una cubierta, una fachada. Las que sí tienen equipo
+    #: heredan su objeto y no hace falta decirlo dos veces.
+    capex_code_id: uuid.UUID | None = None
     status: str
     origin: str
     original_filename: str
@@ -170,6 +174,10 @@ class ActualizarFoto(BaseModel):
     technical_system_id: uuid.UUID | None = None
     #: `[REQ]` §3.2 d · Atar la fotografía de la visita al equipo que retrata.
     equipment_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El OBJETO del árbol que retrata, para las fotografías que
+    #: no son de una máquina: una cubierta, una fachada. Las que sí tienen equipo
+    #: heredan su objeto y no hace falta decirlo dos veces.
+    capex_code_id: uuid.UUID | None = None
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     caption: str | None = None
     description: str | None = None
@@ -249,6 +257,7 @@ class Enlace(BaseModel):
 
 _COLUMNAS = """
     id, project_id, asset_id, zone_id, location_node_id, technical_system_id, equipment_id,
+    capex_code_id,
     status::text AS status, origin::text AS origin,
     original_filename, display_name, file_extension, mime_type, sha256, phash,
     byte_size, width_px, height_px, taken_at, gps_latitude, gps_longitude,
@@ -1307,6 +1316,10 @@ class ActualizacionEnLote(BaseModel):
     technical_system_id: uuid.UUID | None = None
     #: Y atar de una vez las cinco fotos que se hicieron de la misma enfriadora.
     equipment_id: uuid.UUID | None = None
+    #: `[REQ]` §3.2 d · El OBJETO del árbol que retrata, para las fotografías que
+    #: no son de una máquina: una cubierta, una fachada. Las que sí tienen equipo
+    #: heredan su objeto y no hace falta decirlo dos veces.
+    capex_code_id: uuid.UUID | None = None
     photo_category: str | None = Field(default=None, max_length=60)
     include_in_report: bool | None = None
     report_section: str | None = Field(default=None, max_length=60)

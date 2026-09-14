@@ -5,6 +5,20 @@ la documentación el descriptivo de cada objeto de Hard Cost que encuentre**, lo
 enseñe marcado como pendiente de validar por el gestor técnico, se pueda editar y
 se marque como validado con una casilla.
 
+## Dos textos, y por qué no son uno
+
+Cada objeto lleva **descriptivo** y **valoración**, y dicen cosas distintas:
+
+* el **descriptivo** es *qué hay* —«enfriadora aire-agua en cubierta, 2 ud»— y
+  sale de la memoria técnica, así que se puede volver a traer con un botón;
+* la **valoración** es *en qué estado está* —«22 años de servicio, por encima de
+  su vida útil»— y no la dice ningún documento: la escribe quien ha ido a verlo.
+
+En el mismo párrafo nadie sabría medio año después qué se observó y qué se
+copió, y traer el descriptivo otra vez borraría por delante el juicio del
+técnico. Por eso son dos columnas y **`desde-documentacion` solo toca la
+primera**.
+
 ## Por qué es una tabla y no un campo de `memoria_objeto`
 
 Es de ahí de donde sale el texto la primera vez, pero son dos cosas con dos
@@ -67,6 +81,7 @@ class Descriptivo(BaseModel):
     chapter_code: str
     chapter_name: str
     texto: str
+    valoracion: str
     document_id: uuid.UUID | None
     origen: str | None
     es_simulada: bool
@@ -83,7 +98,11 @@ class LineaEditada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     capex_code_id: uuid.UUID
+    #: Qué hay. Sale de la memoria técnica, y `desde-documentacion` lo rellena.
     texto: str = Field(default="", max_length=4000)
+    #: En qué estado está. `[REQ]` §3.2 d · No sale de ningún documento: lo
+    #: escribe quien ha ido a verlo, y por eso nada lo rellena solo.
+    valoracion: str = Field(default="", max_length=4000)
     #: La casilla. `[REQ]` Validar es un acto de una persona, así que la API
     #: apunta **quién** y **cuándo**; la pantalla solo dice sí o no.
     validado: bool = False
@@ -105,7 +124,7 @@ class Traidos(BaseModel):
 _CAMPOS = """
     d.id, d.capex_code_id, cc.code AS capex_code, cc.name_es AS capex_name,
     cap.code AS chapter_code, cap.name_es AS chapter_name,
-    d.texto, d.document_id, d.origen, d.es_simulada,
+    d.texto, d.valoracion, d.document_id, d.origen, d.es_simulada,
     d.validado_at IS NOT NULL AS validado,
     CAST(d.validado_at AS text) AS validado_at, d.validado_por,
     u.full_name AS validado_por_nombre, d.row_version
@@ -203,22 +222,23 @@ def guardar(asset_id: uuid.UUID, cuerpo: Edicion, s: SesionDep, usuario: Usuario
             # `[REQ]` La restricción de la base dice lo mismo, y aquí se dice
             # antes para poder explicarlo: un 23514 de PostgreSQL no cuenta que
             # lo que falta es escribir el texto antes de firmarlo.
-            if linea.validado and not linea.texto.strip():
+            if linea.validado and not (linea.texto.strip() or linea.valoracion.strip()):
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "No se puede marcar como validado un descriptivo vacío: sería firmar "
-                    "una casilla en blanco.",
+                    "No se puede marcar como validado un objeto vacío: sería firmar una "
+                    "casilla en blanco. Escriba el descriptivo o la valoración.",
                 )
 
     for linea in cuerpo.lineas:
         s.execute(
             text(
                 "INSERT INTO descriptivo_objeto (organization_id, asset_id, capex_code_id, "
-                "  texto, validado_at, validado_por, created_by) "
-                "VALUES (:o, :a, :c, :t, "
+                "  texto, valoracion, validado_at, validado_por, created_by) "
+                "VALUES (:o, :a, :c, :t, :val, "
                 "  CASE WHEN :v THEN now() END, CASE WHEN :v THEN CAST(:u AS uuid) END, :u) "
                 "ON CONFLICT (asset_id, capex_code_id) DO UPDATE SET "
                 "  texto = EXCLUDED.texto, "
+                "  valoracion = EXCLUDED.valoracion, "
                 # La fecha de validación **se conserva** si ya estaba validado:
                 # volver a guardar el texto no es volver a validarlo, y mover la
                 # fecha borraría cuándo se firmó de verdad.
@@ -234,6 +254,7 @@ def guardar(asset_id: uuid.UUID, cuerpo: Edicion, s: SesionDep, usuario: Usuario
                 "a": str(asset_id),
                 "c": str(linea.capex_code_id),
                 "t": linea.texto.strip(),
+                "val": linea.valoracion.strip(),
                 "v": linea.validado,
                 "u": str(usuario.id),
             },
