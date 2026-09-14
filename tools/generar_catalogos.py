@@ -19,6 +19,7 @@ import re
 import sys
 import unicodedata
 from pathlib import Path
+from typing import Any
 
 RAIZ = Path(__file__).resolve().parent.parent
 DOC = RAIZ / "docs" / "05-catalogos-y-taxonomias.md"
@@ -327,7 +328,7 @@ def sistemas_tecnicos(doc: str) -> list[dict[str, str]]:
     a un solo capítulo y forzarlo perdería justamente esa información.
     """
     cuerpo = _seccion(doc, "5.8.")
-    filas = []
+    filas: list[dict[str, Any]] = []
     for linea in cuerpo.splitlines():
         if not linea.startswith("|") or "---" in linea:
             continue

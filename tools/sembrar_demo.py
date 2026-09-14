@@ -282,7 +282,7 @@ ACOMPANANTES: tuple[tuple[str, str], ...] = (
 
 #: `[REQ]` La memoria técnica del edificio, de la que salen los descriptivos de
 #: §3.2 d. Categoría (capítulo) → objetos con lo que la memoria dice de ellos.
-MEMORIA: tuple[tuple[str, tuple[tuple[str, str, str | None, str | None], ...]], ...] = (
+MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], ...]], ...] = (
     (
         "HC.H08",
         (
@@ -431,7 +431,8 @@ def sembrar(api: Api) -> str:
         """
         for zona in disponibles:
             if zona["code"] == code:
-                return zona["id"]
+                identificador: str = zona["id"]
+                return identificador
         raise SystemExit(
             f"La zona {code} no está entre las de {donde}: "
             f"{', '.join(sorted(z['code'] for z in disponibles))}"
@@ -453,7 +454,8 @@ def sembrar(api: Api) -> str:
                 f"El código {code} no está en el catálogo. Regenere la semilla "
                 f"(make catalogs && make db-seed) o corrija la lista de este guion."
             )
-        return codigos[code]
+        codigo: dict[str, Any] = codigos[code]
+        return codigo
 
     for titulo, capitulo, plazo, importe, riesgo, concepto, zona in HALLAZGOS:
         codigo = por_codigo(capitulo)

@@ -43,7 +43,9 @@ def main() -> int:
     # hace una pantalla que navega a la ficha nada más guardar.
     conexion = http.client.HTTPConnection("localhost", 8000)
 
-    def pedir(metodo: str, ruta: str, cuerpo: Any = None, token: str | None = None):
+    def pedir(
+        metodo: str, ruta: str, cuerpo: Any = None, token: str | None = None
+    ) -> tuple[int, Any]:
         cabeceras = {}
         datos = None
         if token:

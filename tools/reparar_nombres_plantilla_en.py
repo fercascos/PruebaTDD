@@ -104,7 +104,11 @@ def _q(etiqueta: str) -> str:
 def _ruta_de_hoja(zf: zipfile.ZipFile, posicion: int) -> str:
     libro = zf.read("xl/workbook.xml").decode("utf-8")
     rels = zf.read("xl/_rels/workbook.xml.rels").decode("utf-8")
-    destinos = dict(re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels))
+    # El tipo va escrito: `dict(re.findall(...))` es `dict[Any, Any]` para mypy,
+    # y de ahí salía un `str` que en realidad era `Any`.
+    destinos: dict[str, str] = dict(
+        re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels)
+    )
     hojas = re.findall(r'<sheet name="[^"]+"[^>]*r:id="([^"]+)"', libro)
     return "xl/" + destinos[hojas[posicion]]
 
@@ -133,7 +137,9 @@ def _escribir_texto(bruto: bytes, celdas: tuple[str, ...], valor: str) -> bytes:
             texto.set(XML_ESPACIO, "preserve")
     if pendientes:
         raise SystemExit(f"La plantilla no tiene las celdas {sorted(pendientes)}")
-    return etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True)
+    # `lxml` no está tipado (ver `mypy.ini`), así que `tostring` devuelve `Any`.
+    xml: bytes = etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True)
+    return xml
 
 
 def reparar(origen: Path, *, comprobar: bool) -> int:

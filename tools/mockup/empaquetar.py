@@ -45,7 +45,8 @@ button{font:inherit;color:inherit}
 def bajar(url: str) -> bytes:
     peticion = urllib.request.Request(url, headers={"User-Agent": AGENTE})  # noqa: S310
     with urllib.request.urlopen(peticion, timeout=60) as respuesta:  # noqa: S310
-        return respuesta.read()
+        datos: bytes = respuesta.read()
+    return datos
 
 
 def tipografias() -> tuple[str, int]:
@@ -60,7 +61,12 @@ def tipografias() -> tuple[str, int]:
     for subconjunto, bloque in re.findall(r"/\* ([a-z-]+) \*/\s*(@font-face \{.*?\})", css, re.S):
         if subconjunto != "latin":
             continue
-        url = re.search(r"url\((https://[^)]+)\)", bloque).group(1)
+        encontrado = re.search(r"url\((https://[^)]+)\)", bloque)
+        if encontrado is None:
+            # Sin esto salía «NoneType no tiene group», que no dice nada de lo
+            # que ha pasado: que Google ha cambiado la forma de su CSS.
+            raise SystemExit(f"El bloque @font-face de «{subconjunto}» no trae ninguna url()")
+        url = encontrado.group(1)
         datos = base64.b64encode(bajar(url)).decode()
         trozos.append(bloque.replace(url, f"data:font/woff2;base64,{datos}"))
     if not trozos:
@@ -80,7 +86,10 @@ def main() -> None:
     # Fuera el enlace a Google: el fichero tiene que abrir sin salir a Internet.
     cuerpo = re.sub(r'<link rel="preconnect"[^>]*>\s*', "", cuerpo)
     cuerpo = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis[^>]*>\s*', "", cuerpo)
-    titulo = re.search(r"<title>(.*?)</title>", cuerpo).group(1)
+    encabezado = re.search(r"<title>(.*?)</title>", cuerpo)
+    if encabezado is None:
+        raise SystemExit("La página no tiene <title>: ¿es la que genera construir.py?")
+    titulo = encabezado.group(1)
     cuerpo = cuerpo.replace(f"<title>{titulo}</title>\n", "", 1)
 
     args.salida.write_text(

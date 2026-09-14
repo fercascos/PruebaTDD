@@ -139,7 +139,13 @@ def plantilla(activos: list[str], sistemas: list[str]) -> bytes:
     memoria y la mitad de las filas fallan al importar por una tilde.
     """
     wb = Workbook()
+    # `active` está tipado como «hoja o None» porque un libro puede quedarse sin
+    # ninguna. Uno recién creado siempre tiene una, pero eso mypy no lo sabe y
+    # arrastraba el `None` por las siete líneas siguientes. Se comprueba una vez
+    # y se dice: un `assert` desaparecería con `python -O`.
     ws = wb.active
+    if ws is None:  # pragma: no cover - un libro nuevo siempre trae su hoja
+        raise RuntimeError("openpyxl ha devuelto un libro sin hoja activa")
     ws.title = "Inventario"
 
     for i, campo in enumerate(ORDEN, 1):

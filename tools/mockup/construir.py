@@ -31,11 +31,15 @@ def cargar(directorio: pathlib.Path) -> dict[str, str]:
     """Cada PNG del directorio, reducido a JPEG y codificado en base64."""
     imagenes: dict[str, str] = {}
     for png in sorted(directorio.glob("*.png")):
-        with Image.open(png) as im:
-            im = im.convert("RGB")
+        with Image.open(png) as fichero:
+            # `open()` devuelve un `ImageFile` y `convert()` un `Image`: son dos
+            # tipos, y reutilizar la variable los mezclaba.
+            im = fichero.convert("RGB")
             if im.width > ANCHO_MAXIMO:
                 alto = round(im.height * ANCHO_MAXIMO / im.width)
-                im = im.resize((ANCHO_MAXIMO, alto), Image.LANCZOS)
+                # `Image.LANCZOS` es el alias viejo; el sitio del enumerado es
+                # `Image.Resampling`, que es donde vive desde Pillow 9.1.
+                im = im.resize((ANCHO_MAXIMO, alto), Image.Resampling.LANCZOS)
             buffer = io.BytesIO()
             im.save(buffer, "JPEG", quality=CALIDAD, optimize=True, progressive=True)
         imagenes[png.stem] = base64.b64encode(buffer.getvalue()).decode()
@@ -43,7 +47,10 @@ def cargar(directorio: pathlib.Path) -> dict[str, str]:
 
 
 # (clave, título, descripción, nota opcional)
-BLOQUES = [
+#: Cada bloque: etiqueta, titular y sus láminas (clave de captura, nombre,
+#: texto y una nota opcional de dos partes).
+Lamina = tuple[str, str, str, tuple[str, str] | None]
+BLOQUES: list[tuple[str, str, list[Lamina]]] = [
     (
         "Acceso",
         "Quién entra y cómo se recupera",

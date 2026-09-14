@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         # un «todo correcto» contra MinIO no dice nada de un bucket de AWS.
         print("  · Contra AWS de verdad. Es lo que MinIO no puede demostrar (docs/21).")
 
-    problemas = almacen.comprobar()  # type: ignore[union-attr]
+    problemas = almacen.comprobar()
     for p in problemas:
         print(f"  ✗ {p}")
     if not problemas:
@@ -102,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         print("  ✓ Se puede escribir un original CON retención (s3:PutObjectRetention)")
 
         try:
-            almacen.borrar(clave)  # type: ignore[union-attr]
+            almacen.borrar(clave)
         except Exception as exc:  # noqa: BLE001 — el tipo lo pone el adaptador
             print(f"  ✓ El adaptador se niega a borrar el original: {type(exc).__name__}")
         else:
@@ -138,7 +138,7 @@ def main(argv: list[str] | None = None) -> int:
         # defecto. Lo único que zanja la duda es pedir el objeto **como lo pide
         # un navegador** y mirar si vuelve la cabecera.
         origen = settings.app_base_url.rstrip("/")
-        url = almacen.url_firmada(clave, segundos=60)  # type: ignore[union-attr]
+        url = almacen.url_firmada(clave, segundos=60)
         peticion = urllib.request.Request(url, headers={"Origin": origen})  # noqa: S310
         try:
             with urllib.request.urlopen(peticion, timeout=15) as r:  # noqa: S310

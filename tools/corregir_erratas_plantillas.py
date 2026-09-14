@@ -120,7 +120,11 @@ POS_CAPEX = 4
 def _ruta_capex(zf: zipfile.ZipFile) -> str:
     libro = zf.read("xl/workbook.xml").decode("utf-8")
     rels = zf.read("xl/_rels/workbook.xml.rels").decode("utf-8")
-    destinos = dict(re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels))
+    # El tipo va escrito: `dict(re.findall(...))` es `dict[Any, Any]` para mypy,
+    # y de ahí salía un `str` que en realidad era `Any`.
+    destinos: dict[str, str] = dict(
+        re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels)
+    )
     hojas = re.findall(r'<sheet name="[^"]+"[^>]*r:id="([^"]+)"', libro)
     return "xl/" + destinos[hojas[POS_CAPEX]]
 

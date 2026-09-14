@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """Prueba de concepto del bloque 4 · generación de PPTX.
 
+`[LIM]` Tenía un séptimo paso que sacaba el XLSX desde el mismo layout con
+`tdd.exports.capex_xlsx.generar_xlsx()`. Ese módulo **ya no existe**: se retiró
+en 3696443, cuando el botón de exportar y el informe pasaron a rellenar la
+plantilla del cliente en vez de construir una hoja a mano, y lo que hay ahora
+parte de un snapshot y no de un `CapexTableLayout`. Este guion se quedó
+importándolo y llevaba **roto desde entonces** —fallaba al arrancar, sin llegar
+a la primera línea—, cosa que nadie vio porque `tools/` no entraba en ninguna
+puerta. Se retira el paso: lo que probaba está construido y con pruebas propias.
+
 Responde a las preguntas de `docs/15` §21.3 con **números medidos**, no con
 opiniones. Genera un informe a partir de la plantilla real del cliente y deja
 el resultado listo para renderizar y comparar.
@@ -21,7 +30,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "apps/api/src"))
 
 from pptx import Presentation  # noqa: E402
-from tdd.exports.capex_xlsx import generar_xlsx  # noqa: E402
 from tdd.reporting import capex_layout as cl  # noqa: E402
 from tdd.reporting.clone import clonar_diapositiva, sustituir_marcadores  # noqa: E402
 from tdd.reporting.fonts import comprobar_familias  # noqa: E402
@@ -211,18 +219,11 @@ def main() -> int:
         f"{len(prs.slides) - n_original}) en {ms:.0f} ms → {salida.name}"
     )
 
-    # ── 6 · XLSX desde el MISMO layout ──────────────────────────────────────
-    xlsx = salida.with_suffix(".xlsx")
-    xlsx.write_bytes(generar_xlsx(layout))
-    print(
-        f"6. XLSX desde el mismo CapexTableLayout → {xlsx.name} ({xlsx.stat().st_size // 1024} KB)"
-    )
-
-    # ── 7 · El original, intacto ────────────────────────────────────────────
+    # ── 6 · El original, intacto ────────────────────────────────────────────
     import hashlib
 
     h = hashlib.sha256(plantilla.read_bytes()).hexdigest()
-    print(f"7. ORIGINAL INTACTO · sha256 {h[:16]}…")
+    print(f"6. ORIGINAL INTACTO · sha256 {h[:16]}…")
     return 0
 
 

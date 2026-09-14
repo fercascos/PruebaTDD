@@ -201,7 +201,11 @@ def _q(t: str) -> str:
 def _ruta(zf: zipfile.ZipFile, posicion: int) -> str:
     libro = zf.read("xl/workbook.xml").decode("utf-8")
     rels = zf.read("xl/_rels/workbook.xml.rels").decode("utf-8")
-    destinos = dict(re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels))
+    # El tipo va escrito: `dict(re.findall(...))` es `dict[Any, Any]` para mypy,
+    # y de ahí salía un `str` que en realidad era `Any`.
+    destinos: dict[str, str] = dict(
+        re.findall(r'Id="([^"]+)"[^>]*Target="(worksheets/[^"]+)"', rels)
+    )
     hojas = re.findall(r'<sheet name="[^"]+"[^>]*r:id="([^"]+)"', libro)
     return "xl/" + destinos[hojas[posicion]]
 
@@ -420,7 +424,9 @@ def anadir(bruto: bytes, bloques: tuple[Bloque, ...], *, ingles: bool) -> bytes:
     orden = sorted(datos.iterfind(_q("row")), key=lambda f: int(f.get("r")))
     for f in orden:
         datos.append(f)
-    return etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True)
+    # `lxml` no está tipado (ver `mypy.ini`), así que `tostring` devuelve `Any`.
+    xml: bytes = etree.tostring(raiz, xml_declaration=True, encoding="UTF-8", standalone=True)
+    return xml
 
 
 def _ampliar_area_de_impresion(libro: str, ultima: int) -> str:

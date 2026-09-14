@@ -35,6 +35,7 @@ sys.path.insert(0, str(RAIZ / "apps" / "api" / "src"))
 
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
+from tdd.evidence import storage  # noqa: E402
 from tdd.reporting import generator, snapshot  # noqa: E402
 
 #: El tamaño que pide §20.5. No se redondea a un número bonito: es el criterio.
@@ -58,8 +59,15 @@ PARRAFO = (
 )
 
 
-def _sembrar(s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID) -> uuid.UUID:
-    """Un proyecto del tamaño del criterio. Devuelve su identificador."""
+def _sembrar(
+    s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID
+) -> tuple[uuid.UUID, list[uuid.UUID], int]:
+    """Un proyecto del tamaño del criterio.
+
+    Devuelve el proyecto, sus activos y cuántas líneas de CAPEX se han puesto.
+    El tipo decía `uuid.UUID` —solo el proyecto— desde que se escribió, y quien
+    llama lleva desde entonces desempaquetando tres valores.
+    """
     proyecto = s.execute(
         text(
             "INSERT INTO project (organization_id, client_id, internal_code, name, status) "
@@ -97,7 +105,7 @@ def _sembrar(s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID)
     ]
     riesgos = [r[0] for r in s.execute(text("SELECT id FROM risk_level ORDER BY id")).all()]
 
-    activos = []
+    activos: list[uuid.UUID] = []
     for i in range(ACTIVOS):
         activos.append(
             s.execute(
@@ -180,10 +188,15 @@ def _sembrar(s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID)
     return proyecto, activos, puestas
 
 
-def _fotos(s: Session, org: uuid.UUID, proyecto: uuid.UUID, activos: list, usuario: uuid.UUID):
+def _fotos(
+    s: Session,
+    org: uuid.UUID,
+    proyecto: uuid.UUID,
+    activos: list[uuid.UUID],
+    usuario: uuid.UUID,
+) -> storage.AlmacenEnMemoria:
     """35 fotografías sintéticas, con su objeto y su derivado."""
     from PIL import Image
-    from tdd.evidence import storage
 
     almacen = storage.AlmacenEnMemoria()
     for i in range(FOTOS):

@@ -133,8 +133,15 @@ lint:  ## Formato y reglas (ruff)
 # la documentación lo llamaba puerta bloqueante, pero `make lint` decía «ruff +
 # mypy» y **solo ejecutaba ruff**: el tipado no se comprobaba en ningún sitio.
 # Al encenderlo salieron 65 errores en 17 ficheros.
+#
+# `tools/` va en la segunda línea, con su propio `mypy.ini` en la raíz: mypy usa
+# la configuración más cercana al fichero, así que son dos pasadas y cada una
+# manda en lo suyo. Al encender esta salieron 45 errores en 12 ficheros, y entre
+# ellos un guion que ni siquiera arrancaba y una firma que mentía desde el día
+# que se escribió.
 typecheck:  ## Tipado estricto (mypy)
 	cd apps/api && python3 -m mypy
+	python3 -m mypy
 
 fmt:  ## Formatea
 	cd apps/api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
