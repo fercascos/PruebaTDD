@@ -400,6 +400,56 @@ def test_se_filtra_por_activo(
     assert Decimal(solo_norte["total_importe"]) == Decimal("100.00")
 
 
+def test_el_filtro_admite_varios_activos_a_la_vez(
+    cliente: TestClient, cab: Any, proyecto: str, catalogo: dict[str, Any], activo: str
+) -> None:
+    """`[REQ]` §3.3 · «Todos, uno solo o varios», con las palabras del cliente.
+
+    Con un activo por consulta, la comparación que se hace en una cartera —«las
+    dos naves del polígono frente al resto»— hay que sumarla a mano, que es el
+    descuadre que esta pantalla existe para evitar.
+    """
+    nombres = ("Edificio Sur", "Edificio Este")
+    otros = [
+        str(
+            cliente.post(
+                f"{RUTA}/projects/{proyecto}/assets",
+                headers=cab("consultor_a"),
+                json={"name": n, "typology_id": catalogo["tipologia"]},
+            ).json()["id"]
+        )
+        for n in nombres
+    ]
+    for destino, importe in zip((activo, *otros), ("100.00", "900.00", "7.00"), strict=True):
+        crear(
+            cliente,
+            cab,
+            proyecto,
+            catalogo,
+            destino,
+            lineas=[{"time_horizon_code": "CORTO", "amount": importe}],
+        )
+
+    dos = f"asset_id={activo}&asset_id={otros[0]}"
+    r = cliente.get(f"{RUTA}/projects/{proyecto}/risk-matrix?{dos}", headers=cab("consultor_a"))
+    assert r.status_code == 200, r.text
+    # Los dos elegidos se SUMAN; el tercero se queda fuera.
+    assert Decimal(r.json()["total_importe"]) == Decimal("1000.00")
+
+    # Sin ninguna casilla marcada, la pantalla deja de escribir el parámetro y
+    # lo que se lee es la cartera entera, no «ningún activo»: una matriz a cero
+    # ahí se leería como un proyecto sin nada.
+    assert Decimal(matriz(cliente, cab, proyecto)["total_importe"]) == Decimal("1007.00")
+
+    # `[LIM]` Un `?asset_id=` con el valor vacío NO se trata como «sin filtro»:
+    # FastAPI lo valida como UUID y responde 422 antes de llegar a la consulta.
+    # Solo se escribe a mano, y tragárselo escondería una URL mal construida.
+    en_blanco = cliente.get(
+        f"{RUTA}/projects/{proyecto}/risk-matrix?asset_id=", headers=cab("consultor_a")
+    )
+    assert en_blanco.status_code == 422
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Aislamiento
 # ─────────────────────────────────────────────────────────────────────────────

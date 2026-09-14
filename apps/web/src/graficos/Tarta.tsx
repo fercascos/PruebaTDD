@@ -24,6 +24,19 @@ export type Porcion = {
   valor: number
   /** Cuántas categorías van dentro, si es la porción agrupada. */
   agrupa?: number
+  /**
+   * La porción **no es una categoría**: es el hueco sin rellenar.
+   *
+   * Sale en el gris de segundo plano en vez de gastar un tono de serie. Lo usa
+   * «Sin determinar» del reparto de quién paga, que no es un tercer pagador
+   * sino una casilla que nadie rellenó; pintarla como a los otros dos sugeriría
+   * que se ha decidido algo. `agrupa` ya caía en el mismo gris por el mismo
+   * motivo —tampoco es una categoría—, pero dice otra cosa: cuántas hay dentro.
+   *
+   * Va **siempre la última**. El tono de cada porción se toma por su posición,
+   * así que una gris en medio se saltaría un color de la serie.
+   */
+  gris?: boolean
 }
 
 /** Radio del círculo en el sistema de coordenadas del SVG. */
@@ -83,18 +96,13 @@ export function Tarta({
       desde,
       hasta: desde + barrido,
       parte: porcentaje(p.valor, total),
-      color: colorDePorcion(i, p.agrupa !== undefined),
+      color: colorDePorcion(i, p.agrupa !== undefined || p.gris === true),
     }
   })
 
   return (
     <div className="tarta">
-      <svg
-        viewBox="-110 -110 220 220"
-        role="img"
-        aria-labelledby={idTitulo}
-        className="lienzo"
-      >
+      <svg viewBox="-110 -110 220 220" role="img" aria-labelledby={idTitulo} className="lienzo">
         <title id={idTitulo}>{titulo}</title>
         {trozos.map((t) => {
           // Una porción tan fina que el hueco se la comería se dibuja entera:
@@ -103,7 +111,10 @@ export function Tarta({
           return (
             <path
               key={t.clave}
-              d={sector(t.desde + (cabeHueco ? HUECO / 2 : 0), t.hasta - (cabeHueco ? HUECO / 2 : 0))}
+              d={sector(
+                t.desde + (cabeHueco ? HUECO / 2 : 0),
+                t.hasta - (cabeHueco ? HUECO / 2 : 0),
+              )}
               fill={t.color}
               className={encima && encima !== t.clave ? 'apagada' : ''}
               onMouseEnter={() => setEncima(t.clave)}
@@ -134,9 +145,7 @@ export function Tarta({
             <span className="marca" style={{ background: t.color }} aria-hidden="true" />
             <span className="nombre">
               {t.nombre}
-              {t.agrupa !== undefined && (
-                <span className="ayuda"> · {t.agrupa} conceptos</span>
-              )}
+              {t.agrupa !== undefined && <span className="ayuda"> · {t.agrupa} conceptos</span>}
             </span>
             <span className="porcentaje">{t.parte}</span>
             <span className="importe">{formatear(t.valor)}</span>

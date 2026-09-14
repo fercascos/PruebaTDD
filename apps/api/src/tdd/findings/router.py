@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import uuid
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -560,7 +560,16 @@ def borrar(finding_id: uuid.UUID, s: SesionDep, request: Request) -> None:
 def matriz_de_riesgos(
     project_id: uuid.UUID,
     s: SesionDep,
-    asset_id: uuid.UUID | None = None,
+    #: `[REQ]` §3.3 · Se puede repetir —`?asset_id=…&asset_id=…`— para leer
+    #: **varios edificios juntos**, como los cortes del dashboard. La comparación
+    #: que se hace en una cartera es «las dos naves del polígono frente al
+    #: resto», y con un activo por consulta hay que sumar a mano, que es justo el
+    #: descuadre que estas pantallas existen para evitar.
+    #:
+    #: Una lista vacía es «sin filtro» y no «ningún activo»: llega escribiendo
+    #: `?asset_id=` a mano o soltando el último de la selección, y una matriz a
+    #: cero ahí se lee como un proyecto sin hallazgos.
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
     chapter_code: str | None = None,
 ) -> Any:
     """`[REQ]` §12 · Riesgo × horizonte temporal.
@@ -598,12 +607,12 @@ def matriz_de_riesgos(
                 "LEFT JOIN time_horizon th ON th.id = ci.time_horizon_id "
                 "WHERE f.project_id = :p AND f.deleted_at IS NULL "
                 "  AND CAST(f.status AS text) = ANY(:estados) "
-                "  AND (CAST(:a AS uuid) IS NULL OR f.asset_id = CAST(:a AS uuid)) "
+                "  AND (CAST(:a AS uuid[]) IS NULL OR f.asset_id = ANY(CAST(:a AS uuid[]))) "
                 "  AND (CAST(:c AS text) IS NULL OR cap.code = CAST(:c AS text))"
             ),
             {
                 "p": str(project_id),
-                "a": str(asset_id) if asset_id else None,
+                "a": [str(a) for a in asset_id] if asset_id else None,
                 "c": chapter_code,
                 # Lo descartado queda fuera: decir que no se hace y seguir
                 # sumándolo al riesgo del proyecto sería contradictorio.

@@ -561,7 +561,7 @@ FICHA DEL HALLAZGO
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ ‹ 2026-014 │ Riesgos          Activo: Todos ▾ │ Capítulo: Todos ▾           │
+│ ‹ 2026-014 │ Riesgos   ▸ Toda la cartera · 4 activos │ Capítulo: Todos ▾  │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ DISTRIBUCIÓN POR GRADO DE RIESGO E IMPORTE                                   │
 │ ┌──────────────────────────────────────────────────────────────────────────┐│
@@ -593,6 +593,11 @@ FICHA DEL HALLAZGO
 │ [ Vista de tabla equivalente ]  ⓘ El grado nunca se identifica solo por color│
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+`[REQ]` §3.3 · **El filtro de activos admite uno, varios o todos**, con las palabras del cliente al
+revisar el prototipo: *«pudiendo ser todos, uno solo o varios»*. Es el mismo mando del dashboard
+—`FiltroDeActivos`— y no una segunda versión suya: dos pantallas que agregan los mismos hallazgos no
+pueden discrepar en qué está seleccionado. Sin ninguna casilla marcada se lee la cartera entera.
 
 `[REC]` La matriz de riesgo × horizonte es más útil aquí que la clásica probabilidad × consecuencia:
 la especificación revisada define el riesgo como un **grado único de cuatro niveles** ya

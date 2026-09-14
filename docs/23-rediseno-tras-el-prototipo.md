@@ -148,7 +148,7 @@ las pestañas del proyecto **de diez a cinco**:
 |:--:|---|---|
 | 1 | **Resumen** | Introducción del informe · mapa de todos los activos · fases |
 | 2 | **Activos** | La lista, y dentro de cada uno su espacio de cinco secciones |
-| 3 | **Dashboard** | Los cinco cortes del CAPEX |
+| 3 | **Dashboard** | Los seis cortes del CAPEX |
 | 4 | **Riesgos** | Grado × horizonte |
 | 5 | **Informe final** | Avisos previos, generación y versiones |
 
@@ -512,11 +512,12 @@ etiqueta; afecta a quien rellene esas filas a mano.
 
 ### 3.3. Dashboard ✅ hecho
 
-El desglose económico del CAPEX, con **cinco cortes**, en su propia pestaña:
+El desglose económico del CAPEX, con **seis cortes**, en su propia pestaña:
 
 | Título en pantalla | Corte | Forma | Estado |
 |---|---|---|---|
 | Distribución por concepto de gasto | concepto | tarta | ✅ |
+| Reparto de la inversión por pagador | quién paga | tarta | ✅ nuevo |
 | Perfil temporal de la inversión | plazo | barras, en orden de plazo | ✅ |
 | Exposición por grado de riesgo | riesgo | barras, en orden de gravedad | ✅ nuevo |
 | Desglose por categoría y objeto | categoría y objeto | **barras apiladas**: cada categoría es una barra y dentro van sus objetos | ✅ nuevo |
@@ -531,9 +532,42 @@ informe.
 
 Y el selector pasa de un activo a **uno, varios o toda la cartera** ✅. En la API
 es el mismo parámetro repetido —`?asset_id=…&asset_id=…`—, escrito una sola vez
-para los cuatro cortes filtrables: tenerlo en un sitio es lo que impide que uno
+para los cinco cortes filtrables: tenerlo en un sitio es lo que impide que uno
 filtre por el activo de la línea y otro por el del hallazgo, que es el descuadre
-que ya apareció una vez.
+que ya apareció una vez. **La matriz de riesgos comparte el mando** ✅: allí
+había un desplegable de uno solo, y eso dejaba fuera la única comparación que se
+hace en una cartera. Es el mismo componente —`ui/FiltroDeActivos`— porque dos
+pantallas que agregan los mismos hallazgos no pueden discrepar en qué está
+seleccionado.
+
+#### Quién paga, y por qué es la segunda tarta
+
+`[REQ]` Lo pidió el cliente sobre el prototipo: *«querría un gráfico de tarta
+para representar la distribución de gasto por concepto y en el gráfico de quién
+paga»*. *«Cuánto de esto recae realmente sobre la propiedad»* es de las primeras
+preguntas de un inversor, y el dato estaba en el hallazgo —`tenant_recoverable`,
+que además se puede proponer desde la titularidad de la zona— sin que ningún
+corte lo sumara.
+
+Va **pegada a la del concepto** y no al final: las dos contestan cómo se reparte
+el mismo dinero, y leerlas seguidas es lo que convierte «300.000 € de normativa»
+en «300.000 € de normativa que paga el comprador».
+
+| En pantalla | En la base | |
+|---|---|---|
+| Lo asume la propiedad | `NO` | La cifra que se negocia, por eso primera |
+| Repercutible al inquilino | `SI` | |
+| Sin determinar | `NA` | **No es un tercer pagador**: es la casilla que nadie rellenó |
+
+`[REC]` «Sin determinar» va en el **gris de segundo plano** de la paleta y no en
+un tono de serie. Depende de los contratos de arrendamiento y se decide actuación
+por actuación; pintarlo como a los otros dos sugeriría que se ha decidido algo.
+Es la misma excepción que ya tenía la porción «Otros», y por el mismo motivo: no
+es una categoría.
+
+Las tres salen **siempre y con ceros** en la tabla de debajo. Que «sin
+determinar» valga cero es justo la noticia buena que hay que poder leer, y si
+desapareciera de la lista no se distinguiría de que nadie haya mirado.
 
 **Era la vista «Resumen» de Hallazgos y CAPEX y sube a pestaña propia.** En la
 rejilla queda un enlace, no una copia: las dos se consultan una detrás de otra
@@ -553,7 +587,7 @@ pasar por encima y la tabla de debajo, que los lista todos con su importe y su
 parte. En un móvil el nombre de dentro se quita: en una barra de cuarenta
 píxeles salía como «Cu…».
 
-`[REQ]` **Los cinco cortes suman lo mismo**, y hay pruebas que lo imponen: en la
+`[REQ]` **Los seis cortes suman lo mismo**, y hay pruebas que lo imponen: en la
 API se comparan entre sí con varios activos elegidos, `by-risk` se compara además
 contra la matriz de riesgos —que calcula lo mismo por otro camino—, y
 `herramientas/comprobar-dashboard.mjs` lo vuelve a comprobar **sobre la pantalla
@@ -587,9 +621,8 @@ Con una persona a tiempo completo que ya conoce el código.
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
 
 **Las cinco secciones del activo están construidas.** De lo que quedaba pendiente al revisar el
-prototipo sigue abierto el Resumen del proyecto, y dos piezas que el cliente pidió sobre el
-prototipo y todavía no están en la aplicación de verdad: el **filtro de activos y los dos gráficos
-de tarta** del Dashboard, y el **Full Report ampliado**.
+prototipo sigue abierto el Resumen del proyecto, y una pieza que el cliente pidió sobre el
+prototipo y todavía no está en la aplicación de verdad: el **Full Report ampliado**.
 
 `[REC]` **Por este orden**: Dashboard primero —enseña resultado pronto y no
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,

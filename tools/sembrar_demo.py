@@ -143,7 +143,16 @@ def imagen(color: tuple[int, int, int], texto: str) -> bytes:
 #: habla: ponía la cubierta en «Vestuarios» y el cuadro eléctrico en «Aseos» con
 #: la misma alegría. Una demostración se enseña delante de un cliente, y la zona
 #: es parte de lo que hace creíble el hallazgo.
-HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
+#: `[REQ]` §3.3 · El octavo campo es **quién lo paga** (`tenant_recoverable`):
+#: `NO` lo asume la propiedad, `SI` es repercutible al inquilino, `NA` está sin
+#: determinar. La columna existe desde el primer día y la demostración la dejaba
+#: entera en `NA`, así que el corte «quién paga» del dashboard salía de una sola
+#: porción gris —un gráfico que no enseña para qué sirve—. Se reparten a mano y
+#: con criterio: lo estructural y lo de seguridad recae en la propiedad; el
+#: consumo y el mantenimiento corriente suelen repercutirse; y **dos se dejan
+#: sin determinar a propósito**, porque depende de contratos de arrendamiento
+#: que no están y es el caso que la pantalla tiene que saber enseñar.
+HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str, str], ...] = (
     (
         "Enfriadora al final de su vida útil",
         "HC.H08.01",
@@ -152,6 +161,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "03",
         "VIDA_UTIL",
         "CUBIERTA",
+        "NO",
     ),
     (
         "Lámina de cubierta con ampollas generalizadas",
@@ -161,6 +171,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "03",
         "REPARACION",
         "CUBIERTA",
+        "NO",
     ),
     (
         "Cuadro general sin protección diferencial en dos líneas",
@@ -170,6 +181,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "04",
         "SEGURIDAD",
         "CUARTOS_TECNICOS",
+        "NO",
     ),
     (
         "Juntas de dilatación abiertas en fachada norte",
@@ -179,6 +191,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "02",
         "REPARACION",
         "ZONAS_EXTERIORES",
+        "NO",
     ),
     (
         "Luminarias de almacén sin sustituir a LED",
@@ -188,6 +201,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "01",
         "ESG",
         "ALMACEN",
+        "SI",
     ),
     (
         "Red de PCI sin certificado de mantenimiento vigente",
@@ -197,6 +211,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "03",
         "NORMATIVA",
         "GENERAL",
+        "SI",
     ),
     # `[REQ]` Un soft cost, que se codifica en la CATEGORÍA porque en el árbol
     # del cliente los soft costs no tienen objetos. Sin él, la demostración
@@ -209,6 +224,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "01",
         "SOFT_COST",
         "GENERAL",
+        "NA",
     ),
 )
 
@@ -216,7 +232,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
 #: La plantilla CAPEX del cliente describe un solo activo, así que la separación
 #: por activo —un libro para cada uno— solo se ve con más de uno. Con un único
 #: activo la demostración enseñaba el caso fácil y escondía el que importa.
-HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str], ...] = (
+HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str, str], ...] = (
     (
         "Climatizadora de oficinas fuera de servicio",
         "HC.H08.01",
@@ -225,6 +241,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "03",
         "VIDA_UTIL",
         "CUARTOS_TECNICOS",
+        "NO",
     ),
     (
         "Falso techo con manchas de humedad en dos plantas",
@@ -234,6 +251,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "02",
         "REPARACION",
         "OFICINAS",
+        "SI",
     ),
     (
         "Escalera de emergencia sin señalización fotoluminiscente",
@@ -243,6 +261,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "04",
         "NORMATIVA",
         "NUCLEO_ESCALERAS",
+        "NA",
     ),
 )
 
@@ -537,7 +556,7 @@ def sembrar(api: Api) -> str:
         codigo: dict[str, Any] = codigos[code]
         return codigo
 
-    for titulo, capitulo, plazo, importe, riesgo, concepto, zona in HALLAZGOS:
+    for titulo, capitulo, plazo, importe, riesgo, concepto, zona, paga in HALLAZGOS:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
@@ -546,6 +565,9 @@ def sembrar(api: Api) -> str:
                 "capex_code_id": codigo["id"],
                 "zone_id": por_zona(zonas, zona, "una nave industrial"),
                 **clasificacion(riesgo, concepto),
+                # `[REQ]` §3.3 · Quién lo paga. Sin esto los diez salían en `NA`
+                # y el corte «quién paga» del dashboard era una sola porción.
+                "tenant_recoverable": paga,
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
                 "capex_lines": [{"time_horizon_code": plazo, "amount": importe}],
@@ -584,7 +606,7 @@ def sembrar(api: Api) -> str:
     # Las zonas se piden para SU tipología: la lista de un edificio de oficinas
     # no es la de una nave, y es justo lo que arregla separar los libros.
     zonas_b = api.get(f"/catalogs/zones?typology_id={oficinas['id']}")
-    for titulo, capitulo, plazo, importe, riesgo, concepto, zona in HALLAZGOS_SEGUNDO:
+    for titulo, capitulo, plazo, importe, riesgo, concepto, zona, paga in HALLAZGOS_SEGUNDO:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
@@ -593,6 +615,9 @@ def sembrar(api: Api) -> str:
                 "capex_code_id": codigo["id"],
                 "zone_id": por_zona(zonas_b, zona, "un edificio de oficinas"),
                 **clasificacion(riesgo, concepto),
+                # `[REQ]` §3.3 · Quién lo paga. Sin esto los diez salían en `NA`
+                # y el corte «quién paga» del dashboard era una sola porción.
+                "tenant_recoverable": paga,
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
                 "capex_lines": [{"time_horizon_code": plazo, "amount": importe}],

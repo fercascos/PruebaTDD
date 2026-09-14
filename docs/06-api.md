@@ -98,12 +98,22 @@ sin lógica duplicada en el frontend. La regla de qué zona aplica a qué tipolo
 | `POST` | `/projects/{id}/exports` | `{format:"xlsx"\|"csv"}` → `202` `[REQ]` §3.1.6 |
 
 `[REQ]` **El código lo genera el servidor**, `AAAA-NNN` por organización y año,
-calculado sobre los códigos que ya existen y contando solo los de tres cifras
-—uno traído de otro sistema, `2026-123456`, dispararía la serie—. Se admite
-`internal_code` en el cuerpo para una migración desde otro sistema, y ahí un
-choque es un `409` honesto; cuando lo genera él, un choque es cosa suya —dos
+calculado sobre los códigos que ya existen y contando **los de tres a cinco
+cifras** —uno traído de otro sistema, `2026-137309`, dispararía la serie—. Se
+admite `internal_code` en el cuerpo para una migración desde otro sistema, y ahí
+un choque es un `409` honesto; cuando lo genera él, un choque es cosa suya —dos
 altas a la vez— y reintenta con el siguiente. **No hay forma de cambiarlo
 después**: este módulo no tiene `PATCH`.
+
+El tope de abajo era **tres**, y con tres **el alta se rompía al llegar a mil**:
+`2026-1000` ya no casa con el patrón de tres cifras, así que el máximo se
+quedaba clavado en 999, el generador proponía `2026-1000` una y otra vez y, tras
+los cinco reintentos, el alta contestaba `409` para toda la organización el resto
+del año. Salió al ejecutar dos veces seguidas una comprobación de navegador sobre
+una base de desarrollo con mil altas de pruebas; en una organización con mil
+encargos al año habría salido en producción. `[LIM]` Vuelve a los **100 000**
+encargos en un año: no se pone `\d{3,}` porque entonces un código importado de
+seis cifras se lleva la serie por delante, y eso pasa antes.
 
 `[REQ]` **El cliente que no está en el catálogo no bloquea.** Se manda
 `client_name` en lugar de `client_id`: el proyecto se crea, el cliente nace con
@@ -404,13 +414,14 @@ interruptor más lo convertiría en un clic sin memoria.
 
 ### Resumen del CAPEX `[REQ]`
 
-Cuatro preguntas distintas, cuatro consultas. La rejilla de hallazgos contesta
+Seis preguntas distintas, seis consultas. La rejilla de hallazgos contesta
 «qué hay que hacer»; estos cortes contestan lo que se pregunta en la reunión y
 que hasta ahora se sumaba a mano.
 
 | Método | Ruta | Pregunta que contesta |
 |---|---|---|
 | `GET` | `/projects/{id}/capex/summary/by-concept?asset_id=` | **Distribución por concepto de gasto** · en qué se va el dinero. Ordenado de mayor a menor. Los conceptos sin importe no salen; las líneas sin concepto salen como `SIN_CONCEPTO` |
+| `GET` | `/projects/{id}/capex/summary/by-tenant-recoverable?asset_id=` | `[REQ]` §3.3 · **Reparto de la inversión por pagador** · cuánto recae sobre la propiedad y cuánto es repercutible al inquilino. **Los tres salen siempre, con ceros**, en orden `NO` → `SI` → `NA`: es un reparto de tres partes y no un ranking, y que «sin determinar» valga cero es la noticia que hay que poder leer. Cada fila trae su `name_es` —«Lo asume la propiedad»— porque el enumerado contesta «¿es repercutible?» y la pregunta es «¿quién paga?»: invertirlo en cada cliente que lo pinte es repetir la misma regla |
 | `GET` | `/projects/{id}/capex/summary/by-horizon?asset_id=` | **Perfil temporal de la inversión** · cuándo hay que pagarlo. En orden de plazo, no de importe. Los cinco plazos salen siempre, con ceros |
 | `GET` | `/projects/{id}/capex/summary/by-chapter?asset_id=` | **Desglose por categoría** · qué parte del edificio. Un hallazgo codificado en un objeto (nivel 3) suma en su **capítulo** (nivel 2) |
 | `GET` | `/projects/{id}/capex/summary/by-object?asset_id=` | **Lo mismo, un nivel más abajo:** una fila por capítulo **y objeto**, que es lo que alimenta las barras apiladas. El objeto va a `null` cuando el hallazgo se codificó en el propio capítulo |
@@ -421,10 +432,15 @@ que hasta ahora se sumaba a mano.
 edificios juntos**, que es la comparación que se hace en una cartera —«las dos
 naves del polígono frente al resto»—. Es la forma estándar de una lista en una
 URL y no rompe a quien llamaba con uno solo. Sin el parámetro, el proyecto
-entero.
+entero. Lo mismo vale para `/risk-matrix`, que comparte el filtro.
 
-`[REQ]` **Todos suman lo mismo, y hay una prueba que lo impone.** Cinco gráficos
-en la misma pantalla que no cuadran destruyen la confianza en los cinco, y el
+`[LIM]` Un `?asset_id=` **con el valor vacío** responde `422` y no «sin filtro»:
+FastAPI valida cada elemento como UUID antes de llegar a la consulta. Solo se
+escribe a mano —la pantalla, al soltar la última casilla, deja de escribir el
+parámetro—, y saneárselo escondería una URL mal construida.
+
+`[REQ]` **Todos suman lo mismo, y hay una prueba que lo impone.** Seis gráficos
+en la misma pantalla que no cuadran destruyen la confianza en los seis, y el
 descuadre no lo ve nadie hasta que el cliente suma con la calculadora. `by-risk`
 se compara además contra `/risk-matrix`, que calcula lo mismo por otro camino.
 

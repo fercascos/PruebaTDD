@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { obtener } from '../api/cliente'
 import type { Activo } from '../api/tipos'
+import { FiltroDeActivos } from '../ui/FiltroDeActivos'
 import { Mensaje, Vacio } from '../ui/Marco'
 
 type Grado = {
@@ -56,17 +57,31 @@ const NOMBRE_DE_HORIZONTE: Record<string, string> = {
  * lado. Un daltónico —y son uno de cada doce hombres— tiene que poder leer
  * esta pantalla, y quien la imprima en blanco y negro para una reunión,
  * también. El color acompaña; no informa por sí solo.
+ *
+ * `[REQ]` §3.3 · **El filtro de activos admite uno, varios o todos**, con las
+ * palabras del cliente al revisar el prototipo. Aquí había un desplegable de
+ * uno solo, y eso dejaba fuera la única comparación que se hace en una cartera:
+ * «las dos naves del polígono frente al resto». Es el mismo mando que el del
+ * dashboard —`FiltroDeActivos`— y no una segunda versión suya: dos pantallas
+ * que agregan los mismos hallazgos no pueden discrepar en qué está
+ * seleccionado.
  */
 export function PestanaRiesgos({ projectId }: { projectId: string }) {
   const [datos, setDatos] = useState<Matriz | null>(null)
   const [activos, setActivos] = useState<Activo[]>([])
-  const [activo, setActivo] = useState('')
+  /** Vacío = toda la cartera, que es lo que se espera al soltar el último. */
+  const [elegidos, setElegidos] = useState<string[]>([])
   const [capitulo, setCapitulo] = useState('')
   const [error, setError] = useState<string | null>(null)
 
+  // La clave del filtro para las dependencias del efecto: un array nuevo en
+  // cada render volvería a pedir la matriz aunque la selección no haya cambiado.
+  const clave = elegidos.join(',')
+
   const recargar = useCallback(() => {
     const partes = [
-      activo ? `asset_id=${activo}` : '',
+      // `?asset_id=…&asset_id=…`, que es como se escribe una lista en una URL.
+      ...(clave ? clave.split(',').map((a) => `asset_id=${a}`) : []),
       capitulo ? `chapter_code=${encodeURIComponent(capitulo)}` : '',
     ].filter(Boolean)
     obtener<Matriz>(
@@ -74,7 +89,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
     )
       .then(setDatos)
       .catch((e: Error) => setError(e.message))
-  }, [projectId, activo, capitulo])
+  }, [projectId, clave, capitulo])
 
   useEffect(recargar, [recargar])
 
@@ -95,17 +110,22 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
   return (
     <>
       <div className="filtro">
-        <label>
-          Activo
-          <select value={activo} onChange={(e) => setActivo(e.target.value)}>
-            <option value="">Todos</option>
-            {activos.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* Con un solo activo no se pinta: un desplegable de una casilla no
+            filtra nada y ocupa el sitio del recuento. */}
+        {activos.length > 1 && (
+          <FiltroDeActivos
+            activos={activos.map((a) => ({
+              id: a.id,
+              nombre: a.asset_code ? `${a.asset_code} · ${a.name}` : a.name,
+            }))}
+            elegidos={elegidos}
+            alAlternar={(id) =>
+              setElegidos((antes) =>
+                antes.includes(id) ? antes.filter((x) => x !== id) : [...antes, id],
+              )
+            }
+          />
+        )}
         <label>
           Capítulo
           <select value={capitulo} onChange={(e) => setCapitulo(e.target.value)}>
@@ -119,6 +139,14 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
         </label>
         <span className="ayuda">
           {datos.total_hallazgos} hallazgos · {euros.format(total)}
+          {elegidos.length > 0 && (
+            <>
+              {' '}
+              <button type="button" className="enlace" onClick={() => setElegidos([])}>
+                ver los {activos.length} agregados
+              </button>
+            </>
+          )}
         </span>
       </div>
 

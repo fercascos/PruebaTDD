@@ -165,10 +165,15 @@ FILTRO_DE_ACTIVOS = " AND (CAST(:a AS uuid[]) IS NULL OR f.asset_id = ANY(CAST(:
 def _activos(asset_id: list[uuid.UUID] | None) -> list[str] | None:
     """La lista para el `ANY`, o `None` cuando no hay filtro.
 
-    Una lista **vacía** es `None` y no «ningún activo»: llega escribiendo
-    `?asset_id=` a mano o soltando el último de la selección, y devolver cero
-    euros ahí se lee como un proyecto sin CAPEX. Sin filtro es lo que espera
-    quien acaba de quitar el último.
+    Una lista **vacía** es `None` y no «ningún activo»: es lo que llega al
+    soltar la última casilla de la selección —la pantalla deja entonces de
+    escribir el parámetro—, y devolver cero euros ahí se lee como un proyecto
+    sin CAPEX. Sin filtro es lo que espera quien acaba de quitar el último.
+
+    `[LIM]` Un `?asset_id=` **con el valor vacío** no llega hasta aquí: FastAPI
+    valida cada elemento como UUID y responde `422` antes. Solo se escribe a
+    mano, así que no se añade un saneado para tratarlo como «sin filtro»:
+    tragárselo en silencio escondería una URL mal construida.
     """
     return [str(a) for a in asset_id] if asset_id else None
 
@@ -562,6 +567,93 @@ def resumen_por_objeto(
                 "         cap.code, sum(ci.amount) DESC"
             ),
             {"p": project_id, "a": _activos(asset_id)},
+        )
+        .mappings()
+        .all()
+    )
+    return [dict(f) for f in filas]
+
+
+class ResumenPorPagador(BaseModel):
+    #: El valor del enumerado `tenant_recoverable`: `NO`, `SI` o `NA`.
+    tenant_recoverable: str
+    #: Cómo se lee. Va en la respuesta y no en la pantalla porque la pregunta es
+    #: «quién paga» y el enumerado contesta «¿es repercutible?»: traducir `NO` a
+    #: «lo asume la propiedad» en el navegador obligaría a repetir esa inversión
+    #: en cada sitio que lo pinte —y el informe también lo pinta—.
+    name_es: str
+    findings: int
+    lines: int
+    amount: Decimal
+    total_cost: Decimal
+
+
+#: `[REQ]` §3.3 · Los tres pagadores, en el orden en que se leen.
+#:
+#: La propiedad primero porque es la cifra que se negocia: de lo que hay que
+#: pagar, cuánto acaba recayendo sobre quien compra. «Sin determinar» al final y
+#: **no es una tercera forma de pagar**: es una casilla sin rellenar, depende de
+#: los contratos de arrendamiento y lo decide una persona actuación a actuación.
+PAGADORES: tuple[tuple[str, str, int], ...] = (
+    ("NO", "Lo asume la propiedad", 1),
+    ("SI", "Repercutible al inquilino", 2),
+    ("NA", "Sin determinar", 3),
+)
+
+
+@router.get(
+    "/projects/{project_id}/capex/summary/by-tenant-recoverable",
+    response_model=list[ResumenPorPagador],
+)
+def resumen_por_pagador(
+    project_id: uuid.UUID,
+    s: SesionDep,
+    asset_id: Annotated[list[uuid.UUID] | None, Query()] = None,
+) -> Any:
+    """`[REQ]` §3.3 · El CAPEX por **quién lo paga**.
+
+    *«Cuánto de esto recae realmente sobre la propiedad»* es de las primeras
+    preguntas de un inversor y hoy se calcula a mano. El dato está desde el
+    principio —`finding.tenant_recoverable`, que además se puede proponer desde
+    la titularidad de la zona— y no había ningún corte que lo sumara.
+
+    **Los tres salen siempre, con ceros.** Es un reparto de tres partes y no un
+    ranking: que «sin determinar» desaparezca de la lista cuando vale cero es
+    precisamente la noticia buena que hay que poder leer, y si desaparece no se
+    distingue de que nadie haya mirado.
+
+    `[REC]` **«Sin determinar» no es un tercer pagador.** Es la casilla que
+    nadie rellenó, y por eso la pantalla lo pinta en gris de segundo plano y no
+    con un color de serie: mezclarlo con los otros dos sugeriría que se ha
+    decidido algo.
+    """
+    filas = (
+        s.execute(
+            text(
+                # Los tres por la izquierda, para que salgan con ceros. El filtro
+                # de activos va en el `ON` y no en un `WHERE`: en un `WHERE`
+                # convertiría el `LEFT JOIN` en interno y se perderían las filas
+                # vacías, que son justo las que hay que enseñar.
+                "SELECT p.code AS tenant_recoverable, p.name_es, "
+                "       count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
+                "       COALESCE(sum(ci.amount), 0) AS amount, "
+                "       COALESCE(sum(ci.total_cost), 0) AS total_cost "
+                "FROM (VALUES "
+                + ", ".join(f"(:c{i}, :n{i}, :o{i})" for i in range(len(PAGADORES)))
+                + ") AS p(code, name_es, orden) "
+                "LEFT JOIN finding f ON CAST(f.tenant_recoverable AS text) = p.code "
+                "     AND f.project_id = :p AND f.deleted_at IS NULL "
+                + FILTRO_DE_ACTIVOS
+                + "LEFT JOIN capex_item ci ON ci.finding_id = f.id "
+                "GROUP BY p.code, p.name_es, p.orden ORDER BY p.orden"
+            ),
+            {
+                "p": project_id,
+                "a": _activos(asset_id),
+                **{f"c{i}": c for i, (c, _, _) in enumerate(PAGADORES)},
+                **{f"n{i}": n for i, (_, n, _) in enumerate(PAGADORES)},
+                **{f"o{i}": o for i, (_, _, o) in enumerate(PAGADORES)},
+            },
         )
         .mappings()
         .all()

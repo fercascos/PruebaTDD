@@ -84,6 +84,9 @@ def crear_hallazgo(
     horizonte: str = "CORTO",
     titulo: str = "Actuación",
     riesgo: str | None = None,
+    #: `[REQ]` §3.3 · Quién lo paga: `NO` la propiedad, `SI` repercutible al
+    #: inquilino, `NA` sin determinar, que es el valor por omisión de la columna.
+    paga: str | None = None,
 ) -> str:
     # `/capex-codes` es una lista PLANA con `level` y `parent_id`. La
     # documentación menciona un `/capex-codes/tree` que no está construido:
@@ -108,6 +111,8 @@ def crear_hallazgo(
     if riesgo is not None:
         grados = catalogo(cliente, cab, "risk-levels")
         cuerpo["risk_level_id"] = next(g["id"] for g in grados if g["code"] == riesgo)
+    if paga is not None:
+        cuerpo["tenant_recoverable"] = paga
 
     r = cliente.post(
         f"{RUTA}/projects/{proyecto}/findings", headers=cab("consultor_a"), json=cuerpo
@@ -291,11 +296,11 @@ def test_un_hallazgo_en_un_objeto_suma_en_su_capitulo(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_los_cuatro_cortes_suman_lo_mismo(
+def test_los_cinco_cortes_suman_lo_mismo(
     cliente: TestClient, cab: Any, proyecto: str, activo: str
 ) -> None:
-    """`[REQ]` **Lo que hace creíble el resumen.** Cuatro gráficos en la misma
-    pantalla que no cuadran entre sí destruyen la confianza en los cuatro, y el
+    """`[REQ]` **Lo que hace creíble el resumen.** Cinco gráficos en la misma
+    pantalla que no cuadran entre sí destruyen la confianza en los cinco, y el
     descuadre no lo ve nadie hasta que el cliente suma con la calculadora."""
     crear_hallazgo(
         cliente,
@@ -330,7 +335,7 @@ def test_los_cuatro_cortes_suman_lo_mismo(
 
     totales = {
         corte: sum(Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, corte))
-        for corte in ("concept", "horizon", "chapter", "asset")
+        for corte in ("concept", "horizon", "chapter", "asset", "tenant-recoverable")
     }
 
     assert len(set(totales.values())) == 1, totales
@@ -727,10 +732,10 @@ def test_el_filtro_admite_varios_activos_a_la_vez(
     assert total(asset_ids=[activo, otro_activo, tercero]) == Decimal("7000.00")
 
 
-def test_los_cinco_cortes_cuadran_con_varios_activos_elegidos(
+def test_los_seis_cortes_cuadran_con_varios_activos_elegidos(
     cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str, tipologia: str
 ) -> None:
-    """`[REQ]` Los cinco gráficos del dashboard se leen en la misma pantalla y
+    """`[REQ]` Los seis gráficos del dashboard se leen en la misma pantalla y
     con el mismo filtro. Si no sumaran lo mismo, el descuadre lo encontraría el
     cliente con la calculadora delante."""
     r = cliente.post(
@@ -781,7 +786,7 @@ def test_los_cinco_cortes_cuadran_con_varios_activos_elegidos(
             (Decimal(f["amount"]) for f in resumen(cliente, cab, proyecto, corte, asset_ids=dos)),
             Decimal("0"),
         )
-        for corte in ("concept", "horizon", "chapter", "risk", "object")
+        for corte in ("concept", "horizon", "chapter", "risk", "object", "tenant-recoverable")
     }
 
     assert len(set(totales.values())) == 1, totales
@@ -955,3 +960,160 @@ def test_el_desglose_por_objeto_suma_lo_mismo_que_su_capitulo(
     h09 = [f for f in objetos if f["chapter_code"] == "HC.H09"]
     assert [f["object_code"] for f in h09] == ["HC.H09.01", "HC.H09.02", None]
     assert h09[-1]["object_name"] is None, "codificado en el capítulo: no tiene objeto"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Por pagador: quién paga `[REQ]` §3.3
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_reparto_por_pagador_trae_los_tres_siempre_y_en_orden(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """`[REQ]` Es un reparto de tres partes y no un ranking.
+
+    Los tres salen **con ceros**: que «sin determinar» valga cero es la noticia
+    buena que hay que poder leer, y si desaparece de la lista no se distingue de
+    que nadie haya mirado. El orden es propiedad → inquilino → sin determinar, y
+    la propiedad va primera porque es la cifra que se negocia.
+    """
+    # Un proyecto entero sin ningún hallazgo ya tiene que traer las tres filas.
+    vacio = resumen(cliente, cab, proyecto, "tenant-recoverable")
+    assert [f["tenant_recoverable"] for f in vacio] == ["NO", "SI", "NA"]
+    assert all(Decimal(f["amount"]) == 0 for f in vacio)
+    assert [f["name_es"] for f in vacio] == [
+        "Lo asume la propiedad",
+        "Repercutible al inquilino",
+        "Sin determinar",
+    ]
+
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H02",
+        concepto="REPARACION",
+        importe="10000.00",
+        paga="NO",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H09",
+        concepto="ESG",
+        importe="4000.00",
+        paga="SI",
+    )
+
+    filas = {
+        f["tenant_recoverable"]: f for f in resumen(cliente, cab, proyecto, "tenant-recoverable")
+    }
+    assert Decimal(filas["NO"]["amount"]) == Decimal("10000.00")
+    assert Decimal(filas["SI"]["amount"]) == Decimal("4000.00")
+    # La tercera sigue ahí, en cero, y no ha desaparecido por no tener nada.
+    assert Decimal(filas["NA"]["amount"]) == 0
+    assert filas["NA"]["findings"] == 0
+
+
+def test_un_hallazgo_sin_decidir_cae_en_sin_determinar(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """`NA` es el valor por omisión de la columna, así que un hallazgo que nadie
+    clasificó **no se pierde**: cuenta como casilla sin rellenar, que es un dato
+    —depende de los contratos de arrendamiento— y no un hueco."""
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H02",
+        concepto="REPARACION",
+        importe="7500.00",
+    )
+    filas = {
+        f["tenant_recoverable"]: f for f in resumen(cliente, cab, proyecto, "tenant-recoverable")
+    }
+    assert Decimal(filas["NA"]["amount"]) == Decimal("7500.00")
+    assert filas["NA"]["findings"] == 1
+
+
+def test_el_reparto_por_pagador_se_filtra_por_activo(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str, otro_activo: str
+) -> None:
+    """Como los otros cortes del dashboard: con un activo, con varios y sin
+    ninguno, que es la cartera entera y no «ningún activo»."""
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H02",
+        concepto="REPARACION",
+        importe="10000.00",
+        paga="NO",
+    )
+    crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        otro_activo,
+        codigo_capex="HC.H09",
+        concepto="ESG",
+        importe="4000.00",
+        paga="NO",
+    )
+
+    def propiedad(**kwargs: Any) -> Decimal:
+        filas = resumen(cliente, cab, proyecto, "tenant-recoverable", **kwargs)
+        return Decimal(next(f for f in filas if f["tenant_recoverable"] == "NO")["amount"])
+
+    assert propiedad() == Decimal("14000.00")
+    assert propiedad(asset_id=activo) == Decimal("10000.00")
+    assert propiedad(asset_ids=[activo, otro_activo]) == Decimal("14000.00")
+    # Una lista vacía es «sin filtro» y no «ningún activo»: llega al soltar la
+    # última casilla, y devolver cero ahí se lee como un proyecto sin CAPEX.
+    assert propiedad(asset_ids=[]) == Decimal("14000.00")
+
+
+def test_un_hallazgo_descartado_no_cuenta_en_el_reparto_por_pagador(
+    cliente: TestClient, cab: Any, proyecto: str, activo: str
+) -> None:
+    """Decir que algo no se hace y seguir contándolo en quién lo paga sería
+    contradictorio, igual que en los otros cortes."""
+    vivo = crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H02",
+        concepto="REPARACION",
+        importe="10000.00",
+        paga="NO",
+    )
+    muerto = crear_hallazgo(
+        cliente,
+        cab,
+        proyecto,
+        activo,
+        codigo_capex="HC.H09",
+        concepto="ESG",
+        importe="4000.00",
+        paga="NO",
+    )
+    assert vivo != muerto
+    # `If-Match` es obligatorio al borrar un hallazgo: sin él la API responde 428
+    # en vez de borrar a ciegas algo que otro pudo haber cambiado.
+    borrado = cliente.delete(
+        f"{RUTA}/findings/{muerto}",
+        headers={**cab("consultor_a"), "If-Match": "1"},
+    )
+    assert borrado.status_code in (200, 204), borrado.text
+
+    filas = {
+        f["tenant_recoverable"]: f for f in resumen(cliente, cab, proyecto, "tenant-recoverable")
+    }
+    assert Decimal(filas["NO"]["amount"]) == Decimal("10000.00")
+    assert filas["NO"]["findings"] == 1

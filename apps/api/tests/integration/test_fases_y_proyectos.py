@@ -515,6 +515,62 @@ def test_dos_altas_seguidas_no_repiten_codigo(cliente, cab, datos_base):
     assert len(codigos) == 3
 
 
+def test_la_serie_del_codigo_sigue_despues_del_novecientos_noventa_y_nueve(
+    cliente, cab, datos_base, motor_admin
+):
+    """El proyecto 1000 **no puede romper el alta para el resto del año**.
+
+    El generador contaba solo los códigos de tres cifras, y `2026-1000` no es
+    uno: el máximo se quedaba clavado en 999 y proponía `2026-1000` una y otra
+    vez. Con los cinco reintentos llegaba a `2026-1004` y a partir de ahí el
+    alta contestaba **409 para toda la organización**, sin más salida que
+    teclear el código a mano. Salió al ejecutar dos veces seguidas una
+    comprobación de navegador sobre una base que llevaba mil altas de pruebas.
+    """
+    anio = date.today().year
+    with motor_admin.begin() as c:
+        for numero in (999, 1000, 1001):
+            c.execute(
+                text(
+                    "INSERT INTO project (organization_id, client_id, internal_code, name) "
+                    "VALUES (:o, :c, :ic, 'Proyecto de la serie larga')"
+                ),
+                {
+                    "o": str(datos_base["org_a"]),
+                    "c": str(datos_base["cliente_a"]),
+                    "ic": f"{anio}-{numero}",
+                },
+            )
+
+    r = _alta(cliente, cab, client_id=str(datos_base["cliente_a"]))
+    assert r.status_code == 201, r.text
+    assert r.json()["internal_code"] == f"{anio}-1002"
+
+
+def test_un_codigo_importado_largo_no_dispara_la_serie(cliente, cab, datos_base, motor_admin):
+    """Es lo que protegía el tope de tres cifras y se conserva con el de cinco.
+
+    Un `2026-137309` traído de otro sistema llevaría la serie a `2026-137310` y
+    dejaría ilegibles todos los siguientes.
+    """
+    anio = date.today().year
+    with motor_admin.begin() as c:
+        c.execute(
+            text(
+                "INSERT INTO project (organization_id, client_id, internal_code, name) "
+                "VALUES (:o, :c, :ic, 'Proyecto importado')"
+            ),
+            {
+                "o": str(datos_base["org_a"]),
+                "c": str(datos_base["cliente_a"]),
+                "ic": f"{anio}-137309",
+            },
+        )
+
+    generado = _alta(cliente, cab, client_id=str(datos_base["cliente_a"])).json()["internal_code"]
+    assert len(generado.split("-")[1]) <= 5, generado
+
+
 def test_el_codigo_dado_a_mano_se_respeta_y_choca_si_se_repite(cliente, cab, datos_base):
     """Una migración desde otro sistema trae los suyos, y ahí un choque **sí**
     es cosa de quien llama: se le dice, no se le cambia el código por otro."""

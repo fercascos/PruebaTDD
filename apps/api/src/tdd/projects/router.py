@@ -131,9 +131,19 @@ def _codigo_generado(s: Any, organizacion: uuid.UUID, salto: int = 0) -> str:
     un contador se desincroniza en cuanto alguien borra un proyecto o importa
     una tanda con códigos propios, y entonces genera uno repetido.
 
-    Cuenta **solo los de tres cifras**, que son los que genera él mismo. Un
-    código traído de otro sistema —`2026-123456`— dispararía la serie a
-    `2026-123457` y dejaría los siguientes ilegibles para siempre.
+    Cuenta **solo los de tres a cinco cifras**, que son los que genera él mismo.
+    Un código traído de otro sistema —`2026-137309`, seis cifras— dispararía la
+    serie y dejaría los siguientes ilegibles para siempre.
+
+    El tope de abajo era tres, y **se rompía solo al llegar a mil**: el proyecto
+    número 1000 sale como `2026-1000`, que ya no casa con el patrón de tres
+    cifras, así que el máximo se quedaba clavado en 999 y a partir de ahí el
+    generador proponía `2026-1000` una y otra vez. Con los cinco reintentos
+    llegaba hasta `2026-1004` y **el alta empezaba a fallar con un 409** para
+    toda la organización el resto del año, sin más forma de crear un proyecto
+    que teclear el código a mano. Salió en una base de desarrollo que llevaba
+    mil altas de pruebas; en una organización con mil encargos al año habría
+    salido en producción.
 
     `salto` es el número de intentos ya fallidos: sin él, un reintento volvería
     a calcular el mismo número y chocaría otra vez hasta agotarse.
@@ -141,6 +151,11 @@ def _codigo_generado(s: Any, organizacion: uuid.UUID, salto: int = 0) -> str:
     `[LIM]` Dos altas simultáneas pueden calcular el mismo número. Lo impide el
     `UNIQUE (organization_id, internal_code)` de la tabla, y quien llama
     reintenta: es más simple que un bloqueo y falla del lado seguro.
+
+    `[LIM]` El mismo fallo vuelve a los 100 000 encargos en un año, donde el
+    generador se saldría del patrón de cinco cifras. No se pone `\\d{3,}` porque
+    entonces un código importado de seis cifras se lleva la serie por delante, y
+    eso pasa **antes** y con más facilidad que llegar a cien mil encargos.
     """
     anio = date.today().year
     siguiente = s.execute(
@@ -149,12 +164,14 @@ def _codigo_generado(s: Any, organizacion: uuid.UUID, salto: int = 0) -> str:
             "FROM project WHERE organization_id = :o AND internal_code LIKE :prefijo"
         ),
         {
-            "patron": r"^\d{4}-(\d{3})$",
+            "patron": r"^\d{4}-(\d{3,5})$",
             "o": str(organizacion),
             "prefijo": f"{anio}-%",
             "salto": 1 + salto,
         },
     ).scalar_one()
+    # `:03d` rellena hasta tres y deja pasar los más largos: `2026-007` y
+    # `2026-1000` son los dos de la misma serie.
     return f"{anio}-{int(siguiente):03d}"
 
 

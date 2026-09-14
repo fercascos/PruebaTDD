@@ -1,7 +1,7 @@
 /**
  * ¿Dice la matriz de riesgos lo que tiene que decir? `[REQ]` §12
  *
- * Dos cosas que no se ven en una prueba unitaria:
+ * Tres cosas que no se ven en una prueba unitaria:
  *
  * 1. **Que los números de la pantalla cuadren con el CAPEX del proyecto.** Es lo
  *    que sostiene la utilidad de la matriz: si el total no coincide, quien la
@@ -10,6 +10,10 @@
  *    hombres es daltónico, y esta pantalla se imprime en blanco y negro para
  *    reuniones. Se comprueba leyendo el texto: los códigos y los nombres tienen
  *    que estar escritos.
+ * 3. **Que el filtro de activos admita uno, varios y todos** `[REQ]` §3.3, con
+ *    las palabras del cliente. Aquí había un desplegable de uno solo, y eso
+ *    dejaba fuera la única comparación que se hace en una cartera: «las dos
+ *    naves del polígono frente al resto».
  *
  *     npm run build && npx vite preview --port 4173 &
  *     node herramientas/comprobar-riesgos.mjs
@@ -90,12 +94,39 @@ for (const [i, caso] of REPARTO.entries()) {
 }
 console.log(`· ${REPARTO.length} hallazgos, ${esperado.toLocaleString('es-ES')} € en total`)
 
+// `[REQ]` §3.3 · Un segundo activo, que es lo que hace que el filtro exista:
+// con uno solo no se pinta, porque un desplegable de una casilla no filtra.
+const segundo = await api(
+  'POST',
+  `/projects/${proyecto.id}/assets`,
+  { name: 'Edificio Sur', typology_id: tipologias[0].id },
+  tk,
+)
+const zonasSur = await api('GET', `/assets/${segundo.id}/allowed-zones`, null, tk)
+const SUR = 77000
+await api(
+  'POST',
+  `/projects/${proyecto.id}/findings`,
+  {
+    asset_id: segundo.id,
+    capex_code_id: codigos[0].id,
+    zone_id: zonasSur[0].id,
+    risk_level_id: porCodigo['02'],
+    title: 'Anomalía del sur',
+    description: 'Observada en visita.',
+    capex_lines: [{ time_horizon_code: 'CORTO', amount: String(SUR) }],
+  },
+  tk,
+)
+const TODO = esperado + SUR
+console.log(`· Segundo activo con ${SUR} € · ${TODO} € en la cartera`)
+
 // El CAPEX del proyecto por la otra vía: si los dos no coinciden, es que la
 // matriz está contando mal, no que la prueba esté mal escrita.
 const resumen = await api('GET', `/projects/${proyecto.id}/capex/summary/by-horizon`, null, tk)
 const capex = resumen.reduce((a, f) => a + Number(f.amount), 0)
-if (Math.abs(capex - esperado) > 0.01) {
-  fallos.push(`El CAPEX del proyecto (${capex}) no es el que se ha cargado (${esperado})`)
+if (Math.abs(capex - TODO) > 0.01) {
+  fallos.push(`El CAPEX del proyecto (${capex}) no es el que se ha cargado (${TODO})`)
 }
 
 // ── La pantalla ──────────────────────────────────────────────────────────────
@@ -123,9 +154,9 @@ const enPantalla = [...pie.matchAll(/([\d.]+)\s*€/g)].map((m) =>
   Number(m[1].replace(/\./g, '')),
 )
 const totalPantalla = enPantalla.at(-1)
-console.log(`  total en pantalla: ${totalPantalla} · esperado: ${Math.round(esperado)}`)
-if (Math.abs(totalPantalla - esperado) > 1) {
-  fallos.push(`El total de la matriz (${totalPantalla}) no cuadra con el CAPEX (${esperado})`)
+console.log(`  total en pantalla: ${totalPantalla} · esperado: ${Math.round(TODO)}`)
+if (Math.abs(totalPantalla - TODO) > 1) {
+  fallos.push(`El total de la matriz (${totalPantalla}) no cuadra con el CAPEX (${TODO})`)
 }
 // Y las columnas suman el total.
 const columnas = enPantalla.slice(0, -1)
@@ -161,11 +192,81 @@ if (!cuerpoTabla.includes('Sin clasificar')) {
   fallos.push('La fila de hallazgos sin grado no aparece: los totales dejarían de cuadrar')
 }
 
-// 5 · El recuento de hallazgos es 6, no 7 (la recurrente cuenta una vez).
-const cabecera = await pagina.locator('.filtro .ayuda').textContent()
+// 5 · El recuento de hallazgos cuenta la recurrente una vez: 6 + el del sur.
+// `> .ayuda` y no `.ayuda` a secas: el `<legend>` del filtro de activos lleva
+// la misma clase y está dentro de `.filtro`, así que el selector suelto
+// devuelve dos elementos.
+const cabecera = await pagina.locator('.filtro > .ayuda').textContent()
 console.log('  cabecera:', cabecera.trim())
-if (!cabecera.includes(`${REPARTO.length} hallazgos`)) {
-  fallos.push(`La cabecera no dice «${REPARTO.length} hallazgos»: ${cabecera.trim()}`)
+if (!cabecera.includes(`${REPARTO.length + 1} hallazgos`)) {
+  fallos.push(`La cabecera no dice «${REPARTO.length + 1} hallazgos»: ${cabecera.trim()}`)
+}
+
+// 6 · `[REQ]` §3.3 · El filtro: uno, varios y todos.
+/**
+ * El total de la matriz **cuando llegue a valerlo**, o el que haya al agotarse
+ * la espera.
+ *
+ * Espera por el valor exacto y no por «que cambie del anterior», que es lo que
+ * hacía y estaba mal: marcar y desmarcar casillas produce estados intermedios
+ * —tras soltar la primera de dos, la matriz enseña un momento solo la segunda—
+ * y «ha cambiado» se cumple ahí, así que la comprobación leía un total real
+ * pero de un paso que no era el suyo.
+ */
+async function totalDeLaMatriz(esperadoAqui) {
+  const leer = () =>
+    pagina.locator('.tabla.matriz tfoot tr').textContent().then((fila) => {
+      const cifras = [...fila.matchAll(/([\d.]+)\s*€/g)].map((m) => Number(m[1].replace(/\./g, '')))
+      return cifras.at(-1)
+    })
+  try {
+    await pagina.waitForFunction(
+      (valor) => {
+        const fila = document.querySelector('.tabla.matriz tfoot tr')?.textContent ?? ''
+        const ultima = [...fila.matchAll(/([\d.]+)\s*€/g)].at(-1)
+        return ultima !== undefined && Number(ultima[1].replace(/\./g, '')) === valor
+      },
+      Math.round(esperadoAqui),
+      { timeout: 10000 },
+    )
+  } catch {
+    // Se deja caer: quien llama compara y dice qué salió, que informa más que
+    // un tiempo de espera agotado sin cifra.
+  }
+  return leer()
+}
+
+if ((await pagina.locator('.filtro .filtro-de-activos').count()) !== 1) {
+  fallos.push('Con dos activos, la matriz no ofrece el filtro de varios')
+} else {
+  await pagina.locator('.filtro-de-activos > summary').click()
+  const casilla = (nombre) =>
+    pagina.locator('.filtro-de-activos label').filter({ hasText: nombre }).locator('input')
+
+  // Uno solo.
+  await casilla('Edificio Norte').check()
+  const soloNorte = await totalDeLaMatriz(esperado)
+  console.log(`  solo Edificio Norte: ${soloNorte} · esperado ${Math.round(esperado)}`)
+  if (Math.abs(soloNorte - esperado) > 1) {
+    fallos.push(`Filtrando a un activo la matriz suma ${soloNorte} y debería sumar ${esperado}`)
+  }
+
+  // Varios: el segundo se SUMA al primero, no lo sustituye.
+  await casilla('Edificio Sur').check()
+  const losDos = await totalDeLaMatriz(TODO)
+  console.log(`  los dos: ${losDos} · esperado ${Math.round(TODO)}`)
+  if (Math.abs(losDos - TODO) > 1) {
+    fallos.push(`Con los dos marcados la matriz suma ${losDos} y debería sumar ${TODO}`)
+  }
+
+  // Y soltarlos todos vuelve a la cartera entera, no a cero.
+  await casilla('Edificio Norte').uncheck()
+  await casilla('Edificio Sur').uncheck()
+  const sinFiltro = await totalDeLaMatriz(TODO)
+  console.log(`  sin ninguna casilla: ${sinFiltro}`)
+  if (Math.abs(sinFiltro - TODO) > 1) {
+    fallos.push(`Sin casillas marcadas la matriz suma ${sinFiltro} y debería ser la cartera entera`)
+  }
 }
 
 await navegador.close()
@@ -176,4 +277,7 @@ if (fallos.length) {
   for (const f of fallos) console.log(' -', f)
   process.exit(1)
 }
-console.log('Los totales cuadran con el CAPEX y el grado se lee sin depender del color.')
+console.log(
+  'Los totales cuadran con el CAPEX, el grado se lee sin depender del color y el filtro ' +
+    'admite uno, varios y todos.',
+)

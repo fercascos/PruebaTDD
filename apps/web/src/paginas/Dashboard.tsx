@@ -5,23 +5,26 @@ import type {
   ResumenPorConcepto,
   ResumenPorHorizonte,
   ResumenPorObjeto,
+  ResumenPorPagador,
   ResumenPorRiesgo,
 } from '../api/tipos'
 import { Tarta, type Porcion } from '../graficos/Tarta'
 import { euros, eurosExactos, porcentaje } from '../graficos/formato'
 import { agrupar, tinteApilado } from '../graficos/paleta'
+import { FiltroDeActivos } from '../ui/FiltroDeActivos'
 import { Mensaje, Vacio } from '../ui/Marco'
 
 /**
- * El dashboard del CAPEX: cinco preguntas y sus cinco respuestas.
+ * El dashboard del CAPEX: seis preguntas y sus seis respuestas.
  *
  * La rejilla de hallazgos contesta «qué hay que hacer». Esta pantalla contesta
- * las cinco que se hacen en la reunión, y que antes se contestaban sumando a
+ * las seis que se hacen en la reunión, y que antes se contestaban sumando a
  * mano:
  *
  * | Título en pantalla | Pregunta que contesta | Forma |
  * |---|---|---|
  * | Distribución por concepto de gasto | ¿en qué se va el dinero? | **tarta** — es un reparto parte-todo |
+ * | Reparto de la inversión por pagador | ¿quién lo paga? | **tarta** — otro reparto parte-todo |
  * | Perfil temporal de la inversión | ¿cuándo hay que pagarlo? | barras, en orden de plazo |
  * | Exposición por grado de riesgo | ¿cuánto de esto es grave? | barras, en orden de gravedad |
  * | Desglose por categoría y objeto | ¿qué parte del edificio? | barras **apiladas** |
@@ -39,7 +42,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  *
  * ## El filtro alcanza a toda la pantalla, y admite varios
  *
- * `[REQ]` Un selector arriba, y **los cuatro primeros cortes se piden
+ * `[REQ]` Un selector arriba, y **los cinco primeros cortes se piden
  * filtrados**. Las tarjetas de titulares se mueven con él: una que dijera
  * «CAPEX del proyecto» encima de unos gráficos de una sola nave se contradice
  * con ellos, y quien mire por encima se lleva la cifra equivocada.
@@ -55,7 +58,7 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * comparar varios activos en el momento sin salir de la pantalla. Sigue
  * enseñando la cartera entera, y por eso vale de referencia: dice si el
  * edificio que se está mirando es el caro o uno de los baratos, cosa que los
- * otros cuatro, ya filtrados, no pueden decir.
+ * otros cinco, ya filtrados, no pueden decir.
  *
  * Sus barras se **pulsan**: cada una mete o saca ese activo de la selección.
  * La lista de casillas de arriba y estas barras son el mismo mando escrito dos
@@ -66,13 +69,17 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * para el selector y da el total del proyecto, que es lo que permite decir qué
  * parte representa la selección sin volver a pedirlo.
  *
- * ## Por qué solo una es una tarta
+ * ## Por qué solo dos son tartas
  *
  * Una tarta sirve para ver **una proporción de un vistazo** y es mala para
  * comparar dos trozos parecidos: el ojo humano compara longitudes mucho mejor
- * que ángulos. El concepto es un reparto —«esto es normativa, esto es mejora»—
- * y ahí la tarta acierta. Los otros cuatro son comparaciones de magnitud, y ahí
- * una barra se lee mejor y no obliga a inventar colores.
+ * que ángulos. El concepto y el pagador son repartos —«esto es normativa, esto
+ * es mejora»; «esto lo paga la propiedad, esto el inquilino»— y ahí la tarta
+ * acierta. Van seguidas porque contestan cómo se reparte el mismo dinero por
+ * dos criterios, y leerlas juntas es lo que convierte «300.000 € de normativa»
+ * en «300.000 € de normativa que paga el comprador». Los otros cuatro cortes
+ * son comparaciones de magnitud, y ahí una barra se lee mejor y no obliga a
+ * inventar colores.
  *
  * `[REQ]` Ningún gráfico se identifica solo por color. Cada barra lleva su
  * nombre y su cifra escritos, la tarta lleva leyenda con importes y
@@ -84,9 +91,10 @@ import { Mensaje, Vacio } from '../ui/Marco'
 /** Lo que no depende del filtro: la lista de activos con sus totales. */
 type Datos = { activo: ResumenPorActivo[] }
 
-/** Los cuatro cortes que sí lo hacen. */
+/** Los cinco cortes que sí lo hacen. */
 type Filtrado = {
   concepto: ResumenPorConcepto[]
+  pagador: ResumenPorPagador[]
   horizonte: ResumenPorHorizonte[]
   riesgo: ResumenPorRiesgo[]
   objeto: ResumenPorObjeto[]
@@ -107,7 +115,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
    */
   const [elegidos, setElegidos] = useState<string[]>([])
   /**
-   * Los cuatro cortes filtrados. Nulo mientras llegan, para no enseñar los de
+   * Los cinco cortes filtrados. Nulo mientras llegan, para no enseñar los de
    * la selección anterior con el selector diciendo otra cosa.
    */
   const [filtrado, setFiltrado] = useState<Filtrado | null>(null)
@@ -133,27 +141,33 @@ export function Dashboard({ projectId }: { projectId: string }) {
   // cada render volvería a pedirlo todo aunque la selección no haya cambiado.
   const clave = elegidos.join(',')
 
-  // Los cuatro cortes filtrables se piden juntos y aparte del resto: `by-asset`
+  // Los cinco cortes filtrables se piden juntos y aparte del resto: `by-asset`
   // no se filtra —es la lista de activos, y con el filtro puesto sería una sola
   // fila— y hace de índice para el selector.
   useEffect(() => {
     // `?asset_id=…&asset_id=…`, que es como se escribe una lista en una URL.
-    const sufijo = clave ? `?${clave.split(',').map((a) => `asset_id=${a}`).join('&')}` : ''
+    const sufijo = clave
+      ? `?${clave
+          .split(',')
+          .map((a) => `asset_id=${a}`)
+          .join('&')}`
+      : ''
     const base = `/projects/${projectId}/capex/summary`
     let vigente = true
     setFiltrado(null)
     Promise.all([
       obtener<ResumenPorConcepto[]>(`${base}/by-concept${sufijo}`),
+      obtener<ResumenPorPagador[]>(`${base}/by-tenant-recoverable${sufijo}`),
       obtener<ResumenPorHorizonte[]>(`${base}/by-horizon${sufijo}`),
       obtener<ResumenPorRiesgo[]>(`${base}/by-risk${sufijo}`),
       obtener<ResumenPorObjeto[]>(`${base}/by-object${sufijo}`),
     ])
-      .then(([concepto, horizonte, riesgo, objeto]) => {
+      .then(([concepto, pagador, horizonte, riesgo, objeto]) => {
         // Si se ha cambiado la selección mientras llegaba esta respuesta, se
         // descarta: sin esto, la más lenta pisa a la más reciente y los
         // gráficos acaban enseñando unos activos distintos de los que dice el
-        // selector. Con cuatro peticiones en vuelo la ventana es ancha.
-        if (vigente) setFiltrado({ concepto, horizonte, riesgo, objeto })
+        // selector. Con cinco peticiones en vuelo la ventana es ancha.
+        if (vigente) setFiltrado({ concepto, pagador, horizonte, riesgo, objeto })
       })
       .catch((e: Error) => setError(e.message))
     return () => {
@@ -182,8 +196,8 @@ export function Dashboard({ projectId }: { projectId: string }) {
   if (totalDelProyecto <= 0) {
     return (
       <Vacio>
-        Todavía no hay ninguna línea de CAPEX valorada. Este dashboard se rellena solo a medida que
-        se registran hallazgos con su importe.
+        Todavía no hay ninguna línea de CAPEX valorada. Este dashboard se rellena solo a medida
+        que se registran hallazgos con su importe.
       </Vacio>
     )
   }
@@ -239,6 +253,20 @@ export function Dashboard({ projectId }: { projectId: string }) {
       : []),
   ]
 
+  // `[REQ]` §3.3 · Las tres del reparto de pagador, en el orden que manda la
+  // API —propiedad, inquilino, sin determinar— y **sin agrupar**: son tres y
+  // caben. Las que valen cero se quedan fuera de la tarta, que no sabe dibujar
+  // una porción de cero grados, pero **siguen en la tabla de debajo**: que no
+  // haya nada sin determinar es justo lo que hay que poder leer.
+  const porcionesDePagador: Porcion[] = filtrado.pagador
+    .filter((p) => Number(p.amount) > 0)
+    .map((p) => ({
+      clave: p.tenant_recoverable,
+      nombre: p.name_es,
+      valor: Number(p.amount),
+      gris: p.tenant_recoverable === 'NA',
+    }))
+
   return (
     <div className="resumen-capex">
       {cabecera}
@@ -261,9 +289,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
         </li>
         <li>
           <span className="valor">{lineas}</span>
-          <span className="rotulo">
-            {lineas === 1 ? 'línea de CAPEX' : 'líneas de CAPEX'}
-          </span>
+          <span className="rotulo">{lineas === 1 ? 'línea de CAPEX' : 'líneas de CAPEX'}</span>
         </li>
         {seleccion.length ? (
           /* Con una selección puesta, «activos con actuaciones» no dice nada:
@@ -296,8 +322,11 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <h3>Distribución por concepto de gasto</h3>
             <p className="ayuda">
               Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal
-              mantenido: <strong>lo exigido por normativa hay que ejecutarlo y una mejora es
-              discrecional</strong>, y en el total pesan igual.
+              mantenido:{' '}
+              <strong>
+                lo exigido por normativa hay que ejecutarlo y una mejora es discrecional
+              </strong>
+              , y en el total pesan igual.
             </p>
             <Tarta
               porciones={porciones}
@@ -310,6 +339,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
             />
             <Tabla
               columna="Concepto"
+              plural="conceptos"
               filas={filtrado.concepto.map((c) => ({
                 clave: c.capex_concept_code,
                 nombre: c.capex_concept_name,
@@ -320,11 +350,50 @@ export function Dashboard({ projectId }: { projectId: string }) {
             />
           </section>
 
+          {/* `[REQ]` §3.3 · «Cuánto de esto recae realmente sobre la propiedad»
+              es de las primeras preguntas de un inversor y se calculaba a mano:
+              el dato está en el hallazgo desde el primer día y no había ningún
+              corte que lo sumara.
+
+              Es la segunda tarta y va pegada a la primera a propósito: las dos
+              contestan cómo se reparte el mismo dinero —en qué se va, y quién
+              lo paga— y leerlas seguidas es lo que convierte «300.000 € de
+              normativa» en «300.000 € de normativa que paga el comprador». */}
+          <section className="bloque">
+            <h3>Reparto de la inversión por pagador</h3>
+            <p className="ayuda">
+              Cuánto del CAPEX recae sobre la propiedad y cuánto es repercutible al inquilino.
+              <strong> «Sin determinar» no es una tercera forma de pagar</strong>: es una
+              casilla sin rellenar —depende de los contratos de arrendamiento y se decide
+              actuación por actuación—, y por eso va en gris y no con un color de serie.
+            </p>
+            <Tarta
+              porciones={porcionesDePagador}
+              titulo={
+                deQuien
+                  ? `Reparto del CAPEX de ${deQuien} entre propiedad e inquilinos`
+                  : 'Reparto del CAPEX del proyecto entre propiedad e inquilinos'
+              }
+              formatear={(v) => eurosExactos.format(v)}
+            />
+            <Tabla
+              columna="Quién lo paga"
+              plural="pagadores"
+              filas={filtrado.pagador.map((p) => ({
+                clave: p.tenant_recoverable,
+                nombre: p.name_es,
+                importe: Number(p.amount),
+                detalle: `${p.findings} ${p.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+              }))}
+              total={total}
+            />
+          </section>
+
           <section className="bloque">
             <h3>Perfil temporal de la inversión</h3>
             <p className="ayuda">
-              Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí es
-              el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.
+              Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí
+              es el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.
             </p>
             <Barras
               filas={filtrado.horizonte.map((h) => ({
@@ -344,9 +413,9 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>Exposición por grado de riesgo</h3>
             <p className="ayuda">
-              Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los grados
-              sin importe se muestran con cero: uno que desaparece de la lista se confunde con uno
-              que no tiene nada.
+              Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los
+              grados sin importe se muestran con cero: uno que desaparece de la lista se
+              confunde con uno que no tiene nada.
             </p>
             <Barras
               filas={filtrado.riesgo.map((r) => ({
@@ -381,7 +450,8 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <section className="bloque">
               <h3>Distribución por activo</h3>
               <p className="ayuda">
-                En un proyecto de cartera es la cifra que entra en la negociación de cada activo.
+                En un proyecto de cartera es la cifra que entra en la negociación de cada
+                activo.
                 <strong> Este bloque no se filtra nunca</strong>: es la referencia contra la que
                 se lee el resto. Los activos sin actuaciones se muestran con cero: uno que
                 desaparece de la lista se confunde con uno que se visitó y no tenía nada.
@@ -455,7 +525,6 @@ function Cabecera({
   alAlternar: (id: string) => void
   alQuitarFiltro: () => void
 }) {
-  const elegidos = new Set(seleccion.map((a) => a.asset_id))
   return (
     <div className="alcance-del-resumen">
       <p className="alcance">
@@ -476,36 +545,15 @@ function Cabecera({
         )}
       </p>
       {cartera && (
-        <details className="filtro-de-activos">
-          <summary>
-            {seleccion.length
-              ? `${seleccion.length} de ${activos.length} activos`
-              : `Toda la cartera · ${activos.length} activos`}
-          </summary>
-          <fieldset>
-            <legend className="ayuda">
-              Uno, varios o ninguno. Sin ninguna casilla marcada se lee la cartera entera.
-            </legend>
-            <ul>
-              {activos.map((a) => (
-                <li key={a.asset_id}>
-                  {/* `casilla` es la convención de la casa para una etiqueta con
-                      su casilla al lado: sin ella, `label` es una columna y el
-                      nombre cae debajo del cuadrito. */}
-                  <label className="casilla">
-                    <input
-                      type="checkbox"
-                      checked={elegidos.has(a.asset_id)}
-                      onChange={() => alAlternar(a.asset_id)}
-                    />
-                    {a.asset_code ? `${a.asset_code} · ${a.asset_name}` : a.asset_name}
-                    <span className="ayuda"> {euros.format(Number(a.amount))}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
-        </details>
+        <FiltroDeActivos
+          activos={activos.map((a) => ({
+            id: a.asset_id,
+            nombre: a.asset_code ? `${a.asset_code} · ${a.asset_name}` : a.asset_name,
+            pie: euros.format(Number(a.amount)),
+          }))}
+          elegidos={seleccion.map((a) => a.asset_id)}
+          alAlternar={alAlternar}
+        />
       )}
     </div>
   )
@@ -666,9 +714,7 @@ function BarrasApiladas({ filas }: { filas: ResumenPorObjeto[] }) {
       </ul>
 
       <details className="detalle-tabla">
-        <summary>
-          Ver los {filas.length} objetos en tabla, con su categoría
-        </summary>
+        <summary>Ver los {filas.length} objetos en tabla, con su categoría</summary>
         <div className="desbordable">
           <table className="tabla">
             <thead>
@@ -752,18 +798,31 @@ function agruparPorCategoria(filas: ResumenPorObjeto[]): Apilada[] {
  * se queda en 2,74:1. Además es lo que permite leer los conceptos que la tarta
  * agrupa en «Otros», y copiar una cifra exacta.
  */
+/**
+ * La tabla que acompaña a cada tarta.
+ *
+ * `[REQ]` No es un extra: es donde vive la información completa cuando el
+ * gráfico agrupa la cola en «Otros» o deja fuera una porción que vale cero.
+ * `plural` es el nombre de lo que se lista y **no tiene valor por omisión**:
+ * decía «conceptos» clavado y el reparto por pagador salió con «Ver los 3
+ * conceptos en tabla», que no son conceptos.
+ */
 function Tabla({
   columna,
+  plural,
   filas,
   total,
 }: {
   columna: string
+  plural: string
   filas: Fila[]
   total: number
 }) {
   return (
     <details className="detalle-tabla">
-      <summary>Ver los {filas.length} conceptos en tabla</summary>
+      <summary>
+        Ver {filas.length === 1 ? 'la fila' : `los ${filas.length} ${plural}`} en tabla
+      </summary>
       <div className="desbordable">
         <table className="tabla">
           <thead>

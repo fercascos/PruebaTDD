@@ -1,19 +1,21 @@
 /**
  * ¿Dice el dashboard lo que tiene que decir? `[REQ]` §3.3 de `docs/23`.
  *
- * Cuatro cosas que no se ven en una prueba unitaria:
+ * Cinco cosas que no se ven en una prueba unitaria:
  *
- * 1. **Que los cinco cortes cuadren entre sí en la pantalla.** Cinco gráficos
+ * 1. **Que los seis cortes cuadren entre sí en la pantalla.** Seis gráficos
  *    uno debajo de otro que no suman lo mismo destruyen la confianza en los
- *    cinco, y el descuadre lo encuentra el cliente con la calculadora.
- * 2. **Que el selector de varios activos filtre de verdad los cinco.** Es lo
- *    nuevo: si un corte se quedara sin filtrar, saldría más grande que los
- *    demás y nadie sabría cuál creer.
+ *    seis, y el descuadre lo encuentra el cliente con la calculadora.
+ * 2. **Que el selector de varios activos filtre de verdad los cinco primeros.**
+ *    Si un corte se quedara sin filtrar, saldría más grande que los demás y
+ *    nadie sabría cuál creer.
  * 3. **Que la barra apilada sume su categoría.** Los tramos son los objetos; si
  *    no dieran la barra, el gráfico mentiría en la misma pantalla que lo
  *    desmiente.
  * 4. **Que nada se identifique solo por color.** Los grados de riesgo con su
  *    código escrito, y los objetos de cada apilada listados en su tabla.
+ * 5. **Que el reparto por pagador sume el mismo total** y que «sin determinar»
+ *    salga en gris: no es un tercer pagador, es una casilla sin rellenar.
  *
  *     npm run build && npx vite preview --port 4173 &
  *     node herramientas/comprobar-dashboard.mjs
@@ -80,13 +82,18 @@ const zonas = await api('GET', `/assets/${activos[0].id}/allowed-zones`, null, t
  * El reparto. Los dos primeros activos llevan objetos del MISMO capítulo, que
  * es lo que hace que la barra apilada tenga varios tramos que comprobar.
  */
+//
+// `paga` reparte los tres valores del enumerado —`NO` propiedad, `SI`
+// repercutible, `NA` sin determinar— para que el corte por pagador tenga las
+// tres porciones. Con todo en `NA`, que es el valor por omisión, la tarta sería
+// una sola porción gris y no comprobaría nada.
 const REPARTO = [
-  { nave: 0, codigo: 'HC.H09.01', riesgo: '04', concepto: 'NORMATIVA', plazo: 'CORTO', importe: 500000 },
-  { nave: 0, codigo: 'HC.H09.02', riesgo: '03', concepto: 'NORMATIVA', plazo: 'CORTO', importe: 300000 },
-  { nave: 0, codigo: 'HC.H09', riesgo: '02', concepto: 'MEJORA', plazo: 'MEDIO', importe: 100000 },
-  { nave: 1, codigo: 'HC.H02.01', riesgo: '01', concepto: 'MEJORA', plazo: 'LARGO', importe: 120000 },
+  { nave: 0, codigo: 'HC.H09.01', riesgo: '04', concepto: 'NORMATIVA', plazo: 'CORTO', importe: 500000, paga: 'NO' },
+  { nave: 0, codigo: 'HC.H09.02', riesgo: '03', concepto: 'NORMATIVA', plazo: 'CORTO', importe: 300000, paga: 'SI' },
+  { nave: 0, codigo: 'HC.H09', riesgo: '02', concepto: 'MEJORA', plazo: 'MEDIO', importe: 100000, paga: 'NA' },
+  { nave: 1, codigo: 'HC.H02.01', riesgo: '01', concepto: 'MEJORA', plazo: 'LARGO', importe: 120000, paga: 'NO' },
   // Ruido fuera de la selección: si un corte no se filtrara, se vería.
-  { nave: 2, codigo: 'HC.H03.01', riesgo: '04', concepto: 'SEGURIDAD', plazo: 'CORTO', importe: 999000 },
+  { nave: 2, codigo: 'HC.H03.01', riesgo: '04', concepto: 'SEGURIDAD', plazo: 'CORTO', importe: 999000, paga: 'SI' },
 ]
 for (const [i, caso] of REPARTO.entries()) {
   await api('POST', `/projects/${proyecto.id}/findings`, {
@@ -95,6 +102,7 @@ for (const [i, caso] of REPARTO.entries()) {
     zone_id: zonas[0].id,
     risk_level_id: porRiesgo[caso.riesgo],
     capex_concept_id: porConcepto[caso.concepto],
+    tenant_recoverable: caso.paga,
     title: `Anomalía ${i + 1}`,
     description: 'Observada en visita.',
     capex_lines: [{ time_horizon_code: caso.plazo, amount: String(caso.importe) }],
@@ -134,6 +142,7 @@ for (const b of bloques) titulos.push((await b.locator('h3').innerText()).trim()
 console.log('  bloques:', titulos.join(' · '))
 for (const esperado of [
   'Distribución por concepto de gasto',
+  'Reparto de la inversión por pagador',
   'Perfil temporal de la inversión',
   'Exposición por grado de riesgo',
   'Desglose por categoría y objeto',
@@ -161,6 +170,44 @@ for (const titulo of BARRAS) {
   const suma = await totalDelBloque(titulo)
   console.log(`  «${titulo}» suma ${suma}`)
   if (suma !== TOTAL) fallos.push(`«${titulo}» suma ${suma} y el CAPEX es ${TOTAL}`)
+}
+
+/** El total de una tarta: la suma de los importes de su leyenda. */
+async function totalDeLaTarta(titulo) {
+  const bloque = pagina.locator('.bloque').filter({ has: pagina.getByText(titulo, { exact: true }) })
+  const cifras = await bloque.locator('.tarta .leyenda .importe').allInnerTexts()
+  return cifras.reduce((a, x) => a + (importes(x)[0] ?? 0), 0)
+}
+
+// 3 bis · El reparto por pagador: mismo total y «sin determinar» en gris.
+const PAGADOR = 'Reparto de la inversión por pagador'
+const sumaPagador = await totalDeLaTarta(PAGADOR)
+console.log(`  «${PAGADOR}» suma ${sumaPagador}`)
+if (sumaPagador !== TOTAL) fallos.push(`«${PAGADOR}» suma ${sumaPagador} y el CAPEX es ${TOTAL}`)
+
+const bloquePagador = pagina
+  .locator('.bloque')
+  .filter({ has: pagina.getByText(PAGADOR, { exact: true }) })
+const leyendaPagador = (await bloquePagador.locator('.leyenda').innerText())
+  .replace(/\s+/g, ' ')
+  .trim()
+console.log('  leyenda:', leyendaPagador)
+for (const nombre of ['Lo asume la propiedad', 'Repercutible al inquilino', 'Sin determinar']) {
+  if (!leyendaPagador.includes(nombre)) {
+    fallos.push(`La leyenda del pagador no nombra «${nombre}»: el color solo no identifica`)
+  }
+}
+// `[REQ]` «Sin determinar» va en el gris de segundo plano y no en un tono de
+// serie: pintarlo como a los otros dos sugeriría que se ha decidido algo.
+const marcas = await bloquePagador.locator('.leyenda .marca').evaluateAll((ns) =>
+  ns.map((n) => n.style.background),
+)
+console.log('  tonos:', marcas.join(' / '))
+if (!/107,\s*106,\s*102|#6b6a66/i.test(marcas[marcas.length - 1] ?? '')) {
+  fallos.push(`«Sin determinar» debería ir en el gris de la paleta y va en ${marcas.at(-1)}`)
+}
+if (new Set(marcas).size !== marcas.length) {
+  fallos.push('Dos porciones del reparto por pagador comparten color')
 }
 
 // 3 · El grado de riesgo va escrito, no solo en color.
@@ -239,6 +286,12 @@ for (const titulo of BARRAS.slice(0, -1)) {
   console.log(`  filtrado, «${titulo}» suma ${suma}`)
   if (suma !== DOS_NAVES) fallos.push(`Filtrado, «${titulo}» suma ${suma} y debería ser ${DOS_NAVES}`)
 }
+// Las dos tartas también: son cortes filtrables como los demás.
+for (const titulo of ['Distribución por concepto de gasto', PAGADOR]) {
+  const suma = await totalDeLaTarta(titulo)
+  console.log(`  filtrado, «${titulo}» suma ${suma}`)
+  if (suma !== DOS_NAVES) fallos.push(`Filtrado, «${titulo}» suma ${suma} y debería ser ${DOS_NAVES}`)
+}
 // La distribución por activo NO se filtra: es la referencia del resto.
 const edificios = await totalDelBloque('Distribución por activo')
 console.log(`  filtrado, la distribución por activo sigue sumando ${edificios}`)
@@ -254,4 +307,7 @@ if (fallos.length) {
   for (const f of fallos) console.log(' -', f)
   process.exit(1)
 }
-console.log('Los cinco cortes cuadran, el filtro alcanza a cuatro y la distribución por activo se queda.')
+console.log(
+  'Los seis cortes cuadran, el filtro alcanza a cinco —las dos tartas incluidas— y la ' +
+    'distribución por activo se queda con la cartera entera.',
+)

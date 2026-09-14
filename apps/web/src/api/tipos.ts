@@ -748,6 +748,25 @@ export type ResumenPorConcepto = {
   total_cost: string
 }
 
+/**
+ * `[REQ]` §3.3 · El CAPEX por **quién lo paga**.
+ *
+ * Los tres llegan siempre, con ceros y en orden: propiedad, inquilino y sin
+ * determinar. El nombre viene de la API y no se traduce aquí: el enumerado
+ * contesta «¿es repercutible?» y la pregunta de la pantalla es «¿quién paga?»,
+ * así que invertir `NO` → «lo asume la propiedad» en el navegador obligaría a
+ * repetir esa inversión en cada sitio que lo pinte, y el informe también lo
+ * pinta.
+ */
+export type ResumenPorPagador = {
+  tenant_recoverable: 'NO' | 'SI' | 'NA'
+  name_es: string
+  findings: number
+  lines: number
+  amount: string
+  total_cost: string
+}
+
 export type ResumenPorHorizonte = {
   time_horizon_code: string
   time_horizon_name: string

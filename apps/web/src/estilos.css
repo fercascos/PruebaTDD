@@ -2189,6 +2189,9 @@ button.enlace {
 .filtro-de-activos {
   min-width: 0;
   max-width: 100%;
+  /* El panel abierto se saca del flujo (ver el `fieldset`), y para eso hace
+     falta que su contenedor sea el de posicionamiento. */
+  position: relative;
 }
 .filtro-de-activos > summary {
   cursor: pointer;
@@ -2203,16 +2206,53 @@ button.enlace {
   outline: 2px solid var(--acento);
   outline-offset: 1px;
 }
+/* El panel va **por encima** y no empujando: abrirlo dentro de la fila de
+   filtros de la matriz de riesgos bajaba el desplegable de capítulo que tiene al
+   lado, y en el dashboard desplazaba la pantalla entera justo cuando se está
+   mirando un gráfico. Un mando que mueve lo que se está mirando obliga a
+   buscarlo otra vez.
+
+   `min-width` contra el ancho del propio resumen —«Toda la cartera · 12
+   activos» es estrecho y los nombres de los activos no— y tope para que no se
+   salga de un móvil. */
 .filtro-de-activos fieldset {
-  margin: 0.5rem 0 0;
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(26rem, calc(100vw - 2rem));
+  margin: 0;
   padding: 0.6rem;
   border: 1px solid var(--borde);
   border-radius: 4px;
+  background: var(--papel);
+  box-shadow: 0 6px 20px rgb(15 23 42 / 12%);
   /* Con muchos activos la lista se desplaza dentro de su caja en vez de
      empujar la página: el filtro tiene que caber en la misma pantalla que lo
      que filtra. */
   max-height: 15rem;
   overflow-y: auto;
+}
+/* En el dashboard el mando va pegado al margen DERECHO, así que el panel se
+   ancla por ese lado: colgando por la izquierda se salía de la pantalla y la
+   página empezaba a desplazarse en horizontal. Cada contenedor declara su lado
+   porque es el que sabe dónde está su disparador. */
+.alcance-del-resumen .filtro-de-activos fieldset {
+  left: auto;
+  right: 0;
+}
+/* Un `<legend>` se dibuja SOBRE el borde del `fieldset`: con un renglón se lee
+   como el título de la caja y con dos queda medio fuera. Por eso la leyenda es
+   corta y la explicación va debajo, en su párrafo. Sacarlo del flujo con
+   `float` —que fue el primer intento— rompía la rejilla de casillas de al lado
+   en pantalla estrecha. */
+.filtro-de-activos legend {
+  padding: 0 0.3rem;
+}
+.filtro-de-activos .ayuda {
+  margin: 0.2rem 0 0;
 }
 .filtro-de-activos ul {
   list-style: none;
