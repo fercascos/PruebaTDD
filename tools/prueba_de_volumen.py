@@ -35,7 +35,6 @@ sys.path.insert(0, str(RAIZ / "apps" / "api" / "src"))
 
 from sqlalchemy import create_engine, text  # noqa: E402
 from sqlalchemy.orm import Session  # noqa: E402
-
 from tdd.reporting import generator, snapshot  # noqa: E402
 
 #: El tamaño que pide §20.5. No se redondea a un número bonito: es el criterio.
@@ -59,9 +58,7 @@ PARRAFO = (
 )
 
 
-def _sembrar(
-    s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID
-) -> uuid.UUID:
+def _sembrar(s: Session, org: uuid.UUID, usuario: uuid.UUID, cliente: uuid.UUID) -> uuid.UUID:
     """Un proyecto del tamaño del criterio. Devuelve su identificador."""
     proyecto = s.execute(
         text(
@@ -96,14 +93,9 @@ def _sembrar(
         ).all()
     ]
     horizontes = [
-        r[0]
-        for r in s.execute(
-            text("SELECT id FROM time_horizon ORDER BY sort_order")
-        ).all()
+        r[0] for r in s.execute(text("SELECT id FROM time_horizon ORDER BY sort_order")).all()
     ]
-    riesgos = [
-        r[0] for r in s.execute(text("SELECT id FROM risk_level ORDER BY id")).all()
-    ]
+    riesgos = [r[0] for r in s.execute(text("SELECT id FROM risk_level ORDER BY id")).all()]
 
     activos = []
     for i in range(ACTIVOS):
@@ -188,12 +180,9 @@ def _sembrar(
     return proyecto, activos, puestas
 
 
-def _fotos(
-    s: Session, org: uuid.UUID, proyecto: uuid.UUID, activos: list, usuario: uuid.UUID
-):
+def _fotos(s: Session, org: uuid.UUID, proyecto: uuid.UUID, activos: list, usuario: uuid.UUID):
     """35 fotografías sintéticas, con su objeto y su derivado."""
     from PIL import Image
-
     from tdd.evidence import storage
 
     almacen = storage.AlmacenEnMemoria()
@@ -252,18 +241,13 @@ def _fotos(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--plantilla", required=True, type=Path, help="PPTX real del cliente"
-    )
+    parser.add_argument("--plantilla", required=True, type=Path, help="PPTX real del cliente")
     parser.add_argument(
         "--dsn",
-        default=os.environ.get("DATABASE_MIGRATION_URL")
-        or os.environ.get("DATABASE_URL", ""),
+        default=os.environ.get("DATABASE_MIGRATION_URL") or os.environ.get("DATABASE_URL", ""),
         help="Conexión de ADMINISTRACIÓN a una base de DEMOSTRACIÓN.",
     )
-    parser.add_argument(
-        "--salida", type=Path, default=Path("/tmp/informe-volumen.pptx")
-    )
+    parser.add_argument("--salida", type=Path, default=Path("/tmp/informe-volumen.pptx"))
     args = parser.parse_args(argv)
     if not args.dsn:
         print("Falta la conexión: defina DATABASE_URL o pase --dsn.", file=sys.stderr)
@@ -279,34 +263,22 @@ def main(argv: list[str] | None = None) -> int:
         print("     Sin ellas el aviso de desbordamiento NO se emite: el módulo")
         print("     prefiere callarse antes que medir con una sustituta.")
     else:
-        print(
-            f"   ✓ Las {len(fonts.FAMILIAS_REQUERIDAS)} instaladas. Se mide de verdad."
-        )
+        print(f"   ✓ Las {len(fonts.FAMILIAS_REQUERIDAS)} instaladas. Se mide de verdad.")
 
     motor = create_engine(args.dsn, future=True)
     with Session(motor) as s, s.begin():
-        org = s.execute(
-            text("SELECT id FROM organization ORDER BY created_at LIMIT 1")
-        ).scalar()
-        usuario = s.execute(
-            text("SELECT id FROM app_user ORDER BY created_at LIMIT 1")
-        ).scalar()
-        cliente = s.execute(
-            text("SELECT id FROM client ORDER BY created_at LIMIT 1")
-        ).scalar()
+        org = s.execute(text("SELECT id FROM organization ORDER BY created_at LIMIT 1")).scalar()
+        usuario = s.execute(text("SELECT id FROM app_user ORDER BY created_at LIMIT 1")).scalar()
+        cliente = s.execute(text("SELECT id FROM client ORDER BY created_at LIMIT 1")).scalar()
         if not (org and usuario and cliente):
             print("La base no tiene organización, usuario o cliente.", file=sys.stderr)
             return 2
 
-        print(
-            f"\n── Sembrando {ACTIVOS} activos, {HALLAZGOS} hallazgos, {LINEAS} líneas"
-        )
+        print(f"\n── Sembrando {ACTIVOS} activos, {HALLAZGOS} hallazgos, {LINEAS} líneas")
         t0 = time.perf_counter()
         proyecto, activos, lineas = _sembrar(s, org, usuario, cliente)
         almacen = _fotos(s, org, proyecto, activos, usuario)
-        print(
-            f"   {lineas} líneas y {FOTOS} fotografías en {time.perf_counter() - t0:.1f} s"
-        )
+        print(f"   {lineas} líneas y {FOTOS} fotografías en {time.perf_counter() - t0:.1f} s")
 
     with Session(motor) as s:
         print("\n── Congelando la instantánea")

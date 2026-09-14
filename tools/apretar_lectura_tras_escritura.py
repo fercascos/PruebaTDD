@@ -81,9 +81,7 @@ def main() -> int:
         if leido == 404:
             perdidos += 1
 
-    print(
-        f"{perdidos} de {vueltas} identificadores no se veían al pedirlos acto seguido"
-    )
+    print(f"{perdidos} de {vueltas} identificadores no se veían al pedirlos acto seguido")
     return 1 if perdidos else 0
 
 

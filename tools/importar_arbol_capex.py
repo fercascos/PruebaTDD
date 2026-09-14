@@ -124,9 +124,7 @@ def arbol(filas: list[dict[str, str]]) -> list[dict[str, str]]:
     capex = [f for f in filas if f["bloque"] == "CAPEX"]
 
     for nombre, code in TIPOS.items():
-        salida.append(
-            {"code": code, "name_es": nombre, "level": "1", "parent_code": ""}
-        )
+        salida.append({"code": code, "name_es": nombre, "level": "1", "parent_code": ""})
 
     #: código de la hoja —`H01`, `MA1`— → código completo del catálogo.
     por_codigo: dict[str, str] = {}
@@ -193,9 +191,7 @@ def comparar(nuevo: list[dict[str, str]], csv_actual: Path) -> None:
     altas = [c for c in nuevos if c not in actual]
     bajas = [c for c in actual if c not in nuevos]
     renombres = [
-        (c, actual[c], nuevos[c])
-        for c in nuevos
-        if c in actual and actual[c] != nuevos[c]
+        (c, actual[c], nuevos[c]) for c in nuevos if c in actual and actual[c] != nuevos[c]
     ]
 
     print(f"IGUALES     {len(nuevos) - len(altas) - len(renombres):4d}")
@@ -214,9 +210,7 @@ def main() -> int:
     )
     ap.add_argument("hoja", type=Path)
     ap.add_argument("--csv", type=Path, help="fichero de catálogo a escribir")
-    ap.add_argument(
-        "--comparar", action="store_true", help="qué cambia respecto de lo sembrado"
-    )
+    ap.add_argument("--comparar", action="store_true", help="qué cambia respecto de lo sembrado")
     args = ap.parse_args()
 
     filas = arbol(leer(args.hoja))
@@ -230,9 +224,7 @@ def main() -> int:
         comparar(filas, RAIZ / "data" / "catalogos" / "codigos_capex.csv")
     if args.csv:
         with args.csv.open("w", newline="") as f:
-            w = csv.DictWriter(
-                f, fieldnames=["code", "name_es", "level", "parent_code"]
-            )
+            w = csv.DictWriter(f, fieldnames=["code", "name_es", "level", "parent_code"])
             w.writeheader()
             w.writerows(filas)
         print(f"escrito {args.csv}", file=sys.stderr)

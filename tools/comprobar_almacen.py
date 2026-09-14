@@ -104,9 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             almacen.borrar(clave)  # type: ignore[union-attr]
         except Exception as exc:  # noqa: BLE001 — el tipo lo pone el adaptador
-            print(
-                f"  ✓ El adaptador se niega a borrar el original: {type(exc).__name__}"
-            )
+            print(f"  ✓ El adaptador se niega a borrar el original: {type(exc).__name__}")
         else:
             problemas.append(
                 "El adaptador ha BORRADO un original. La barrera 4 no existe: "
@@ -117,18 +115,14 @@ def main(argv: list[str] | None = None) -> int:
         # Y ahora saltándose el adaptador, que es lo que de verdad prueba que la
         # garantía la sostiene el bucket y no nuestro código.
         cliente = almacen._s3  # noqa: SLF001 — comprobación deliberada de la capa de abajo
-        versiones = cliente.list_object_versions(
-            Bucket=settings.storage_bucket, Prefix=clave
-        )
+        versiones = cliente.list_object_versions(Bucket=settings.storage_bucket, Prefix=clave)
         for v in versiones.get("Versions", []):
             try:
                 cliente.delete_object(
                     Bucket=settings.storage_bucket, Key=clave, VersionId=v["VersionId"]
                 )
             except Exception as exc:  # noqa: BLE001 — es un ClientError de botocore
-                print(
-                    f"  ✓ S3 rechaza borrar la versión retenida: {type(exc).__name__}"
-                )
+                print(f"  ✓ S3 rechaza borrar la versión retenida: {type(exc).__name__}")
             else:
                 problemas.append(
                     "S3 ha permitido borrar la versión de un original retenido. "
@@ -151,23 +145,15 @@ def main(argv: list[str] | None = None) -> int:
                 permitido = r.headers.get("Access-Control-Allow-Origin")
         except Exception as exc:  # noqa: BLE001 — cualquier fallo de red vale como «no»
             permitido = None
-            print(
-                f"  ! No se pudo pedir el objeto firmado: {type(exc).__name__}: {exc}"
-            )
+            print(f"  ! No se pudo pedir el objeto firmado: {type(exc).__name__}: {exc}")
         if permitido in ("*", origen):
-            print(
-                f"  ✓ El almacén permite el origen «{origen}» (devolvió «{permitido}»)"
-            )
+            print(f"  ✓ El almacén permite el origen «{origen}» (devolvió «{permitido}»)")
             # Si el navegador puede leerlo, el aviso de configuración sobra.
             problemas = [p for p in problemas if "CORS" not in p]
         else:
-            print(
-                f"  ✗ El almacén NO permite el origen «{origen}» (devolvió «{permitido}»)"
-            )
+            print(f"  ✗ El almacén NO permite el origen «{origen}» (devolvió «{permitido}»)")
             if not any("CORS" in p for p in problemas):
-                problemas.append(
-                    f"El almacén no devuelve CORS para el origen «{origen}»"
-                )
+                problemas.append(f"El almacén no devuelve CORS para el origen «{origen}»")
 
     if problemas:
         print(
