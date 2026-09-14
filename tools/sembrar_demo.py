@@ -133,8 +133,26 @@ def imagen(color: tuple[int, int, int], texto: str) -> bytes:
 #: Fachadas**; y cuando el código no existía, el `next` caía en `codigos[0]` sin
 #: decir nada. Con el código entero, un fallo de codificación se ve al leer esta
 #: lista, y uno que no exista revienta la siembra en vez de mentir en el árbol.
-HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
-    ("Enfriadora al final de su vida útil", "HC.H08.01", "MEDIO", "48500.00", "03", "VIDA_UTIL"),
+#:
+#: `[REQ]` El séptimo campo es la **zona del edificio**, y también va escrita.
+#: Antes se sorteaba con `zonas[hash(titulo) % len(zonas)]`, y eso tenía dos
+#: caras malas. La primera, que el `hash()` de una cadena está aleatorizado por
+#: proceso (`PYTHONHASHSEED`): **cada `make demo` repartía las zonas de otra
+#: manera**, así que la misma demostración no salía dos veces igual y no se
+#: podía hablar de ella con nadie. La segunda, que el sorteo no sabe de qué
+#: habla: ponía la cubierta en «Vestuarios» y el cuadro eléctrico en «Aseos» con
+#: la misma alegría. Una demostración se enseña delante de un cliente, y la zona
+#: es parte de lo que hace creíble el hallazgo.
+HALLAZGOS: tuple[tuple[str, str, str, str, str, str, str], ...] = (
+    (
+        "Enfriadora al final de su vida útil",
+        "HC.H08.01",
+        "MEDIO",
+        "48500.00",
+        "03",
+        "VIDA_UTIL",
+        "CUBIERTA",
+    ),
     (
         "Lámina de cubierta con ampollas generalizadas",
         "HC.H02.01",
@@ -142,6 +160,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
         "83407.50",
         "03",
         "REPARACION",
+        "CUBIERTA",
     ),
     (
         "Cuadro general sin protección diferencial en dos líneas",
@@ -150,6 +169,7 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
         "6200.00",
         "04",
         "SEGURIDAD",
+        "CUARTOS_TECNICOS",
     ),
     (
         "Juntas de dilatación abiertas en fachada norte",
@@ -158,8 +178,17 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
         "14300.00",
         "02",
         "REPARACION",
+        "ZONAS_EXTERIORES",
     ),
-    ("Luminarias de almacén sin sustituir a LED", "HC.H09.10", "LARGO", "31000.00", "01", "ESG"),
+    (
+        "Luminarias de almacén sin sustituir a LED",
+        "HC.H09.10",
+        "LARGO",
+        "31000.00",
+        "01",
+        "ESG",
+        "ALMACEN",
+    ),
     (
         "Red de PCI sin certificado de mantenimiento vigente",
         "HC.H10.12",
@@ -167,18 +196,27 @@ HALLAZGOS: tuple[tuple[str, str, str, str, str, str], ...] = (
         "9800.00",
         "03",
         "NORMATIVA",
+        "GENERAL",
     ),
     # `[REQ]` Un soft cost, que se codifica en la CATEGORÍA porque en el árbol
     # del cliente los soft costs no tienen objetos. Sin él, la demostración
     # enseñaría solo Hard Costs y el árbol parecería tener un único tipo.
-    ("Redacción de proyecto y dirección de obra", "SC.S01", "CORTO", "18500.00", "01", "SOFT_COST"),
+    (
+        "Redacción de proyecto y dirección de obra",
+        "SC.S01",
+        "CORTO",
+        "18500.00",
+        "01",
+        "SOFT_COST",
+        "GENERAL",
+    ),
 )
 
 #: `[REQ]` El proyecto de demostración es de **cartera**, no de un edificio.
 #: La plantilla CAPEX del cliente describe un solo activo, así que la separación
 #: por activo —un libro para cada uno— solo se ve con más de uno. Con un único
 #: activo la demostración enseñaba el caso fácil y escondía el que importa.
-HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str], ...] = (
+HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str], ...] = (
     (
         "Climatizadora de oficinas fuera de servicio",
         "HC.H08.01",
@@ -186,6 +224,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str], ...] = (
         "22400.00",
         "03",
         "VIDA_UTIL",
+        "CUARTOS_TECNICOS",
     ),
     (
         "Falso techo con manchas de humedad en dos plantas",
@@ -194,6 +233,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str], ...] = (
         "11750.00",
         "02",
         "REPARACION",
+        "OFICINAS",
     ),
     (
         "Escalera de emergencia sin señalización fotoluminiscente",
@@ -202,6 +242,7 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str], ...] = (
         "4300.00",
         "04",
         "NORMATIVA",
+        "NUCLEO_ESCALERAS",
     ),
 )
 
@@ -379,6 +420,23 @@ def sembrar(api: Api) -> str:
             raise SystemExit(f"El concepto {concepto} no está en el catálogo")
         return {"risk_level_id": riesgos[riesgo], "capex_concept_id": conceptos[concepto]}
 
+    def por_zona(disponibles: list[dict[str, Any]], code: str, donde: str) -> str:
+        """La zona escrita, **exigiendo que exista para esa tipología**.
+
+        Las zonas no son las mismas en una nave que en un edificio de oficinas
+        —una tiene almacén y vestuarios; el otro, vestíbulo de planta—, así que
+        la lista se pide por tipología y esto comprueba contra la que toca.
+        Equivocarse de zona no rompe nada visible: el hallazgo se guarda igual y
+        la pantalla lo dibuja igual. Por eso tiene que saltar aquí.
+        """
+        for zona in disponibles:
+            if zona["code"] == code:
+                return zona["id"]
+        raise SystemExit(
+            f"La zona {code} no está entre las de {donde}: "
+            f"{', '.join(sorted(z['code'] for z in disponibles))}"
+        )
+
     # Todos los niveles: un soft cost se codifica en su CATEGORÍA, porque en el
     # árbol del cliente los soft costs no tienen objetos.
     codigos = {c["code"]: c for c in api.get("/catalogs/capex-codes")}
@@ -397,14 +455,14 @@ def sembrar(api: Api) -> str:
             )
         return codigos[code]
 
-    for titulo, capitulo, plazo, importe, riesgo, concepto in HALLAZGOS:
+    for titulo, capitulo, plazo, importe, riesgo, concepto, zona in HALLAZGOS:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
             {
                 "asset_id": activo["id"],
                 "capex_code_id": codigo["id"],
-                "zone_id": zonas[hash(titulo) % len(zonas)]["id"],
+                "zone_id": por_zona(zonas, zona, "una nave industrial"),
                 **clasificacion(riesgo, concepto),
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
@@ -444,14 +502,14 @@ def sembrar(api: Api) -> str:
     # Las zonas se piden para SU tipología: la lista de un edificio de oficinas
     # no es la de una nave, y es justo lo que arregla separar los libros.
     zonas_b = api.get(f"/catalogs/zones?typology_id={oficinas['id']}")
-    for titulo, capitulo, plazo, importe, riesgo, concepto in HALLAZGOS_SEGUNDO:
+    for titulo, capitulo, plazo, importe, riesgo, concepto, zona in HALLAZGOS_SEGUNDO:
         codigo = por_codigo(capitulo)
         api.post(
             f"/projects/{proyecto['id']}/findings",
             {
                 "asset_id": segundo["id"],
                 "capex_code_id": codigo["id"],
-                "zone_id": zonas_b[hash(titulo) % len(zonas_b)]["id"],
+                "zone_id": por_zona(zonas_b, zona, "un edificio de oficinas"),
                 **clasificacion(riesgo, concepto),
                 "title": titulo,
                 "description": "Observado durante la visita. Importe estimado, sin oferta.",
