@@ -293,6 +293,8 @@ del volumen que se había supuesto, y es el dato que valida o corrige el objetiv
 | **Definición de riesgo** | T19: `{{finding.risk_definition}}` con la definición del grado 04 (412 caracteres) en un marco justo ⇒ aviso `[REC]` |
 | **Limitaciones** | T20: proyecto sin documentación no disponible ⇒ la diapositiva se omite con `@if_empty: skip_slide` |
 | **Gráficos y SmartArt** | T6 sustitución de datos; T7 aviso y SmartArt intacto |
+| **Repetición de diapositivas** ✅ | `@repeat: asset` y `@repeat: finding`: cada copia con **sus** datos, en el **sitio del modelo** y no detrás de las conclusiones, el modelo retirado, `@max` dejando fuera y diciéndolo, colección vacía retirando la diapositiva, y colección inexistente avisando en vez de callarse |
+| **Dos trampas del formato** ✅ | `python-pptx` bautiza cada diapositiva nueva con **el número de las que hay**, no con el primer nombre libre: quitar una y añadir otra escribía dos partes `slideN.xml` y **una se comía a la otra sin ningún error**. Y las copias heredaban la parte de **notas** del modelo, que guarda un enlace de vuelta: eso mantenía vivo al modelo retirado y **se comía la primera copia**. Las dos salieron generando el primer informe de verdad —dos activos, salía uno— y las dos tienen prueba |
 | **Marcadores sin mapear** | Bloquean; `force` con motivo los permite y queda auditado |
 | **Campos vacíos** | El resultado contiene texto vacío y **nunca** el literal `{{...}}`. Prueba que busca `{{` en todo el texto del PPTX generado `[REC]` |
 | **Ficheros problemáticos** | T13 corrupta; T14 no es PPTX; T15 zip bomb; T16 macros; T17 XXE |

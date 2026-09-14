@@ -132,6 +132,7 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[21](docs/21-bucket-s3.md)** | **El bucket de S3** · cómo crearlo y los permisos exactos del rol. Sin ejecutar contra AWS todavía | añadido |
 | **[22](docs/22-camino-a-produccion.md)** | **El camino a producción** · qué falta para un go-live, con esfuerzo estimado y casillas marcables | añadido |
 | **[23](docs/23-rediseno-tras-el-prototipo.md)** | **El rediseño tras el primer prototipo** · lo que el cliente pidió cambiar, qué está hecho y qué falta por definir | añadido |
+| **[24](docs/24-plantillas-del-informe.md)** | **Cómo preparar una plantilla del informe** · los 70 marcadores, `@repeat`, y lo que todavía no hace | añadido |
 | **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 | **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |
 

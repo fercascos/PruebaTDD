@@ -20,6 +20,8 @@ from pptx import Presentation
 from pptx.util import Emu, Inches
 
 from tdd.reporting import capex_layout as cl
+from tdd.reporting import marcadores as mk
+from tdd.reporting import repeticion
 from tdd.reporting.clone import sustituir_marcadores
 from tdd.reporting.pptx_table import insertar_tabla
 from tdd.reporting.watermark import retirar_marcas_de_agua
@@ -55,40 +57,24 @@ class ResultadoDeGeneracion:
     #: Lo que la hoja del cliente no puede representar de este proyecto: tiene
     #: sitio para un activo y el proyecto puede tener varios.
     avisos_del_excel: list[str] = field(default_factory=list)
+    #: `[REQ]` Lo que las diapositivas repetibles no han podido hacer: una
+    #: colección vacía, un tope que deja elementos fuera, un `@repeat` sobre
+    #: algo que no existe. Van al informe de generación, no al PPTX.
+    avisos_de_repeticion: list[str] = field(default_factory=list)
+    #: Cuántas diapositivas se han clonado desde una modelo.
+    diapositivas_repetidas: int = 0
 
 
 def valores_de_marcadores(snapshot: dict[str, Any]) -> dict[str, str]:
-    """Traduce el snapshot al catálogo cerrado de marcadores de §17.2.
+    """Los marcadores de ámbito global. Ver `reporting/marcadores.py`.
 
-    Se construye **solo desde el snapshot**: si un dato no está congelado, no
-    puede salir en el informe, y eso es exactamente lo que se busca.
+    Vivía aquí y producía **dieciséis** valores mientras `docs/12` §17.2
+    describía unos ochenta: un informe que pidiera `{{finding.title}}` —que
+    estaba en la especificación desde el primer día— se quedaba con el marcador
+    sin resolver. Ahora el catálogo está en un módulo propio y la validación del
+    router se deduce de él, así que no pueden volver a discrepar.
     """
-    proyecto = snapshot["project"]
-    activos = snapshot.get("assets", [])
-    totales = _totales(snapshot)
-
-    valores = {
-        "project.code": str(proyecto.get("internal_code") or ""),
-        "project.name": str(proyecto.get("name") or ""),
-        "project.client": str(proyecto.get("client_name") or ""),
-        "project.currency": str(proyecto.get("currency") or "EUR"),
-        "project.asset_count": str(len(activos)),
-        "report.generated_at": str(snapshot.get("generated_at", "")),
-        "capex.total": cl.formatear_importe(sum(totales.values(), Decimal("0"))),
-    }
-    for codigo, importe in totales.items():
-        valores[f"capex.{codigo.lower()}"] = cl.formatear_importe(importe)
-    if activos:
-        primero = activos[0]
-        valores.update(
-            {
-                "asset.name": str(primero.get("name") or ""),
-                "asset.city": str(primero.get("city") or ""),
-                "asset.year_built": str(primero.get("year_built") or ""),
-                "asset.total_built_sqm": str(primero.get("total_built_sqm") or ""),
-            }
-        )
-    return valores
+    return mk.globales(snapshot)
 
 
 def _totales(snapshot: dict[str, Any]) -> dict[str, Decimal]:
@@ -290,7 +276,22 @@ def generar(
         if aviso is not None:
             desbordamientos.append(aviso)
 
-    for slide in prs.slides:
+    def _sustituir(slide: Any, con: dict[str, str]) -> list[str]:
+        return sustituir_marcadores(slide, con, medir=_medir)
+
+    # 1a · Las diapositivas que piden repetirse, ANTES que las fijas: clonar
+    # copia el XML del modelo, y si el modelo ya tuviera los marcadores
+    # sustituidos las copias saldrían todas con los datos del mismo elemento.
+    antes = len(prs.slides)
+    sin_resolver_repetidas, avisos_de_repeticion = repeticion.expandir(
+        prs, snapshot, valores, sustituir=_sustituir
+    )
+    sin_resolver += sin_resolver_repetidas
+    repetidas = max(0, len(prs.slides) - antes)
+
+    # 1b · Y el resto, con los valores globales.
+    fijas = [s for s in prs.slides if repeticion.plan_de(s) is None]
+    for slide in fijas:
         sin_resolver += sustituir_marcadores(slide, valores, medir=_medir)
 
     # 2 · Tabla nativa de CAPEX, partida si hace falta.
@@ -352,6 +353,8 @@ def generar(
         marcas_de_agua_retiradas=[m.texto for m in marcas],
         fotos_insertadas=insertadas,
         totales=layout.totales,
+        avisos_de_repeticion=avisos_de_repeticion,
+        diapositivas_repetidas=repetidas,
     )
 
 

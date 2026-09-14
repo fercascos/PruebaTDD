@@ -124,14 +124,21 @@ transiciones.
 
 `[REQ]` **Cualquier marcador fuera de este catálogo pasa a `REQUIERE_MAPEO` y bloquea la generación.**
 
+> **Estado de construcción.** El catálogo vive ahora en `reporting/marcadores.py` y son **70**
+> marcadores, no los dieciséis que producía el generador hasta ahora ni los ochenta largos que
+> describe esta tabla. La validación del router **se deduce del mismo módulo**, así que no puede
+> volver a quedarse corta respecto a lo que la generación sabe rellenar —que es lo que pasaba: un
+> informe que pidiera `{{finding.title}}` se quedaba con el marcador sin resolver—.
+> [`24`](./24-plantillas-del-informe.md) lista los 70 con lo que escribe cada uno y dice qué falta.
+
 ### Regla 5 · Directivas de las notas
 
 | Directiva | Función | Ejemplo |
 |---|---|---|
-| `@repeat: <colección>` | Una diapositiva por elemento | `@repeat: asset` |
+| `@repeat: <colección>` | Una diapositiva por elemento ✅ **construido** (`asset`, `finding`) | `@repeat: asset` |
 | `@filter: <expresión>` | Filtra | `@filter: risk in [03,04]` |
 | `@sort: <campo>` | Ordena (`-` descendente) | `@sort: -risk` |
-| `@max: <n>` | Límite | `@max: 20` |
+| `@max: <n>` | Límite ✅ **construido** | `@max: 20` |
 | `@group_by: <campo>` | Agrupa antes de repetir | `@group_by: capex_chapter` |
 | `@table: rows=<n>` | Filas por diapositiva | `@table: rows=18, repeat_header=true, subtotals=group, totals=last` |
 | `@photos: max=<n>, fit=<modo>` | Fotos por diapositiva | `@photos: max=3, fit=contain, caption=below` |

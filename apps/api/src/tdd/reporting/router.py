@@ -32,6 +32,7 @@ from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import guardia, images
 from tdd.evidence.router import AlmacenDep, AntivirusDep
 from tdd.reporting import generator
+from tdd.reporting import marcadores as mk
 from tdd.reporting import snapshot as snap
 from tdd.reporting.warnings import (
     Aviso,
@@ -216,26 +217,14 @@ def obtener_plantilla(template_id: uuid.UUID, s: SesionDep) -> Any:
 #: Campos que el generador sabe rellenar. Se valida el mapeo contra esta lista
 #: **al guardarlo**: descubrir en la generación que una expresión no existe es
 #: tarde, y §17.7 lo declara bloqueante justo por eso.
-CAMPOS_DISPONIBLES = frozenset(
-    {
-        "project.code",
-        "project.name",
-        "project.client",
-        "project.currency",
-        "project.asset_count",
-        "report.generated_at",
-        "capex.total",
-        "capex.corto",
-        "capex.medio",
-        "capex.largo",
-        "capex.mejoras",
-        "capex.otro",
-        "asset.name",
-        "asset.city",
-        "asset.year_built",
-        "asset.total_built_sqm",
-    }
-)
+#: Los campos a los que un marcador de plantilla se puede atar.
+#:
+#: **Se deduce del catálogo** (`reporting/marcadores.py`), no se escribe aquí.
+#: Escrito a mano tenía dieciséis nombres mientras el generador sabía resolver
+#: muchos más y `docs/12` describía unos ochenta: la validación rechazaba
+#: marcadores que la generación habría rellenado sin problema, y el usuario no
+#: tenía forma de saber cuál de las dos listas era la buena.
+CAMPOS_DISPONIBLES = mk.catalogo()
 
 
 class Mapeo(BaseModel):

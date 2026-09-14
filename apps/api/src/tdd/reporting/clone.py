@@ -48,6 +48,18 @@ def clonar_diapositiva(prs: Presentacion, origen: Slide) -> Slide:
     for rid, rel in origen.part.rels.items():
         if rel.reltype.endswith("slideLayout"):
             continue  # la diapositiva nueva ya tiene el suyo
+        # Las NOTAS tampoco se copian, y esto no es una preferencia de estilo:
+        #
+        #  1. Una parte de notas guarda un enlace **de vuelta** a su diapositiva.
+        #     Compartirla mantenía viva a la diapositiva modelo después de
+        #     retirarla —seguía siendo alcanzable desde la copia—, así que al
+        #     guardar se escribían dos partes con el mismo nombre y **el modelo
+        #     se comía a la primera copia**: un informe de dos activos salía con
+        #     uno, y el otro hueco enseñaba los `{{marcadores}}` sin sustituir.
+        #  2. Las notas del modelo llevan la directiva `@repeat`. Heredada por
+        #     la copia, la copia pediría repetirse otra vez.
+        if rel.reltype.endswith("notesSlide"):
+            continue
         if rel.is_external:
             mapa[rid] = destino.part.rels.get_or_add_ext_rel(rel.reltype, rel.target_ref)
         else:

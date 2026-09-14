@@ -33,7 +33,11 @@ from sqlalchemy.orm import Session
 
 #: Versión del formato del snapshot. Si cambia la estructura, un informe
 #: antiguo debe seguir sabiendo cómo leerse.
-VERSION_DE_FORMATO = 1
+#:
+#: **2** añade `descriptivos` `[REQ]` §3.2 d. Es un añadido y no un cambio: un
+#: snapshot de la versión 1 se lee igual y la clave sale vacía, que es lo que
+#: corresponde —aquel informe se generó cuando la aplicación no los guardaba—.
+VERSION_DE_FORMATO = 2
 
 
 def _serializable(valor: Any) -> Any:
@@ -242,6 +246,27 @@ def construir(
         {"p": str(project_id)},
     )
 
+    # `[REQ]` §3.2 d · El descriptivo y la valoración de cada objeto. Son los
+    # textos que escribe el gestor técnico —«qué hay» y «en qué estado está»— y
+    # el informe no los traía: se volvían a teclear en PowerPoint.
+    #
+    # Solo los **validados**. Un descriptivo pendiente de validar es un borrador
+    # que la aplicación marca como tal en pantalla, y colarlo en un entregable
+    # firmado le quitaría a esa casilla todo su sentido.
+    descriptivos = _filas(
+        s,
+        "SELECT d.asset_id, cc.code AS capex_code, cc.name_es AS capex_name, "
+        "cap.code AS chapter_code, cap.name_es AS chapter_name, "
+        "d.texto, d.valoracion, d.es_simulada "
+        "FROM descriptivo_objeto d "
+        "JOIN capex_code cc ON cc.id = d.capex_code_id "
+        "LEFT JOIN capex_code cap ON cap.id = cc.parent_id "
+        "JOIN asset a ON a.id = d.asset_id "
+        "WHERE a.project_id = :p AND a.deleted_at IS NULL AND d.validado_at IS NOT NULL "
+        "ORDER BY cc.code",
+        {"p": str(project_id)},
+    )
+
     # [REC] Los catálogos, tal como estaban HOY. Sin esto, retirar un código
     # dentro de dos años dejaría huecos en un informe ya entregado.
     # La RLS ya acota lo que se ve a las filas del sistema y las de la propia
@@ -283,6 +308,7 @@ def construir(
         "photos": fotos,
         "limitations": limitaciones,
         "visits": visitas,
+        "descriptivos": descriptivos,
         "catalogs": catalogos,
     }
     return snapshot
