@@ -177,12 +177,16 @@ def guardar(asset_id: uuid.UUID, cuerpo: Edicion, s: SesionDep, usuario: Usuario
 
     codigos = [str(linea.capex_code_id) for linea in cuerpo.lineas]
     if codigos:
-        niveles = dict(
-            s.execute(
+        # El tipo va escrito: `dict(...)` sobre las filas de SQLAlchemy deja a
+        # mypy sin nada que deducir —`Row[Any]` no es una pareja— y con `strict`
+        # eso son dos errores. Escribirlo además documenta con qué se busca.
+        niveles: dict[uuid.UUID, int] = {
+            fila.id: fila.level
+            for fila in s.execute(
                 text("SELECT id, level FROM capex_code WHERE id = ANY(CAST(:ids AS uuid[]))"),
                 {"ids": codigos},
             ).all()
-        )
+        }
         for linea in cuerpo.lineas:
             nivel = niveles.get(linea.capex_code_id)
             if nivel is None:

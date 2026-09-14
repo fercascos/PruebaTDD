@@ -1,0 +1,25 @@
+# Configuración de ruff para TODO el repositorio.
+#
+# Vivía solo en `apps/api/pyproject.toml`, y eso tenía dos consecuencias que se
+# notaban al trabajar:
+#
+#   * los guiones de `tools/` —el generador de catálogos, el importador del
+#     árbol CAPEX, el sembrador de la demostración— no los revisaba nadie, ni
+#     `make lint` ni la CI;
+#   * ejecutar `ruff` desde la raíz **no encontraba ninguna configuración** y
+#     caía en sus 88 columnas por omisión en vez de las 100 de la casa, así que
+#     reformateaba medio fichero sin que nadie se lo pidiera. Pasó de verdad.
+#
+# `apps/api/pyproject.toml` sigue mandando dentro de la API —tiene sus propias
+# excepciones por fichero— y esto cubre el resto. Si algún día cambia el ancho
+# de línea, hay que tocar los dos sitios: ruff no hereda hacia arriba.
+
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+# N818 exige que las excepciones acaben en «Error». El dominio de este proyecto
+# está escrito en español —igual que la documentación que revisa el cliente— y
+# `TransicionInvalidaError` sería un híbrido peor que cualquiera de los dos.
+ignore = ["N818"]

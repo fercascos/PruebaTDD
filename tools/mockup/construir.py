@@ -13,8 +13,8 @@ descargada tiene que abrir con doble clic sin una carpeta de imágenes al lado.
 
 import argparse
 import base64
-import json
 import io
+import json
 import pathlib
 
 from PIL import Image
@@ -407,9 +407,7 @@ for bi, (etiqueta, titulo, laminas) in enumerate(BLOQUES, start=1):
             f"</figure>"
         )
     partes.append("</section>")
-    rango = (
-        f"{primera:02d}" if primera == lamina_n else f"{primera:02d} — {lamina_n:02d}"
-    )
+    rango = f"{primera:02d}" if primera == lamina_n else f"{primera:02d} — {lamina_n:02d}"
     indice.append(
         f'<li><a href="#b{bi}"><span class="n">{rango}</span>'
         f'<span class="t">{etiqueta}</span>'
@@ -687,7 +685,8 @@ HTML = f"""<title>Due diligence técnica</title>
   </div>
 </footer>
 
-<div class="lupa" id="lupa" data-abierta="0" role="dialog" aria-modal="true" aria-label="Captura ampliada">
+<div class="lupa" id="lupa" data-abierta="0"
+     role="dialog" aria-modal="true" aria-label="Captura ampliada">
   <button class="cerrar" type="button">Cerrar ✕</button>
   <img id="lupa-img" alt="">
 </div>

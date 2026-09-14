@@ -120,8 +120,14 @@ test-catalogs:  ## Las 86 combinaciones zona × tipología y el árbol
 	cd apps/api && TEST_DATABASE_URL="$(TEST_DATABASE_URL)" \
 	  python3 -m pytest tests/integration/test_catalogos.py -q
 
+# `tools/` entra aquí desde el principio de nada: son trece guiones y unas 3.500
+# líneas —el generador de catálogos, el importador del árbol CAPEX, el sembrador
+# de la demostración— que no revisaba nadie. Y el sembrador no es un juguete: lo
+# ejecuta la CI para montar su proyecto de pruebas, y es lo que se enseña
+# delante de un cliente.
 lint:  ## Formato y reglas (ruff)
 	cd apps/api && python3 -m ruff check src tests && python3 -m ruff format --check src tests
+	python3 -m ruff check tools && python3 -m ruff format --check tools
 
 # Estaba configurado desde el principio (`strict = true` en `pyproject.toml`) y
 # la documentación lo llamaba puerta bloqueante, pero `make lint` decía «ruff +
@@ -132,6 +138,7 @@ typecheck:  ## Tipado estricto (mypy)
 
 fmt:  ## Formatea
 	cd apps/api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
+	python3 -m ruff format tools && python3 -m ruff check --fix tools
 
 # Montserrat es SIL OFL 1.1, así que **se podría** versionar. No se hace: un
 # binario en el repositorio se queda ahí para siempre, se actualiza a mano y

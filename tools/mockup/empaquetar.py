@@ -57,9 +57,7 @@ def tipografias() -> tuple[str, int]:
     """
     css = bajar(CSS_URL).decode()
     trozos = []
-    for subconjunto, bloque in re.findall(
-        r"/\* ([a-z-]+) \*/\s*(@font-face \{.*?\})", css, re.S
-    ):
+    for subconjunto, bloque in re.findall(r"/\* ([a-z-]+) \*/\s*(@font-face \{.*?\})", css, re.S):
         if subconjunto != "latin":
             continue
         url = re.search(r"url\((https://[^)]+)\)", bloque).group(1)
@@ -72,12 +70,8 @@ def tipografias() -> tuple[str, int]:
 
 def main() -> None:
     opciones = argparse.ArgumentParser(description=__doc__)
-    opciones.add_argument(
-        "--entrada", type=pathlib.Path, default=pathlib.Path("mockup.html")
-    )
-    opciones.add_argument(
-        "--salida", type=pathlib.Path, default=pathlib.Path("mockup-suelto.html")
-    )
+    opciones.add_argument("--entrada", type=pathlib.Path, default=pathlib.Path("mockup.html"))
+    opciones.add_argument("--salida", type=pathlib.Path, default=pathlib.Path("mockup-suelto.html"))
     args = opciones.parse_args()
 
     cuerpo = args.entrada.read_text()
@@ -85,9 +79,7 @@ def main() -> None:
 
     # Fuera el enlace a Google: el fichero tiene que abrir sin salir a Internet.
     cuerpo = re.sub(r'<link rel="preconnect"[^>]*>\s*', "", cuerpo)
-    cuerpo = re.sub(
-        r'<link rel="stylesheet" href="https://fonts\.googleapis[^>]*>\s*', "", cuerpo
-    )
+    cuerpo = re.sub(r'<link rel="stylesheet" href="https://fonts\.googleapis[^>]*>\s*', "", cuerpo)
     titulo = re.search(r"<title>(.*?)</title>", cuerpo).group(1)
     cuerpo = cuerpo.replace(f"<title>{titulo}</title>\n", "", 1)
 
