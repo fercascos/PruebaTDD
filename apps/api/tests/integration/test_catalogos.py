@@ -460,11 +460,22 @@ def test_las_categorias_de_solicitud_se_sirven_por_api(cliente, cab) -> None:
     r = cliente.get("/api/v1/catalogs/doc-request-categories", headers=cab("consultor_a"))
     assert r.status_code == 200
     categorias = r.json()
-    codigos = {c["code"] for c in categorias}
-    assert "LICENCIAS_URBANISTICAS" in codigos
-    assert len(categorias) == 6
-    # `[REQ]` La memoria técnica va la PRIMERA, y no por orden alfabético: es el
-    # documento del que salen los datos del edificio y el esqueleto del CAPEX,
-    # así que pedirla tarde retrasa todo lo demás. El orden de la checklist es
-    # lo que le dice al consultor por dónde empezar.
-    assert categorias[0]["code"] == "MEMORIA_TECNICA"
+    # `[REQ]` §5.10 · El árbol de la hoja v2 del cliente: 73 nodos, 60 casillas.
+    # Antes eran seis categorías escritas a mano, de relleno hasta que el árbol
+    # llegara.
+    assert len(categorias) == 73
+    assert sum(1 for c in categorias if c["es_casilla"]) == 60
+    # El orden es el de la hoja del cliente y **no el alfabético**: por código,
+    # `S2.10` caería entre `S2.1` y `S2.2`.
+    assert categorias[0]["code"] == "S1"
+    codigos = [c["code"] for c in categorias]
+    assert codigos.index("S2.9") < codigos.index("S2.10")
+
+    # Nivel y padre se calculan del código, que es donde está la verdad.
+    hoja = next(c for c in categorias if c["code"] == "S1.1.1")
+    assert (hoja["level"], hoja["parent_code"], hoja["es_casilla"]) == (3, "S1.1", True)
+    rama = next(c for c in categorias if c["code"] == "S1.1")
+    assert (rama["level"], rama["parent_code"], rama["es_casilla"]) == (2, "S1", False)
+    # `S2` sí tiene hijos; `S4` no tiene ninguno y es casilla aunque sea de
+    # nivel 1. Una casilla es un nodo SIN HIJOS, esté donde esté.
+    assert next(c for c in categorias if c["code"] == "S4")["es_casilla"] is True

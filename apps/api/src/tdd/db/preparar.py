@@ -90,10 +90,8 @@ def sembrar(dsn: str) -> None:
     motor = create_engine(dsn, future=True)
     with motor.begin() as conn:
         print(sembrar_catalogos(conn))
-        plantillas, hitos, comprobaciones = sembrar_fases(conn)
-        print(
-            f"Fases: {plantillas} plantillas, {hitos} hitos, {comprobaciones} tipos de comprobación"
-        )
+        plantillas, comprobaciones = sembrar_fases(conn)
+        print(f"Fases: {plantillas} plantillas, {comprobaciones} tipos de comprobación")
     motor.dispose()
 
 

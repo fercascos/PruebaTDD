@@ -186,7 +186,7 @@ ser secciones **de cada activo**. Cinco:
 | Sección | Qué lleva | Estado |
 |---|---|---|
 | **a) Detalle** | La ficha, **su mapa** y el árbol de ubicaciones | ✅ |
-| **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, verde/gris, no bloqueante | ✅ **definida**, ⬜ por construir |
+| **b) Documentación** | Árbol de 73 nodos · 60 casillas por activo, estado por casilla, documentos colgando, no bloqueante | ✅ |
 | **c) Visita** | Ubicación, fecha, check de realizada, equipo implicado, coste y fotos | ✅ |
 | **d) Inventario** | Vuelca la memoria técnica si la hay; casilla de **«pasa a CAPEX»** por equipo o sistema; **vincular fotos** de la visita a cada equipo; y el **descriptivo de cada objeto de Hard Cost**, editable y con su casilla de validado | ✅ |
 | **e) CAPEX** | Árbol Tipo de coste → Categoría → Objeto, y la ficha del objeto | ✅ |
@@ -201,7 +201,7 @@ repercutible a inquilinos.
 > cambia **no es el modelo, es la presentación**: hoy es una rejilla plana por
 > proyecto y pasa a ser un árbol por activo. Eso abarata mucho este punto.
 
-#### b) Documentación ✅ definida
+#### b) Documentación ✅
 
 El cliente entregó la estructura en su hoja **v2**: **73 nodos** —4 tipos · 25 categorías · 44
 hojas— que dejan **60 casillas** por activo. Está transcrita literal en
@@ -211,18 +211,44 @@ bloque que añade la v2, con 33 hojas— y **S4 Q&A**.
 
 Cuatro decisiones tomadas con el cliente:
 
-- **Sustituye al checklist de la fase «Solicitud de documentación».** Las cinco categorías
-  sembradas hasta hoy son un subconjunto pobre de estos 73 nodos, y mantener las dos cosas
-  produciría dos verdades sobre qué documentación falta. `[REQ]`
+- **Sustituye al checklist de la fase «Solicitud de documentación».** Las seis categorías
+  sembradas hasta entonces eran un subconjunto pobre de estos 73 nodos, y mantener las dos cosas
+  produciría dos verdades sobre qué documentación falta. `[REQ]` **Hecho** en la revisión 0027: la
+  semilla son los 73 nodos y las seis se retiran, salvo las que tengan líneas colgando —borrarlas se
+  llevaría por delante trabajo de una persona—.
 - **Ninguna casilla bloquea nada**, con sus palabras: *«si no hay documentación se tiene que poder
   continuar»*. Verde si hay algo, gris si no. `[REQ]`
 - **Dos colores, cuatro estados.** El color es el que pidió; por debajo, `PENDIENTE` ·
   `RECIBIDA` · `NO_DISPONIBLE` · `NO_APLICA`. El capítulo de limitaciones del informe necesita
   distinguir «no nos lo han dado» de «este edificio no tiene gas propano», y en gris las dos se
   ven igual. Solo `NO_APLICA` **no** limita el informe. `[REQ]`
+
+  Al construirlo resultaron **seis situaciones y no cuatro**, y las dos de más no son un capricho:
+
+  | En pantalla | En la base | Por qué |
+  |---|---|---|
+  | Pendiente de pedir | no hay fila | Por donde empiezan las 60. Crear sesenta filas vacías por activo habría llenado la tabla de ruido para no decir nada |
+  | Solicitada | `SOLICITADA` | Ya se ha pedido, que no es lo mismo que no haber empezado |
+  | Recibida | `RECIBIDA` | |
+  | Recibida en parte | `PARCIAL` | `[REC]` `[PDV]` **No está en la hoja del cliente.** Recibir tres de los ocho boletines eléctricos no es haberlos recibido, y el sitio donde eso se declara es el informe: `PARCIAL` limita igual que `NO_DISPONIBLE`. Sin validar |
+  | No disponible | `NO_DISPONIBLE` | **Exige motivo**, que es lo que se escribe en las limitaciones |
+  | No aplica | `NO_APLICA` | La única que no limita |
 - **Varios ficheros por casilla**, que lo pide la nota de `S1` — y además una nota de texto, porque
   cuatro nodos del árbol no son documentos sino datos (`S3.1.1 Dirección`, `S3.1.4 Consumos
-  anuales`). Verde si hay cualquiera de las dos. `[REC]`
+  anuales`). Verde si hay cualquiera de las dos. `[REC]` **Los ficheros, hechos**: la casilla los
+  lista y adjuntar uno la da por recibida de una vez, sin pedir dos gestos para una sola cosa. `[LIM]`
+  **La nota de texto no está**: `doc_request_item.description` existe y la pantalla no la ofrece
+  todavía, así que los cuatro nodos que son datos y no documentos se marcan pero no se rellenan.
+
+Tres decisiones más, tomadas al construirlo y no con el cliente:
+
+- **Un nodo que agrupa no lleva estado.** Marcar `S1.1 Licencias urbanísticas` como recibida cuando
+  cuelgan cuatro licencias no dice nada de ninguna de las cuatro. Intentarlo da `422`. `[SUP]`
+- **Una casilla es un nodo sin hijos, esté en el nivel que esté.** `S2.1` lo es siendo de nivel 2 y
+  `S4 Q&A` siendo de nivel 1. Atarla al nivel 3 habría dejado veinte nodos sin poder marcarse. `[SUP]`
+- **El árbol nace plegado y se abre solo lo que ya tiene trabajo hecho.** Son 73 nodos con nombres de
+  hasta 342 caracteres: abiertos de golpe es una pantalla de varios metros donde no se encuentra
+  nada. Es el mismo criterio que el inventario. `[REC]`
 
 `[LIM]` **El plan de autoprotección no tiene casilla en el árbol v2.** La aplicación ya sabe
 leerlo —de él salen los medios que van al inventario de equipo y limitaciones del informe— y no
@@ -555,22 +581,21 @@ Con una persona a tiempo completo que ya conoce el código.
 | ~~§3.3 · Dashboard completo~~ | ✅ hecho |
 | ~~§3.2 e · el árbol del CAPEX por activo~~ | ✅ hecho |
 | ~~§3.2 d · el inventario del activo~~ | ✅ hecho |
-| §3.2 b · documentación del activo (73 nodos, 60 casillas) | 3-4 días · **definida** |
+| ~~§3.2 b · documentación del activo (73 nodos, 60 casillas)~~ | ✅ hecho · **1 día**, no los 3-4 estimados: `doc_request_item` ya tenía estados, motivo, limitaciones y adjuntos; faltaba sembrar el árbol y pintarlo |
 | ~~§3.2 c · visita del activo~~ | ✅ hecho · **medio día**, no 1-2: `asset_visit` ya tenía casi todo |
 | ~~Resembrar el catálogo, con remapeo~~ | ✅ hecho · **1 día**, no los 3-4 estimados |
 | §3.1 · Resumen del proyecto | 2-3 días **desde que se defina** |
-| Documentación y visita del activo | por definir |
 
-**≈ 4 semanas** para lo definido, sin contar lo que está `[PDV]`.
+**Las cinco secciones del activo están construidas.** De lo que quedaba pendiente al revisar el
+prototipo sigue abierto el Resumen del proyecto, y dos piezas que el cliente pidió sobre el
+prototipo y todavía no están en la aplicación de verdad: el **filtro de activos y los dos gráficos
+de tarta** del Dashboard, y el **Full Report ampliado**.
 
 `[REC]` **Por este orden**: Dashboard primero —enseña resultado pronto y no
 mueve nada de sitio—, el árbol del CAPEX después, y el activo entero al final,
-que es lo que obliga a mover documentación, fotos e inventario de pestaña. El
-Dashboard ✅, el árbol del CAPEX ✅ y el inventario ✅ ya están. De las cinco
-secciones del activo quedan **dos**, documentación y visita, y desde la hoja v2
-del cliente **las dos están definidas**: ya no falta enunciado, falta
-construirlas. La visita es la más barata —`asset_visit` ya tiene casi todos sus
-campos— y conviene hacerla primero por eso mismo.
+que es lo que obliga a mover documentación, fotos e inventario de pestaña. Se
+siguió, y el orden se sostuvo: cada sección del activo salió más barata que su
+estimación porque el modelo de datos ya estaba puesto.
 
 ## 4 bis. El prototipo para validar la forma
 

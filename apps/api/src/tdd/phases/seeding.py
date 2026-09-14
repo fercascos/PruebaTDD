@@ -1,8 +1,8 @@
-"""Semilla de las 8 fases y de las categorías de documentación.
+"""Semilla de las 8 fases del proceso y de los tipos de comprobación documental.
 
-Estas dos son catálogo del sistema y van en código, no en CSV: a diferencia de
-las zonas y los códigos CAPEX, el cliente no los amplía —las fases del proceso
-son la estructura de la aplicación— y sus banderas de comportamiento
+Van en código y no en CSV: a diferencia de las zonas, los códigos CAPEX o el
+árbol documental, el cliente no los amplía —las fases del proceso son la
+estructura de la aplicación— y sus banderas de comportamiento
 (`status_is_derived`, `has_checklist`…) no son datos revisables en una hoja.
 """
 
@@ -22,20 +22,6 @@ FASES: tuple[tuple[str, str, bool, bool, bool, bool, bool], ...] = (
     ("FULL_REPORT", "Full Report", False, False, False, False, True),
     ("PRESENTACION_CLIENTE", "Presentación a cliente", False, False, False, False, False),
     ("DEFENSA", "Defensa frente a la otra parte", False, False, False, False, False),
-)
-
-#: `[REQ]` §3.1.5 · Categorías de la solicitud de documentación. Ampliable.
-CATEGORIAS_DOCUMENTACION: tuple[tuple[str, str], ...] = (
-    # `[REQ]` La primera de la lista, y no por orden alfabético: es el documento
-    # del que salen los datos del edificio y el esqueleto del CAPEX. Pedirla
-    # tarde retrasa todo lo demás, y el orden de la checklist es lo que le dice
-    # al consultor por dónde empezar.
-    ("MEMORIA_TECNICA", "Memoria técnica"),
-    ("LICENCIAS_URBANISTICAS", "Licencias urbanísticas"),
-    ("PROYECTOS", "Proyectos"),
-    ("CONTRATOS_MANTENIMIENTO", "Contratos de mantenimiento"),
-    ("LEGALIZACIONES_CERTIFICADOS", "Legalizaciones y certificados"),
-    ("GARANTIAS", "Garantías"),
 )
 
 #: `[PDV]` Qué se le pide comprobar a la IA sobre cada documento recibido.
@@ -79,10 +65,17 @@ TIPOS_DE_COMPROBACION: tuple[tuple[str, str, str], ...] = (
 )
 
 
-def sembrar_fases(conn: Connection) -> tuple[int, int, int]:
-    """Siembra las definiciones de fase, las categorías y los tipos de comprobación.
+def sembrar_fases(conn: Connection) -> tuple[int, int]:
+    """Siembra las definiciones de fase y los tipos de comprobación.
 
     Idempotente.
+
+    Las **categorías de la solicitud documental ya no se siembran aquí**. Eran
+    seis buckets de relleno escritos a mano —`MEMORIA_TECNICA`,
+    `LICENCIAS_URBANISTICAS`…— puestos antes de que el cliente entregara su
+    árbol. Ahora las 73 filas salen de `data/catalogos/arbol_documental.csv` y
+    las carga `tdd.catalogs.seeding`, que es donde vive todo lo que viene de un
+    CSV generado desde `docs/05`.
     """
     for orden, (code, nombre, chk, enlace, visitas, rondas, derivado) in enumerate(FASES, 1):
         conn.execute(
@@ -104,16 +97,6 @@ def sembrar_fases(conn: Connection) -> tuple[int, int, int]:
             },
         )
 
-    for orden, (code, nombre) in enumerate(CATEGORIAS_DOCUMENTACION, 1):
-        conn.execute(
-            text(
-                "INSERT INTO doc_request_category (organization_id, code, name_es, "
-                "display_order, is_system) VALUES (NULL, :c, :n, :o, TRUE) "
-                "ON CONFLICT (organization_id, code) DO NOTHING"
-            ),
-            {"c": code, "n": nombre, "o": orden},
-        )
-
     for orden, (code, nombre, descripcion) in enumerate(TIPOS_DE_COMPROBACION, 1):
         conn.execute(
             text(
@@ -125,4 +108,4 @@ def sembrar_fases(conn: Connection) -> tuple[int, int, int]:
             {"c": code, "n": nombre, "d": descripcion, "o": orden},
         )
 
-    return len(FASES), len(CATEGORIAS_DOCUMENTACION), len(TIPOS_DE_COMPROBACION)
+    return len(FASES), len(TIPOS_DE_COMPROBACION)

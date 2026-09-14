@@ -61,12 +61,28 @@ def tipologias(s: SesionDep) -> Any:
     return [dict(f) for f in filas]
 
 
-@router.get("/doc-request-categories", response_model=list[ElementoCatalogo])
-def categorias_de_solicitud(s: SesionDep) -> Any:
-    """`[REQ]` §3.1.5 · Las categorías de la checklist de documentación.
+class NodoDocumental(ElementoCatalogo):
+    """`[REQ]` §5.10 · Un nodo del árbol documental.
 
-    Existían en la base y en la API de fases desde el principio, pero no se
-    servían: dar de alta una línea exigía conocer su `category_id` de memoria.
+    `level` y `parent_code` **no son columnas**: se calculan aquí a partir del
+    código, que es donde está la verdad —`S3.1.1` es de nivel 3 y cuelga de
+    `S3.1`—. Viajan igualmente porque quien pinta el árbol los necesita y
+    deducirlos otra vez en el navegador sería escribir la misma regla dos veces.
+    """
+
+    level: int
+    parent_code: str | None
+    #: Un nodo sin hijos, esté en el nivel que esté. Son 60 de los 73, y son los
+    #: únicos que llevan estado y documentos: los otros 13 solo agrupan.
+    es_casilla: bool
+
+
+@router.get("/doc-request-categories", response_model=list[NodoDocumental])
+def categorias_de_solicitud(s: SesionDep) -> Any:
+    """`[REQ]` §3.2 b · El árbol documental del cliente, en el orden de su hoja.
+
+    Se ordena por `display_order` y **no por código**: el alfabético pondría
+    `S2.10` entre `S2.1` y `S2.2`.
     """
     filas = (
         s.execute(
@@ -75,7 +91,17 @@ def categorias_de_solicitud(s: SesionDep) -> Any:
         .mappings()
         .all()
     )
-    return [dict(f) for f in filas]
+    codigos = [str(f["code"]) for f in filas]
+    con_hijos = {c.rsplit(".", 1)[0] for c in codigos if "." in c}
+    return [
+        {
+            **dict(f),
+            "level": str(f["code"]).count(".") + 1,
+            "parent_code": str(f["code"]).rsplit(".", 1)[0] if "." in str(f["code"]) else None,
+            "es_casilla": str(f["code"]) not in con_hijos,
+        }
+        for f in filas
+    ]
 
 
 @router.get("/zones", response_model=list[ElementoCatalogo])

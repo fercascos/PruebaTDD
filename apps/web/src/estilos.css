@@ -2701,3 +2701,189 @@ button.enlace.volver {
   color: var(--tinta-suave);
   font-variant-numeric: tabular-nums;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   El árbol documental del activo `[REQ]` §3.2 b
+
+   Mismo vocabulario que el árbol del inventario —flecha, código monoespaciado,
+   marca a la derecha— porque son la misma clase de objeto y aprender dos formas
+   de leer un árbol en la misma aplicación no le sirve a nadie. Lo que cambia es
+   el color de la casilla, que aquí SÍ significa algo: es el estado.
+   ═══════════════════════════════════════════════════════════════════════════ */
+/* La región viva mientras no dice nada. Sigue en el árbol de accesibilidad
+   —una región que aparece a la vez que su texto no se anuncia— pero sin ocupar
+   ni pintar nada: `display: none` la sacaría del árbol y `visibility: hidden`
+   también. */
+.aviso-vacio {
+  margin: 0;
+  height: 0;
+  overflow: hidden;
+}
+.arbol-documental .ayuda {
+  margin: 0 0 0.9rem;
+}
+.arbol-documental .codigo {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  color: var(--tinta-suave);
+  flex: 0 0 auto;
+}
+.ramas-doc,
+.ramas-doc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ramas-doc ul {
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--borde);
+}
+.cabecera-doc {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.35rem 0.4rem;
+  margin: 0.15rem 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dashed var(--borde);
+  cursor: pointer;
+  color: inherit;
+}
+.cabecera-doc:hover {
+  background: var(--marcado, #eff6ff);
+}
+.cabecera-doc:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+}
+.cabecera-doc.n1 {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.cabecera-doc.n2 {
+  font-weight: 600;
+}
+.cabecera-doc .flecha {
+  flex: 0 0 auto;
+  color: var(--tinta-suave);
+}
+.cabecera-doc .nombre-doc {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cabecera-doc .marca-doc {
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}
+.cabecera-doc.con-algo {
+  border-left: 3px solid var(--ok);
+  padding-left: 0.5rem;
+}
+
+/* La casilla. El borde de la izquierda ES el estado: es lo que se recorre con
+   la vista para saber qué queda por pedir sin leer ni un desplegable. El gris
+   de «pendiente de pedir» es deliberadamente el más callado de los seis. */
+.ficha-doc {
+  padding: 0.5rem 0.6rem;
+  margin: 0.35rem 0;
+  border-left: 4px solid #cbd5e1;
+  background: var(--papel);
+  border-radius: 0 var(--radio) var(--radio) 0;
+}
+.ficha-doc.e-solicitada {
+  border-left-color: var(--acento);
+}
+.ficha-doc.e-recibida {
+  border-left-color: var(--ok);
+}
+.ficha-doc.e-parcial {
+  border-left-color: var(--aviso);
+}
+.ficha-doc.e-no_disponible {
+  border-left-color: var(--error);
+}
+.ficha-doc.e-no_aplica {
+  border-left-color: #94a3b8;
+}
+.cabecera-casilla {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.cabecera-casilla .nombre-doc {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+/* Los mandos envuelven en vez de apretarse: los nombres del árbol llegan a
+   trescientos caracteres y en un móvil el desplegable y el botón de adjuntar
+   tienen que caber enteros o no se pueden usar con el dedo. */
+.mandos-casilla {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.8rem;
+  margin-top: 0.4rem;
+}
+.campo-linea {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  color: var(--tinta-suave);
+}
+.subir-casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.86rem;
+  color: var(--tinta-suave);
+  cursor: pointer;
+}
+.subir-casilla input {
+  font-size: 0.8rem;
+}
+.ficha-doc .limitacion {
+  font-size: 0.82rem;
+  color: #8a5a1a;
+  margin: 0.4rem 0 0;
+}
+.ficha-doc .campo textarea {
+  width: 100%;
+  font: inherit;
+  margin-top: 0.2rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  resize: vertical;
+}
+.adjuntos-doc {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.adjuntos-doc li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.88rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--fondo);
+  border-radius: var(--radio);
+}
+.adjuntos-doc .fecha {
+  margin-left: auto;
+  color: var(--tinta-suave);
+  font-variant-numeric: tabular-nums;
+}

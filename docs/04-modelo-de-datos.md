@@ -175,11 +175,40 @@ La instancia de una fase en un proyecto. **Se crea solo si el usuario marca la f
 `affects_report_limitations` BOOLEAN GENERATED (`status IN ('NO_DISPONIBLE','PARCIAL')`) ·
 `display_order` · auditoría · soft delete.
 
-Semilla de `doc_request_category` `[REQ]`: licencias urbanísticas · proyectos · contratos de
-mantenimiento · legalizaciones y certificados · garantías. Ampliable por el cliente.
+Semilla de `doc_request_category` `[REQ]` §3.2 b: **el árbol documental del cliente**, los 73 nodos
+de su hoja v2 transcritos en §5.10 y generados a `data/catalogos/arbol_documental.csv`. El nivel y el
+padre **no son columnas**: salen del propio código —`S3.1.1` es de nivel 3 y cuelga de `S3.1`—, y así
+no puede haber un padre que no case con el código. Es la diferencia con `capex_code`, cuyos códigos
+no anidaban. `name_es` es `VARCHAR(400)` porque los nombres se transcriben literales y el más largo
+—el nodo de REACH— tiene 342 caracteres.
+
+`[LIM]` Hasta la revisión 0027 la semilla eran **seis categorías escritas a mano** —`MEMORIA_TECNICA`,
+`LICENCIAS_URBANISTICAS`…— puestas de relleno antes de que el cliente entregara el árbol. Se retiran,
+pero **solo las que no tengan líneas colgando**: borrar una con trabajo dentro se llevaría por delante
+lo que escribió una persona. Las que sobrevivan se van al final de la lista y conviven con el árbol.
+Sus líneas **no se reubican solas**: `LICENCIAS_URBANISTICAS` abarca cuatro nodos (`S1.1.1`…`S1.1.4`)
+y elegir uno sería inventarse cuál.
+
+**Una casilla es un nodo sin hijos**, esté en el nivel que esté: son 60 de los 73, y son las únicas
+que llevan estado y documentos. `S2.1` es casilla siendo de nivel 2 y `S4 Q&A` lo es siendo de nivel 1.
 
 **Restricción:** `CHECK (status <> 'NO_DISPONIBLE' OR unavailable_reason IS NOT NULL)`.
-**Índices:** `(project_phase_id, display_order)`, `(organization_id, status)`.
+**Índices:** `(project_phase_id, display_order)`, `(organization_id, status)`,
+`UNIQUE (project_phase_id, asset_id, category_id) WHERE asset_id IS NOT NULL`.
+
+`[REQ]` §3.2 b · Ese índice único es **parcial**, y la condición separa las dos cosas que conviven en
+la tabla: lo que cuelga de un activo es el árbol —una casilla **es** un nodo, y no puede haber dos—;
+lo que no cuelga de ninguno sigue siendo la checklist libre del proyecto, donde dos informes técnicos
+previos distintos son dos líneas legítimas de la misma categoría.
+
+`[SUP]` **Una casilla sin tocar no tiene fila**, y eso es un estado válido —pendiente de pedir— y no
+un dato que falte. Crear 60 filas vacías por activo al dar de alta el proyecto habría llenado la tabla
+de ruido y habría que mantenerlas sincronizadas si el árbol cambiase. La fila aparece cuando alguien
+pone un estado o adjunta un documento.
+
+`[REC]` `PARCIAL` **no está en la hoja del cliente**, que define cuatro estados. Se mantiene porque
+cuenta como limitación igual que `NO_DISPONIBLE`: recibir tres de los ocho boletines eléctricos no es
+haberlos recibido. `[PDV]` Sin validar con el cliente.
 
 `[REC]` `affects_report_limitations` alimenta automáticamente el apartado de limitaciones y
 salvedades del informe. Declarar qué no se ha podido revisar es una obligación profesional en una TDD,

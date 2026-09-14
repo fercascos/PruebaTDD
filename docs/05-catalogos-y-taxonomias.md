@@ -755,9 +755,16 @@ teclee dos veces.
 ### Lo que este árbol sustituye
 
 `[REQ]` **Sustituye al checklist de la fase «Solicitud de documentación»**, decidido por el
-cliente. Las cinco categorías sembradas hasta ahora —licencias urbanísticas · proyectos ·
-contratos de mantenimiento · legalizaciones y certificados · garantías— son un subconjunto pobre
-de estos 73 nodos, y tener las dos cosas produciría dos verdades sobre qué documentación falta.
+cliente. Las seis categorías sembradas hasta entonces —memoria técnica · licencias urbanísticas ·
+proyectos · contratos de mantenimiento · legalizaciones y certificados · garantías— eran un
+subconjunto pobre de estos 73 nodos, y tener las dos cosas produciría dos verdades sobre qué
+documentación falta.
+
+**Hecho** en la revisión 0027: `doc_request_category` se siembra con estos 73 nodos desde
+`data/catalogos/arbol_documental.csv`, y las seis se retiran. `[LIM]` **Solo las que no tengan
+líneas colgando**: borrar una con trabajo dentro se llevaría por delante lo que escribió una
+persona, y sus líneas **no se reubican solas** —`LICENCIAS_URBANISTICAS` abarca cuatro nodos y
+elegir uno sería inventarse cuál—. Las que sobrevivan se van al final de la lista.
 
 `[LIM]` **Queda una casilla sin sitio: el plan de autoprotección.** La aplicación ya sabe leerlo
 —de él salen los medios que van al inventario de equipo y las limitaciones del informe— y el árbol

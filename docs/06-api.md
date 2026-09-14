@@ -161,9 +161,9 @@ Las fases no incluidas quedan como `NO_APLICA` y pueden activarse después. `[SU
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| `GET`/`POST` | `/project-phases/{id}/doc-requests` | Checklist. Al crear la fase se siembra con las 6 categorías de §3.1.5, y la primera es la **memoria técnica** |
+| `GET`/`POST` | `/project-phases/{id}/doc-requests` | Checklist **libre del proyecto**: líneas con su propio título colgadas de un nodo del árbol documental (§5.10). Es lo que se pide de golpe al inicio del encargo; el repaso activo por activo va en `/assets/{id}/doc-tree` |
 | `PATCH` | `/doc-requests/{id}` | Estado, fechas, motivo. `422` si `NO_DISPONIBLE` sin motivo |
-| `POST` | `/doc-requests/{id}/documents` | Adjunta documentos; clasifica automáticamente por categoría |
+| `POST` | `/doc-requests/{id}/documents` | Adjunta documentos; **clasifica automáticamente por el código del nodo** —`S1.1.*` es licencia urbanística, `S2.11` es plano—, resolviendo por prefijo más largo y por segmentos: `S2.1` (memoria técnica) no puede casar con `S2.10` (legalización del gas propano) |
 | `POST` | `/project-phases/{id}/doc-requests/export` | Genera el XLSX de solicitud para enviar al cliente `[REC]` |
 | `GET` | `/projects/{id}/report-limitations` | Líneas en `NO_DISPONIBLE` o `PARCIAL`, listas para volcar al informe `[REC]` |
 
@@ -225,6 +225,8 @@ importe no aparece en ninguna parte del JSON congelado.
 | `POST` | `/assets/{id}/memoria/generar-capex` | El **esqueleto**: un hallazgo en BORRADOR por objeto. Idempotente: no duplica ni pisa lo ya rellenado |
 | `GET`/`PUT` | `/assets/{id}/descriptivos` | `[REQ]` §3.2 d · El **descriptivo y la valoración de cada objeto de Hard Cost**, editables, con su casilla de validado. `texto` es *qué hay* y sale de la memoria; `valoracion` es *en qué estado está* y la escribe quien lo ha visto. El `PUT` manda las filas cambiadas —los dos textos y la casilla juntos— y devuelve la rejilla entera. `422` si el código no es de nivel 3, y `422` al validar un objeto **sin ninguno de los dos textos** |
 | `POST` | `/assets/{id}/descriptivos/desde-documentacion` | Trae **los descriptivos** de la memoria técnica. Idempotente y **no pisa lo validado ni lo escrito**, y **no toca la valoración**: devuelve cuántos creó, completó y respetó. `409` si el activo no tiene memoria |
+| `GET` | `/assets/{id}/doc-tree` | `[REQ]` §3.2 b · **El árbol documental del activo**: los 73 nodos de la hoja del cliente, en su orden y **siempre los 73**, con el estado y los documentos de cada casilla. `404` si el proyecto no tiene activada la fase `SOLICITUD_DOCUMENTACION`, que es donde viven las casillas |
+| `PUT` | `/assets/{id}/doc-tree/{code}` | Pone el estado de una casilla, **creándola si es la primera vez**. `422` si el nodo agrupa a otros —el estado se pone en los que cuelgan de él— y `422` si `NO_DISPONIBLE` sin motivo. `RECIBIDA` y `PARCIAL` fechan solas, y la fecha **no se mueve** al volver a guardar. Acepta `If-Match` |
 | `GET`/`POST` | `/projects/{id}/members` | `{user_id, role_code, specialty_ids[], asset_ids[]}` |
 
 ### Extracción documental `[REQ]`

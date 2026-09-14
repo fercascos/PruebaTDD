@@ -22,9 +22,8 @@ Escenario: Creación correcta con selección de fases
   Entonces el proyecto se crea en estado "BORRADOR"
   Y se crean seis instancias de fase en estado "PENDIENTE"
   Y las fases no marcadas (Q&A y defensa) quedan como "NO_APLICA"
-  Y la fase de solicitud de documentación se siembra con las cinco categorías estándar:
-        licencias urbanísticas, proyectos, contratos de mantenimiento,
-        legalizaciones y certificados, y garantías
+  Y la fase de solicitud de documentación puede colgar sus líneas del árbol
+        documental del cliente (§5.10): 73 nodos y 60 casillas
   Y se registra un evento de auditoría "PROJECT_CREATED"
 
 Escenario: Activar una fase después del alta

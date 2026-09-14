@@ -373,12 +373,44 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
     ),
 )
 
+#: La checklist **del proyecto**: líneas sueltas, con su propio título, colgadas
+#: del nodo del árbol al que pertenecen. Es lo que se pide de golpe al inicio.
 DOCUMENTOS: tuple[tuple[str, str], ...] = (
-    ("LICENCIAS_URBANISTICAS", "Licencia de actividad"),
-    ("LICENCIAS_URBANISTICAS", "Licencia de primera ocupación"),
-    ("PROYECTOS", "Proyecto de ejecución as-built"),
-    ("LEGALIZACIONES_CERTIFICADOS", "Certificado de instalación de baja tensión"),
-    ("CONTRATOS_MANTENIMIENTO", "Contrato de mantenimiento de PCI"),
+    ("S1.1.3", "Licencia de actividad"),
+    ("S1.1.2", "Licencia de primera ocupación"),
+    ("S1.2.2", "Proyecto de ejecución as-built"),
+    ("S2.6", "Certificado de instalación de baja tensión"),
+    ("S2.3", "Contrato de mantenimiento de PCI"),
+)
+
+#: El árbol **del activo** `[REQ]` §3.2 b. Doce casillas de las sesenta, y no
+#: más: una demostración en la que todo esté resuelto no enseña para qué sirve
+#: la pantalla. Se tocan las seis situaciones —incluida «sin fila», que son las
+#: cuarenta y ocho restantes— para que se vean los seis colores a la vez.
+ARBOL_DEL_ACTIVO: tuple[tuple[str, str, str | None], ...] = (
+    ("S1.1.1", "RECIBIDA", None),
+    ("S1.1.2", "RECIBIDA", None),
+    ("S1.1.3", "SOLICITADA", None),
+    (
+        "S1.1.4",
+        "NO_DISPONIBLE",
+        "El ayuntamiento no la emitió en su día y la propiedad no tiene copia. "
+        "Queda declarado como limitación: no se ha podido comprobar que la "
+        "actividad esté en regla frente al expediente municipal.",
+    ),
+    ("S1.2.2", "RECIBIDA", None),
+    ("S1.3.1", "NO_APLICA", None),
+    ("S2.1", "RECIBIDA", None),
+    ("S2.3", "SOLICITADA", None),
+    ("S2.5", "PARCIAL", None),
+    ("S2.6", "RECIBIDA", None),
+    (
+        "S2.11",
+        "NO_DISPONIBLE",
+        "Solo hay planos en PDF escaneados de 2004. Las mediciones de superficie "
+        "de este informe salen de la memoria y de la visita, no de CAD.",
+    ),
+    ("S3.1.2", "RECIBIDA", None),
 )
 
 
@@ -742,6 +774,14 @@ def sembrar(api: Api) -> str:
         elif i == 3:
             api.patch(f"/doc-requests/{linea['id']}", {"status": "RECIBIDA"})
     print(f"· {len(DOCUMENTOS)} líneas de checklist")
+
+    # ── El árbol documental del activo `[REQ]` §3.2 b ───────────────────────
+    for code, estado, motivo in ARBOL_DEL_ACTIVO:
+        api.put(
+            f"/assets/{activo['id']}/doc-tree/{code}",
+            {"status": estado, "unavailable_reason": motivo},
+        )
+    print(f"· {len(ARBOL_DEL_ACTIVO)} casillas del árbol documental del activo")
 
     return str(proyecto["id"])
 

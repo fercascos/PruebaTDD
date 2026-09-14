@@ -169,11 +169,12 @@ def test_adjuntar_a_una_linea_del_checklist_clasifica_el_documento(
     """`[REC]` §15.11 · Elegir el tipo a mano cuando el sistema ya lo sabe es
     trabajo repetido y una fuente de incoherencias."""
     with motor_admin.begin() as conn:
+        # `S1.1.3` es «Licencia de Actividad» en el árbol del cliente (§5.10).
+        # Antes esto buscaba una categoría `LICENCIAS` que nunca existió y la
+        # prueba se saltaba sola: verde sin haber comprobado nada.
         categoria = conn.execute(
-            text("SELECT id FROM doc_request_category WHERE code = 'LICENCIAS'")
-        ).scalar()
-    if categoria is None:
-        pytest.skip("el catálogo no trae la categoría LICENCIAS")
+            text("SELECT id FROM doc_request_category WHERE code = 'S1.1.3'")
+        ).scalar_one()
 
     linea = cliente.post(
         f"{RUTA}/projects/{proyecto}/doc-requests",

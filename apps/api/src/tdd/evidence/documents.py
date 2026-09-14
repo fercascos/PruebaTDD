@@ -176,21 +176,53 @@ _CAMPOS = """
     CAST(status AS text) AS status, version_number, supersedes_document_id, notes, uploaded_by
 """
 
-#: `[REC]` §15.11 · Adjuntar a una línea del checklist clasifica el documento
-#: solo. La correspondencia va por el código de la categoría documental.
-_TIPO_POR_CATEGORIA = {
-    "LICENCIAS": "LICENCIA_URBANISTICA",
-    "URBANISMO": "LICENCIA_URBANISTICA",
-    "PROYECTOS": "PROYECTO",
-    "PROYECTO": "PROYECTO",
-    "MANTENIMIENTO": "CONTRATO_MANTENIMIENTO",
-    "LEGALIZACIONES": "LEGALIZACION",
-    "LEGALIZACION": "LEGALIZACION",
-    "CERTIFICADOS": "CERTIFICADO",
-    "GARANTIAS": "GARANTIA",
-    "PLANOS": "PLANO",
-    "INFORMES": "INFORME_PREVIO",
-}
+#: `[REC]` §15.11 · Adjuntar a una casilla del árbol documental clasifica el
+#: documento solo. La correspondencia va por el **código del nodo** (§5.10).
+#:
+#: `[SUP]` La tabla es una lectura del árbol, no algo que dijera el cliente: en
+#: su hoja los nodos no llevan tipo. Se resuelve por **prefijo más largo**, así
+#: que `S2.11` gana a `S2` y una rama entera se clasifica con una sola fila.
+#: Cuando ningún prefijo casa, el tipo queda en `OTRO`, que es lo que ya pasaba
+#: antes y no estropea nada: el tipo se puede corregir a mano después.
+#:
+#: `[PDV]` `S2.4` —informes de mantenimiento— se queda en `OTRO` a propósito. No
+#: es un contrato, no es un certificado y no es un informe técnico previo de los
+#: que se piden en una TDD; forzarlo a cualquiera de los tres ensuciaría los
+#: filtros por tipo. Está pendiente de decidir con el cliente si merece un tipo
+#: propio.
+_TIPO_POR_NODO: tuple[tuple[str, str], ...] = (
+    ("S1.1", "LICENCIA_URBANISTICA"),
+    ("S1.2", "PROYECTO"),
+    ("S2.1", "MEMORIA_TECNICA"),
+    ("S2.2", "CERTIFICADO"),
+    ("S2.3", "CONTRATO_MANTENIMIENTO"),
+    ("S2.5", "CERTIFICADO"),
+    ("S2.6", "LEGALIZACION"),
+    ("S2.7", "LEGALIZACION"),
+    ("S2.8", "LEGALIZACION"),
+    ("S2.9", "LEGALIZACION"),
+    ("S2.10", "LEGALIZACION"),
+    ("S2.11", "PLANO"),
+    ("S2.12", "CERTIFICADO"),
+    ("S2.13", "INFORME_PREVIO"),
+    ("S4", "QA"),
+)
+
+
+def _tipo_por_nodo(codigo: str) -> str | None:
+    """El tipo de documento que corresponde a un nodo del árbol, o `None`.
+
+    Prefijo más largo, y comparando por **segmentos**: `S2.1` no puede casar con
+    `S2.10`, que es otro nodo y otro tipo —memoria técnica contra legalización
+    del gas propano—. Partir por puntos en vez de usar `startswith` es lo que
+    evita ese fallo, que además solo se habría visto con un documento real.
+    """
+    partes = codigo.split(".")
+    for largo in range(len(partes), 0, -1):
+        tipo = dict(_TIPO_POR_NODO).get(".".join(partes[:largo]))
+        if tipo is not None:
+            return tipo
+    return None
 
 
 def _leer(s: Session, document_id: uuid.UUID) -> dict[str, Any]:
@@ -299,7 +331,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             ),
             {"i": str(doc_request_item_id)},
         ).scalar()
-        tipo = _TIPO_POR_CATEGORIA.get((codigo or "").upper())
+        tipo = _tipo_por_nodo(codigo) if codigo else None
     if tipo is None and qa_round_id is not None:
         tipo = "QA"
     tipo = tipo or "OTRO"

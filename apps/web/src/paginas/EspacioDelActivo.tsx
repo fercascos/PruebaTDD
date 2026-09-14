@@ -45,13 +45,12 @@ const MapaDeFotos = lazy(() =>
  * edificio es salirse de la pantalla en la que se está.
  *
  * - **Detalle** lleva la ficha, el mapa de este activo y su árbol de ubicaciones.
+ * - **Documentación** lleva el árbol de 73 nodos de la hoja v2 del cliente, con
+ *   el estado y los documentos de cada una de sus 60 casillas.
  * - **Visita** lleva los datos, el equipo implicado y **las fotografías**, que
  *   es donde el cliente las puso: su bloque V3 dice «aquí incluye la sección de
  *   fotos que hay actualmente desarrollado».
  * - **Inventario** lleva los descriptivos, «pasa a CAPEX» y la ficha de equipo.
- *
- * `[LIM]` **Documentación está por construir.** El diseño está cerrado —el árbol
- * de 73 nodos de la hoja v2— y la sección lo dice con letras en vez de fingir.
  */
 
 const SECCIONES = [

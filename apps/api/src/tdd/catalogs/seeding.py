@@ -33,6 +33,8 @@ class ResumenSemilla:
     technical_systems: int
     #: `[REQ]` §5.9 · secciones de memoria → capítulos CAPEX.
     memoria_sections: int = 0
+    #: `[REQ]` §5.10 · los 73 nodos del árbol documental del cliente.
+    doc_tree_nodes: int = 0
 
     def __str__(self) -> str:
         return (
@@ -41,7 +43,8 @@ class ResumenSemilla:
             f"{self.capex_codes} códigos CAPEX · {self.risk_levels} riesgos · "
             f"{self.concepts} conceptos · {self.horizons} horizontes · "
             f"{self.technical_systems} sistemas técnicos · "
-            f"{self.memoria_sections} secciones de memoria"
+            f"{self.memoria_sections} secciones de memoria · "
+            f"{self.doc_tree_nodes} nodos del árbol documental"
         )
 
 
@@ -189,6 +192,28 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
             fila,
         )
 
+    # `[REQ]` §5.10 · El árbol documental del activo: 73 nodos, 60 casillas.
+    #
+    # `display_order` es la posición en el CSV y no se calcula al leer, porque el
+    # orden correcto **no** es el alfabético: `S2.10` va detrás de `S2.9`, y
+    # ordenar por `code` lo pondría entre `S2.1` y `S2.2`. El CSV sale de
+    # `docs/05` §5.10 ya en el orden de la hoja del cliente, así que la posición
+    # de la fila es el dato.
+    #
+    # Ni `level` ni el padre se guardan: se leen del propio código. Un nodo con
+    # nivel 3 y padre de nivel 1 sería una contradicción que aquí no cabe.
+    arbol = _leer("arbol_documental.csv", base)
+    for i, fila in enumerate(arbol):
+        conn.execute(
+            text(
+                "INSERT INTO doc_request_category (organization_id, code, name_es, "
+                "display_order, is_system) VALUES (NULL, :code, :name_es, :orden, TRUE) "
+                "ON CONFLICT (organization_id, code) DO UPDATE "
+                "   SET name_es = EXCLUDED.name_es, display_order = EXCLUDED.display_order"
+            ),
+            {"code": fila["code"], "name_es": fila["name_es"], "orden": i},
+        )
+
     return ResumenSemilla(
         typologies=n_tip,
         zones=n_zon,
@@ -199,4 +224,5 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
         horizons=len(horizontes),
         technical_systems=len(sistemas),
         memoria_sections=len(secciones),
+        doc_tree_nodes=len(arbol),
     )

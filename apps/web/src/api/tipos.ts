@@ -485,7 +485,55 @@ export type Solicitud = {
   display_order: number
 }
 
-export type CategoriaDeSolicitud = { id: string; code: string; name_es: string }
+/**
+ * Un nodo del árbol documental `[REQ]` §3.2 b, tal como lo sirve
+ * `/catalogs/doc-request-categories`.
+ *
+ * `level` y `parent_code` no son columnas de la base: se calculan del código,
+ * que es donde está la verdad —`S3.1.1` es de nivel 3 y cuelga de `S3.1`—.
+ */
+export type CategoriaDeSolicitud = {
+  id: string
+  code: string
+  name_es: string
+  level: number
+  parent_code: string | null
+  /** Un nodo sin hijos. Son 60 de los 73, y son los únicos que llevan estado. */
+  es_casilla: boolean
+}
+
+/** Lo justo de un documento para listarlo bajo su casilla y descargarlo. */
+export type DocumentoDeCasilla = {
+  id: string
+  display_name: string
+  doc_type: string
+  confidentiality: string
+  version_number: number
+  uploaded_at: string
+}
+
+/**
+ * Una casilla del árbol **de un activo**: el nodo más lo que haya pasado en él.
+ *
+ * `status` en `null` no es un dato que falte: es **pendiente de pedir**, que es
+ * por donde empiezan las sesenta casillas. La fila en la base aparece cuando
+ * alguien pone un estado o adjunta un documento, no antes.
+ */
+export type NodoDocumental = {
+  code: string
+  name_es: string
+  category_id: string
+  level: number
+  parent_code: string | null
+  es_casilla: boolean
+  item_id: string | null
+  status: EstadoSolicitud | null
+  unavailable_reason: string | null
+  received_at: string | null
+  limita_el_informe: boolean
+  row_version: number | null
+  documentos: DocumentoDeCasilla[]
+}
 
 export type Documento = {
   id: string

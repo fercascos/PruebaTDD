@@ -648,11 +648,21 @@ CREATE TABLE project_phase (
 CREATE INDEX project_phase_orden_idx ON project_phase (project_id, display_order);
 CREATE INDEX project_phase_estado_idx ON project_phase (organization_id, status);
 
+-- [REQ] §3.2 b · Los 73 nodos del árbol documental del cliente (docs/05 §5.10).
+-- El nivel y el padre NO son columnas: salen del propio código —`S3.1.1` es de
+-- nivel 3 y cuelga de `S3.1`—, y así no puede haber un padre que no case con el
+-- código. Es la diferencia con `capex_code`, cuyos códigos no anidaban.
+--
+-- Una CASILLA es un nodo sin hijos, esté en el nivel que esté: son 60, y son las
+-- únicas que llevan estado y documentos. Las otras 13 solo agrupan.
 CREATE TABLE doc_request_category (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
-    name_es         VARCHAR(120) NOT NULL,
+    -- 400 y no 120: los nombres se transcriben literales de la hoja del cliente
+    -- —el nodo de REACH tiene 342 caracteres— porque esa frase es con la que el
+    -- gestor reconoce qué tiene que pedirle a la propiedad.
+    name_es         VARCHAR(400) NOT NULL,
     display_order   SMALLINT NOT NULL DEFAULT 0,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
@@ -693,6 +703,15 @@ CREATE TABLE doc_request_item (
                OR (unavailable_reason IS NOT NULL AND length(trim(unavailable_reason)) > 0))
 );
 CREATE INDEX doc_request_fase_idx ON doc_request_item (project_phase_id, display_order);
+-- [REQ] §3.2 b · Una casilla del árbol ES un nodo, así que no puede haber dos
+-- para el mismo activo. El índice es PARCIAL y esa condición separa las dos
+-- cosas que conviven en la tabla: lo que cuelga de un activo es el árbol y es
+-- único; lo que no cuelga de ninguno sigue siendo la checklist libre del
+-- proyecto, donde dos informes previos distintos son dos líneas legítimas de la
+-- misma categoría.
+CREATE UNIQUE INDEX doc_request_casilla_uniq
+    ON doc_request_item (project_phase_id, asset_id, category_id)
+    WHERE asset_id IS NOT NULL;
 
 CREATE TABLE vdr_link (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),

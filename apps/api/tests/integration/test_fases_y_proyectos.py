@@ -328,7 +328,7 @@ def test_no_disponible_sin_motivo_no_se_admite(
             {"p": proyecto["id"]},
         ).scalar_one()
         cat = c.execute(
-            text("SELECT id FROM doc_request_category WHERE code = 'PROYECTOS'")
+            text("SELECT id FROM doc_request_category WHERE code = 'S1.2.2'")
         ).scalar_one()
 
     with pytest.raises((IntegrityError, DBAPIError)):
@@ -359,14 +359,14 @@ def test_las_limitaciones_del_informe_salen_solas_de_la_checklist(
         ).scalar_one()
         cats = dict(c.execute(text("SELECT code, id FROM doc_request_category")).all())
         filas = [
-            ("Licencia de primera ocupación", "RECIBIDA", None, cats["LICENCIAS_URBANISTICAS"]),
+            ("Licencia de primera ocupación", "RECIBIDA", None, cats["S1.1.2"]),
             (
                 "Proyecto de ejecución",
                 "NO_DISPONIBLE",
                 "No se conserva en el archivo",
-                cats["PROYECTOS"],
+                cats["S1.2.2"],
             ),
-            ("Contratos de mantenimiento HVAC", "PARCIAL", None, cats["CONTRATOS_MANTENIMIENTO"]),
+            ("Contratos de mantenimiento HVAC", "PARCIAL", None, cats["S2.3"]),
         ]
         for i, (titulo, estado, motivo, cat) in enumerate(filas):
             c.execute(
@@ -412,7 +412,7 @@ def test_la_fase_de_documentacion_sugiere_su_estado(
             {"p": proyecto["id"]},
         ).scalar_one()
         cat = c.execute(
-            text("SELECT id FROM doc_request_category WHERE code = 'GARANTIAS'")
+            text("SELECT id FROM doc_request_category WHERE code = 'S2.2'")
         ).scalar_one()
         c.execute(
             text(

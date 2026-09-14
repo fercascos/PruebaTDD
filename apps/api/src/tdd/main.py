@@ -19,6 +19,7 @@ from tdd.core import metricas, observabilidad
 from tdd.core.config import get_settings
 from tdd.core.conflictos import registrar as registrar_conflictos
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
+from tdd.documental.arbol import router as arbol_documental_router
 from tdd.equipment.router import router as equipment_router
 from tdd.evidence import antivirus, storage
 from tdd.evidence.documents import router as documents_router
@@ -218,6 +219,7 @@ def crear_app() -> FastAPI:
     app.include_router(ubicaciones_router, prefix=api)
     app.include_router(memoria_router, prefix=api)
     app.include_router(descriptivos_router, prefix=api)
+    app.include_router(arbol_documental_router, prefix=api)
     app.include_router(extraccion_router, prefix=api)
     app.include_router(equipment_router, prefix=api)
     app.include_router(findings_router, prefix=api)
