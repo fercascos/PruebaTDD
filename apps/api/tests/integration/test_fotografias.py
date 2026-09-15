@@ -10,6 +10,7 @@ es lo que trae el fichero, y eso es justo lo que se prueba aquí.
 from __future__ import annotations
 
 import io
+import itertools
 import uuid
 from typing import Any
 
@@ -67,11 +68,45 @@ def subir(
     )
 
 
-def foto_unica(color: tuple[int, int, int] | None = None) -> bytes:
-    """Una imagen distinta cada vez: el índice único por `sha256` es real."""
-    import random
+#: Un contador, no un sorteo. Ver `foto_unica`.
+_SIGUIENTE_COLOR = itertools.count()
 
-    return imagen(color=color or (random.randrange(256), random.randrange(256), 90))
+
+def foto_unica(color: tuple[int, int, int] | None = None) -> bytes:
+    """Una imagen distinta cada vez, **por construcción y no por azar**.
+
+    El índice único por `sha256` es real, así que dos imágenes iguales dan un
+    409. Esto sorteaba `(R, G, 90)` —65 536 combinaciones— y el fixture
+    `proyecto` de este fichero es de módulo: las sesenta y dos fotos de la suite
+    van **al mismo proyecto**. Por la paradoja del cumpleaños, dos coincidían en
+    torno al 3 % de las ejecuciones, y entonces una prueba cualquiera de las
+    cincuenta y siete se llevaba un 409 donde esperaba un 201. Fallaba una vez
+    cada tantas, en un sitio distinto cada vez y sin relación con lo que se
+    estuviera cambiando, que es la peor clase de prueba frágil: la que hace
+    dudar del cambio en vez de la prueba.
+    """
+    if color is not None:
+        return imagen(color=color)
+    # El mismo espacio de antes —(R, G, 90)— recorrido con un multiplicador
+    # impar: sobre 2^16 es una biyección, así que las 65 536 primeras llamadas
+    # dan 65 536 colores distintos. Y quedan tan repartidos como los sorteados,
+    # que importa: dos colores contiguos producen dos degradados casi iguales y
+    # el `phash` los daría por parecidos.
+    k = (next(_SIGUIENTE_COLOR) * 40503) % 65536
+    return imagen(color=(k % 256, k // 256, 90))
+
+
+def test_el_generador_de_fotos_no_repite_ninguna() -> None:
+    """Sostiene a las otras cincuenta y siete pruebas de este fichero.
+
+    Todas suben al **mismo** proyecto, donde el `sha256` es único: una repetida
+    da un 409 y tumba una prueba cualquiera, distinta cada vez. Se comprueban
+    más del doble de las que usa la suite.
+    """
+    import hashlib
+
+    huellas = {hashlib.sha256(foto_unica()).hexdigest() for _ in range(200)}
+    assert len(huellas) == 200  # noqa: PLR2004
 
 
 # ─────────────────────────────────────────────────────────────────────────────

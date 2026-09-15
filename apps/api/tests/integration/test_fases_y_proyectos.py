@@ -467,9 +467,42 @@ def test_otra_organizacion_no_ve_ningun_encargo_ajeno(cliente, cab, datos_base) 
 
 
 def test_el_listado_busca_por_codigo_y_por_nombre(cliente, cab, datos_base) -> None:
-    r = cliente.get("/api/v1/projects?q=2026-014", headers=cab("consultor_a"))
-    assert r.status_code == 200
-    assert [p["internal_code"] for p in r.json()] == ["2026-014"]
+    """Busca por **subcadena**, en el código y en el nombre.
+
+    El proyecto que se busca lo crea esta prueba, con una cadena única suya, y
+    no se apoya en el del escenario base. Se apoyaba: buscaba «2026-014», el
+    código del proyecto de `datos_base`, y exigía **una sola** fila.
+
+    La base de las pruebas no se vacía entre ellas —se acumulan cuatrocientos
+    proyectos a lo largo de la sesión— y el fixture `proyecto` de este mismo
+    fichero reparte códigos `2026-<seis dígitos hexadecimales>`. Uno de cada
+    4096 empieza por «014», y entonces `2026-014f00` **contiene** «2026-014»:
+    la búsqueda devolvía dos filas y la prueba fallaba. Una vez cada muchas
+    ejecuciones, sin tocar nada y sin que el fallo tuviera que ver con lo que
+    se estuviera cambiando.
+    """
+    marca = uuid.uuid4().hex[:10]
+    alta = cliente.post(
+        "/api/v1/projects",
+        headers=cab("consultor_a"),
+        json={
+            "client_id": str(datos_base["cliente_a"]),
+            "internal_code": f"BUSCA-{marca}",
+            "name": f"Encargo localizable {marca}",
+            "applicable_phases": [{"code": "VISITA"}],
+        },
+    )
+    assert alta.status_code == 201, alta.text
+
+    por_codigo = cliente.get(f"/api/v1/projects?q=BUSCA-{marca}", headers=cab("consultor_a"))
+    assert por_codigo.status_code == 200
+    assert [p["internal_code"] for p in por_codigo.json()] == [f"BUSCA-{marca}"]
+
+    # Y por nombre, que es la mitad que el nombre de la prueba prometía y no
+    # llegaba a comprobarse.
+    busca = f"/api/v1/projects?q=localizable {marca}"
+    por_nombre = cliente.get(busca, headers=cab("consultor_a"))
+    assert [p["internal_code"] for p in por_nombre.json()] == [f"BUSCA-{marca}"]
 
 
 def test_la_ficha_del_encargo_se_lee_por_su_identificador(cliente, cab, datos_base) -> None:
