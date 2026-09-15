@@ -26,12 +26,27 @@ diapositivas: una de texto y otra de cuatro fotos. `SECCIONES` ata cada título 
 su código del árbol de CAPEX, y de ahí salen el descriptivo y la valoración.
 
 `[SUP]` La correspondencia la he deducido comparando los títulos de la plantilla
-con el árbol de §5.3, y **no está validada con el cliente**. Tres son decisiones
-discutibles y se señalan en la tabla.
+con el árbol de §5.3. La mayoría es literal —«CUBIERTA» es el capítulo
+«Cubierta»— y esas no admiten discusión. Las que sí, y **siguen sin validar**,
+van marcadas `[PDV]` en la tabla: son las dos subsecciones inglesas de
+propagación del fuego, que agrupan varios objetos del CTE bajo un solo título.
 
-`[LIM]` **Las fotografías no se marcan.** Las cuatro autoformas vacías de cada
-diapositiva par son marcos de imagen, y la inserción de imágenes por marcador no
-está construida. Se quedan como están.
+## Las fotografías y la tabla de CAPEX
+
+Van en las **notas del orador**, que no se imprimen:
+
+* La diapositiva **siguiente** a la de texto de cada sección es la de sus cuatro
+  marcos, y recibe `@fotos: <código de la sección>`. `[REQ]` Con las palabras
+  del cliente: *«todas las fotos que vayamos adjuntando en la parte de
+  inventario deberán aparecer en cada recuadro azul, y el pie de cada foto es el
+  título de esa foto»*.
+* La primera diapositiva de la sección 07 que solo trae imágenes pegadas desde
+  Excel recibe `@capex`. `[REQ]` *«En vez de la tabla que aparece ahí deberá ir
+  la tabla pegada de CAPEX de nuestra herramienta.»*
+
+`[LIM]` De las diapositivas de la sección 07 se marca **la primera**. Las demás
+—la segunda tabla, la leyenda de riesgo y los dos gráficos— se quedan con sus
+imágenes: son contenido de la plantilla y quién decide si sobran es el cliente.
 """
 
 from __future__ import annotations
@@ -39,9 +54,14 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import cast
 
-from pptx import Presentation
+import pptx
+from pptx.presentation import Presentation
+from pptx.shapes.autoshape import Shape
+from pptx.shapes.base import BaseShape
 from pptx.slide import Slide
+from pptx.text.text import TextFrame
 
 #: `(título en la plantilla, código del árbol, nota)`.
 #:
@@ -78,10 +98,14 @@ SECCIONES: tuple[tuple[str, str, str], ...] = (
     ("ELECTRICAL INSTALATION", "HC.H09", ""),
     ("TELECOMUNICACIONES", "HC.H14", ""),
     ("TELECOMMUNICATIONS", "HC.H14", ""),
-    # `[SUP]` «Protección contra incendios» a secas es la ACTIVA: la pasiva
-    # tiene su propia sección unas diapositivas antes.
-    ("PROTECCION CONTRA INCENDIOS", "HC.H10", "se entiende como PCI activa"),
-    ("FIRE PROTECTION", "HC.H10", "se entiende como PCI activa"),
+    # `[REQ]` «Protección contra incendios» a secas es la ACTIVA. Lo confirmó el
+    # cliente: *«sobre Protección contra Incendios, esto debe ir en el análisis
+    # técnico de instalaciones»*, y en su plantilla esta sección está justamente
+    # ahí, bajo la cabecera «ANÁLISIS TÉCNICO · INSTALACIONES». La PASIVA es
+    # obra —sectorización, resistencia al fuego de la estructura— y tiene su
+    # propia sección unas diapositivas antes, dentro de ARQUITECTURA.
+    ("PROTECCION CONTRA INCENDIOS", "HC.H10", "PCI activa, en instalaciones"),
+    ("FIRE PROTECTION", "HC.H10", "PCI activa, en instalaciones"),
     ("ASCENSORES", "HC.H12", ""),
     ("ELEVATORS", "HC.H12", ""),
     # `[REQ]` Fontanería **sí tiene sección**, y comparte diapositiva con
@@ -155,11 +179,128 @@ def _codigo_de(titulo: str) -> str | None:
 
 
 def marcar(prs: Presentation) -> list[str]:
-    """Escribe los marcadores. Devuelve qué se ha puesto y dónde."""
+    """Escribe los marcadores y las directivas. Devuelve qué se ha puesto."""
     puestos: list[str] = []
+    codigos_por_diapositiva: dict[int, list[str]] = {}
     for numero, slide in enumerate(prs.slides, start=1):
-        puestos += _marcar_diapositiva(slide, numero)
+        lineas = _marcar_diapositiva(slide, numero)
+        puestos += lineas
+        codigos = _codigos_de(lineas)
+        if codigos:
+            codigos_por_diapositiva[numero] = codigos
+
+    puestos += _marcar_fotos(prs, codigos_por_diapositiva)
+    puestos += _marcar_capex(prs)
     return puestos
+
+
+def _codigos_de(lineas: list[str]) -> list[str]:
+    """Los códigos que han caído en una diapositiva, sin repetir y en orden."""
+    vistos: list[str] = []
+    for linea in lineas:
+        codigo = linea.rsplit(":", 1)[-1].rstrip("}")
+        if codigo not in vistos:
+            vistos.append(codigo)
+    return vistos
+
+
+def _marcar_fotos(prs: Presentation, codigos: dict[int, list[str]]) -> list[str]:
+    """`@fotos` en la diapositiva **siguiente** a la de texto de cada sección.
+
+    Es la pareja que la plantilla ya trae: una de texto y otra de cuatro marcos.
+    Se comprueba que la siguiente tenga de verdad marcos de imagen antes de
+    escribir nada, porque en las plantillas inglesas la protección pasiva ocupa
+    tres diapositivas seguidas de texto y ahí no hay pareja.
+
+    Cuando una diapositiva lleva **dos secciones** —cimentación y estructura,
+    ascensores y fontanería— su página de fotos recibe el código del capítulo
+    común si lo hay, y si no, el de la primera. `[SUP]` Sin validar: puede que
+    el cliente quiera las dos secciones repartidas en la misma página.
+    """
+    puestos: list[str] = []
+    for numero, suyos in codigos.items():
+        if numero >= len(prs.slides):
+            continue
+        siguiente = prs.slides[numero]  # `numero` es 1-based: esta es la de después
+        if not _tiene_marcos(siguiente):
+            continue
+        # Las dos secciones de una diapositiva compartida —ascensores y
+        # fontanería— comparten también su página de fotos, y `@fotos` admite
+        # los dos códigos. Con uno solo, las fotos de la segunda se perdían.
+        codigo = ", ".join(suyos)
+        _anotar(siguiente, f"@fotos: {codigo}")
+        puestos.append(f"diap. {numero + 1}: @fotos: {codigo}")
+    return puestos
+
+
+def _tiene_marcos(slide: Slide) -> bool:
+    """¿Es una diapositiva de fotos? Cuatro formas grandes y sin imagen dentro."""
+    from pptx.util import Emu
+
+    grandes = [
+        f
+        for f in slide.shapes
+        if f.width is not None
+        and f.height is not None
+        and Emu(f.width).inches >= 1.5  # noqa: PLR2004
+        and Emu(f.height).inches >= 1.5  # noqa: PLR2004
+        and f.shape_type != 13  # no una imagen ya puesta  # noqa: PLR2004
+    ]
+    return len(grandes) >= 2  # noqa: PLR2004
+
+
+#: Cómo se titula la portadilla de la sección del CAPEX, en los dos idiomas.
+PORTADILLA_CAPEX = frozenset({"CAPEX"})
+
+
+def _marcar_capex(prs: Presentation) -> list[str]:
+    """`@capex` en la primera diapositiva de tabla de la sección 07.
+
+    Se busca **desde su portadilla** y no la primera diapositiva de imágenes que
+    aparezca: el primer intento cayó en la sección de mediciones AEO, que
+    también son imágenes pegadas, y habría puesto la tabla del CAPEX en medio
+    del criterio de medición.
+    """
+    inicio = next(
+        (
+            n
+            for n, s in enumerate(prs.slides, start=1)
+            if any(
+                (m := _marco(f)) is not None and _sin_tildes(m.text) in PORTADILLA_CAPEX
+                for f in s.shapes
+            )
+        ),
+        None,
+    )
+    if inicio is None:
+        return []
+    for numero in range(inicio + 1, len(prs.slides) + 1):
+        slide = prs.slides[numero - 1]
+        formas = list(slide.shapes)
+        if formas and all(f.shape_type == 13 for f in formas) and len(formas) >= 2:  # noqa: PLR2004
+            _anotar(slide, "@capex")
+            return [f"diap. {numero}: @capex"]
+    return []
+
+
+def _marco(forma: BaseShape) -> TextFrame | None:
+    """El cuadro de texto de una forma, o `None` si no lo tiene.
+
+    `has_text_frame` contesta la pregunta pero no estrecha el tipo, así que la
+    comprobación y el acceso viven juntos aquí en lugar de repetidos.
+    """
+    if not forma.has_text_frame:
+        return None
+    return cast("TextFrame", cast("Shape", forma).text_frame)
+
+
+def _anotar(slide: Slide, linea: str) -> None:
+    """Añade una línea a las notas del orador, sin borrar lo que hubiera."""
+    marco = slide.notes_slide.notes_text_frame
+    if marco is None:  # pragma: no cover — un patrón de notas sin marcador de texto
+        return
+    actual = marco.text or ""
+    marco.text = f"{actual}\n{linea}".strip() if actual.strip() else linea
 
 
 def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
@@ -172,11 +313,12 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
     """
     puestos: list[str] = []
     for forma in slide.shapes:
-        if not forma.has_text_frame:
+        marco = _marco(forma)
+        if marco is None:
             continue
         codigo: str | None = None
         toca_valoracion = False
-        for parrafo in forma.text_frame.paragraphs:
+        for parrafo in marco.paragraphs:
             texto = parrafo.text.strip()
             if not texto:
                 continue
@@ -234,7 +376,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{args.salida} ya existe. Elija otro nombre o bórrelo.", file=sys.stderr)
         return 2
 
-    prs = Presentation(str(args.original))
+    prs = pptx.Presentation(str(args.original))
     puestos = marcar(prs)
     for linea in puestos:
         print(" ·", linea)

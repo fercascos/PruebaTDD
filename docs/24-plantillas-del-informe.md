@@ -196,8 +196,63 @@ Lee los títulos de la plantilla, los ata a su código y escribe los marcadores
 mal sitio, se corrige en PowerPoint.
 
 `[SUP]` La correspondencia título → código está deducida comparando los títulos
-de la plantilla con el árbol de §5.3 y **no está validada con el cliente**. Tres
-entradas son discutibles y se señalan en la tabla del propio fichero.
+de la plantilla con el árbol de §5.3. La mayoría es literal. Las dos que no lo
+son van marcadas `[PDV]` en la tabla del propio fichero.
+
+`[REQ]` **«Protección contra incendios» es la ACTIVA, y va en instalaciones.**
+Lo pidió el cliente con estas palabras: *«sobre Protección contra Incendios,
+esto debe ir en el análisis técnico de instalaciones»*. Es donde su propia
+plantilla la tiene —diapositiva 38, bajo la cabecera «ANÁLISIS TÉCNICO ·
+INSTALACIONES»— y se ata a `HC.H10`. La **pasiva** es obra —sectorización,
+resistencia al fuego de la estructura— y se queda en su sección de
+ARQUITECTURA, atada a `HC.H06`.
+
+---
+
+## 3 ter · Las fotografías y la tabla de CAPEX, en su sitio de la plantilla
+
+Las dos van en las **notas del orador**, que no se imprimen, y las escribe
+`marcar_plantilla.py` sin que nadie teclee nada.
+
+### `@fotos: <códigos>` · los recuadros azules
+
+`[REQ]` Con las palabras del cliente: *«todas las fotos que vayamos adjuntando
+en la parte de inventario deberán aparecer en cada recuadro azul y el pie de
+cada foto, lo que aparece en la plantilla como "Descripción", es el título de
+esa foto»*.
+
+La diapositiva siguiente a la de texto de cada sección recibe la directiva con
+el código de esa sección. Entonces:
+
+- Van sus fotografías, **las del árbol de esa sección**: una foto de `HC.H02.01`
+  cae en la diapositiva de `@fotos: HC.H02`, porque el capítulo recoge lo de sus
+  objetos.
+- Cada foto **conserva su proporción** dentro del marco y el marco desaparece:
+  no se deforma para rellenar el hueco.
+- El pie «Descripción» se sustituye por el **título de la foto** (`caption`).
+- Los marcos que sobran **se vacían**. Un recuadro azul con «Descripción»
+  debajo, impreso y vacío, delata el hueco.
+
+Una diapositiva compartida por dos secciones lleva las dos, separadas por comas:
+`@fotos: HC.H12, HC.H11` es la de ascensores y fontanería.
+
+Solo entran las fotografías marcadas para el informe: subirlas no es elegirlas.
+Y llevan su **objeto del árbol**, que es lo que las lleva a su sección; una foto
+sin objeto se añade al final y se avisa.
+
+### `@capex` · la tabla de la herramienta
+
+`[REQ]` *«En vez de la tabla que aparece ahí deberá ir la tabla pegada de CAPEX
+de nuestra herramienta.»*
+
+La diapositiva de la sección 07 que lleva la directiva recibe la **tabla nativa**
+del CAPEX del proyecto. Lo que había pegado desde Excel es una imagen y **se
+retira**: dejarla debajo daría dos tablas con cifras distintas en la misma
+página.
+
+Si la tabla no cabe en una diapositiva, se parte: cada trozo se lleva su copia
+de la diapositiva de la plantilla —con su cabecera y su pie— y salen
+**seguidas**, numeradas «(1/2)», «(2/2)».
 
 ---
 
@@ -206,12 +261,10 @@ entradas son discutibles y se señalan en la tabla del propio fichero.
 `[LIM]` Se dice porque el informe es un entregable firmado y conviene saber
 dónde está el límite hoy:
 
-- **Las fotografías no se insertan.** Cada sección del Full Report tiene su
-  diapositiva con cuatro marcos 3,15 × 2,36 in y sus cuatro pies «Descripción»:
-  se quedan vacíos. Es la pieza más visible de las que faltan.
-- **La tabla del CAPEX se añade en diapositivas en blanco al final**, con el
-  diseño de la aplicación y no con el tuyo. La plantilla tiene su propia sección
-  07 CAPEX con seis diapositivas de imágenes EMF, y ahí es donde debería ir.
+- **Solo se marca la primera diapositiva de tablas de la sección 07.** Las demás
+  —la segunda tabla, la leyenda de riesgo y los dos gráficos— se quedan con sus
+  imágenes pegadas: son contenido de la plantilla y quién decide si sobran es el
+  cliente.
 - **No hay filas repetibles dentro de una tabla** (`{{#row ...}}` de
   [`12`](./12-pptx.md) §17.2). Una tabla de la plantilla se queda como está.
 - **No se insertan imágenes por marcador** (`{{@asset.main_photo}}`).

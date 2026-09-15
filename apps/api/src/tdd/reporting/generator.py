@@ -20,9 +20,9 @@ from pptx import Presentation
 from pptx.util import Emu, Inches
 
 from tdd.reporting import capex_layout as cl
+from tdd.reporting import composicion, repeticion
 from tdd.reporting import marcadores as mk
-from tdd.reporting import repeticion
-from tdd.reporting.clone import sustituir_marcadores
+from tdd.reporting.clone import clonar_diapositiva, sustituir_marcadores
 from tdd.reporting.pptx_table import insertar_tabla
 from tdd.reporting.watermark import retirar_marcas_de_agua
 
@@ -32,11 +32,17 @@ FILAS_POR_DIAPOSITIVA = 18
 
 @dataclass(frozen=True, slots=True)
 class FotoParaInsertar:
-    """Una foto lista para colocar: sus bytes y su pie."""
+    """Una foto lista para colocar: sus bytes, su pie y su sección.
+
+    `capex_code` es lo que la lleva a la diapositiva de SU sección del Full
+    Report `[REQ]` §3.2. Sale de la propia foto o del equipo que retrata, y sin
+    él la fotografía no sabe a qué recuadro va.
+    """
 
     photo_id: str
     datos: bytes
     caption: str = ""
+    capex_code: str = ""
 
 
 @dataclass
@@ -66,6 +72,13 @@ class ResultadoDeGeneracion:
     #: Marcadores de sección que la plantilla pide y este proyecto no tiene, ya
     #: vaciados. No son un fallo: son secciones sin contenido en este edificio.
     secciones_sin_datos: list[str] = field(default_factory=list)
+    #: Lo que la composición ha tenido que decidir: fotos que no caben en una
+    #: diapositiva, marcos que no se reconocen, más de un `@capex`.
+    avisos_de_composicion: list[str] = field(default_factory=list)
+    #: Diapositivas de la plantilla que han recibido la tabla nativa de CAPEX.
+    #: Cero significa que la plantilla no dice dónde quiere la tabla y se ha
+    #: añadido al final.
+    diapositivas_de_capex_en_plantilla: int = 0
 
 
 def valores_de_marcadores(snapshot: dict[str, Any]) -> dict[str, str]:
@@ -315,15 +328,45 @@ def generar(
             sustituir_marcadores(slide, vacios)
         sin_resolver = [m for m in sin_resolver if m not in set(sin_datos)]
 
-    # 2 · Tabla nativa de CAPEX, partida si hace falta.
+    # 2 · Tabla nativa de CAPEX.
+    #
+    # `[REQ]` §3.2 · Va **donde la plantilla la pide**, no en diapositivas en
+    # blanco al final. Con las palabras del cliente: *«en vez de la tabla que
+    # aparece ahí deberá ir la tabla pegada de CAPEX de nuestra herramienta»*.
+    # Su sección 07 ya tiene la maqueta —portadilla, pie, numeración— y una
+    # imagen pegada desde Excel que se retira.
+    #
+    # `[LIM]` Sin `@capex` en ninguna diapositiva se sigue añadiendo al final,
+    # que es lo que hacía antes: una plantilla que no dice dónde quiere la tabla
+    # prefiere tenerla suelta a no tenerla.
     layout = cl.construir(lineas_de_capex(snapshot), capitulo="CAPEX", locale=locale)
     trozos = cl.particionar(layout, filas_por_diapositiva=FILAS_POR_DIAPOSITIVA)
-    for trozo in trozos:
-        slide = prs.slides.add_slide(prs.slide_layouts[6])
-        insertar_tabla(slide, trozo)
+    usadas, avisos_de_composicion = composicion.poner_capex(
+        prs, trozos, clonar=clonar_diapositiva, insertar=insertar_tabla
+    )
+    if not usadas:
+        for trozo in trozos:
+            slide = prs.slides.add_slide(prs.slide_layouts[6])
+            insertar_tabla(slide, trozo)
 
-    # 3 · Fotografías, en el orden que fijó el consultor.
+    # 3 · Fotografías.
+    #
+    # `[REQ]` §3.2 · Cada una en **el recuadro de su sección**, con su título de
+    # pie. Con las palabras del cliente: *«todas las fotos que vayamos
+    # adjuntando en la parte de inventario deberán aparecer en cada recuadro
+    # azul, y el pie de cada foto es el título de esa foto»*.
     insertadas = 0
+    en_seccion, avisos_de_fotos = composicion.repartir_fotos(
+        prs, list(fotos or []), clonar=clonar_diapositiva
+    )
+    insertadas += en_seccion
+    avisos_de_composicion += avisos_de_fotos
+
+    # `[LIM]` Las que no caen en ninguna sección —sin código y sin equipo— se
+    # siguen añadiendo al final, como antes. Perderlas por no estar clasificadas
+    # sería peor: son fotografías de una visita que ya se hizo.
+    declaradas = composicion.secciones_declaradas(prs)
+    fotos = [f for f in (fotos or []) if not composicion.cae_en_una_seccion(f, declaradas)]
     if fotos:
         if prs.slide_width is None or prs.slide_height is None:
             raise ValueError("La plantilla no declara el tamaño de diapositiva")
@@ -377,6 +420,8 @@ def generar(
         avisos_de_repeticion=avisos_de_repeticion,
         diapositivas_repetidas=repetidas,
         secciones_sin_datos=sin_datos,
+        avisos_de_composicion=avisos_de_composicion,
+        diapositivas_de_capex_en_plantilla=usadas,
     )
 
 

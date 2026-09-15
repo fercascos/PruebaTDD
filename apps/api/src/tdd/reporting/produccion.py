@@ -108,7 +108,10 @@ def fotos_del_snapshot(
 
         salida.append(
             generator.FotoParaInsertar(
-                photo_id=str(foto["id"]), datos=datos, caption=str(foto.get("caption") or "")
+                photo_id=str(foto["id"]),
+                datos=datos,
+                caption=str(foto.get("caption") or ""),
+                capex_code=str(foto.get("capex_code") or ""),
             )
         )
     return salida

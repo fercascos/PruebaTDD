@@ -351,6 +351,12 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     zone_id: Annotated[uuid.UUID | None, Form()] = None,
     location_node_id: Annotated[uuid.UUID | None, Form()] = None,
     technical_system_id: Annotated[uuid.UUID | None, Form()] = None,
+    # `[REQ]` §3.2 d · El OBJETO del árbol que retrata. Se admite **al subir**
+    # y no solo en la ficha porque el sistema técnico ya se admitía aquí, y
+    # mandarlo era lo natural: un formulario no declarado se descarta sin
+    # error, y así se perdía la clasificación que lleva la foto a su sección
+    # del Full Report.
+    capex_code_id: Annotated[uuid.UUID | None, Form()] = None,
     caption: Annotated[str | None, Form()] = None,
 ) -> Any:
     """Da de alta la foto y sus derivados. **El original se guarda tal cual llegó.**
@@ -431,14 +437,14 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             """
             INSERT INTO photo (
                 id, organization_id, project_id, asset_id, zone_id, location_node_id,
-                technical_system_id,
+                technical_system_id, capex_code_id,
                 stored_object_id,
                 origin, status, original_filename, display_name, file_extension, mime_type,
                 sha256, phash, byte_size, width_px, height_px, taken_at,
                 gps_latitude, gps_longitude, camera_make, camera_model, orientation,
                 exif_raw, caption, duplicate_of_photo_id, uploaded_by
             ) VALUES (
-                :id, :org, :proy, :activo, :zona, :espacio, :sistema, :objeto,
+                :id, :org, :proy, :activo, :zona, :espacio, :sistema, :codigo, :objeto,
                 CAST(:origen AS photo_origin), 'LISTA', :llegada, :visible, :ext, :mime,
                 :sha, :phash, :bytes, :ancho, :alto, :fecha,
                 :lat, :lon, :marca, :modelo, :orient,
@@ -454,6 +460,7 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
             "sistema": str(technical_system_id) if technical_system_id else None,
             "zona": str(zone_id) if zone_id else None,
             "espacio": str(location_node_id) if location_node_id else None,
+            "codigo": str(capex_code_id) if capex_code_id else None,
             "objeto": str(objeto_id),
             "origen": origin if origin in _ORIGENES else "ORDENADOR",
             "llegada": nombre_original[:260],

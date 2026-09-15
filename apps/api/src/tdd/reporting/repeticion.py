@@ -85,7 +85,7 @@ def plan_de(slide: Slide) -> tuple[str, int] | None:
     return coleccion, int(tope.group(1)) if tope else 0
 
 
-def _mover_detras(prs: Presentacion, slide: Slide, referencia: Slide) -> None:
+def mover_detras(prs: Presentacion, slide: Slide, referencia: Slide) -> None:
     """Coloca `slide` justo detrás de `referencia` en el orden de la lista.
 
     `python-pptx` no ofrece reordenar: se opera sobre `sldIdLst`, que es la
@@ -187,7 +187,7 @@ def expandir(
         anterior: Slide = slide
         for elemento in elementos:
             copia = clonar_diapositiva(prs, slide)
-            _mover_detras(prs, copia, anterior)
+            mover_detras(prs, copia, anterior)
             anterior = copia
             sin_resolver += sustituir(copia, {**globales, **valores_de(snapshot, elemento)})
         _retirar(prs, slide)

@@ -270,3 +270,48 @@ def test_una_seccion_sin_datos_sale_en_blanco_y_no_con_el_marcador() -> None:
     assert "{{" not in texto, texto
     assert r.marcadores_sin_resolver == []
     assert r.secciones_sin_datos == ["descriptivo:HC.H14"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  La tabla de CAPEX en la diapositiva que la plantilla reserva
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_los_trozos_de_la_tabla_de_capex_van_seguidos_y_no_al_final() -> None:
+    """`[REQ]` *«en vez de la tabla que aparece ahí deberá ir la tabla pegada de
+    CAPEX de nuestra herramienta»*.
+
+    Una tabla que no cabe se parte, y cada trozo necesita su propia diapositiva.
+    Clonar añade al final de la presentación: el «(2/2)» salía como última
+    diapositiva del informe, detrás de las conclusiones.
+    """
+    from tdd.reporting import composicion
+    from tdd.reporting.clone import clonar_diapositiva
+
+    prs = Presentation(
+        io.BytesIO(
+            _plantilla(
+                ("Portada", ""),
+                ("Tabla de CAPEX", "@capex"),
+                ("Conclusiones", ""),
+            )
+        )
+    )
+
+    def _insertar(slide: Any, trozo: Any) -> None:
+        caja = slide.shapes.add_textbox(Inches(1), Inches(4), Inches(8), Inches(1))
+        caja.text_frame.text = trozo
+
+    usadas, avisos = composicion.poner_capex(
+        prs, ["trozo 1", "trozo 2"], clonar=clonar_diapositiva, insertar=_insertar
+    )
+
+    assert (usadas, avisos) == (2, [])
+    textos = _textos(prs)
+    assert "trozo 1" in textos[1]
+    assert "trozo 2" in textos[2]
+    assert textos[-1] == "Conclusiones"
+    # Cada trozo, en su diapositiva y **solo el suyo**: la copia se sacaba del
+    # modelo cuando ya llevaba el trozo anterior dentro, y las dos tablas
+    # salían superpuestas en el mismo sitio.
+    assert "trozo 1" not in textos[2], textos[2]

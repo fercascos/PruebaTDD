@@ -37,7 +37,10 @@ from sqlalchemy.orm import Session
 #: **2** añade `descriptivos` `[REQ]` §3.2 d. Es un añadido y no un cambio: un
 #: snapshot de la versión 1 se lee igual y la clave sale vacía, que es lo que
 #: corresponde —aquel informe se generó cuando la aplicación no los guardaba—.
-VERSION_DE_FORMATO = 2
+#:
+#: **3** añade `capex_code` a cada fotografía `[REQ]` §3.2, que es lo que la
+#: lleva a la diapositiva de su sección en el Full Report.
+VERSION_DE_FORMATO = 3
 
 
 def _serializable(valor: Any) -> Any:
@@ -193,10 +196,22 @@ def construir(
         s,
         "SELECT p.id, p.asset_id, p.zone_id, p.display_name, p.file_extension, p.caption, "
         "p.report_order, p.report_section, CAST(p.status AS text) AS status, p.taken_at, "
+        # `[REQ]` §3.2 · El objeto del árbol al que pertenece la fotografía. Es
+        # lo que la lleva a la diapositiva de SU sección del Full Report: sin
+        # esto, las fotos del inventario no sabían a qué recuadro iban.
+        #
+        # Sale del código de la propia foto y, si no lo tiene, del equipo que
+        # retrata: se fotografía una máquina antes que un capítulo, y obligar a
+        # codificar la foto cuando el equipo ya lo está sería teclear dos veces.
+        "COALESCE(cc.code, ec.code) AS capex_code, "
         "(SELECT pv.annotations FROM photo_version pv "
         "  WHERE pv.photo_id = p.id AND pv.is_current AND pv.annotations IS NOT NULL "
         "  ORDER BY pv.version_number DESC LIMIT 1) AS annotations "
-        "FROM photo p WHERE p.project_id = :p AND p.deleted_at IS NULL AND p.include_in_report "
+        "FROM photo p "
+        "LEFT JOIN capex_code cc ON cc.id = p.capex_code_id "
+        "LEFT JOIN equipment e ON e.id = p.equipment_id "
+        "LEFT JOIN capex_code ec ON ec.id = e.capex_code_id "
+        "WHERE p.project_id = :p AND p.deleted_at IS NULL AND p.include_in_report "
         "ORDER BY COALESCE(p.report_order, 2147483647), p.uploaded_at",
         {"p": str(project_id)},
     )

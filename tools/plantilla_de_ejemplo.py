@@ -24,7 +24,8 @@ import argparse
 import sys
 from pathlib import Path
 
-from pptx import Presentation
+import pptx
+from pptx.presentation import Presentation
 from pptx.util import Inches, Pt
 
 #: `(título, cuerpo, notas)`. El cuerpo lleva los marcadores.
@@ -95,7 +96,7 @@ DIAPOSITIVAS: tuple[tuple[str, str, str], ...] = (
 
 
 def construir() -> Presentation:
-    prs = Presentation()
+    prs: Presentation = pptx.Presentation()
     # 16:9, que es lo que usa cualquier plantilla corporativa de hoy.
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)

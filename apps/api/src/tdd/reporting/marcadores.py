@@ -348,7 +348,7 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
         codigo = _texto(fila.get("capex_code"))
         if not codigo:
             continue
-        for clave in _codigo_y_ancestros(codigo):
+        for clave in codigo_y_ancestros(codigo):
             for campo, destino in (("texto", descriptivos), ("valoracion", valoraciones)):
                 valor = _texto(fila.get(campo)).strip()
                 if valor:
@@ -366,13 +366,13 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
         if hallazgo is None:
             continue
         codigo = _texto(hallazgo.get("capex_code"))
-        for clave in _codigo_y_ancestros(codigo):
+        for clave in codigo_y_ancestros(codigo):
             importes[clave] = importes.get(clave, Decimal("0")) + Decimal(str(linea["amount"]))
     for hallazgo in snapshot.get("findings", []):
         codigo = _texto(hallazgo.get("capex_code"))
         titulo = _texto(hallazgo.get("title"))
         riesgo = _texto(hallazgo.get("risk_name"))
-        for clave in _codigo_y_ancestros(codigo):
+        for clave in codigo_y_ancestros(codigo):
             hallazgos.setdefault(clave, []).append(f"{titulo} ({riesgo})" if riesgo else titulo)
 
     valores: dict[str, str] = {}
@@ -387,7 +387,7 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
     return valores
 
 
-def _codigo_y_ancestros(codigo: str) -> list[str]:
+def codigo_y_ancestros(codigo: str) -> list[str]:
     """`HC.H04.03` → `['HC.H04.03', 'HC.H04', 'HC']`.
 
     Sale del propio código, como en el árbol documental: así el marcador de un

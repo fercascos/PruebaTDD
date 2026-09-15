@@ -216,6 +216,30 @@ def test_la_foto_sin_activo_se_acepta_con_aviso(
     assert any("activo" in a for a in r.json()["avisos"])
 
 
+def test_el_objeto_del_arbol_se_puede_mandar_al_subir(
+    cliente: TestClient, cab: Any, proyecto: str, motor_admin: Any
+) -> None:
+    """`[REQ]` §3.2 d · Es lo que lleva la foto a su sección del Full Report.
+
+    Mandarlo en el formulario de subida **no daba error y no se guardaba**: un
+    campo que el endpoint no declara se descarta en silencio. Con eso las fotos
+    llegaban al informe sin objeto y los recuadros de la plantilla salían
+    vacíos sin que nada lo dijera.
+    """
+    with motor_admin.begin() as conn:
+        codigo = conn.execute(
+            text("SELECT id FROM capex_code WHERE code = 'HC.H02.01' AND organization_id IS NULL")
+        ).scalar_one()
+
+    cuerpo = subir(cliente, cab, proyecto, foto_unica(), capex_code_id=str(codigo)).json()
+
+    with motor_admin.begin() as conn:
+        guardado = conn.execute(
+            text("SELECT capex_code_id FROM photo WHERE id = :i"), {"i": cuerpo["id"]}
+        ).scalar_one()
+    assert str(guardado) == str(codigo)
+
+
 def test_sin_fecha_exif_el_campo_queda_vacio_y_se_avisa(
     cliente: TestClient, cab: Any, proyecto: str
 ) -> None:

@@ -265,6 +265,21 @@ HALLAZGOS_SEGUNDO: tuple[tuple[str, str, str, str, str, str, str, str], ...] = (
     ),
 )
 
+#: `[REQ]` §3.2 · Las fotografías de la visita: dónde se tomaron, a qué sistema
+#: pertenecen, **qué objeto del árbol retratan** y su título.
+#:
+#: El objeto es lo que las lleva a la diapositiva de su sección del Full Report;
+#: el título es lo que la plantilla del cliente llama «Descripción» y va de pie.
+#: Se reparten por secciones distintas a propósito —cubierta, electricidad,
+#: climatización— para que se vea que cada una cae en su diapositiva y no todas
+#: en la misma.
+FOTOS: tuple[tuple[str, tuple[int, int, int], str, str, str], ...] = (
+    ("Sala Máquinas 2", (96, 118, 140), "CLIMA", "HC.H08.01", "Enfriadora aire-agua en cubierta"),
+    ("Lucernarios", (120, 104, 92), "CUB", "HC.H02.01", "Lucernarios de policarbonato celular"),
+    ("Cuarto eléctrico", (86, 112, 96), "ELEC", "HC.H09.02", "Cuadro general de baja tensión"),
+    ("Muelle 3", (132, 116, 140), "CUB", "HC.H02.01", "Encuentro de cubierta con el muelle"),
+)
+
 UBICACIONES: tuple[tuple[str, str, str | None], ...] = (
     ("ZONA", "Cubierta", None),
     ("ESPACIO", "Sala Máquinas 2", "Cubierta"),
@@ -625,33 +640,49 @@ def sembrar(api: Api) -> str:
         )
     print(f"· {len(HALLAZGOS_SEGUNDO)} hallazgos más, en el segundo activo")
 
-    # ── Fotografías, cada una en su sitio ───────────────────────────────────
+    # ── Fotografías, cada una en su sitio y en su sección ───────────────────
+    #
+    # `[REQ]` §3.2 · Cada fotografía lleva **su objeto del árbol**, que es lo que
+    # la lleva a la diapositiva de su sección en el Full Report, y **entra en el
+    # informe** con su título de pie. Sin las dos cosas, la demostración no
+    # podía enseñar los recuadros de la plantilla rellenos: las fotos existían y
+    # el informe salía con los marcos vacíos.
     sistemas = api.get("/catalogs/technical-systems")
-    colores = [(96, 118, 140), (120, 104, 92), (86, 112, 96), (132, 116, 140)]
-    for i, (nombre, color) in enumerate(
-        zip(
-            ["Sala Máquinas 2", "Lucernarios", "Cuarto eléctrico", "Muelle 3"],
-            colores,
-            strict=True,
-        )
-    ):
-        api.post(
+    por_codigo_sistema = {s["code"]: s["id"] for s in sistemas}
+    # `objeto_foto` y no `objeto` a secas: el inventario de equipo, más abajo,
+    # reutiliza ese nombre para un código que **puede faltar**, y compartirlo
+    # dejaba el tipo en desacuerdo entre los dos bucles.
+    for i, (nombre, color, sistema, objeto_foto, titulo) in enumerate(FOTOS):
+        subida = api.post(
             f"/projects/{proyecto['id']}/photos",
             campos={
                 "file": (f"visita-{i}.jpg", imagen(color, nombre), "image/jpeg"),
                 "asset_id": activo["id"],
                 "location_node_id": por_nombre[nombre],
-                "technical_system_id": sistemas[i % len(sistemas)]["id"],
-                "caption": f"{nombre} · estado durante la visita",
+                "technical_system_id": por_codigo_sistema.get(sistema),
+                "caption": titulo,
             },
         )
-    print("· 4 fotografías, cada una en su ubicación")
+        # El OBJETO del árbol y la entrada en el informe van en la ficha, no en
+        # la subida: subir y clasificar son dos actos, y es lo que hace la
+        # aplicación. `capex_code_id` mandado en el formulario de subida **se
+        # pierde sin decir nada** —no es un campo de ese endpoint—, y con él se
+        # perdían los recuadros de fotos del Full Report: salían vacíos.
+        api.patch(
+            f"/photos/{subida['id']}",
+            {
+                "capex_code_id": por_codigo(objeto_foto)["id"],
+                "include_in_report": True,
+                "report_order": i,
+            },
+        )
+    print(f"· {len(FOTOS)} fotografías, cada una en su ubicación y en su sección del informe")
 
     # ── Inventario de equipo (§7 · §3.2 d) ──────────────────────────────────
     # El sistema técnico se elige POR CÓDIGO y no por posición en la lista: de
     # él sale el capítulo del CAPEX al generar las actuaciones, y repartirlos
-    # por índice colocaba la enfriadora en «Accesibilidad».
-    por_codigo_sistema = {s["code"]: s["id"] for s in sistemas}
+    # por índice colocaba la enfriadora en «Accesibilidad». El mapa ya se
+    # construyó al subir las fotografías, que lo necesitan por lo mismo.
     for tipo, tag, marca, ano, vida, estado, sistema, objeto, marcado in EQUIPOS:
         api.post(
             f"/projects/{proyecto['id']}/equipment",
