@@ -532,3 +532,97 @@ def test_con_un_solo_activo_no_se_avisa_de_nada() -> None:
     r = generator.generar(_plantilla(("Dirección: {{asset.address}}", "")), datos)
 
     assert r.avisos_de_composicion == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  El resumen ejecutivo: un bloque de obra entero, y las cifras
+# ─────────────────────────────────────────────────────────────────────────────
+
+RESUMEN: dict[str, Any] = {
+    **SNAPSHOT,
+    "findings": [
+        {"id": "f1", "capex_code": "HC.H02.01", "title": "Cubierta", "risk_name": "Alto"},
+        {"id": "f2", "capex_code": "HC.H03", "title": "Fachada", "risk_name": "Moderado"},
+        {"id": "f3", "capex_code": "HC.H03", "title": "Juntas", "risk_name": "Moderado"},
+        {"id": "f4", "capex_code": "HC.H09.02", "title": "CGBT", "risk_name": "Extremo"},
+    ],
+    "capex_items": [
+        {"finding_id": "f1", "time_horizon_code": "MEDIO", "amount": "83407.50"},
+        {"finding_id": "f2", "time_horizon_code": "CORTO", "amount": "14300"},
+        {"finding_id": "f4", "time_horizon_code": "CORTO", "amount": "6200"},
+    ],
+    "catalogs": {
+        "risk_levels": [
+            {"code": "04", "name_es": "Extremo", "score": 4},
+            {"code": "03", "name_es": "Alto", "score": 3},
+            {"code": "02", "name_es": "Moderado", "score": 2},
+        ],
+        "time_horizons": [
+            {"code": "CORTO", "name_es": "Corto plazo", "sort_order": 1},
+            {"code": "MEDIO", "name_es": "Medio plazo", "sort_order": 2},
+        ],
+    },
+}
+
+
+def test_un_bloque_de_obra_vale_como_ambito() -> None:
+    """`[REQ]` El resumen ejecutivo de la plantilla es **una diapositiva para
+    arquitectura y otra para instalaciones**, sin desglosar por capítulo. El
+    bloque sale del código del capítulo, como el capítulo sale del objeto."""
+    from tdd.reporting import marcadores as mk
+
+    assert mk.codigo_y_ancestros("HC.H02.01") == ["HC.H02.01", "HC.H02", "HC", "ARQUITECTURA"]
+    assert mk.codigo_y_ancestros("HC.H09.02")[-1] == "INSTALACIONES"
+    # Lo que no es obra no tiene bloque: su sitio es el resumen de presupuesto.
+    assert mk.codigo_y_ancestros("SC.S01") == ["SC.S01", "SC"]
+
+
+def test_el_resumen_cuenta_las_deficiencias_y_el_capex_del_bloque() -> None:
+    from tdd.reporting import marcadores as mk
+
+    valores = mk.por_codigo(RESUMEN)
+    assert valores["resumen:ARQUITECTURA"] == (
+        "3 deficiencias detectadas: 1 de riesgo alto y 2 de riesgo moderado.\n"
+        "CAPEX estimado: 97.707,50 € (14.300,00 € a corto plazo y 83.407,50 € a medio plazo)."
+    )
+
+
+def test_cada_grado_de_riesgo_lleva_su_de_riesgo_delante() -> None:
+    """Abreviarlo deja los nombres haciendo de adjetivo, y entonces tienen que
+    concordar: «2 moderado» donde el castellano pide «2 moderadas». Concordar no
+    se puede, porque los grados son de catálogo y el cliente los renombra."""
+    from tdd.reporting import marcadores as mk
+
+    primera = mk.por_codigo(RESUMEN)["resumen:ARQUITECTURA"].split("\n")[0]
+    assert primera.count("de riesgo") == 2  # noqa: PLR2004
+
+
+def test_un_solo_grado_no_repite_el_numero() -> None:
+    """«1 deficiencia detectada: 1 de riesgo extremo» dice dos veces lo mismo."""
+    from tdd.reporting import marcadores as mk
+
+    assert mk.por_codigo(RESUMEN)["resumen:INSTALACIONES"] == (
+        "1 deficiencia detectada, de riesgo extremo.\nCAPEX estimado: 6.200,00 €."
+    )
+
+
+def test_un_bloque_sin_nada_no_emite_el_marcador() -> None:
+    """Y entonces el generador lo vacía, como cualquier sección sin datos: un
+    «0 deficiencias detectadas» impreso sería afirmar algo que nadie ha
+    comprobado —puede ser que no se revisara—."""
+    from tdd.reporting import marcadores as mk
+
+    solo_obra = {**RESUMEN, "findings": RESUMEN["findings"][:1], "capex_items": []}
+    valores = mk.por_codigo(solo_obra)
+    assert "resumen:ARQUITECTURA" in valores
+    assert "resumen:INSTALACIONES" not in valores
+
+
+def test_la_introduccion_del_proyecto_llega_al_informe() -> None:
+    """`[REQ]` §3.1 · El esquema dice de ella «sale tal cual en el informe» y no
+    salía: no estaba en el snapshot ni tenía marcador, así que alguien la
+    escribía en la ficha del proyecto y se perdía."""
+    from tdd.reporting import marcadores as mk
+
+    datos = {**SNAPSHOT, "project": {**SNAPSHOT["project"], "summary_text": "Compra de la nave."}}
+    assert mk.globales(datos)["project.summary"] == "Compra de la nave."

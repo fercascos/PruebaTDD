@@ -135,21 +135,29 @@ SECCIONES: tuple[tuple[str, str, str], ...] = (
     ("EVACUATION - OCCUPANCY", "HC.H06.09", ""),
 )
 
-#: Los campos de la **ficha del edificio**: un título de la plantilla y el
-#: marcador que va en el relleno de debajo.
+#: Un **título de la plantilla** y el marcador que va en el relleno de debajo.
 #:
-#: `[LIM]` Solo están los dos que la aplicación sabe rellenar. El resumen
-#: ejecutivo de arquitectura y de instalaciones, el análisis de licencias y la
-#: documentación consultada tienen su hueco en la plantilla y **no hay dato que
-#: poner**: se quedan con el relleno «XXXX» para que quien redacta vea que le
-#: toca escribirlos. Inventar un marcador para ellos daría un informe con
-#: apartados vacíos y aire de estar terminado.
-CAMPOS_DEL_EDIFICIO: dict[str, str] = {
+#: `[LIM]` Solo están los que la aplicación sabe rellenar. El análisis de
+#: licencias y la documentación consultada tienen su hueco en la plantilla y
+#: **no hay dato que poner**: se quedan con el relleno «XXXX» para que quien
+#: redacta vea que le toca escribirlos. Inventar un marcador para ellos daría un
+#: informe con apartados vacíos y aire de estar terminado.
+CAMPOS_POR_TITULO: dict[str, str] = {
+    # ── La ficha del edificio (sección 02) ──────────────────────────────────
     "EMPLAZAMIENTO": "{{asset.address}}",
     "LOCATION": "{{asset.address}}",
     "DESCRIPCION": "{{asset.descriptivo}}",
     "DESCRIPTION": "{{asset.descriptivo}}",
     "BUILDING DESCRIPTION": "{{asset.descriptivo}}",
+    # ── El resumen ejecutivo (sección 01) ───────────────────────────────────
+    #
+    # Los dos puntos forman parte del título y no sobran: «ARQUITECTURA» a secas
+    # es también la cabecera de la sección 04, y sin ellos el resumen ejecutivo
+    # se confundiría con una sección de análisis técnico.
+    "ARQUITECTURA:": "{{resumen:ARQUITECTURA}}",
+    "ARCHITECTURE:": "{{resumen:ARQUITECTURA}}",
+    "INSTALACIONES:": "{{resumen:INSTALACIONES}}",
+    "INSTALLATIONS:": "{{resumen:INSTALACIONES}}",
 }
 
 #: Los títulos que NO son una sección de sistema aunque estén en mayúsculas y
@@ -571,7 +579,7 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
             # debajo es la dirección del activo. Va antes que la búsqueda de
             # sección porque estos títulos están en `NO_SON_SECCION` justamente
             # para que no se los tome por un capítulo del árbol.
-            posible_campo = CAMPOS_DEL_EDIFICIO.get(_sin_tildes(texto))
+            posible_campo = CAMPOS_POR_TITULO.get(_sin_tildes(texto))
             if posible_campo is not None:
                 campo, codigo = posible_campo, None
                 continue

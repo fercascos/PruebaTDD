@@ -137,6 +137,10 @@ def globales(snapshot: dict[str, Any]) -> dict[str, str]:
         "project.currency": _texto(proyecto.get("currency") or "EUR"),
         "project.asset_count": str(len(activos)),
         "project.finding_count": str(len(hallazgos)),
+        # `[REQ]` §3.1 · La introducción del proyecto, tal como la redacta el
+        # gestor: qué se compra, para qué y con qué alcance. Es lo que abre el
+        # informe y **no se genera**: la escribe una persona.
+        "project.summary": _texto(proyecto.get("summary_text")),
         "client.name": _texto(proyecto.get("client_name")),
         # El nombre viejo del mismo dato. Se mantiene porque puede haber
         # plantillas y mapeos que ya lo usen: retirar un marcador que alguien
@@ -366,7 +370,71 @@ def _descriptivos(snapshot: dict[str, Any], asset_id: str, campo: str) -> str:
 # lleva **dos** secciones en el mismo cuadro de texto, cimentación y estructura.
 
 #: Los prefijos de marcador que llevan un código del árbol detrás.
-POR_CODIGO = ("descriptivo", "valoracion", "capex", "hallazgos")
+POR_CODIGO = ("descriptivo", "valoracion", "capex", "hallazgos", "resumen")
+
+
+def _cuenta(n: int, singular: str, plural: str) -> str:
+    return f"{n} {singular if n == 1 else plural}"
+
+
+def _enumerar(partes: list[str]) -> str:
+    """`['a', 'b', 'c']` → `«a, b y c»`."""
+    if len(partes) <= 1:
+        return "".join(partes)
+    return f"{', '.join(partes[:-1])} y {partes[-1]}"
+
+
+def _frase_de_resumen(
+    riesgos: dict[str, int],
+    plazos: dict[str, Decimal],
+    orden_de_riesgo: dict[str, int],
+    nombre_de_plazo: list[tuple[str, str]],
+) -> str:
+    """Las cifras de un ámbito, en dos frases. Vacío si no hay nada que contar.
+
+    `[SUP]` Es lo que la plantilla del cliente pide en su sección 01: una
+    diapositiva de «Arquitectura» y otra de «Instalaciones», con un párrafo
+    debajo. Qué párrafo exactamente no lo dice —el hueco trae «XXXX»—, así que
+    aquí van **los hechos** y no un juicio: cuántas deficiencias, de qué riesgo
+    y cuánto CAPEX. Nada de «el edificio está en buen estado», que es una
+    opinión y la firma una persona.
+
+    Se edita en PowerPoint como cualquier otro texto del informe, que es para
+    lo que se exporta.
+    """
+    frases: list[str] = []
+    total = sum(riesgos.values())
+    if total:
+        por_gravedad = sorted(riesgos.items(), key=lambda r: -orden_de_riesgo.get(r[0], 0))
+        # «de riesgo» en **cada** grado, aunque repita. Abreviarlo a «1 de
+        # riesgo extremo, 1 alto y 2 moderado» deja los nombres de segundo en
+        # adelante haciendo de adjetivo, y entonces tienen que concordar: sale
+        # «2 moderado» donde el castellano pide «2 moderadas». Y concordar no se
+        # puede, porque los nombres de los grados son de **catálogo** y el
+        # cliente puede cambiarlos por otros de género o número distintos.
+        detalle = [f"{n} de riesgo {nombre.lower()}" for nombre, n in por_gravedad if n]
+        cuenta = _cuenta(total, "deficiencia detectada", "deficiencias detectadas")
+        if len(por_gravedad) == 1:
+            # Con un solo grado, «1 deficiencia detectada: 1 de riesgo extremo»
+            # repite el número. Se dice una vez.
+            frases.append(f"{cuenta}, de riesgo {por_gravedad[0][0].lower()}.")
+        else:
+            frases.append(f"{cuenta}: {_enumerar(detalle)}." if detalle else f"{cuenta}.")
+
+    suma = sum(plazos.values())
+    if suma:
+        desglose = [
+            f"{cl.formatear_importe(plazos[codigo])} a {nombre.lower()}"
+            for codigo, nombre in nombre_de_plazo
+            if plazos.get(codigo)
+        ]
+        importe = cl.formatear_importe(suma)
+        frases.append(
+            f"CAPEX estimado: {importe} ({_enumerar(desglose)})."
+            if len(desglose) > 1
+            else f"CAPEX estimado: {importe}."
+        )
+    return "\n".join(frases)
 
 
 def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
@@ -395,20 +463,32 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
 
     importes: dict[str, Decimal] = {}
     hallazgos: dict[str, list[str]] = {}
+    #: Por ámbito: cuántas deficiencias de cada riesgo y cuánto CAPEX por plazo.
+    #: Es lo que alimenta `{{resumen:...}}`.
+    riesgos: dict[str, dict[str, int]] = {}
+    plazos: dict[str, dict[str, Decimal]] = {}
     por_hallazgo = {h["id"]: h for h in snapshot.get("findings", [])}
     for linea in snapshot.get("capex_items", []):
         hallazgo = por_hallazgo.get(linea["finding_id"])
         if hallazgo is None:
             continue
         codigo = _texto(hallazgo.get("capex_code"))
+        horizonte = _texto(linea.get("time_horizon_code"))
         for clave in codigo_y_ancestros(codigo):
             importes[clave] = importes.get(clave, Decimal("0")) + Decimal(str(linea["amount"]))
+            del_plazo = plazos.setdefault(clave, {})
+            del_plazo[horizonte] = del_plazo.get(horizonte, Decimal("0")) + Decimal(
+                str(linea["amount"])
+            )
     for hallazgo in snapshot.get("findings", []):
         codigo = _texto(hallazgo.get("capex_code"))
         titulo = _texto(hallazgo.get("title"))
         riesgo = _texto(hallazgo.get("risk_name"))
         for clave in codigo_y_ancestros(codigo):
             hallazgos.setdefault(clave, []).append(f"{titulo} ({riesgo})" if riesgo else titulo)
+            if riesgo:
+                del_riesgo = riesgos.setdefault(clave, {})
+                del_riesgo[riesgo] = del_riesgo.get(riesgo, 0) + 1
 
     valores: dict[str, str] = {}
     for clave, lineas in descriptivos.items():
@@ -419,17 +499,53 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
         valores[f"capex:{clave}"] = cl.formatear_importe(importe)
     for clave, lineas in hallazgos.items():
         valores[f"hallazgos:{clave}"] = _lista(lineas)
+
+    catalogos = snapshot.get("catalogs", {})
+    orden_de_riesgo = {
+        _texto(r.get("name_es")): int(r.get("score") or 0) for r in catalogos.get("risk_levels", [])
+    }
+    nombre_de_plazo = [
+        (_texto(h.get("code")), _texto(h.get("name_es")))
+        for h in catalogos.get("time_horizons", [])
+    ]
+    for clave in sorted(set(riesgos) | set(plazos)):
+        frase = _frase_de_resumen(
+            riesgos.get(clave, {}), plazos.get(clave, {}), orden_de_riesgo, nombre_de_plazo
+        )
+        if frase:
+            valores[f"resumen:{clave}"] = frase
     return valores
 
 
+#: El bloque de obra al que pertenece cada capítulo, en mayúsculas como los
+#: códigos del árbol. Es la misma división que el Full Report hace en su sección
+#: 04 —«ANÁLISIS TÉCNICO ARQUITECTURA» frente a «INSTALACIONES»— y en las dos
+#: tablas de detalle de la 07, así que sale de allí y no se escribe dos veces.
+BLOQUE_DEL_CAPITULO: dict[str, str] = {
+    capitulo: nombre.upper()
+    for nombre, capitulos in cl.BLOQUES_DE_OBRA.items()
+    for capitulo in capitulos
+}
+
+
 def codigo_y_ancestros(codigo: str) -> list[str]:
-    """`HC.H04.03` → `['HC.H04.03', 'HC.H04', 'HC']`.
+    """`HC.H04.03` → `['HC.H04.03', 'HC.H04', 'HC', 'ARQUITECTURA']`.
 
     Sale del propio código, como en el árbol documental: así el marcador de un
     capítulo recoge lo de sus objetos sin que nadie mantenga una tabla aparte.
+
+    El **bloque** va detrás del tipo de coste y es lo que hace que
+    `{{valoracion:ARQUITECTURA}}` recoja los siete capítulos de obra de
+    arquitectura. El resumen ejecutivo de la plantilla del cliente es
+    justamente eso: una diapositiva para arquitectura y otra para
+    instalaciones, sin desglosar por capítulo.
     """
+    if not codigo:
+        return [codigo]
     partes = codigo.split(".")
-    return [".".join(partes[: i + 1]) for i in range(len(partes) - 1, -1, -1)]
+    claves = [".".join(partes[: i + 1]) for i in range(len(partes) - 1, -1, -1)]
+    bloque = BLOQUE_DEL_CAPITULO.get(".".join(partes[:2]))
+    return [*claves, bloque] if bloque else claves
 
 
 # ─────────────────────────────────────────────────────────────────────────────

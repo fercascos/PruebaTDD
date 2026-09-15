@@ -87,8 +87,10 @@ generación lo dice por su nombre en vez de dejarlo escrito en el informe.
 | `{{project.currency}}` | `EUR` |
 | `{{project.asset_count}}` | Cuántos activos |
 | `{{project.finding_count}}` | Cuántos hallazgos |
+| `{{project.summary}}` | La introducción que redacta el gestor: qué se compra, para qué y con qué alcance |
 | `{{client.name}}` | Nombre del cliente. `{{project.client}}` es el nombre antiguo del mismo dato y sigue valiendo |
 | `{{report.date}}` | Fecha del informe, `AAAA-MM-DD` |
+| `{{report.month}}` | «Septiembre 2026», que es como lo escribe una portada |
 | `{{report.generated_at}}` | Fecha y hora completas |
 
 ### CAPEX · agregados del proyecto
@@ -174,6 +176,7 @@ del árbol**, y para eso el marcador lleva el código dentro:
 {{valoracion:HC.H04.03}}    la valoración del objeto «Suelos y techos»
 {{capex:HC.H09}}            el importe de los hallazgos de Electricidad
 {{hallazgos:HC.H09}}        sus títulos, uno por línea
+{{resumen:HC.H09}}          sus cifras: cuántas deficiencias, de qué riesgo y cuánto CAPEX
 ```
 
 Un código de **capítulo** agrega lo de todos sus objetos; uno de **objeto** trae
@@ -350,11 +353,64 @@ enseñaría la ficha del primero y callaría las demás.
 edificio: primero todos los emplazamientos y después todas las descripciones. Es
 consecuencia de que la plantilla las tenga en dos páginas distintas.
 
+### El resumen ejecutivo
+
+La sección 01 de la plantilla son **dos diapositivas**: «Arquitectura:» y
+«Instalaciones:», cada una con un párrafo debajo. Reciben `{{resumen:ARQUITECTURA}}`
+y `{{resumen:INSTALACIONES}}`, que producen las cifras del bloque:
+
+```
+4 deficiencias detectadas: 1 de riesgo extremo, 1 de riesgo alto y 2 de riesgo moderado.
+CAPEX estimado: 113.757,50 € (87.707,50 € a corto plazo y 26.050,00 € a medio plazo).
+```
+
+Cuadra con la sección 07: ese total es el mismo que el de su tabla de detalle y
+el de su matriz de riesgo, porque sale de los mismos datos.
+
+`[SUP]` Qué va exactamente en ese párrafo la plantilla no lo dice —el hueco trae
+«XXXX»—, así que van **los hechos** y no un juicio: cuántas deficiencias, de qué
+riesgo y cuánto CAPEX. Nada de «el edificio está en buen estado», que es una
+opinión y la firma una persona. Se edita en PowerPoint como cualquier otro texto,
+que es para lo que se exporta.
+
+Un bloque **sin nada** no emite el marcador, así que la diapositiva sale en
+blanco. Imprimir «0 deficiencias detectadas» afirmaría algo que nadie ha
+comprobado: puede ser que esa parte no se revisara.
+
+### Un bloque de obra vale como ámbito
+
+`ARQUITECTURA` e `INSTALACIONES` funcionan como un código más del árbol, y valen
+para **los cinco marcadores de sección**:
+
+```
+{{resumen:ARQUITECTURA}}       las cifras del bloque
+{{valoracion:INSTALACIONES}}   las valoraciones de sus capítulos, seguidas
+{{capex:ARQUITECTURA}}         solo el importe
+{{hallazgos:INSTALACIONES}}    sus títulos, uno por línea
+```
+
+El bloque sale del **código del capítulo**, igual que el capítulo sale del
+código del objeto: `HC.H02.01` → `HC.H02` → `HC` → `ARQUITECTURA`. Es la misma
+división que el informe hace en su sección 04 y en las dos tablas de detalle de
+la 07, así que está escrita una vez. Lo que no es obra —costes blandos,
+licencias— no pertenece a ningún bloque: su sitio es el resumen de presupuesto.
+
+### La introducción del proyecto
+
+`[REQ]` §3.1 · `{{project.summary}}` es la introducción que redacta el gestor en
+la ficha del proyecto: qué se compra, para qué y con qué alcance. El esquema
+decía de ella «sale tal cual en el informe» y **no salía**: no estaba en el
+snapshot ni tenía marcador, así que alguien la escribía y se perdía.
+
+`[PDV]` Ya está disponible, pero **no se coloca sola**: la plantilla del cliente
+no tiene un hueco declarado para ella. Dónde la quiere —abriendo el resumen
+ejecutivo, en la descripción del inmueble— es decisión suya, y se escribe el
+marcador en esa diapositiva.
+
 ### Lo que **no** se rellena, y por qué
 
-`[LIM]` Cuatro huecos de la plantilla se quedan con su relleno «XXXX»:
+`[LIM]` Dos huecos de la plantilla se quedan con su relleno «XXXX»:
 
-- **Resumen ejecutivo de arquitectura** y **de instalaciones**
 - **Análisis de licencias**
 - **Documentación consultada**
 

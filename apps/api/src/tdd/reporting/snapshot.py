@@ -109,6 +109,11 @@ def construir(
         s.execute(
             text(
                 "SELECT p.id, p.internal_code, p.name, CAST(p.status AS text) AS status, "
+                # `[REQ]` §3.1 · La introducción que redacta el gestor. El
+                # esquema dice de ella «sale tal cual en el informe» y no salía:
+                # no estaba en el snapshot ni tenía marcador, así que alguien la
+                # escribía y se perdía entre la ficha del proyecto y el PPTX.
+                "p.summary_text, "
                 "p.currency, p.report_due_date, c.name AS client_name "
                 "FROM project p JOIN client c ON c.id = p.client_id WHERE p.id = :p"
             ),
