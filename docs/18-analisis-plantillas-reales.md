@@ -38,6 +38,20 @@ he hecho ninguna afirmación sobre cómo se ven.**
 
 ---
 
+> ⚠️ **Corregido al abrirlas para generar de verdad (2026-09-15).** Cuatro afirmaciones de este
+> documento no resisten la lectura párrafo a párrafo de los ficheros. Se dejan en su sitio, tachadas
+> donde procede, porque el análisis que las produjo sigue siendo el que hay:
+>
+> | Decía | Es |
+> |---|---|
+> | `H11` **fontanería no tiene sección** en la plantilla (§18.3, P-30) | **Sí la tiene.** Comparte diapositiva con ascensores, igual que estructura comparte con cimentación. En castellano «FONTANERÍA Y SANEAMIENTO», en inglés «PLUMBING AND SEWAGE». Solo quedan sin sección `H13` y `H15` |
+> | 14 secciones de sistema | **15**, contando fontanería |
+> | «Las cuatro plantillas son una sola estructura» | **ES y EN no coinciden.** La numeración va desplazada desde la diapositiva 27 y, sobre todo, «Protección pasiva contra incendios» está **vacía en castellano** y **desarrollada en inglés** en cuatro subsecciones repartidas en tres diapositivas |
+> | — | «ACCESIBILIDAD» **no tiene bloque de Valoración** en ninguna de las cuatro: solo descriptivo |
+>
+> La correspondencia sección → código del árbol, ya con estas correcciones, vive en
+> `tools/marcar_plantilla.py` y es la que se ejecuta.
+
 ## 18.1. Las cuatro plantillas son una sola estructura
 
 El hallazgo que más simplifica el problema:

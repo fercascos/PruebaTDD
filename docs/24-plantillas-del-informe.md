@@ -157,15 +157,61 @@ a marcar nada.
 
 ---
 
+## 3 bis · Las secciones del Full Report, atadas a su código
+
+`[REQ]` §3.2 · Es lo que pide la plantilla real del cliente, y no se vio hasta
+abrirla. Su Full Report tiene **quince secciones de sistema ya maquetadas a
+mano** —«CUBIERTA», «FACHADAS», «ELECTRICIDAD Y ILUMINACIÓN»…—, cada una con su
+pareja de diapositivas: una de texto y otra de cuatro fotos.
+
+**No son una repetición.** Están escritas, numeradas y ordenadas en las 67
+diapositivas, y el índice las enumera. Repetir una diapositiva modelo produciría
+otro informe, no el suyo. Lo que hace falta es **atar cada sección a su código
+del árbol**, y para eso el marcador lleva el código dentro:
+
+```
+{{descriptivo:HC.H02}}      el descriptivo de todo el capítulo «Cubierta»
+{{valoracion:HC.H04.03}}    la valoración del objeto «Suelos y techos»
+{{capex:HC.H09}}            el importe de los hallazgos de Electricidad
+{{hallazgos:HC.H09}}        sus títulos, uno por línea
+```
+
+Un código de **capítulo** agrega lo de todos sus objetos; uno de **objeto** trae
+solo lo suyo. La correspondencia no es de un solo nivel: «CUBIERTA» es el
+capítulo `HC.H02` entero, pero «SUELOS Y TECHOS» es el objeto `HC.H04.03`,
+porque el informe desglosa interiores en tres secciones.
+
+`[REQ]` **Una sección sin datos sale en blanco**, no con el marcador a la vista.
+Un edificio sin nada de telecomunicaciones deja esa diapositiva vacía, que es lo
+que el consultor rellenaría a mano; el marcador escrito saldría impreso delante
+del cliente. La respuesta de generación los lista aparte: no son «un marcador
+que no existe», son «una sección de la que este edificio no tiene nada».
+
+### No hace falta escribirlos a mano
+
+    python3 tools/marcar_plantilla.py original.pptx marcada.pptx
+
+Lee los títulos de la plantilla, los ata a su código y escribe los marcadores
+**conservando el formato**. El original no se toca. Si algún marcador queda en
+mal sitio, se corrige en PowerPoint.
+
+`[SUP]` La correspondencia título → código está deducida comparando los títulos
+de la plantilla con el árbol de §5.3 y **no está validada con el cliente**. Tres
+entradas son discutibles y se señalan en la tabla del propio fichero.
+
+---
+
 ## 4 · Lo que todavía NO hace
 
 `[LIM]` Se dice porque el informe es un entregable firmado y conviene saber
 dónde está el límite hoy:
 
-- **La tabla del CAPEX y las fotografías se añaden en diapositivas en blanco al
-  final**, con el diseño de la aplicación y no con el tuyo. Es la parte que aún
-  se lee como «la aplicación impresa detrás de tu portada». Para meterlas en tu
-  diseño hace falta que la plantilla diga dónde, y eso es el paso siguiente.
+- **Las fotografías no se insertan.** Cada sección del Full Report tiene su
+  diapositiva con cuatro marcos 3,15 × 2,36 in y sus cuatro pies «Descripción»:
+  se quedan vacíos. Es la pieza más visible de las que faltan.
+- **La tabla del CAPEX se añade en diapositivas en blanco al final**, con el
+  diseño de la aplicación y no con el tuyo. La plantilla tiene su propia sección
+  07 CAPEX con seis diapositivas de imágenes EMF, y ahí es donde debería ir.
 - **No hay filas repetibles dentro de una tabla** (`{{#row ...}}` de
   [`12`](./12-pptx.md) §17.2). Una tabla de la plantilla se queda como está.
 - **No se insertan imágenes por marcador** (`{{@asset.main_photo}}`).

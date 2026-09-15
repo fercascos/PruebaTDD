@@ -63,6 +63,9 @@ class ResultadoDeGeneracion:
     avisos_de_repeticion: list[str] = field(default_factory=list)
     #: Cuántas diapositivas se han clonado desde una modelo.
     diapositivas_repetidas: int = 0
+    #: Marcadores de sección que la plantilla pide y este proyecto no tiene, ya
+    #: vaciados. No son un fallo: son secciones sin contenido en este edificio.
+    secciones_sin_datos: list[str] = field(default_factory=list)
 
 
 def valores_de_marcadores(snapshot: dict[str, Any]) -> dict[str, str]:
@@ -260,7 +263,7 @@ def generar(
     prs = Presentation(io.BytesIO(plantilla))
 
     # 1 · Marcadores, en todas las diapositivas que los tengan.
-    valores = valores_de_marcadores(snapshot)
+    valores = {**valores_de_marcadores(snapshot), **mk.por_codigo(snapshot)}
     sin_resolver: list[str] = []
     desbordamientos: list[str] = []
 
@@ -293,6 +296,24 @@ def generar(
     fijas = [s for s in prs.slides if repeticion.plan_de(s) is None]
     for slide in fijas:
         sin_resolver += sustituir_marcadores(slide, valores, medir=_medir)
+
+    # 1c · Los marcadores **de código** que la plantilla pide y el proyecto no
+    # tiene se vacían. `{{descriptivo:HC.H14}}` en un edificio sin nada de
+    # telecomunicaciones deja la sección en blanco, que es lo que el consultor
+    # rellenaría a mano; dejar el marcador escrito sería peor que el hueco,
+    # porque sale impreso delante del cliente.
+    #
+    # Va en una segunda pasada y no mezclado con la primera para que el aviso
+    # sepa distinguirlos: esto **no** es «un marcador que no existe», es «una
+    # sección de la que este edificio no tiene nada».
+    sin_datos = sorted(
+        {m for m in sin_resolver if m.split(":", 1)[0] in mk.POR_CODIGO and ":" in m}
+    )
+    if sin_datos:
+        vacios = dict.fromkeys(sin_datos, "")
+        for slide in prs.slides:
+            sustituir_marcadores(slide, vacios)
+        sin_resolver = [m for m in sin_resolver if m not in set(sin_datos)]
 
     # 2 · Tabla nativa de CAPEX, partida si hace falta.
     layout = cl.construir(lineas_de_capex(snapshot), capitulo="CAPEX", locale=locale)
@@ -355,6 +376,7 @@ def generar(
         totales=layout.totales,
         avisos_de_repeticion=avisos_de_repeticion,
         diapositivas_repetidas=repetidas,
+        secciones_sin_datos=sin_datos,
     )
 
 

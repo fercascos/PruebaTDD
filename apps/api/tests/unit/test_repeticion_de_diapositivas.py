@@ -219,3 +219,54 @@ def test_las_copias_no_heredan_las_notas_del_modelo() -> None:
         "Nave Sur",
         "Edificio Este",
     ]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Marcadores de sección: un código del árbol dentro del marcador
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_el_marcador_de_capitulo_agrega_lo_de_sus_objetos() -> None:
+    """`[REQ]` §3.2 · Es lo que pide la plantilla real: «CUBIERTA» es el capítulo
+    `HC.H02` entero, y «SUELOS Y TECHOS» es el objeto `HC.H04.03`, porque el
+    informe desglosa interiores en tres secciones."""
+    from tdd.reporting import marcadores as mk
+
+    datos = {
+        **SNAPSHOT,
+        "descriptivos": [
+            {"capex_code": "HC.H04.01", "capex_name": "Particiones", "texto": "Tabiquería seca"},
+            {"capex_code": "HC.H04.03", "capex_name": "Suelos y techos", "texto": "Terrazo"},
+        ],
+    }
+    valores = mk.por_codigo(datos)
+    # El objeto trae lo suyo, sin repetir el título de su diapositiva.
+    assert valores["descriptivo:HC.H04.03"] == "Terrazo"
+    # El capítulo agrega los dos, cada uno con el nombre de su objeto delante.
+    assert (
+        valores["descriptivo:HC.H04"]
+        == "· Particiones: Tabiquería seca\n· Suelos y techos: Terrazo"
+    )
+
+
+def test_una_seccion_sin_datos_sale_en_blanco_y_no_con_el_marcador() -> None:
+    """Un edificio sin nada de telecomunicaciones deja esa sección vacía, que es
+    lo que el consultor rellenaría a mano. Dejar `{{descriptivo:HC.H14}}` escrito
+    sería peor que el hueco: sale impreso delante del cliente."""
+    from tdd.reporting import generator
+
+    plantilla = _plantilla(("CUBIERTA {{descriptivo:HC.H02}} TELECO {{descriptivo:HC.H14}}", ""))
+    # Sin hallazgos: esta prueba mira los marcadores, y el generador produce
+    # además el XLSX sobre la plantilla del cliente, que exige hallazgos bien
+    # codificados. Dárselos aquí sería montar un caso de otra prueba.
+    datos = {
+        **SNAPSHOT,
+        "findings": [],
+        "descriptivos": [{"capex_code": "HC.H02", "capex_name": "Cubierta", "texto": "Deck"}],
+    }
+    r = generator.generar(plantilla, datos)
+    texto = _textos(Presentation(io.BytesIO(r.pptx)))[0]
+    assert "Deck" in texto
+    assert "{{" not in texto, texto
+    assert r.marcadores_sin_resolver == []
+    assert r.secciones_sin_datos == ["descriptivo:HC.H14"]

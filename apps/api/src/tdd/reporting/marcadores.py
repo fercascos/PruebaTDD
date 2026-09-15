@@ -310,6 +310,94 @@ def _descriptivos(snapshot: dict[str, Any], asset_id: str, campo: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Ámbito de la SECCIÓN: un código del árbol de CAPEX
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# `[REQ]` §3.2 · Es el ámbito que pide la plantilla real del cliente, y no lo
+# vimos hasta abrirla. Su Full Report tiene **catorce secciones de sistema ya
+# maquetadas a mano** —«CUBIERTA», «FACHADAS», «ELECTRICIDAD Y ILUMINACIÓN»…—,
+# cada una con su pareja de diapositivas: una de texto y otra de cuatro fotos.
+#
+# **No son una repetición.** Están escritas, numeradas y ordenadas en las 67
+# diapositivas, y el índice de la diapositiva 2 las enumera. Repetir una
+# diapositiva modelo produciría otro informe, no el suyo. Lo que hace falta es
+# **atar cada sección a su código del árbol** y traerle sus textos.
+#
+# Y la correspondencia **no es de un solo nivel**: «CUBIERTA» es el capítulo
+# `HC.H02` entero, pero «SUELOS Y TECHOS» es el objeto `HC.H04.03`, porque el
+# informe desglosa el capítulo de interiores en tres secciones. Por eso el
+# marcador lleva el código dentro —`{{descriptivo:HC.H04.03}}`— en vez de
+# depender de una directiva por diapositiva: la primera diapositiva de sistema
+# lleva **dos** secciones en el mismo cuadro de texto, cimentación y estructura.
+
+#: Los prefijos de marcador que llevan un código del árbol detrás.
+POR_CODIGO = ("descriptivo", "valoracion", "capex", "hallazgos")
+
+
+def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
+    """`{{descriptivo:HC.H02}}`, `{{valoracion:HC.H04.03}}`, `{{capex:HC.H09}}`…
+
+    Un código de **capítulo** agrega lo de todos sus objetos; uno de **objeto**
+    trae solo lo suyo. Se emite una clave por cada código que tenga algo, y el
+    generador vacía los que la plantilla pida y no existan —una sección sin
+    hallazgos sale en blanco, no con el marcador a la vista—.
+    """
+    descriptivos: dict[str, list[str]] = {}
+    valoraciones: dict[str, list[str]] = {}
+    for fila in snapshot.get("descriptivos", []):
+        codigo = _texto(fila.get("capex_code"))
+        if not codigo:
+            continue
+        for clave in _codigo_y_ancestros(codigo):
+            for campo, destino in (("texto", descriptivos), ("valoracion", valoraciones)):
+                valor = _texto(fila.get(campo)).strip()
+                if valor:
+                    # En el capítulo se antepone el nombre del objeto; en el
+                    # objeto no, que sería repetir el título de la diapositiva.
+                    etiqueta = _texto(fila.get("capex_name"))
+                    linea = f"{etiqueta}: {valor}" if clave != codigo else valor
+                    destino.setdefault(clave, []).append(linea)
+
+    importes: dict[str, Decimal] = {}
+    hallazgos: dict[str, list[str]] = {}
+    por_hallazgo = {h["id"]: h for h in snapshot.get("findings", [])}
+    for linea in snapshot.get("capex_items", []):
+        hallazgo = por_hallazgo.get(linea["finding_id"])
+        if hallazgo is None:
+            continue
+        codigo = _texto(hallazgo.get("capex_code"))
+        for clave in _codigo_y_ancestros(codigo):
+            importes[clave] = importes.get(clave, Decimal("0")) + Decimal(str(linea["amount"]))
+    for hallazgo in snapshot.get("findings", []):
+        codigo = _texto(hallazgo.get("capex_code"))
+        titulo = _texto(hallazgo.get("title"))
+        riesgo = _texto(hallazgo.get("risk_name"))
+        for clave in _codigo_y_ancestros(codigo):
+            hallazgos.setdefault(clave, []).append(f"{titulo} ({riesgo})" if riesgo else titulo)
+
+    valores: dict[str, str] = {}
+    for clave, lineas in descriptivos.items():
+        valores[f"descriptivo:{clave}"] = _lista(lineas) if len(lineas) > 1 else lineas[0]
+    for clave, lineas in valoraciones.items():
+        valores[f"valoracion:{clave}"] = _lista(lineas) if len(lineas) > 1 else lineas[0]
+    for clave, importe in importes.items():
+        valores[f"capex:{clave}"] = cl.formatear_importe(importe)
+    for clave, lineas in hallazgos.items():
+        valores[f"hallazgos:{clave}"] = _lista(lineas)
+    return valores
+
+
+def _codigo_y_ancestros(codigo: str) -> list[str]:
+    """`HC.H04.03` → `['HC.H04.03', 'HC.H04', 'HC']`.
+
+    Sale del propio código, como en el árbol documental: así el marcador de un
+    capítulo recoge lo de sus objetos sin que nadie mantenga una tabla aparte.
+    """
+    partes = codigo.split(".")
+    return [".".join(partes[: i + 1]) for i in range(len(partes) - 1, -1, -1)]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  Ámbito del hallazgo
 # ─────────────────────────────────────────────────────────────────────────────
 
