@@ -353,3 +353,128 @@ def test_los_cuatro_grados_de_riesgo_llegan_a_la_tabla() -> None:
     ]
     filas = [f for f in cl.construir(lineas, capitulo="Arq.").filas if f.tipo == "dato"]
     assert {f.celdas["riesgo"] for f in filas} == {"Bajo", "Moderado", "Alto", "Extremo"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los resúmenes de la sección 07
+#
+#  `[REQ]` La sección 07 de la plantilla del cliente no tiene una tabla: tiene
+#  cinco. Las otras cuatro venían pegadas desde Excel, con los números de otro
+#  proyecto impresos en un informe firmado.
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: El catálogo de riesgo tal como llega del snapshot: `(nombre, score)`.
+NIVELES = [("Extremo", 4), ("Alto", 3), ("Moderado", 2), ("Bajo", 1)]
+
+#: Las mismas líneas, con el **código** del capítulo puesto, que es lo que
+#: reparte cada una entre la tabla de arquitectura y la de instalaciones.
+LINEAS_CON_CODIGO = [
+    _linea(capitulo_code="HC.H02"),  # cubierta → arquitectura
+    _linea(
+        horizonte="CORTO",
+        importe=Decimal("2300.00"),
+        riesgo="Bajo",
+        capitulo_code="HC.H02",
+    ),
+    _linea(
+        horizonte="CORTO",
+        importe=Decimal("144780.00"),
+        riesgo="Extremo",
+        capitulo="Protección activa contra incendios",
+        capitulo_code="HC.H10",  # → instalaciones
+    ),
+    _linea(
+        horizonte="OTRO",
+        importe=Decimal("12000.00"),
+        riesgo="Bajo",
+        tipo_de_coste="Soft Costs",
+        capitulo="Licencias y Tasas",
+        capitulo_code="SC.S03",  # ni una ni otra: es coste blando
+    ),
+]
+
+
+def _fila(layout: cl.CapexTableLayout, rotulo: str) -> cl.Fila:
+    clave = layout.columnas[0].key
+    return next(f for f in layout.filas if f.celdas.get(clave) == rotulo)
+
+
+def test_el_resumen_por_riesgo_enseña_los_cuatro_grados_aunque_falte_alguno() -> None:
+    """La plantilla los enseña **siempre**. Con solo los presentes, la fila
+    desaparecería y quien lee no sabría si es que no hay o si se olvidó."""
+    layout = cl.resumen_por_riesgo(LINEAS_CON_CODIGO, niveles=NIVELES)
+    rotulos = [f.celdas["riesgo"] for f in layout.filas]
+    assert rotulos == ["Extremo", "Alto", "Moderado", "Bajo", "TOTAL"]
+    # «Alto» no tiene ninguna línea: sale la fila, con las celdas en blanco.
+    assert _fila(layout, "Alto").celdas["total"] == ""
+
+
+def test_el_resumen_por_riesgo_cuadra_con_las_lineas() -> None:
+    layout = cl.resumen_por_riesgo(LINEAS_CON_CODIGO, niveles=NIVELES)
+    assert layout.totales["total"] == sum(ln.importe for ln in LINEAS_CON_CODIGO)
+    assert _fila(layout, "Extremo").celdas["corto"] == "144.780,00 €"
+    assert _fila(layout, "Moderado").celdas["medio"] == "83.407,50 €"
+
+
+def test_un_riesgo_que_no_esta_en_el_catalogo_no_se_descarta() -> None:
+    """Descartarlo cuadraría la tabla restando un importe sin decirlo."""
+    lineas = [*LINEAS_CON_CODIGO, _linea(riesgo="Catastrófico", importe=Decimal("500.00"))]
+    layout = cl.resumen_por_riesgo(lineas, niveles=NIVELES)
+    assert _fila(layout, "Catastrófico").celdas["total"] == "500,00 €"
+    assert layout.totales["total"] == sum(ln.importe for ln in lineas)
+
+
+def test_el_resumen_por_capitulo_recoge_tambien_lo_que_no_es_obra() -> None:
+    """Es donde se ve que el presupuesto es mayor que la suma de las dos tablas
+    de detalle: el coste blando no cabe en ninguna de las dos."""
+    layout = cl.resumen_por_capitulo(LINEAS_CON_CODIGO)
+    capitulos = [f.celdas["capitulo"] for f in layout.filas]
+    assert "Licencias y Tasas" in capitulos
+    assert layout.totales["total"] == sum(ln.importe for ln in LINEAS_CON_CODIGO)
+
+
+def test_el_resumen_de_costes_separa_mejora_de_capex() -> None:
+    """La plantilla las pone en dos columnas porque una mejora no es una
+    obligación: se negocia aparte."""
+    lineas = [
+        _linea(horizonte="CORTO", importe=Decimal("1000.00"), capitulo_code="HC.H02"),
+        _linea(horizonte="MEJORAS", importe=Decimal("400.00"), capitulo_code="HC.H02"),
+    ]
+    layout = cl.resumen_de_costes(lineas)
+    total = _fila(layout, "TOTAL PRESUPUESTO (SIN IVA)")
+    assert total.celdas["capex"] == "1.000,00 €"
+    assert total.celdas["mejoras"] == "400,00 €"
+    assert total.celdas["total"] == "1.400,00 €"
+
+
+def test_el_coste_duro_va_sin_desglose_y_el_blando_con_el() -> None:
+    """`[LIM]` El desglose del coste duro es la tabla de la diapositiva
+    anterior; repetirlo aquí solo alargaría la página."""
+    layout = cl.resumen_de_costes(LINEAS_CON_CODIGO)
+    conceptos = [f.celdas["concepto"] for f in layout.filas]
+    assert "HARD COSTS" in conceptos
+    assert "Cubierta" not in conceptos  # el capítulo de obra no se repite
+    assert "Licencias y Tasas" in conceptos  # el de coste blando sí
+
+
+def test_el_detalle_se_reparte_en_arquitectura_e_instalaciones() -> None:
+    """`[REQ]` La plantilla tiene **dos** tablas de detalle, con estos mismos
+    capítulos: es la división que su sección 04 ya hace."""
+    arquitectura = cl.del_bloque(LINEAS_CON_CODIGO, "arquitectura")
+    instalaciones = cl.del_bloque(LINEAS_CON_CODIGO, "instalaciones")
+
+    assert [ln.capitulo_code for ln in arquitectura] == ["HC.H02", "HC.H02"]
+    assert [ln.capitulo_code for ln in instalaciones] == ["HC.H10"]
+    # El coste blando no está en ninguna de las dos: su sitio es el resumen de
+    # presupuesto, no la «valoración de las actuaciones en el inmueble».
+    assert sum(ln.importe for ln in arquitectura + instalaciones) == Decimal("230487.50")
+
+
+def test_un_capitulo_de_obra_nuevo_no_desaparece_en_silencio() -> None:
+    """Sumaría en los resúmenes y no saldría en ninguna tabla de detalle: la
+    diferencia es invisible salvo que alguien cuadre las cifras a mano."""
+    lineas = [*LINEAS_CON_CODIGO, _linea(capitulo_code="HC.H99", importe=Decimal("100.00"))]
+    huerfanas = cl.fuera_de_los_bloques(lineas)
+    assert [ln.capitulo_code for ln in huerfanas] == ["HC.H99"]
+    # Y lo que sí está repartido no se señala.
+    assert cl.fuera_de_los_bloques(LINEAS_CON_CODIGO) == []

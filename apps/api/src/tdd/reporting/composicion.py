@@ -56,8 +56,19 @@ from tdd.reporting.repeticion import mover_detras, notas_de
 #: fotos. Con un solo código, las fotos de la segunda sección se perdían.
 FOTOS = re.compile(r"@fotos\s*:\s*([A-Za-z0-9.,\s]+)", re.IGNORECASE)
 
-#: `@capex` en las notas de la diapositiva que debe llevar la tabla.
-CAPEX = re.compile(r"@capex\b", re.IGNORECASE)
+#: `@capex` en las notas de la diapositiva que debe llevar la tabla, con la
+#: lista de qué tablas, separadas por coma. `@capex` a secas es `@capex: detalle`.
+#:
+#: `[REQ]` La sección 07 de la plantilla del cliente tiene **cinco** tablas
+#: distintas, no una: las dos de detalle —obra de arquitectura y de
+#: instalaciones—, la matriz de riesgo por plazo que va detrás de cada una, el
+#: resumen por capítulo y el presupuesto de costes duros y blandos.
+CAPEX = re.compile(r"@capex\b(?:\s*:\s*([A-Za-z:,\s]+))?", re.IGNORECASE)
+
+#: Las tablas que se pueden pedir. `detalle` acepta un bloque detrás de dos
+#: puntos —`detalle:arquitectura`— y `riesgos` también, para la matriz que va
+#: debajo de cada tabla de detalle.
+TABLAS = ("detalle", "riesgos", "capitulos", "costes")
 
 #: Un marco de fotografía de la plantilla del cliente mide 3,15 × 2,36 in. Se
 #: admite un margen amplio porque las cuatro plantillas difieren en centésimas.
@@ -79,6 +90,22 @@ def codigos_de_fotos(slide: Slide) -> list[str]:
 
 def lleva_capex(slide: Slide) -> bool:
     return CAPEX.search(notas_de(slide)) is not None
+
+
+def tablas_de_capex(slide: Slide) -> list[str]:
+    """Qué tablas pide esta diapositiva, en el orden en que se escribieron.
+
+    Vacío si no lleva la directiva. `@capex` sin lista es `["detalle"]`, que es
+    lo que significaba antes de que la directiva admitiese nombres: una
+    plantilla ya marcada sigue generando lo mismo.
+    """
+    encontrado = CAPEX.search(notas_de(slide))
+    if encontrado is None:
+        return []
+    lista = encontrado.group(1)
+    if not lista:
+        return ["detalle"]
+    return [t.strip().lower() for t in lista.split(",") if t.strip()]
 
 
 def secciones_declaradas(prs: Presentacion) -> set[str]:
@@ -259,51 +286,137 @@ def _escribir_pie(forma: Any, texto: str) -> None:
         otro._p.getparent().remove(otro._p)
 
 
+#: Dónde arranca la tabla de detalle cuando ocupa la diapositiva entera. Es la
+#: posición que tiene en la plantilla del cliente, medida sobre su fichero.
+DETALLE_IZQ_IN = 0.47
+DETALLE_ARRIBA_IN = 1.55
+
+
+def _imagenes(slide: Slide) -> list[Any]:
+    """Las imágenes de la diapositiva, **de mayor a menor superficie**.
+
+    La más grande es la tabla pegada desde Excel; las pequeñas de las
+    diapositivas 56 y 58 son la **leyenda de riesgo**, que es contenido de la
+    plantilla y no se toca. Retirarlas todas, como se hacía, dejaba la página de
+    la matriz sin sus cuatro cuadros de color ni la escala de plazos.
+    """
+    fotos = [
+        f
+        for f in slide.shapes
+        if f.shape_type == 13 and f.width is not None and f.height is not None  # noqa: PLR2004
+    ]
+    return sorted(fotos, key=lambda f: -(Emu(f.width).inches * Emu(f.height).inches))
+
+
 def poner_capex(
-    prs: Presentacion, trozos: list[Any], *, clonar: Any, insertar: Any
+    prs: Presentacion, tablas: dict[str, list[Any]], *, clonar: Any, insertar: Any
 ) -> tuple[int, list[str]]:
-    """Pone la tabla nativa donde la plantilla la pide. Devuelve `(usadas, avisos)`.
+    """Pone las tablas nativas donde la plantilla las pide. `(puestas, avisos)`.
 
     `[REQ]` Con las palabras del cliente: *«en vez de la tabla que aparece ahí
     deberá ir la tabla pegada de CAPEX de nuestra herramienta»*. Lo que había en
-    esa diapositiva es una **imagen** pegada desde Excel: se retira, porque
-    dejarla debajo de la tabla nueva daría dos tablas con cifras distintas.
+    esas diapositivas son **imágenes** pegadas desde Excel, con los números de
+    otro proyecto: se retiran, porque dejarlas debajo daría dos tablas con
+    cifras distintas en la misma página.
 
-    Si la tabla no cabe en una diapositiva, se clona la de la plantilla: cada
-    trozo conserva su portadilla, su pie y su numeración.
+    `tablas` es `{nombre: [trozos]}`. Cada diapositiva declara en sus notas qué
+    tablas quiere, y cada una ocupa el marco de la imagen que sustituye:
+
+        @capex: detalle:arquitectura     la tabla de obra de arquitectura
+        @capex: riesgos:arquitectura     su matriz de riesgo por plazo
+        @capex: capitulos, riesgos       las dos, apiladas en el mismo hueco
+        @capex: costes                   el presupuesto de duros y blandos
+
+    Una tabla que no cabe se parte, y cada trozo se lleva su copia de la
+    diapositiva —con su cabecera y su pie— detrás de la anterior.
     """
     avisos: list[str] = []
-    anfitrionas = [s for s in prs.slides if lleva_capex(s)]
-    if not anfitrionas:
-        return 0, avisos
-    if len(anfitrionas) > 1:
-        avisos.append(
-            f"{len(anfitrionas)} diapositivas piden la tabla de CAPEX con «@capex». "
-            "Se usa la primera; las demás se han dejado como estaban."
-        )
-    modelo = anfitrionas[0]
+    puestas = 0
 
-    # Las copias se sacan **antes** de escribir nada, y todas del modelo
-    # intacto. Clonarlo sobre la marcha lo copiaba con el trozo anterior ya
-    # dentro: el «(2/2)» salía dibujado encima de las filas del «(1/2)», con las
-    # dos tablas superpuestas y los textos pisándose.
+    for slide in list(prs.slides):
+        pedidas = tablas_de_capex(slide)
+        if not pedidas:
+            continue
+        desconocidas = [p for p in pedidas if p.split(":")[0] not in TABLAS]
+        if desconocidas:
+            avisos.append(
+                f"«@capex: {', '.join(desconocidas)}» no es una tabla del informe. "
+                f"Disponibles: {', '.join(TABLAS)}. Esa diapositiva se ha dejado como estaba."
+            )
+            continue
+        conocidas = [p for p in pedidas if p in tablas]
+        faltan = [p for p in pedidas if p not in tablas]
+        if faltan:
+            avisos.append(
+                f"La plantilla pide «{', '.join(faltan)}» y este proyecto no tiene datos para "
+                "esa tabla. Se ha dejado el hueco en vez de una tabla vacía."
+            )
+        if not conocidas:
+            continue
+
+        puestas += _poner_en(
+            prs, slide, [(n, tablas[n]) for n in conocidas], clonar=clonar, insertar=insertar
+        )
+
+    return puestas, avisos
+
+
+def _poner_en(
+    prs: Presentacion,
+    modelo: Slide,
+    pedidas: list[tuple[str, list[Any]]],
+    *,
+    clonar: Any,
+    insertar: Any,
+) -> int:
+    """Dibuja en una diapositiva las tablas que ha pedido. Devuelve cuántas."""
+    marcos = _imagenes(modelo)
+    # Una sola tabla que ocupa la página entera —las dos de detalle— se dibuja
+    # en la posición de la plantilla y se lleva por delante todas sus imágenes,
+    # que son los trozos de la tabla vieja. Con varias tablas, cada una va al
+    # marco de la imagen que sustituye y las demás se quedan.
+    a_pagina_completa = len(pedidas) == 1 and pedidas[0][0].startswith("detalle")
+
+    # Las copias se sacan **antes** de escribir nada, y todas del modelo intacto.
+    # Clonarlo sobre la marcha lo copiaba con el trozo anterior ya dentro: el
+    # «(2/2)» salía dibujado encima de las filas del «(1/2)».
+    trozos_extra = max((len(t) for _, t in pedidas), default=1) - 1
     destinos: list[Slide] = [modelo]
     anterior: Slide = modelo
-    for _ in trozos[1:]:
+    for _ in range(trozos_extra):
         copia = clonar(prs, modelo)
-        # Clonar añade al final de la presentación: sin esto, el «(2/2)» salía
+        # Clonar añade al final de la presentación: sin esto el «(2/2)» salía
         # como última diapositiva del informe, detrás de las conclusiones.
         mover_detras(prs, copia, anterior)
         destinos.append(copia)
         anterior = copia
 
-    usadas = 0
-    for destino, trozo in zip(destinos, trozos, strict=True):
-        # Lo pegado desde Excel se retira: son imágenes, y la tabla nativa se
-        # dibujaría encima sin taparlas del todo.
-        for forma in list(destino.shapes):
-            if forma.shape_type == 13:  # PICTURE  # noqa: PLR2004
+    puestas = 0
+    for indice, destino in enumerate(destinos):
+        if a_pagina_completa:
+            for forma in _imagenes(destino):
                 _vaciar(forma)
-        insertar(destino, trozo)
-        usadas += 1
-    return usadas, avisos
+
+        arriba = None
+        for orden, (_, trozos) in enumerate(pedidas):
+            if indice >= len(trozos):
+                continue
+            if a_pagina_completa:
+                izq, arr, ancho = DETALLE_IZQ_IN, DETALLE_ARRIBA_IN, None
+            else:
+                # El marco de esta tabla es la imagen que le toca por tamaño; si
+                # dos tablas comparten un solo marco —el resumen por capítulo y
+                # la matriz de la diapositiva 59 vienen en una sola imagen— la
+                # segunda se apila debajo de la primera.
+                marco = marcos[min(orden, len(marcos) - 1)] if marcos else None
+                if marco is None:
+                    continue
+                izq = Emu(marco.left).inches
+                arr = arriba if orden and arriba is not None else Emu(marco.top).inches
+                ancho = Emu(marco.width).inches
+                if indice == 0 and orden < len(marcos):
+                    _vaciar(marco)
+            alto = insertar(destino, trozos[indice], izq, arr, ancho)
+            arriba = (arr + alto) if alto else arr
+            puestas += 1
+    return puestas

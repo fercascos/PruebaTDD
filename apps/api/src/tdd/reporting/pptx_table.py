@@ -59,12 +59,22 @@ def _escribir(
     celda.text_frame.word_wrap = True
     p = celda.text_frame.paragraphs[0]
     p.alignment = alineacion
-    run = p.add_run()
-    run.text = texto
-    run.font.size = Pt(pt)
-    run.font.bold = negrita
-    run.font.color.rgb = color
-    run.font.name = FUENTE_CABECERA if negrita else FUENTE_CUERPO
+    # El tamaño va **en el párrafo** y no solo en el run. Una celda vacía —y en
+    # una tabla de CAPEX hay muchas: cada importe que no aplica— se quedaba con
+    # un run sin texto, y el render le daba el cuerpo por omisión de la
+    # plantilla, 18 pt: la fila medía 0,30 in en vez de los 0,17 pedidos. Con
+    # eso todas las tablas salían un 75 % más altas de lo calculado, cabían
+    # menos filas de las previstas y en la diapositiva del resumen la fila de
+    # TOTAL acababa debajo de la tabla siguiente.
+    p.font.size = Pt(pt)
+    p.font.name = FUENTE_CABECERA if negrita else FUENTE_CUERPO
+    if texto:
+        run = p.add_run()
+        run.text = texto
+        run.font.size = Pt(pt)
+        run.font.bold = negrita
+        run.font.color.rgb = color
+        run.font.name = FUENTE_CABECERA if negrita else FUENTE_CUERPO
     celda.margin_left = celda.margin_right = Emu(27432)  # 0,03 in
     celda.margin_top = celda.margin_bottom = Emu(9144)
 
@@ -77,23 +87,40 @@ def insertar_tabla(
     top_in: float = 1.55,
     alto_fila_in: float = 0.17,
     cuerpo_pt: float = 5.0,
+    ancho_in: float | None = None,
 ) -> None:
-    """Dibuja la tabla en la diapositiva, con su cabecera de dos niveles."""
-    n_col = len(layout.columnas)
-    # 2 filas de cabecera de la tabla + 1 de título de bloque
-    n_fil = len(layout.filas) + 3
+    """Dibuja la tabla en la diapositiva, con su cabecera de dos niveles.
 
+    `ancho_in` reescala las columnas **en proporción** para que la tabla ocupe
+    justo el hueco que la plantilla le reserva. Los resúmenes de la sección 07
+    van cada uno en un marco de ancho distinto —5,78 in la matriz de riesgo,
+    8,99 in el resumen por capítulo— y con un ancho fijo uno se saldría de la
+    diapositiva y el otro dejaría medio folio en blanco.
+    """
+    n_col = len(layout.columnas)
+    # Los resúmenes de presupuesto no llevan columnas de plazo, así que tampoco
+    # llevan la banda de «CAPEX ESTIMADO» ni la segunda fila de cabecera. Antes
+    # se creaba igualmente y quedaba **entera** como continuación de
+    # combinación, una fila sin una sola celda propia: el render la daba por
+    # inválida y dibujaba la tabla pegada a la esquina de la diapositiva,
+    # encima de la cabecera, con la última fila fuera de la página.
+    del_grupo = [i for i, c in enumerate(layout.columnas) if c.grupo == "capex"]
+    filas_de_cabecera = 2 if del_grupo else 1
+    # + 1 del título de bloque.
+    n_fil = len(layout.filas) + filas_de_cabecera + 1
+
+    escala = 1.0 if ancho_in is None else ancho_in / layout.ancho_total_in
     forma = slide.shapes.add_table(
         n_fil,
         n_col,
         Inches(left_in),
         Inches(top_in),
-        Inches(layout.ancho_total_in),
+        Inches(layout.ancho_total_in * escala),
         Inches(alto_fila_in * n_fil),
     )
     tabla = forma.table
     for i, c in enumerate(layout.columnas):
-        tabla.columns[i].width = Inches(c.ancho_in)
+        tabla.columns[i].width = Inches(c.ancho_in * escala)
     for f in range(n_fil):
         tabla.rows[f].height = Inches(alto_fila_in)
 
@@ -106,14 +133,12 @@ def insertar_tabla(
         c0, layout.titulo, pt=cuerpo_pt + 2, negrita=True, color=BLANCO, alineacion=PP_ALIGN.CENTER
     )
 
-    # ── Filas 1-2 · cabecera de dos niveles ─────────────────────────────────
-    primera = next(i for i, c in enumerate(layout.columnas) if c.grupo == "capex")
-    ultima = max(i for i, c in enumerate(layout.columnas) if c.grupo == "capex")
-
+    # ── Cabecera, de uno o de dos niveles ───────────────────────────────────
     for i, col in enumerate(layout.columnas):
         if col.grupo is None:
-            # Sin grupo: la cabecera ocupa las dos filas.
-            tabla.cell(1, i).merge(tabla.cell(2, i))
+            # Sin grupo: la cabecera ocupa las dos filas, si hay dos.
+            if filas_de_cabecera == 2:  # noqa: PLR2004
+                tabla.cell(1, i).merge(tabla.cell(2, i))
             celda = tabla.cell(1, i)
             celda.fill.solid()
             celda.fill.fore_color.rgb = ORO_GRUPO if col.key == "riesgo" else GRIS_CABECERA
@@ -138,18 +163,19 @@ def insertar_tabla(
                 alineacion=PP_ALIGN.CENTER,
             )
 
-    tabla.cell(1, primera).merge(tabla.cell(1, ultima))
-    cg = tabla.cell(1, primera)
-    cg.fill.solid()
-    cg.fill.fore_color.rgb = ORO_GRUPO
-    _escribir(
-        cg,
-        TITULO_GRUPO["capex"][0 if layout.locale.startswith("es") else 1],
-        pt=cuerpo_pt,
-        negrita=True,
-        color=BLANCO,
-        alineacion=PP_ALIGN.CENTER,
-    )
+    if del_grupo:
+        tabla.cell(1, del_grupo[0]).merge(tabla.cell(1, del_grupo[-1]))
+        cg = tabla.cell(1, del_grupo[0])
+        cg.fill.solid()
+        cg.fill.fore_color.rgb = ORO_GRUPO
+        _escribir(
+            cg,
+            TITULO_GRUPO["capex"][0 if layout.locale.startswith("es") else 1],
+            pt=cuerpo_pt,
+            negrita=True,
+            color=BLANCO,
+            alineacion=PP_ALIGN.CENTER,
+        )
 
     # ── Cuerpo ──────────────────────────────────────────────────────────────
     #
@@ -157,12 +183,16 @@ def insertar_tabla(
     # dentro el capítulo. Se distinguen por tono, como en la hoja del cliente:
     # si los dos fuesen del mismo gris, una tabla con cinco capítulos parecería
     # tener diez secciones sueltas en vez de dos grupos.
-    for f, fila in enumerate(layout.filas, start=3):
+    for f, fila in enumerate(layout.filas, start=filas_de_cabecera + 1):
         seccion = fila.tipo in ("seccion", "total")
         fondo = GRIS_SECCION if fila.nivel == 2 else GRIS_TIPO_DE_COSTE
         for i, col in enumerate(layout.columnas):
             celda = tabla.cell(f, i)
-            if seccion:
+            # En los resúmenes la columna del rótulo va sombreada aunque la fila
+            # sea de datos: es como los pinta la plantilla, con el grado de
+            # riesgo o el capítulo en gris y los importes sobre blanco.
+            destacada = seccion or col.key in fila.destacadas
+            if destacada:
                 celda.fill.solid()
                 celda.fill.fore_color.rgb = fondo
             else:
@@ -171,7 +201,7 @@ def insertar_tabla(
                 celda,
                 fila.celdas.get(col.key, ""),
                 pt=cuerpo_pt,
-                negrita=seccion,
-                color=BLANCO if seccion else NEGRO,
+                negrita=destacada,
+                color=BLANCO if destacada else NEGRO,
                 alineacion=_ALIGN[col.alineacion],
             )

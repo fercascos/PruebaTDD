@@ -40,13 +40,17 @@ Van en las **notas del orador**, que no se imprimen:
   del cliente: *«todas las fotos que vayamos adjuntando en la parte de
   inventario deberán aparecer en cada recuadro azul, y el pie de cada foto es el
   título de esa foto»*.
-* La primera diapositiva de la sección 07 que solo trae imágenes pegadas desde
-  Excel recibe `@capex`. `[REQ]` *«En vez de la tabla que aparece ahí deberá ir
-  la tabla pegada de CAPEX de nuestra herramienta.»*
+* Las diapositivas de la sección 07 reciben `@capex: <tablas>`. `[REQ]` *«En vez
+  de la tabla que aparece ahí deberá ir la tabla pegada de CAPEX de nuestra
+  herramienta.»* La sección **no tiene una tabla, tiene cinco**: las dos de
+  detalle —obra de arquitectura y de instalaciones—, la matriz de riesgo por
+  plazo que va detrás de cada una, el resumen por capítulo y el presupuesto de
+  costes duros y blandos. Se clasifican por la forma de sus imágenes, no por su
+  posición: las cuatro plantillas no numeran igual.
 
-`[LIM]` De las diapositivas de la sección 07 se marca **la primera**. Las demás
-—la segunda tabla, la leyenda de riesgo y los dos gráficos— se quedan con sus
-imágenes: son contenido de la plantilla y quién decide si sobran es el cliente.
+`[LIM]` La **leyenda de riesgo** de las páginas de la matriz —los cuatro grados
+y la escala de plazos— se queda como está: son imágenes aparte y son contenido
+fijo del informe, no datos del proyecto.
 """
 
 from __future__ import annotations
@@ -54,7 +58,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pptx
 from pptx.presentation import Presentation
@@ -62,6 +66,7 @@ from pptx.shapes.autoshape import Shape
 from pptx.shapes.base import BaseShape
 from pptx.slide import Slide
 from pptx.text.text import TextFrame
+from pptx.util import Emu
 
 #: `(título en la plantilla, código del árbol, nota)`.
 #:
@@ -253,13 +258,56 @@ def _tiene_marcos(slide: Slide) -> bool:
 PORTADILLA_CAPEX = frozenset({"CAPEX"})
 
 
-def _marcar_capex(prs: Presentation) -> list[str]:
-    """`@capex` en la primera diapositiva de tabla de la sección 07.
+#: Una tabla de detalle ocupa la página: cruza casi todo el ancho de la
+#: diapositiva y sus trozos suman más de media altura. Es lo que la distingue de
+#: los resúmenes, que son tablas anchas pero bajas. Medido sobre la plantilla
+#: real: las de detalle son de 9,06 × 5,2 in y los resúmenes no pasan de 3,2 in
+#: de alto.
+DETALLE_ANCHO_MIN_IN = 8.5
+DETALLE_ALTO_MIN_IN = 4.5
 
-    Se busca **desde su portadilla** y no la primera diapositiva de imágenes que
-    aparezca: el primer intento cayó en la sección de mediciones AEO, que
-    también son imágenes pegadas, y habría puesto la tabla del CAPEX en medio
-    del criterio de medición.
+#: Las diapositivas de la matriz de riesgo llevan, además de la tabla, los dos
+#: bloques de la **leyenda** —los cuatro grados y la escala de plazos—, cada uno
+#: pegado como su propia imagen. Tres imágenes o más es esa página.
+IMAGENES_CON_LEYENDA = 3
+
+
+def _es_portadilla(slide: Slide) -> bool:
+    """¿Es una de las separatas de sección? Llevan el número solo, «07», «08»."""
+    for forma in slide.shapes:
+        marco = _marco(forma)
+        if marco is not None and marco.text.strip().isdigit() and len(marco.text.strip()) == 2:  # noqa: PLR2004
+            return True
+    return False
+
+
+def _imagenes(slide: Slide) -> list[Any]:
+    """Las imágenes de la diapositiva, de mayor a menor superficie."""
+    fotos = [
+        f
+        for f in slide.shapes
+        if f.shape_type == 13 and f.width is not None and f.height is not None  # noqa: PLR2004
+    ]
+    return sorted(fotos, key=lambda f: -(f.width * f.height))
+
+
+def _marcar_capex(prs: Presentation) -> list[str]:
+    """Las **cinco** tablas de la sección 07, cada una en su diapositiva.
+
+    `[REQ]` La sección no tiene una tabla: tiene dos de detalle —obra de
+    arquitectura y de instalaciones—, una matriz de riesgo por plazo detrás de
+    cada una, un resumen por capítulo y un presupuesto de costes. Estaban las
+    cinco pegadas desde Excel, con los números de otro proyecto.
+
+    Se recorre **desde su portadilla y hasta la siguiente**, y cada diapositiva
+    se clasifica por la forma de sus imágenes, no por su posición: las cuatro
+    plantillas —A y B, castellano e inglés— no numeran igual.
+
+    `[SUP]` Que la matriz que va **detrás** de cada tabla de detalle sea la de
+    *ese* bloque, y no la del proyecto entero, es lectura mía: la plantilla trae
+    las dos con las mismas cifras, que es lo que pasa cuando un ejemplo se copia
+    y no se actualiza. Si el cliente las quiere globales, se le quita el bloque
+    a la directiva en las notas y no hay que tocar nada más.
     """
     inicio = next(
         (
@@ -274,13 +322,64 @@ def _marcar_capex(prs: Presentation) -> list[str]:
     )
     if inicio is None:
         return []
+
+    detalle: list[int] = []
+    matrices: list[int] = []
+    resumenes: list[int] = []
     for numero in range(inicio + 1, len(prs.slides) + 1):
         slide = prs.slides[numero - 1]
-        formas = list(slide.shapes)
-        if formas and all(f.shape_type == 13 for f in formas) and len(formas) >= 2:  # noqa: PLR2004
-            _anotar(slide, "@capex")
-            return [f"diap. {numero}: @capex"]
-    return []
+        if _es_portadilla(slide):
+            break
+        imagenes = _imagenes(slide)
+        if not imagenes:
+            continue
+        ancho = max(Emu(f.width).inches for f in imagenes)
+        alto = sum(Emu(f.height).inches for f in imagenes)
+        if ancho >= DETALLE_ANCHO_MIN_IN and alto >= DETALLE_ALTO_MIN_IN:
+            detalle.append(numero)
+        elif len(imagenes) >= IMAGENES_CON_LEYENDA:
+            matrices.append(numero)
+        else:
+            resumenes.append(numero)
+
+    return _escribir_capex(prs, detalle, matrices, resumenes)
+
+
+#: El orden en que la plantilla coloca sus dos bloques de obra.
+BLOQUES = ("arquitectura", "instalaciones")
+
+
+def _escribir_capex(
+    prs: Presentation, detalle: list[int], matrices: list[int], resumenes: list[int]
+) -> list[str]:
+    """Escribe las directivas que ha deducido `_marcar_capex`."""
+    puestos: list[str] = []
+
+    def poner(numero: int, directiva: str) -> None:
+        _anotar(prs.slides[numero - 1], directiva)
+        puestos.append(f"diap. {numero}: {directiva}")
+
+    # El reparto en dos bloques solo se aplica si hay **exactamente** dos tablas
+    # de detalle, que es como está la plantilla. Con una o con tres, partir el
+    # CAPEX por un criterio que no se cumple dejaría actuaciones fuera de todas
+    # las tablas: se prefiere una sola tabla completa, que no pierde nada.
+    parte_en_bloques = len(detalle) == len(BLOQUES)
+    for i, numero in enumerate(detalle):
+        poner(numero, f"@capex: detalle:{BLOQUES[i]}" if parte_en_bloques else "@capex: detalle")
+
+    for i, numero in enumerate(matrices):
+        ambito = f":{BLOQUES[i]}" if parte_en_bloques and i < len(BLOQUES) else ""
+        poner(numero, f"@capex: riesgos{ambito}")
+
+    # Lo que queda son el resumen por capítulo y el presupuesto, en ese orden.
+    # El primero trae las dos tablas en una sola imagen, así que pide las dos y
+    # se apilan en el mismo hueco.
+    for numero, directiva in zip(
+        resumenes, ("@capex: capitulos, riesgos", "@capex: costes"), strict=False
+    ):
+        poner(numero, directiva)
+
+    return puestos
 
 
 def _marco(forma: BaseShape) -> TextFrame | None:

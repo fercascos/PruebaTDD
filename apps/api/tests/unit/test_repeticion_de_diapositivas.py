@@ -298,12 +298,11 @@ def test_los_trozos_de_la_tabla_de_capex_van_seguidos_y_no_al_final() -> None:
         )
     )
 
-    def _insertar(slide: Any, trozo: Any) -> None:
-        caja = slide.shapes.add_textbox(Inches(1), Inches(4), Inches(8), Inches(1))
-        caja.text_frame.text = trozo
-
     usadas, avisos = composicion.poner_capex(
-        prs, ["trozo 1", "trozo 2"], clonar=clonar_diapositiva, insertar=_insertar
+        prs,
+        {"detalle": ["trozo 1", "trozo 2"]},
+        clonar=clonar_diapositiva,
+        insertar=_insertar_de_prueba,
     )
 
     assert (usadas, avisos) == (2, [])
@@ -315,3 +314,125 @@ def test_los_trozos_de_la_tabla_de_capex_van_seguidos_y_no_al_final() -> None:
     # modelo cuando ya llevaba el trozo anterior dentro, y las dos tablas
     # salían superpuestas en el mismo sitio.
     assert "trozo 1" not in textos[2], textos[2]
+
+
+def _insertar_de_prueba(
+    slide: Any, trozo: Any, izq: float = 1.0, arriba: float = 4.0, ancho: float | None = None
+) -> float:
+    """Sustituye a la tabla nativa: escribe el nombre del trozo y dónde cayó."""
+    caja = slide.shapes.add_textbox(Inches(izq), Inches(arriba), Inches(ancho or 8.0), Inches(0.4))
+    caja.text_frame.text = f"{trozo} @{izq:.2f},{arriba:.2f}"
+    return 1.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Las cinco tablas de la sección 07
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _con_imagenes(*paginas: tuple[str, list[tuple[float, float, float, float]]]) -> bytes:
+    """Una plantilla cuyas diapositivas llevan imágenes donde van las tablas.
+
+    La sección 07 del cliente trae sus tablas **pegadas desde Excel**, y la
+    posición y el tamaño de esas imágenes es lo que dice dónde va cada tabla
+    nueva. Tienen que ser imágenes de verdad y no autoformas: es por el tipo de
+    forma por lo que se distingue el hueco de una tabla del resto del diseño.
+    """
+    from tests.unit.test_imagenes import imagen
+
+    datos = imagen(color=(120, 120, 120))
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = Inches(10), Inches(7.5)
+    for notas, marcos in paginas:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        for izq, arriba, ancho, alto in marcos:
+            slide.shapes.add_picture(
+                io.BytesIO(datos), Inches(izq), Inches(arriba), Inches(ancho), Inches(alto)
+            )
+        if notas:
+            slide.notes_slide.notes_text_frame.text = notas
+    salida = io.BytesIO()
+    prs.save(salida)
+    return salida.getvalue()
+
+
+def test_capex_sin_lista_sigue_significando_la_tabla_de_detalle() -> None:
+    """Una plantilla marcada antes de que la directiva admitiese nombres tiene
+    que seguir generando lo mismo, sin que nadie la vuelva a marcar."""
+    from tdd.reporting import composicion
+
+    prs = Presentation(io.BytesIO(_plantilla(("Tabla", "@capex"))))
+    assert composicion.tablas_de_capex(prs.slides[0]) == ["detalle"]
+
+
+def test_una_diapositiva_puede_pedir_varias_tablas() -> None:
+    from tdd.reporting import composicion
+
+    prs = Presentation(io.BytesIO(_plantilla(("Resumen", "@capex: capitulos, riesgos"))))
+    assert composicion.tablas_de_capex(prs.slides[0]) == ["capitulos", "riesgos"]
+
+
+def test_cada_tabla_va_al_marco_de_su_imagen_y_la_leyenda_se_queda() -> None:
+    """`[REQ]` La diapositiva de la matriz de riesgo trae, además de la tabla,
+    los dos bloques de la **leyenda** pegados como imágenes aparte.
+
+    Se retiraban las tres, y la página salía sin los cuatro grados de riesgo ni
+    la escala de plazos: la tabla quedaba sin el criterio que la explica.
+    """
+    from tdd.reporting import composicion
+    from tdd.reporting.clone import clonar_diapositiva
+
+    # Como en la plantilla real: la matriz es la imagen grande y las otras dos,
+    # pequeñas, son la leyenda.
+    prs = Presentation(
+        io.BytesIO(
+            _con_imagenes(("@capex: riesgos", [(0.68, 4.35, 2.97, 0.95), (3.44, 4.35, 5.78, 2.58)]))
+        )
+    )
+    puestas, avisos = composicion.poner_capex(
+        prs, {"riesgos": ["matriz"]}, clonar=clonar_diapositiva, insertar=_insertar_de_prueba
+    )
+
+    assert (puestas, avisos) == (1, [])
+    # La tabla va en el marco de la imagen grande, no en una posición fija.
+    assert "matriz @3.44,4.35" in _textos(prs)[0]
+    # Y la leyenda sigue ahí: quedan dos formas, el rectángulo pequeño y la
+    # caja de texto que ha sustituido al grande.
+    assert len(prs.slides[0].shapes) == 2  # noqa: PLR2004
+
+
+def test_dos_tablas_en_un_solo_marco_se_apilan() -> None:
+    """La diapositiva del resumen trae las dos tablas en una sola imagen."""
+    from tdd.reporting import composicion
+    from tdd.reporting.clone import clonar_diapositiva
+
+    prs = Presentation(
+        io.BytesIO(_con_imagenes(("@capex: capitulos, riesgos", [(0.50, 1.42, 8.99, 3.18)])))
+    )
+    puestas, _ = composicion.poner_capex(
+        prs,
+        {"capitulos": ["por capítulo"], "riesgos": ["por riesgo"]},
+        clonar=clonar_diapositiva,
+        insertar=_insertar_de_prueba,
+    )
+
+    assert puestas == 2  # noqa: PLR2004
+    texto = _textos(prs)[0]
+    assert "por capítulo @0.50,1.42" in texto
+    # La segunda arranca donde acabó la primera —que declaró 1,0 in de alto—,
+    # no encima de ella.
+    assert "por riesgo @0.50,2.42" in texto
+
+
+def test_una_tabla_que_no_existe_avisa_en_vez_de_callarse() -> None:
+    from tdd.reporting import composicion
+    from tdd.reporting.clone import clonar_diapositiva
+
+    prs = Presentation(io.BytesIO(_con_imagenes(("@capex: inventada", [(1.0, 1.0, 5.0, 3.0)]))))
+    puestas, avisos = composicion.poner_capex(
+        prs, {"detalle": ["x"]}, clonar=clonar_diapositiva, insertar=_insertar_de_prueba
+    )
+
+    assert puestas == 0
+    assert len(avisos) == 1
+    assert "inventada" in avisos[0]

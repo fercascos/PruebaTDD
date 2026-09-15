@@ -137,6 +137,11 @@ def lineas_de_capex(snapshot: dict[str, Any]) -> list[cl.LineaCapex]:
                 tipo_de_coste=str(hallazgo.get("capex_type_name") or ""),
                 capitulo=str(hallazgo.get("capex_chapter_name") or ""),
                 objeto=str(hallazgo.get("capex_item_name") or ""),
+                # El código, además del nombre: es lo que reparte la línea entre
+                # la tabla de arquitectura y la de instalaciones, y el nombre no
+                # sirve porque se traduce.
+                capitulo_code=str(hallazgo.get("capex_chapter_code") or ""),
+                riesgo_orden=int(hallazgo.get("risk_score") or 0),
                 recuperable=RECUPERABLE.get(str(hallazgo.get("tenant_recoverable") or ""), ""),
                 # [REQ] P-44 · Las líneas de la misma actuación se agrupan en
                 # una sola fila con varias columnas de plazo rellenas.
@@ -144,6 +149,95 @@ def lineas_de_capex(snapshot: dict[str, Any]) -> list[cl.LineaCapex]:
             )
         )
     return salida
+
+
+#: Alto de fila de los resúmenes. Tienen pocas filas y un marco generoso: con el
+#: 0,17 in de la tabla de detalle salían apelmazados arriba del hueco.
+ALTO_FILA_RESUMEN_IN = 0.24
+PT_RESUMEN = 7.0
+
+
+def _dibujar_tabla(
+    slide: Any, layout: cl.CapexTableLayout, izq: float, arriba: float, ancho: float | None
+) -> float:
+    """Dibuja una tabla y **devuelve su alto en pulgadas**, para poder apilar.
+
+    La diapositiva 59 de la plantilla trae el resumen por capítulo y la matriz
+    de riesgo en una sola imagen: la segunda tabla se coloca debajo de la
+    primera, y para eso hay que saber cuánto ocupó la primera.
+    """
+    resumen = ancho is not None
+    alto_fila = ALTO_FILA_RESUMEN_IN if resumen else 0.17
+    insertar_tabla(
+        slide,
+        layout,
+        left_in=izq,
+        top_in=arriba,
+        ancho_in=ancho,
+        alto_fila_in=alto_fila,
+        cuerpo_pt=PT_RESUMEN if resumen else 5.0,
+    )
+    # El título del bloque, más una fila de cabecera o dos según la tabla lleve
+    # o no columnas de plazo. El 10 % de más es aire entre una tabla y la
+    # siguiente cuando comparten hueco, no holgura para cuadrar una cuenta: el
+    # alto de fila lo respeta el render desde que las celdas vacías dejaron de
+    # llevar un run sin tamaño.
+    cabecera = 2 if any(c.grupo == "capex" for c in layout.columnas) else 1
+    return (len(layout.filas) + cabecera + 1) * alto_fila * 1.10
+
+
+def tablas_de_capex(
+    lineas: list[cl.LineaCapex], snapshot: dict[str, Any], locale: str
+) -> tuple[dict[str, list[cl.CapexTableLayout]], list[str]]:
+    """Las cinco tablas de la sección 07, cada una bajo el nombre que la pide.
+
+    `[REQ]` La plantilla del cliente reparte el detalle en **dos** tablas —obra
+    de arquitectura y obra de instalaciones—, pone detrás de cada una su matriz
+    de riesgo por plazo, y cierra con el resumen por capítulo y el presupuesto
+    de costes duros y blandos. Estaban las cinco pegadas desde Excel.
+
+    Se construyen todas aunque la plantilla no las pida: cuesta microsegundos y
+    así una plantilla que solo marque dos no obliga a adivinar cuáles.
+    """
+    avisos: list[str] = []
+    niveles = [
+        (str(r.get("name_es") or ""), int(r.get("score") or 0))
+        for r in snapshot.get("catalogs", {}).get("risk_levels", [])
+    ]
+
+    tablas: dict[str, list[cl.CapexTableLayout]] = {
+        "detalle": cl.particionar(
+            cl.construir(lineas, capitulo="CAPEX", locale=locale),
+            filas_por_diapositiva=FILAS_POR_DIAPOSITIVA,
+        ),
+        "riesgos": [cl.resumen_por_riesgo(lineas, niveles=niveles, locale=locale)],
+        "capitulos": [cl.resumen_por_capitulo(lineas, locale=locale)],
+        "costes": [cl.resumen_de_costes(lineas, locale=locale)],
+    }
+
+    for bloque in cl.BLOQUES_DE_OBRA:
+        del_bloque = cl.del_bloque(lineas, bloque)
+        nombre = cl.NOMBRE_DE_BLOQUE[bloque][0 if locale.startswith("es") else 1]
+        tablas[f"detalle:{bloque}"] = cl.particionar(
+            cl.construir(del_bloque, capitulo=nombre, locale=locale),
+            filas_por_diapositiva=FILAS_POR_DIAPOSITIVA,
+        )
+        tablas[f"riesgos:{bloque}"] = [
+            cl.resumen_por_riesgo(del_bloque, niveles=niveles, locale=locale, sufijo=nombre)
+        ]
+
+    # Un capítulo de obra que no esté en ninguno de los dos bloques suma en los
+    # resúmenes y no sale en ninguna tabla de detalle: la diferencia es
+    # invisible salvo que alguien cuadre las cifras a mano.
+    huerfanas = cl.fuera_de_los_bloques(lineas)
+    if huerfanas:
+        codigos = sorted({ln.capitulo_code for ln in huerfanas})
+        avisos.append(
+            f"{len(huerfanas)} líneas de CAPEX están en capítulos de obra que no se reparten "
+            f"entre arquitectura e instalaciones ({', '.join(codigos)}): cuentan en los "
+            "resúmenes pero no salen en ninguna de las dos tablas de detalle."
+        )
+    return tablas, avisos
 
 
 def insertar_foto(
@@ -339,13 +433,14 @@ def generar(
     # `[LIM]` Sin `@capex` en ninguna diapositiva se sigue añadiendo al final,
     # que es lo que hacía antes: una plantilla que no dice dónde quiere la tabla
     # prefiere tenerla suelta a no tenerla.
-    layout = cl.construir(lineas_de_capex(snapshot), capitulo="CAPEX", locale=locale)
-    trozos = cl.particionar(layout, filas_por_diapositiva=FILAS_POR_DIAPOSITIVA)
-    usadas, avisos_de_composicion = composicion.poner_capex(
-        prs, trozos, clonar=clonar_diapositiva, insertar=insertar_tabla
+    lineas = lineas_de_capex(snapshot)
+    tablas, avisos_de_capex = tablas_de_capex(lineas, snapshot, locale)
+    puestas, avisos_de_composicion = composicion.poner_capex(
+        prs, tablas, clonar=clonar_diapositiva, insertar=_dibujar_tabla
     )
-    if not usadas:
-        for trozo in trozos:
+    avisos_de_composicion += avisos_de_capex
+    if not puestas:
+        for trozo in tablas["detalle"]:
             slide = prs.slides.add_slide(prs.slide_layouts[6])
             insertar_tabla(slide, trozo)
 
@@ -412,16 +507,16 @@ def generar(
         xlsx=xlsx,
         avisos_del_excel=avisos_del_excel,
         diapositivas=len(prs.slides),
-        diapositivas_de_tabla=len(trozos),
+        diapositivas_de_tabla=len(tablas["detalle"]),
         marcadores_sin_resolver=sorted(set(sin_resolver)),
         marcas_de_agua_retiradas=[m.texto for m in marcas],
         fotos_insertadas=insertadas,
-        totales=layout.totales,
+        totales=tablas["detalle"][-1].totales,
         avisos_de_repeticion=avisos_de_repeticion,
         diapositivas_repetidas=repetidas,
         secciones_sin_datos=sin_datos,
         avisos_de_composicion=avisos_de_composicion,
-        diapositivas_de_capex_en_plantilla=usadas,
+        diapositivas_de_capex_en_plantilla=puestas,
     )
 
 

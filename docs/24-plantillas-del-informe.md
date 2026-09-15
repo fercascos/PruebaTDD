@@ -240,19 +240,57 @@ Solo entran las fotografías marcadas para el informe: subirlas no es elegirlas.
 Y llevan su **objeto del árbol**, que es lo que las lleva a su sección; una foto
 sin objeto se añade al final y se avisa.
 
-### `@capex` · la tabla de la herramienta
+### `@capex: <tablas>` · las cinco tablas de la sección 07
 
 `[REQ]` *«En vez de la tabla que aparece ahí deberá ir la tabla pegada de CAPEX
 de nuestra herramienta.»*
 
-La diapositiva de la sección 07 que lleva la directiva recibe la **tabla nativa**
-del CAPEX del proyecto. Lo que había pegado desde Excel es una imagen y **se
-retira**: dejarla debajo daría dos tablas con cifras distintas en la misma
-página.
+La sección 07 **no tiene una tabla: tiene cinco**, y las cinco venían pegadas
+desde Excel como imagen, con los números de otro proyecto. Cada diapositiva
+declara en sus notas cuál le toca:
 
-Si la tabla no cabe en una diapositiva, se parte: cada trozo se lleva su copia
+| En las notas | Qué recibe |
+|---|---|
+| `@capex: detalle:arquitectura` | La valoración de las actuaciones de obra, capítulos `HC.H01`–`HC.H07` |
+| `@capex: riesgos:arquitectura` | Su matriz de grado de riesgo × plazo |
+| `@capex: detalle:instalaciones` | Lo mismo para `HC.H08`–`HC.H15` |
+| `@capex: riesgos:instalaciones` | Su matriz |
+| `@capex: capitulos, riesgos` | El resumen por capítulo y la matriz del proyecto entero, apilados |
+| `@capex: costes` | El presupuesto: costes duros, blandos y total sin IVA |
+
+`@capex` a secas sigue significando `@capex: detalle`, la tabla completa sin
+partir por bloques: una plantilla marcada antes de esto genera lo mismo que
+generaba.
+
+**Cada tabla ocupa el hueco de la imagen que sustituye.** Eso es lo que permite
+que en la página de la matriz de riesgo **la leyenda se quede**: los cuatro
+grados y la escala de plazos son otras dos imágenes, más pequeñas, y no se
+tocan. Si dos tablas comparten una sola imagen —el resumen por capítulo y la
+matriz vienen juntas en una— la segunda se apila debajo de la primera.
+
+Si una tabla no cabe en una diapositiva, se parte: cada trozo se lleva su copia
 de la diapositiva de la plantilla —con su cabecera y su pie— y salen
 **seguidas**, numeradas «(1/2)», «(2/2)».
+
+`[REQ]` **Nada se pierde entre las dos tablas de detalle.** Lo que no es obra
+—costes blandos, licencias, imprevistos— no cabe en la «valoración de las
+actuaciones necesarias en el inmueble» y sale en el resumen por capítulo y en el
+presupuesto, que es donde el total del proyecto se ve entero. Y un capítulo de
+obra que alguien añada al árbol y no esté repartido entre los dos bloques
+**produce un aviso al generar**: sumaría en los resúmenes sin salir en ninguna
+tabla de detalle, y esa diferencia no se ve salvo cuadrando las cifras a mano.
+
+`[SUP]` Que la matriz que va **detrás** de cada tabla de detalle sea la de *ese*
+bloque, y no la del proyecto entero, es lectura nuestra: la plantilla trae las
+dos con las mismas cifras, que es lo que pasa cuando un ejemplo se copia y no se
+actualiza. Si se quieren globales, se le quita el bloque a la directiva en las
+notas —`@capex: riesgos`— y no hay que tocar nada más.
+
+`[SUP]` El desglose de **costes blandos** de la plantilla lista siete conceptos
+—dirección facultativa, DEO, project monitoring, PRL, ECLU, ICIO y otras
+licencias—. Nuestro árbol tiene cuatro capítulos de coste blando, y **no** esos
+siete: se enseñan los nuestros. Inventar sus siete etiquetas y repartir importes
+entre ellas sería fabricar un desglose.
 
 ---
 
@@ -261,10 +299,6 @@ de la diapositiva de la plantilla —con su cabecera y su pie— y salen
 `[LIM]` Se dice porque el informe es un entregable firmado y conviene saber
 dónde está el límite hoy:
 
-- **Solo se marca la primera diapositiva de tablas de la sección 07.** Las demás
-  —la segunda tabla, la leyenda de riesgo y los dos gráficos— se quedan con sus
-  imágenes pegadas: son contenido de la plantilla y quién decide si sobran es el
-  cliente.
 - **No hay filas repetibles dentro de una tabla** (`{{#row ...}}` de
   [`12`](./12-pptx.md) §17.2). Una tabla de la plantilla se queda como está.
 - **No se insertan imágenes por marcador** (`{{@asset.main_photo}}`).
