@@ -135,6 +135,23 @@ SECCIONES: tuple[tuple[str, str, str], ...] = (
     ("EVACUATION - OCCUPANCY", "HC.H06.09", ""),
 )
 
+#: Los campos de la **ficha del edificio**: un título de la plantilla y el
+#: marcador que va en el relleno de debajo.
+#:
+#: `[LIM]` Solo están los dos que la aplicación sabe rellenar. El resumen
+#: ejecutivo de arquitectura y de instalaciones, el análisis de licencias y la
+#: documentación consultada tienen su hueco en la plantilla y **no hay dato que
+#: poner**: se quedan con el relleno «XXXX» para que quien redacta vea que le
+#: toca escribirlos. Inventar un marcador para ellos daría un informe con
+#: apartados vacíos y aire de estar terminado.
+CAMPOS_DEL_EDIFICIO: dict[str, str] = {
+    "EMPLAZAMIENTO": "{{asset.address}}",
+    "LOCATION": "{{asset.address}}",
+    "DESCRIPCION": "{{asset.descriptivo}}",
+    "DESCRIPTION": "{{asset.descriptivo}}",
+    "BUILDING DESCRIPTION": "{{asset.descriptivo}}",
+}
+
 #: Los títulos que NO son una sección de sistema aunque estén en mayúsculas y
 #: solos en su diapositiva. Sin esta lista, «DESCRIPCIÓN» recibiría marcadores
 #: de sección y el informe sacaría el descriptivo de un capítulo en la ficha del
@@ -196,7 +213,127 @@ def marcar(prs: Presentation) -> list[str]:
 
     puestos += _marcar_fotos(prs, codigos_por_diapositiva)
     puestos += _marcar_capex(prs)
+    puestos += _marcar_cabeceras(prs)
+    puestos += _marcar_portada(prs)
     return puestos
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los campos globales: la cabecera de todas las páginas y la portada
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: El rótulo que la plantilla pone donde va el nombre del proyecto. Está escrito
+#: así en los **patrones** —uno por sección del informe— y en inglés en las
+#: portadillas, que lo llevan a mano.
+ROTULOS_DEL_PROYECTO = frozenset({"NOMBRE DEL PROYECTO", "PROJECT NAME"})
+
+
+def _marcar_cabeceras(prs: Presentation) -> list[str]:
+    """`{{project.name}}` donde la plantilla pone «NOMBRE DEL PROYECTO».
+
+    `[REQ]` Ese rótulo **no está en ninguna diapositiva**: está en los once
+    patrones, uno por sección —«ANÁLISIS TÉCNICO ARQUITECTURA», «ESTIMACIÓN
+    ECONÓMICA - CAPEX»…—, y es el patrón el que lo pinta en las sesenta y siete
+    páginas. Marcarlo ahí rellena el informe entero de una vez; marcarlo
+    diapositiva a diapositiva no habría encontrado nada.
+
+    El **título de la sección**, que va en el párrafo de arriba del mismo cuadro,
+    no se toca: es contenido del informe, no un dato del proyecto.
+    """
+    puestos: list[str] = []
+    patrones = {id(s.slide_layout): s.slide_layout for s in prs.slides}
+    for patron in patrones.values():
+        if _poner_en_rotulo(patron, ROTULOS_DEL_PROYECTO, "{{project.name}}"):
+            puestos.append(f"patrón «{patron.name}»: {{{{project.name}}}}")
+    # Las portadillas de sección lo llevan escrito en la propia diapositiva, en
+    # inglés, porque no usan el patrón de su sección.
+    for numero, slide in enumerate(prs.slides, start=1):
+        if _poner_en_rotulo(slide, ROTULOS_DEL_PROYECTO, "{{project.name}}"):
+            puestos.append(f"diap. {numero}: {{{{project.name}}}}")
+    return puestos
+
+
+def _poner_en_rotulo(contenedor: Any, rotulos: frozenset[str], marcador: str) -> bool:
+    """Sustituye el párrafo cuyo texto sea uno de los rótulos. ¿Lo encontró?"""
+    for forma in contenedor.shapes:
+        marco = _marco(forma)
+        if marco is None:
+            continue
+        for parrafo in marco.paragraphs:
+            if _sin_tildes(parrafo.text) in rotulos:
+                _escribir(parrafo, marcador)
+                return True
+    return False
+
+
+#: La portada. `[SUP]` Que el hueco de debajo del título sea el **nombre del
+#: proyecto** es lectura mía: la plantilla pone «XXX» y no dice de qué. Es lo que
+#: hay en una portada de TDD debajo de «Due Diligence Técnica», y si el cliente
+#: quiere ahí la dirección del inmueble se cambia el marcador a mano.
+PORTADA_TITULO = frozenset(
+    {
+        # La plantilla escribe «Dilligence» con dos eles. Se admiten las dos
+        # grafías: corregirle la errata al cliente no es cosa de esta
+        # herramienta, y buscar solo la correcta no habría encontrado su portada.
+        "DUE DILLIGENCE TECNICA",
+        "DUE DILIGENCE TECNICA",
+        "TECHNICAL DUE DILIGENCE",
+    }
+)
+
+
+def _marcar_portada(prs: Presentation) -> list[str]:
+    """El nombre del proyecto y la fecha, en la primera diapositiva.
+
+    La fecha de la plantilla —«Febrero 2026»— **no es un relleno**: es una fecha
+    de verdad, de otro encargo. Por eso no la detecta `_es_relleno` y hay que
+    tratarla aparte; dejarla puesta sacaría el informe con la fecha de otro.
+    """
+    if not len(prs.slides):
+        return []
+    portada = prs.slides[0]
+    if not any(
+        _sin_tildes(p.text) in PORTADA_TITULO
+        for f in portada.shapes
+        if (m := _marco(f)) is not None
+        for p in m.paragraphs
+    ):
+        return []
+
+    puestos: list[str] = []
+    for forma in portada.shapes:
+        marco = _marco(forma)
+        if marco is None:
+            continue
+        for parrafo in marco.paragraphs:
+            texto = parrafo.text.strip()
+            if _es_relleno(texto) or set(texto) <= {"X", "x"} and texto:
+                _escribir(parrafo, "{{project.name}}")
+                puestos.append("diap. 1: {{project.name}}")
+            elif _es_una_fecha(texto):
+                _escribir(parrafo, "{{report.month}}")
+                puestos.append("diap. 1: {{report.month}}")
+    return puestos
+
+
+def _es_una_fecha(texto: str) -> bool:
+    """«Febrero 2026» y sus equivalentes: un mes y un año, y nada más."""
+    partes = _sin_tildes(texto).split()
+    if len(partes) != 2:  # noqa: PLR2004
+        return False
+    mes, ano = partes
+    return mes in MESES_EN_PORTADA and ano.isdigit() and len(ano) == 4  # noqa: PLR2004
+
+
+#: Los meses como los escribe una portada, en los dos idiomas de las plantillas.
+MESES_EN_PORTADA = frozenset(
+    {
+        *("ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO"),
+        *("JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"),
+        *("JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE"),
+        *("JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"),
+    }
+)
 
 
 def _codigos_de(lineas: list[str]) -> list[str]:
@@ -382,6 +519,14 @@ def _escribir_capex(
     return puestos
 
 
+def _ya_se_repite(slide: Slide) -> bool:
+    """¿Lleva ya un `@repeat` en las notas? Dos seguidos no tendrían sentido."""
+    if not slide.has_notes_slide:
+        return False
+    marco = slide.notes_slide.notes_text_frame
+    return marco is not None and "@repeat" in marco.text.lower()
+
+
 def _marco(forma: BaseShape) -> TextFrame | None:
     """El cuadro de texto de una forma, o `None` si no lo tiene.
 
@@ -416,14 +561,35 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
         if marco is None:
             continue
         codigo: str | None = None
+        campo: str | None = None
         toca_valoracion = False
         for parrafo in marco.paragraphs:
             texto = parrafo.text.strip()
             if not texto:
                 continue
+            # Un campo de la ficha del edificio: «EMPLAZAMIENTO» y el relleno de
+            # debajo es la dirección del activo. Va antes que la búsqueda de
+            # sección porque estos títulos están en `NO_SON_SECCION` justamente
+            # para que no se los tome por un capítulo del árbol.
+            posible_campo = CAMPOS_DEL_EDIFICIO.get(_sin_tildes(texto))
+            if posible_campo is not None:
+                campo, codigo = posible_campo, None
+                continue
             posible = _codigo_de(texto)
             if posible is not None:
-                codigo, toca_valoracion = posible, False
+                codigo, campo, toca_valoracion = posible, None, False
+                continue
+            if campo is not None and _es_relleno(texto):
+                _escribir(parrafo, campo)
+                puestos.append(f"diap. {numero}: {campo}")
+                # Un campo del edificio es de **un activo**, y una diapositiva
+                # que no se repite no sabe de cuál: saldría en blanco sin decir
+                # por qué. La ficha se repite, una por edificio, que es lo que
+                # hace a mano quien monta un informe de cartera.
+                if campo.startswith("{{asset.") and not _ya_se_repite(slide):
+                    _anotar(slide, "@repeat: asset")
+                    puestos.append(f"diap. {numero}: @repeat: asset")
+                campo = None
                 continue
             # `[REQ]` «Valuation» es lo que escriben las plantillas inglesas.
             # Estaba puesto «Assessment», que es lo que yo habría escrito y no

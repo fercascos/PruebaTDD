@@ -327,13 +327,35 @@ def listar_mapeos(template_id: uuid.UUID, s: SesionDep) -> Any:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _se_sabe_resolver(marcador: str, bindings: dict[str, str]) -> bool:
+    """¿Saldrá este marcador con un valor, o saldría literal en el documento?
+
+    Tres formas de estar cubierto, y el bloqueo es solo para lo que no es
+    ninguna de las tres:
+
+    1. **El mapeo lo ata** a un campo. Es para los nombres propios del cliente:
+       una plantilla que escribe `{{inmueble}}` donde nosotros decimos
+       `asset.name`.
+    2. **Es un marcador del catálogo.** `{{asset.address}}` lo rellena la
+       aplicación sin que nadie mapee nada, y exigir un mapeo para él bloqueaba
+       la generación de una plantilla perfectamente correcta.
+    3. **Es un marcador de sección** —`{{descriptivo:HC.H02}}`—. Si el edificio
+       no tiene nada de esa sección, se vacía y se informa aparte; nunca sale
+       impreso. No es un fallo de plantilla, es una sección sin contenido.
+    """
+    if marcador in bindings or marcador in CAMPOS_DISPONIBLES:
+        return True
+    prefijo, _, codigo = marcador.partition(":")
+    return bool(codigo) and prefijo in mk.POR_CODIGO
+
+
 def _reunir_estado(
     s: Session, project_id: uuid.UUID, plantilla: dict[str, Any], bindings: dict[str, str]
 ) -> EstadoDelInforme:
     """Lee de la base todo lo que §17.7 necesita para decidir."""
     analisis = plantilla["analysis"] or {}
     marcadores = set(analisis.get("placeholders", []))
-    sin_mapear = tuple(sorted(marcadores - set(bindings)))
+    sin_mapear = tuple(sorted(m for m in marcadores if not _se_sabe_resolver(m, bindings)))
     invalidas = tuple(sorted(set(bindings.values()) - CAMPOS_DISPONIBLES))
 
     fotos = (

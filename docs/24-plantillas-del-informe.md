@@ -294,6 +294,76 @@ entre ellas sería fabricar un desglose.
 
 ---
 
+## 3 quater · La cabecera y la portada
+
+### El nombre del proyecto vive en el **patrón**, no en las diapositivas
+
+`[REQ]` La plantilla del cliente pone «NOMBRE DEL PROYECTO» debajo del título de
+sección en lo alto de cada página. Ese rótulo **no está en ninguna de sus
+sesenta y siete diapositivas**: está en **once patrones**, uno por sección
+—«ANÁLISIS TÉCNICO ARQUITECTURA», «ESTIMACIÓN ECONÓMICA - CAPEX»…—, y es el
+patrón el que lo pinta en todas.
+
+Por eso la generación sustituye marcadores **también en los patrones**. Un
+`{{project.name}}` escrito ahí rellena el informe entero de una vez; escrito
+diapositiva a diapositiva habría que ponerlo sesenta y siete veces.
+
+`[LIM]` **En un patrón no caben los marcadores de activo ni de hallazgo.** El
+patrón es uno para todas sus páginas, así que `{{asset.name}}` saldría igual en
+todas, con los datos del primero. Se avisa al generar en vez de dejarlo pasar,
+porque desde fuera parece que la repetición no funciona.
+
+El análisis de la plantilla los lista aparte, en `master_placeholders`: quien
+mire el análisis no los encontrará abriendo las páginas.
+
+### La portada
+
+| Lo que pone la plantilla | Lo que recibe |
+|---|---|
+| El hueco de debajo del título | `{{project.name}}` |
+| «Febrero 2026» | `{{report.month}}` |
+
+`{{report.month}}` es la fecha del informe escrita como la escribe una portada
+—«Septiembre 2026»—, no `AAAA-MM-DD`. Es el mismo dato con otro formato, no un
+dato nuevo.
+
+`[REQ]` La fecha de la plantilla **no es un relleno**: es una fecha de verdad, de
+otro encargo. Se sustituye igual, porque dejarla puesta sacaría el informe con la
+fecha de otro proyecto.
+
+`[SUP]` Que el hueco de debajo del título sea el **nombre del proyecto** es
+lectura nuestra: la plantilla pone «XXX» y no dice de qué. Si ahí va la dirección
+del inmueble, se cambia el marcador a mano en PowerPoint.
+
+### La ficha del edificio
+
+| Título en la plantilla | Lo que recibe |
+|---|---|
+| EMPLAZAMIENTO · LOCATION | `{{asset.address}}` |
+| DESCRIPCIÓN · DESCRIPTION | `{{asset.descriptivo}}` |
+
+Estas dos diapositivas reciben además **`@repeat: asset`**: son datos de **un
+edificio**, y un proyecto de cartera tiene varios. Sin repetirse, el informe
+enseñaría la ficha del primero y callaría las demás.
+
+`[LIM]` Con varios activos las fichas salen **agrupadas por diapositiva**, no por
+edificio: primero todos los emplazamientos y después todas las descripciones. Es
+consecuencia de que la plantilla las tenga en dos páginas distintas.
+
+### Lo que **no** se rellena, y por qué
+
+`[LIM]` Cuatro huecos de la plantilla se quedan con su relleno «XXXX»:
+
+- **Resumen ejecutivo de arquitectura** y **de instalaciones**
+- **Análisis de licencias**
+- **Documentación consultada**
+
+La aplicación **no tiene ese dato**. Inventar un marcador para ellos daría un
+informe con apartados vacíos y aire de estar terminado; dejar el relleno hace
+visible que ahí le toca escribir a una persona.
+
+---
+
 ## 4 · Lo que todavía NO hace
 
 `[LIM]` Se dice porque el informe es un entregable firmado y conviene saber

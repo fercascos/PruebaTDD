@@ -436,3 +436,99 @@ def test_una_tabla_que_no_existe_avisa_en_vez_de_callarse() -> None:
     assert puestas == 0
     assert len(avisos) == 1
     assert "inventada" in avisos[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Los campos globales: la cabecera vive en el PATRÓN, no en las diapositivas
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _con_cabecera_en_el_patron(texto_del_patron: str, *paginas: str) -> bytes:
+    """Una plantilla que escribe en su patrón, como hace la del cliente.
+
+    Su cabecera —«ANÁLISIS TÉCNICO ARQUITECTURA» y debajo el nombre del
+    proyecto— no está en ninguna de las sesenta y siete diapositivas: está en
+    once patrones, y es el patrón el que la pinta en todas.
+    """
+    prs = Presentation()
+    # Un patrón no deja añadir cuadros de texto desde `python-pptx`, así que se
+    # escribe en el marcador de título que ya trae: es lo mismo que hace la
+    # plantilla del cliente, que escribe la cabecera en un cuadro del patrón.
+    patron = prs.slide_layouts[5]
+    patron.placeholders[0].text_frame.text = texto_del_patron
+    for texto in paginas:
+        slide = prs.slides.add_slide(patron)
+        slide.shapes.add_textbox(Inches(1), Inches(2), Inches(8), Inches(1)).text_frame.text = texto
+    salida = io.BytesIO()
+    prs.save(salida)
+    return salida.getvalue()
+
+
+def test_el_marcador_del_patron_se_rellena_en_todas_las_paginas() -> None:
+    """Sustituir solo en las diapositivas dejaba el informe entero con el rótulo
+    de la plantilla —«NOMBRE DEL PROYECTO»— en lo alto de cada página."""
+    from tdd.reporting import generator
+
+    prs = Presentation(io.BytesIO(_con_cabecera_en_el_patron("{{project.name}}", "A", "B", "C")))
+    sin_resolver, avisos = generator.sustituir_en_los_patrones(
+        prs, {"project.name": "Cartera Ficticia"}
+    )
+
+    assert (sin_resolver, avisos) == ([], [])
+    # El patrón es uno solo y lo comparten las tres páginas: se escribe una vez
+    # y sale en las tres.
+    patrones = {id(s.slide_layout) for s in prs.slides}
+    assert len(patrones) == 1
+    assert prs.slides[0].slide_layout.shapes[0].text_frame.text == "Cartera Ficticia"
+
+
+def test_un_patron_compartido_no_se_sustituye_dos_veces() -> None:
+    """Es el mismo objeto para las tres páginas. A la segunda pasada ya no
+    quedaría marcador, y se contaría un «no resuelto» que no existe."""
+    from tdd.reporting import generator
+
+    prs = Presentation(io.BytesIO(_con_cabecera_en_el_patron("{{project.name}}", "A", "B", "C")))
+    sin_resolver, _ = generator.sustituir_en_los_patrones(prs, {})
+    # Una sola vez, aunque lo usen tres diapositivas.
+    assert sin_resolver == ["project.name"]
+
+
+def test_un_marcador_de_activo_en_el_patron_avisa() -> None:
+    """Saldría **igual en todas** las páginas, con los datos del primer activo.
+    Desde fuera parece que la repetición no funciona."""
+    from tdd.reporting import generator
+
+    prs = Presentation(io.BytesIO(_con_cabecera_en_el_patron("{{asset.name}}", "A")))
+    _, avisos = generator.sustituir_en_los_patrones(prs, {"asset.name": "Nave Norte"})
+
+    assert len(avisos) == 1
+    assert "asset.name" in avisos[0]
+    assert "muévalo a la diapositiva" in avisos[0]
+
+
+def test_con_varios_activos_una_ficha_que_no_se_repite_avisa() -> None:
+    """`[SUP]` Fuera de una diapositiva repetida, `{{asset.*}}` es el **primer**
+    activo. Con un edificio eso es lo que se quiere; con tres, el informe enseña
+    la ficha del primero y calla las otras dos, y desde fuera parece una ficha
+    sin más."""
+    from tdd.reporting import generator
+
+    # Sin hallazgos: esta prueba mira el aviso de ámbito, y el generador produce
+    # además el XLSX sobre la plantilla del cliente, que exige hallazgos bien
+    # codificados. Dárselos aquí sería montar un caso de otra prueba.
+    datos = {**SNAPSHOT, "findings": [], "capex_items": []}
+    r = generator.generar(_plantilla(("Dirección: {{asset.address}}", "")), datos)
+
+    assert any("asset.address" in a and "@repeat: asset" in a for a in r.avisos_de_composicion), (
+        r.avisos_de_composicion
+    )
+
+
+def test_con_un_solo_activo_no_se_avisa_de_nada() -> None:
+    """«El primero» y «el único» son lo mismo: no hay nada que contar."""
+    from tdd.reporting import generator
+
+    datos = {**SNAPSHOT, "assets": [SNAPSHOT["assets"][0]], "findings": [], "capex_items": []}
+    r = generator.generar(_plantilla(("Dirección: {{asset.address}}", "")), datos)
+
+    assert r.avisos_de_composicion == []

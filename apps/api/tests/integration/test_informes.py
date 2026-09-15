@@ -251,17 +251,89 @@ def test_solo_hay_un_mapeo_por_defecto(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_sin_mapeo_los_marcadores_bloquean(
+def test_un_marcador_del_catalogo_no_necesita_mapeo(
     cliente: TestClient, cab: Any, proyecto: str, plantilla: dict[str, Any]
 ) -> None:
+    """`{{project.name}}` lo rellena la aplicación sin que nadie mapee nada.
+
+    Exigirle un mapeo bloqueaba la generación de una plantilla correcta: la del
+    cliente trae cuarenta y tres marcadores, **todos** del catálogo, y no se
+    podía generar sin crear antes un mapeo que los ataba a sí mismos. El mapeo
+    es para los nombres propios de quien escribe la plantilla, no para los
+    nuestros.
+    """
     r = cliente.post(
         f"{RUTA}/projects/{proyecto}/reports/preflight",
         headers=cab("admin_a"),
         json={"template_id": plantilla["id"]},
     )
     assert r.status_code == 200
+    assert not any(w["codigo"] == "UNMAPPED_PLACEHOLDER" for w in r.json()["warnings"])
+
+
+def test_un_marcador_que_la_aplicacion_no_conoce_sigue_bloqueando(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """Es para lo que existe la regla: saldría literal delante del cliente."""
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    caja = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    caja.text_frame.text = "Inmueble: {{nombre_del_edificio}}"
+    datos = io.BytesIO()
+    prs.save(datos)
+
+    subida = cliente.post(
+        f"{RUTA}/report-templates",
+        headers=cab("admin_a"),
+        files={
+            "file": ("rara.pptx", io.BytesIO(datos.getvalue()), "application/vnd.ms-powerpoint")
+        },
+        data={"name": f"Rara {uuid.uuid4().hex[:6]}", "language": "es"},
+    ).json()
+
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": subida["id"]},
+    )
     assert r.json()["can_generate"] is False
-    assert any(w["codigo"] == "UNMAPPED_PLACEHOLDER" for w in r.json()["warnings"])
+    bloqueantes = [w for w in r.json()["warnings"] if w["codigo"] == "UNMAPPED_PLACEHOLDER"]
+    assert len(bloqueantes) == 1
+    assert "nombre_del_edificio" in bloqueantes[0]["mensaje"]
+
+
+def test_un_marcador_de_seccion_no_bloquea_aunque_no_haya_datos(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """`{{descriptivo:HC.H14}}` en un edificio sin telecomunicaciones se vacía y
+    se informa aparte. No es un fallo de plantilla: es una sección sin
+    contenido, y bloquear por eso impediría generar el informe de cualquier
+    edificio al que le falte una de las catorce secciones."""
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    caja = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    caja.text_frame.text = "Teleco: {{descriptivo:HC.H14}}"
+    datos = io.BytesIO()
+    prs.save(datos)
+
+    subida = cliente.post(
+        f"{RUTA}/report-templates",
+        headers=cab("admin_a"),
+        files={
+            "file": ("seccion.pptx", io.BytesIO(datos.getvalue()), "application/vnd.ms-powerpoint")
+        },
+        data={"name": f"Seccion {uuid.uuid4().hex[:6]}", "language": "es"},
+    ).json()
+    # Y el análisis lo ve: su patrón llevaba uno propio, sin los dos puntos, y
+    # decía que esta plantilla no tenía ningún marcador.
+    assert "descriptivo:HC.H14" in subida["analysis"]["placeholders"]
+
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": subida["id"]},
+    )
+    assert not any(w["codigo"] == "UNMAPPED_PLACEHOLDER" for w in r.json()["warnings"])
 
 
 def test_con_el_mapeo_completo_ya_se_puede_generar(

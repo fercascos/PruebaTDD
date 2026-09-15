@@ -62,6 +62,37 @@ PAGADOR = {
 LIMITAN = ("NO_DISPONIBLE", "PARCIAL", "SIN_RESPUESTA")
 
 
+#: Los meses en castellano. Se escriben aquí y no se saca de `locale`, porque el
+#: idioma del informe lo elige el proyecto y no el servidor: una máquina con la
+#: configuración regional en inglés sacaría «February 2026» en un informe
+#: castellano, y al revés.
+MESES = (
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+)
+
+
+def _mes_y_ano(iso: str) -> str:
+    """«2026-02-17T…» → «Febrero 2026». Cadena vacía si no hay fecha."""
+    try:
+        ano, mes = int(iso[:4]), int(iso[5:7])
+    except ValueError:
+        return ""
+    if not 1 <= mes <= len(MESES):
+        return ""
+    return f"{MESES[mes - 1]} {ano}"
+
+
 def _texto(valor: Any) -> str:
     """Un valor del snapshot como texto de informe. `None` es cadena vacía.
 
@@ -114,6 +145,10 @@ def globales(snapshot: dict[str, Any]) -> dict[str, str]:
         "project.client": _texto(proyecto.get("client_name")),
         "report.generated_at": _texto(snapshot.get("generated_at")),
         "report.date": _texto(snapshot.get("generated_at"))[:10],
+        # `[REQ]` La portada de la plantilla del cliente pone «Febrero 2026», no
+        # una fecha completa. Es el mismo dato con otro formato, no un dato
+        # nuevo: un `2026-02-17` en una portada corporativa canta.
+        "report.month": _mes_y_ano(_texto(snapshot.get("generated_at"))),
         "capex.total": cl.formatear_importe(total),
     }
 

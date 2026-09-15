@@ -22,7 +22,7 @@ from pptx.util import Emu, Inches
 from tdd.reporting import capex_layout as cl
 from tdd.reporting import composicion, repeticion
 from tdd.reporting import marcadores as mk
-from tdd.reporting.clone import clonar_diapositiva, sustituir_marcadores
+from tdd.reporting.clone import MARCADOR, clonar_diapositiva, sustituir_marcadores
 from tdd.reporting.pptx_table import insertar_tabla
 from tdd.reporting.watermark import retirar_marcas_de_agua
 
@@ -149,6 +149,82 @@ def lineas_de_capex(snapshot: dict[str, Any]) -> list[cl.LineaCapex]:
             )
         )
     return salida
+
+
+def _avisar_de_ambito(fijas: list[Any], snapshot: dict[str, Any]) -> list[str]:
+    """Marcadores de colección en diapositivas que no se repiten.
+
+    Solo se avisa si la colección tiene **más de un elemento**: con uno solo,
+    «el primero» y «el único» son lo mismo y no hay nada que contar.
+    """
+    from tdd.reporting.clone import texto_completo
+
+    avisos: list[str] = []
+    for ambito, (clave, _) in mk.COLECCIONES.items():
+        cuantos = len(snapshot.get(clave, []))
+        if cuantos <= 1:
+            continue
+        usados = sorted(
+            {
+                m.strip()
+                for slide in fijas
+                for m in MARCADOR.findall(texto_completo(slide))
+                if m.strip().startswith(f"{ambito}.")
+            }
+        )
+        if usados:
+            avisos.append(
+                f"{', '.join('«{{' + m + '}}»' for m in usados)} está en una diapositiva que no "
+                f"se repite, y el proyecto tiene {cuantos} elementos de «{ambito}»: sale el "
+                f"primero. Añada «@repeat: {ambito}» en sus notas para tener una por cada uno."
+            )
+    return avisos
+
+
+def sustituir_en_los_patrones(prs: Any, valores: dict[str, str]) -> tuple[list[str], list[str]]:
+    """Los marcadores que viven en el **patrón**, no en las diapositivas.
+
+    `[REQ]` Es donde la plantilla del cliente tiene su cabecera: «ANÁLISIS
+    TÉCNICO ARQUITECTURA» y debajo el nombre del proyecto, repetido en las
+    sesenta y siete páginas porque el patrón lo pinta en todas. Poner ahí un
+    marcador es lo que rellena el informe entero de una vez.
+
+    Se recorre **cada patrón una sola vez** aunque lo usen veinte diapositivas:
+    es el mismo objeto, y sustituir dos veces sobre él dejaría la segunda pasada
+    sin marcador que encontrar y contaría un «no resuelto» que no existe.
+
+    Devuelve `(no_resueltos, avisos)`.
+    """
+    sin_resolver: list[str] = []
+    avisos: list[str] = []
+    vistos: set[int] = set()
+    for slide in prs.slides:
+        patron = slide.slide_layout
+        if id(patron) in vistos:
+            continue
+        vistos.add(id(patron))
+
+        # Un marcador de activo o de hallazgo en el patrón saldría **igual en
+        # todas** las diapositivas que lo usan, con los datos del primero. No es
+        # lo que quiere nadie y desde fuera parece que la repetición no funciona.
+        for encontrado in MARCADOR.finditer(_texto_de(patron)):
+            clave = encontrado.group(1).strip()
+            ambito = clave.split(".", 1)[0]
+            if ambito in mk.COLECCIONES:
+                avisos.append(
+                    f"El patrón «{patron.name}» lleva «{{{{{clave}}}}}», que es de {ambito} y "
+                    "cambia en cada diapositiva. En un patrón sale el mismo valor en todas: "
+                    "muévalo a la diapositiva."
+                )
+
+        sin_resolver += sustituir_marcadores(patron, valores)
+    return sin_resolver, avisos
+
+
+def _texto_de(patron: Any) -> str:
+    return "\n".join(
+        f.text_frame.text for f in patron.shapes if f.has_text_frame and f.text_frame.text
+    )
 
 
 #: Alto de fila de los resúmenes. Tienen pocas filas y un marco generoso: con el
@@ -401,8 +477,24 @@ def generar(
 
     # 1b · Y el resto, con los valores globales.
     fijas = [s for s in prs.slides if repeticion.plan_de(s) is None]
+
+    # `[SUP]` Fuera de una diapositiva repetida, `{{asset.*}}` es el **primer**
+    # activo. Con un solo edificio eso es exactamente lo que se quiere; con
+    # cinco, el informe enseña la ficha del primero y calla los otros cuatro, y
+    # desde fuera parece una ficha sin más. Se avisa antes de sustituir, que es
+    # cuando el marcador todavía está escrito y se puede saber cuál era.
+    avisos_de_ambito = _avisar_de_ambito(fijas, snapshot)
+
     for slide in fijas:
         sin_resolver += sustituir_marcadores(slide, valores, medir=_medir)
+
+    # 1b bis · Los patrones. La cabecera «NOMBRE DEL PROYECTO» de la plantilla
+    # del cliente no está en ninguna de sus diapositivas: está en **once
+    # patrones**, uno por sección del informe. Sustituir solo en las
+    # diapositivas dejaba el informe entero con el rótulo de la plantilla en lo
+    # alto de cada página.
+    sin_resolver_patrones, avisos_de_patrones = sustituir_en_los_patrones(prs, valores)
+    sin_resolver += sin_resolver_patrones
 
     # 1c · Los marcadores **de código** que la plantilla pide y el proyecto no
     # tiene se vacían. `{{descriptivo:HC.H14}}` en un edificio sin nada de
@@ -438,7 +530,7 @@ def generar(
     puestas, avisos_de_composicion = composicion.poner_capex(
         prs, tablas, clonar=clonar_diapositiva, insertar=_dibujar_tabla
     )
-    avisos_de_composicion += avisos_de_capex
+    avisos_de_composicion += avisos_de_capex + avisos_de_patrones + avisos_de_ambito
     if not puestas:
         for trozo in tablas["detalle"]:
             slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -526,19 +618,22 @@ def analizar(plantilla: bytes) -> dict[str, Any]:
     No modifica nada: es una lectura. Lo que devuelve alimenta la pantalla de
     mapeo, y sin ella el usuario tendría que adivinar qué marcadores existen.
     """
-    import re
-
     from tdd.reporting.clone import texto_completo
     from tdd.reporting.watermark import hay_marcas_de_agua
 
     prs = Presentation(io.BytesIO(plantilla))
-    patron = re.compile(r"\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}")
+    # `[REQ]` El **mismo** patrón que usa la sustitución al generar. Tenía uno
+    # propio, más estrecho, sin los dos puntos: no veía `{{descriptivo:HC.H02}}`
+    # ni ninguno de los marcadores de sección, así que la pantalla de análisis
+    # decía que la plantilla del cliente traía dos marcadores cuando traía
+    # cuarenta y tres. Dos expresiones para lo mismo acaban siempre así.
+    patron = MARCADOR
 
     marcadores: set[str] = set()
     por_diapositiva: list[dict[str, Any]] = []
     for indice, slide in enumerate(prs.slides, start=1):
         texto = texto_completo(slide)
-        encontrados = sorted(set(patron.findall(texto)))
+        encontrados = sorted({m.strip() for m in patron.findall(texto)})
         marcadores.update(encontrados)
         por_diapositiva.append(
             {
@@ -549,6 +644,18 @@ def analizar(plantilla: bytes) -> dict[str, Any]:
                 "has_picture": any(f.shape_type == 13 for f in slide.shapes),  # noqa: PLR2004
             }
         )
+
+    # Y los de los **patrones**, que no son de ninguna diapositiva en concreto y
+    # salen en todas las que lo usan. Es donde está la cabecera con el nombre del
+    # proyecto: sin esto el análisis no la nombraba y el mapeo no podía cubrirla.
+    de_patrones = sorted(
+        {
+            m.strip()
+            for patron_de in {id(s.slide_layout): s.slide_layout for s in prs.slides}.values()
+            for m in patron.findall(_texto_de(patron_de))
+        }
+    )
+    marcadores.update(de_patrones)
 
     fuentes = sorted(
         {
@@ -570,6 +677,9 @@ def analizar(plantilla: bytes) -> dict[str, Any]:
         "slide_width_in": round(Emu(prs.slide_width).inches, 2),
         "slide_height_in": round(Emu(prs.slide_height).inches, 2),
         "placeholders": sorted(marcadores),
+        #: Los que vienen del patrón y no de una diapositiva. Se listan aparte
+        #: porque quien mire el análisis no los encontrará abriendo las páginas.
+        "master_placeholders": de_patrones,
         "slides": por_diapositiva,
         "fonts": fuentes,
         # [REQ] P-43 · Se avisa de que la plantilla la trae, porque la

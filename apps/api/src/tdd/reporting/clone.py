@@ -94,9 +94,14 @@ def _runs_de(forma: Any) -> Iterator[Any]:
 
 
 def sustituir_marcadores(
-    slide: Slide, valores: dict[str, str], *, medir: Medidor | None = None
+    slide: Any, valores: dict[str, str], *, medir: Medidor | None = None
 ) -> list[str]:
     """Sustituye `{{clave}}` conservando el formato. Devuelve los no resueltos.
+
+    Vale igual para una diapositiva y para un **patrón de diapositiva**: los dos
+    tienen formas con texto, y la cabecera «NOMBRE DEL PROYECTO» de la plantilla
+    del cliente vive en el patrón, no en las sesenta y siete diapositivas que la
+    enseñan.
 
     PowerPoint parte un marcador entre varios `run` con pasmosa facilidad —basta
     con que alguien corrigiera una letra al escribirlo—. Por eso se opera sobre
