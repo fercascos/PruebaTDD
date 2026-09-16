@@ -186,7 +186,7 @@ def test_retirar_una_diapositiva_y_anadir_otra_no_se_come_ninguna() -> None:
     repetición, que es siempre.
     """
     prs = Presentation(io.BytesIO(_plantilla(("A", ""), ("B", ""), ("C", ""))))
-    repeticion._retirar(prs, prs.slides[1])
+    repeticion.retirar(prs, prs.slides[1])
     nueva = prs.slides.add_slide(prs.slide_layouts[6])
     nueva.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1)).text_frame.text = "NUEVA"
 
@@ -756,3 +756,29 @@ def test_con_varios_edificios_cada_linea_dice_de_cual_es() -> None:
     consultados = _docs(otro)["docs.consultados"]
     assert "· S1.1.1 Licencia de Obras [Nave Norte]" in consultados
     assert "· S1.1.1 Licencia de Obras [Nave Sur]" in consultados
+
+
+def test_una_seccion_sin_fotos_retira_su_diapositiva() -> None:
+    """`[REQ]` Vaciar solo los marcos dejaba una página con la cabecera, el pie y
+    nada más en medio, y de esas salían **once** en un informe de sesenta y
+    nueve: en un entregable eso parece un fallo de impresión.
+
+    Es la misma regla que ya seguía `@repeat` con una colección vacía.
+    """
+    from tdd.reporting import composicion
+    from tdd.reporting.clone import clonar_diapositiva
+
+    prs = Presentation(
+        io.BytesIO(
+            _con_imagenes(
+                ("@fotos: HC.H02", [(0.5, 1.5, 3.2, 2.4), (4.0, 1.5, 3.2, 2.4)]),
+                ("", []),
+            )
+        )
+    )
+    puestas, avisos = composicion.repartir_fotos(prs, [], clonar=clonar_diapositiva)
+
+    assert puestas == 0
+    assert len(prs.slides) == 1, "la diapositiva sin fotos sigue ahí"
+    assert len(avisos) == 1
+    assert "HC.H02" in avisos[0] and "retirado" in avisos[0]

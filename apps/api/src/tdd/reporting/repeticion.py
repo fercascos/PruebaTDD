@@ -108,7 +108,7 @@ def mover_detras(prs: Presentacion, slide: Slide, referencia: Slide) -> None:
 _RID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 
 
-def _retirar(prs: Presentacion, slide: Slide) -> None:
+def retirar(prs: Presentacion, slide: Slide) -> None:
     """Saca la diapositiva modelo de la presentación, **y renumera el resto**.
 
     Renumerar no es cosmético: `python-pptx` bautiza cada diapositiva nueva como
@@ -181,7 +181,7 @@ def expandir(
                 f"No hay ningún elemento de «{coleccion}» en este informe, así que su diapositiva "
                 "se ha retirado en vez de salir con los marcadores a la vista."
             )
-            _retirar(prs, slide)
+            retirar(prs, slide)
             continue
 
         anterior: Slide = slide
@@ -190,6 +190,6 @@ def expandir(
             mover_detras(prs, copia, anterior)
             anterior = copia
             sin_resolver += sustituir(copia, {**globales, **valores_de(snapshot, elemento)})
-        _retirar(prs, slide)
+        retirar(prs, slide)
 
     return sin_resolver, avisos

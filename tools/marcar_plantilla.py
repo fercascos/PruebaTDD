@@ -235,7 +235,14 @@ def marcar(prs: Presentation) -> list[str]:
     for numero, slide in enumerate(prs.slides, start=1):
         lineas = _marcar_diapositiva(slide, numero)
         puestos += lineas
-        codigos = _codigos_de(lineas)
+        # Los códigos salen de los **títulos de sección** de la diapositiva y no
+        # de los marcadores que hayan caído en ella. No es lo mismo: la
+        # protección pasiva contra incendios tiene su título y **ningún hueco de
+        # relleno** en la plantilla castellana, así que no recibía marcador, y
+        # entonces su página de fotos tampoco se marcaba. Era la única página de
+        # fotos del informe que salía con los cuatro recuadros azules y sus
+        # «Descripción» intactos.
+        codigos = _codigos_de_seccion(slide)
         if codigos:
             codigos_por_diapositiva[numero] = codigos
 
@@ -364,13 +371,23 @@ MESES_EN_PORTADA = frozenset(
 )
 
 
-def _codigos_de(lineas: list[str]) -> list[str]:
-    """Los códigos que han caído en una diapositiva, sin repetir y en orden."""
+def _codigos_de_seccion(slide: Slide) -> list[str]:
+    """Los códigos de los **títulos de sección** de esta diapositiva.
+
+    Sin repetir y en orden de lectura. Se miran los títulos y no los marcadores
+    puestos: una sección puede traer su título y ningún hueco que rellenar —la
+    protección pasiva, en la plantilla castellana— y su página de fotos sigue
+    siendo suya.
+    """
     vistos: list[str] = []
-    for linea in lineas:
-        codigo = linea.rsplit(":", 1)[-1].rstrip("}")
-        if codigo not in vistos:
-            vistos.append(codigo)
+    for forma in slide.shapes:
+        marco = _marco(forma)
+        if marco is None:
+            continue
+        for parrafo in marco.paragraphs:
+            codigo = _codigo_de(parrafo.text.strip())
+            if codigo is not None and codigo not in vistos:
+                vistos.append(codigo)
     return vistos
 
 

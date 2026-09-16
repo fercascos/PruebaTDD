@@ -46,7 +46,7 @@ from pptx.slide import Slide
 from pptx.util import Emu, Inches
 
 from tdd.reporting.marcadores import codigo_y_ancestros
-from tdd.reporting.repeticion import mover_detras, notas_de
+from tdd.reporting.repeticion import mover_detras, notas_de, retirar
 
 #: `@fotos: HC.H02` en las notas de la diapositiva de fotografías.
 #:
@@ -218,6 +218,7 @@ def repartir_fotos(prs: Presentacion, fotos: list[Any], *, clonar: Any) -> tuple
     """
     puestas = 0
     avisos: list[str] = []
+    sin_fotos: list[str] = []
     for slide in list(prs.slides):
         codigos = codigos_de_fotos(slide)
         if not codigos:
@@ -233,10 +234,16 @@ def repartir_fotos(prs: Presentacion, fotos: list[Any], *, clonar: Any) -> tuple
 
         suyas = _fotos_de(fotos, codigos)
         if not suyas:
-            # Sin fotos, los marcos vacíos se retiran con sus pies: cuatro
-            # rectángulos de color en un entregable se leen como un fallo.
-            for forma in marcos + pies:
-                _vaciar(forma)
+            # `[REQ]` Sin fotos **se retira la diapositiva entera**, no solo sus
+            # marcos. Vaciarlos dejaba una página con la cabecera, el pie y nada
+            # más en medio, y de esas salían diez en un informe de sesenta y
+            # nueve: en un entregable eso parece un fallo de impresión. Es la
+            # misma regla que ya seguía `@repeat` con una colección vacía.
+            #
+            # `[LIM]` Si lo que se quiere es el hueco para pegar fotos a mano
+            # después, se le quita el `@fotos` a esa diapositiva en las notas.
+            retirar(prs, slide)
+            sin_fotos.append(codigo)
             continue
 
         paginas = [suyas[i : i + len(marcos)] for i in range(0, len(suyas), len(marcos))]
@@ -251,6 +258,12 @@ def repartir_fotos(prs: Presentacion, fotos: list[Any], *, clonar: Any) -> tuple
                 f"«{codigo}» tiene {len(suyas)} fotografías y caben {len(marcos)} por "
                 f"diapositiva: se han añadido {len(paginas) - 1} más."
             )
+
+    if sin_fotos:
+        avisos.append(
+            f"{len(sin_fotos)} secciones no tienen ninguna fotografía y su diapositiva se ha "
+            f"retirado en vez de salir en blanco: {', '.join(sin_fotos)}."
+        )
     return puestas, avisos
 
 
