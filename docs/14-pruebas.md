@@ -326,6 +326,24 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Auditoría de la exportación** | Cada `202` deja un `EXPORT_CREATED` con actor, alcance, nº de líneas e importe |
 | **Comparación con el original** | `[PDV]` La tabla generada se renderiza y se compara con la **imagen EMF de la plantilla real**. Es criterio de salida de la prueba de concepto, no una prueba automatizable desde el día uno |
 
+### El marcado de las plantillas reales · `tools/marcar_plantilla.py`
+
+**Este módulo de pruebas no existía**, y por eso lo que hay en la tabla estuvo
+roto en tres de las cuatro plantillas sin que nadie se enterara: se trabajaba
+solo con el Modelo A castellano, que salía perfecta. Se descubrió pasando las
+otras tres y **contando los marcadores del resultado**.
+
+| Caso | Verificación |
+|---|---|
+| **Las tres grafías de la cabecera** | `NOMBRE DEL PROYECTO`, `NOMBRE PROYECTO` —Modelo B castellano— y `PROJECT NAME` reciben `{{project.name}}`. La segunda faltaba: once páginas con el rótulo literal `[REQ]` |
+| **Las tres formas de dejar la portada** | Relleno de equis con fecha real, «PROYECTO»/«FECHA», «PROJECT»/«Date». Solo la primera estaba contemplada, y las otras dos son tres de las cuatro plantillas |
+| **La errata «Dilligence»** | Con dos eles y con una, en los dos idiomas. Contemplada solo en castellano, dejaba las dos inglesas sin reconocer como portada `[REQ]` |
+| **Una primera página que no es portada** | Un índice con la palabra «PROJECT» **no** se marca. Es lo que impide meter el nombre del cliente donde no va |
+| **El resalte amarillo no llega al informe** | Se quita solo en la portada y solo del `run` reescrito; cuerpo, color y tipografía **se conservan**, que es la regla con la plantilla de un cliente `[REC]` |
+| **El título de la sección no se toca** | Va en el párrafo de arriba del mismo cuadro y es contenido del informe, no un dato |
+| **Los títulos que cada plantilla escribe distinto** | `PLOT LOCATION` para la dirección, `LICENSE ANALYSIS` y `LICENSES ANALYSIS` para las licencias. Una letra dejaba una sección sin marcador |
+| **Lo que no se conoce, no se inventa** | Un título desconocido deja su «XXXX» a la vista, que quien redacta corrige. Un marcador puesto a ojo en el sitio equivocado no se ve hasta que está impreso `[REC]` |
+
 ### Las fuentes del informe
 
 | Caso | Verificación |

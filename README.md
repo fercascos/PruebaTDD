@@ -207,13 +207,31 @@ impedir, y lo introducía nuestra propia elección.
   no entra en la imagen y aquí **no se puede medir**. La aplicación no inventa un número con una
   sustituta —avisa de que no ha podido comprobar si el texto cabe—. Montarla en el volumen que el
   Dockerfile deja preparado recupera la medición sin tocar código, y eso lo decide quien tenga licencia.
-- `[REQ]` **Las cuatro plantillas sí hay que pasarlas por la herramienta**, y esto se vio generando el
-  informe y contando los `typeface` del fichero, no leyendo código. Llevan Century Gothic en el grueso
-  del cuerpo, pero además **86 `run`s de `Gotham Light` y 86 de `Gotham Ultra`**, repartidos por las
-  **once portadillas de sección** —el «01 RESUMEN EJECUTIVO» y su fila de números—. Nadie tiene Gotham
-  instalada, así que esas once páginas salían con una sustituta. `tools/retipografiar_plantilla.py`
-  las convierte **hacia** Century Gothic sin tocar el original: 172 sustituciones, verificadas sobre
-  el informe generado, que queda con **1.566 `run`s de Century Gothic y ni uno de Gotham**.
+- `[REQ]` **Las cuatro plantillas hay que pasarlas por la herramienta, y ya están pasadas.** Esto se
+  vio generando el informe y contando los `typeface` del fichero, no leyendo código: llevan Century
+  Gothic en el grueso del cuerpo, pero además `Gotham Light` y `Gotham Ultra` en sus **once portadillas
+  de sección** —el «01 RESUMEN EJECUTIVO» y su fila de números—, y nadie tiene Gotham instalada.
+  `tools/retipografiar_plantilla.py` las convierte **hacia** Century Gothic sin tocar el original:
+
+  | Plantilla | sustituciones | el informe generado |
+  |---|---:|---|
+  | Modelo A · castellano | **172** | 1.566 `run`s de Century Gothic, 0 de Gotham |
+  | Modelo A · inglés     | **188** | 1.615 `run`s de Century Gothic, 0 de Gotham |
+  | Modelo B · castellano | **217** | 1.577 `run`s de Century Gothic, 0 de Gotham |
+  | Modelo B · inglés     | **221** | 1.611 `run`s de Century Gothic, 0 de Gotham |
+
+  Mismas partes en el ZIP, ni un binario tocado —imágenes y diseño intactos— y los cuatro originales
+  sin modificar.
+
+- `[REQ]` **Y pasar las otras tres destapó que el marcado solo servía para el Modelo A castellano.**
+  No se sabía porque era la única con la que se había trabajado, y salía perfecta. El Modelo B
+  castellano rotula la cabecera «NOMBRE PROYECTO», sin el «DEL» —once páginas con el rótulo literal—;
+  tres de las cuatro portadas no ponen relleno sino el nombre del campo, «PROJECT», «Date» —portada
+  titulada «PROJECT» y sin fecha—; las dos inglesas escriben «Technical Due Dilligence» con la errata
+  de dos eles, contemplada solo en castellano, y no se reconocían como portada; titulan la dirección
+  «PLOT LOCATION» y las licencias «LICENSE ANALYSIS» o «LICENSES ANALYSIS», según el modelo. Corregido
+  todo, y con el módulo de pruebas que no existía: las cuatro generan ahora **sin un solo rótulo sin
+  rellenar ni un marcador sin resolver**.
 - `[PDV]` Lo que queda en las plantillas y **no se toca**: 44 `run`s de `Calibri` —un «EXECUTIVE
   SUMMARY» que en las portadillas va detrás de la fotografía y no se ve—, 27 de `Arial`, 8 de
   `Californian FB`, 1 de `Lucida Sans` y los `Wingdings` de los símbolos. Pueden ser decisiones de

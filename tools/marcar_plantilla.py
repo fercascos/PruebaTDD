@@ -146,6 +146,9 @@ CAMPOS_POR_TITULO: dict[str, str] = {
     # ── La ficha del edificio (sección 02) ──────────────────────────────────
     "EMPLAZAMIENTO": "{{asset.address}}",
     "LOCATION": "{{asset.address}}",
+    # «PLOT LOCATION» es como lo titulan las DOS plantillas inglesas. Sin él se
+    # quedaban sin dirección: `LOCATION` a secas no aparece en ninguna.
+    "PLOT LOCATION": "{{asset.address}}",
     "DESCRIPCION": "{{asset.descriptivo}}",
     "DESCRIPTION": "{{asset.descriptivo}}",
     "BUILDING DESCRIPTION": "{{asset.descriptivo}}",
@@ -176,6 +179,12 @@ CAMPOS_POR_TITULO: dict[str, str] = {
 #: dieciocho— y esto tiene que alcanzar a la que va suelta, no a todas.
 CAMPOS_POR_PATRON: dict[str, str] = {
     "ANALISIS DE LICENCIAS": "{{docs.licencias}}",
+    # Cuatro plantillas, cuatro grafías: el Modelo A inglés pone «LICENSE
+    # ANALYSIS» y el B inglés «LICENSES ANALYSIS». Las dos últimas estaban
+    # puestas de memoria y no existen en ninguna de las cuatro; se dejan porque
+    # no estorban y porque la siguiente corporativa bien puede escribirlo así.
+    "LICENSE ANALYSIS": "{{docs.licencias}}",
+    "LICENSES ANALYSIS": "{{docs.licencias}}",
     "LICENSING ANALYSIS": "{{docs.licencias}}",
     "PLANNING ANALYSIS": "{{docs.licencias}}",
 }
@@ -191,6 +200,7 @@ NO_SON_SECCION = frozenset(
         "BUILDING DESCRIPTION",
         "EMPLAZAMIENTO",
         "LOCATION",
+        "PLOT LOCATION",
         "CONSULTED DOCUMENTS",
         "DOCUMENTACION CONSULTADA",
         "MEASUREMENTS AEO CRITERIA",
@@ -260,7 +270,13 @@ def marcar(prs: Presentation) -> list[str]:
 #: El rótulo que la plantilla pone donde va el nombre del proyecto. Está escrito
 #: así en los **patrones** —uno por sección del informe— y en inglés en las
 #: portadillas, que lo llevan a mano.
-ROTULOS_DEL_PROYECTO = frozenset({"NOMBRE DEL PROYECTO", "PROJECT NAME"})
+#:
+#: «NOMBRE PROYECTO», sin el «DEL», es el del **Modelo B castellano**, y no
+#: estaba. Sin él esa plantilla se quedaba sin un solo `{{project.name}}` en sus
+#: patrones: once páginas saliendo con el rótulo literal en la cabecera. Las
+#: cuatro plantillas escriben lo mismo de tres maneras distintas, y cada una hay
+#: que haberla abierto para saberlo.
+ROTULOS_DEL_PROYECTO = frozenset({"NOMBRE DEL PROYECTO", "NOMBRE PROYECTO", "PROJECT NAME"})
 
 
 def _marcar_cabeceras(prs: Presentation) -> list[str]:
@@ -307,14 +323,39 @@ def _poner_en_rotulo(contenedor: Any, rotulos: frozenset[str], marcador: str) ->
 #: quiere ahí la dirección del inmueble se cambia el marcador a mano.
 PORTADA_TITULO = frozenset(
     {
-        # La plantilla escribe «Dilligence» con dos eles. Se admiten las dos
-        # grafías: corregirle la errata al cliente no es cosa de esta
-        # herramienta, y buscar solo la correcta no habría encontrado su portada.
+        # Las plantillas escriben «Dilligence» con dos eles, y las CUATRO, no
+        # solo las castellanas. Se admiten las dos grafías: corregirle la errata
+        # al cliente no es cosa de esta herramienta, y buscar solo la correcta
+        # dejaba las dos inglesas sin portada —sin nombre de proyecto y sin
+        # fecha— porque la errata solo estaba contemplada en castellano.
         "DUE DILLIGENCE TECNICA",
         "DUE DILIGENCE TECNICA",
+        "TECHNICAL DUE DILLIGENCE",
         "TECHNICAL DUE DILIGENCE",
     }
 )
+
+
+#: Lo que la portada escribe en el hueco del nombre y en el de la fecha cuando
+#: **no** pone ni una `XXX` ni una fecha de verdad.
+#:
+#: Sale de abrir las cuatro: solo el Modelo A castellano trae `XXX` y «Febrero
+#: 2026». Las otras tres ponen el nombre del campo —«PROYECTO», «PROJECT»,
+#: «FECHA», «Date»— y con eso no casaba nada, así que tres de cada cuatro
+#: informes habrían salido con la palabra «PROJECT» por título y sin fecha.
+#:
+#: Va aparte de `ROTULOS_DEL_PROYECTO` a propósito: «PROJECT» a secas es
+#: demasiado corto para buscarlo por todo el informe, y aquí solo se mira la
+#: primera diapositiva y solo si su título es el de una portada.
+ROTULOS_DE_PORTADA: dict[str, str] = {
+    "PROYECTO": "{{project.name}}",
+    "PROJECT": "{{project.name}}",
+    "NOMBRE DEL PROYECTO": "{{project.name}}",
+    "NOMBRE PROYECTO": "{{project.name}}",
+    "PROJECT NAME": "{{project.name}}",
+    "FECHA": "{{report.month}}",
+    "DATE": "{{report.month}}",
+}
 
 
 def _marcar_portada(prs: Presentation) -> list[str]:
@@ -323,6 +364,10 @@ def _marcar_portada(prs: Presentation) -> list[str]:
     La fecha de la plantilla —«Febrero 2026»— **no es un relleno**: es una fecha
     de verdad, de otro encargo. Por eso no la detecta `_es_relleno` y hay que
     tratarla aparte; dejarla puesta sacaría el informe con la fecha de otro.
+
+    Y hay un tercer caso, que apareció al pasar las otras tres plantillas: la
+    portada que no pone ni relleno ni fecha, sino **el nombre del campo**
+    —«PROJECT», «Date»—. Está en `ROTULOS_DE_PORTADA`.
     """
     if not len(prs.slides):
         return []
@@ -343,11 +388,14 @@ def _marcar_portada(prs: Presentation) -> list[str]:
         for parrafo in marco.paragraphs:
             texto = parrafo.text.strip()
             if _es_relleno(texto) or set(texto) <= {"X", "x"} and texto:
-                _escribir(parrafo, "{{project.name}}")
+                _escribir(parrafo, "{{project.name}}", quitar_resalte=True)
                 puestos.append("diap. 1: {{project.name}}")
             elif _es_una_fecha(texto):
-                _escribir(parrafo, "{{report.month}}")
+                _escribir(parrafo, "{{report.month}}", quitar_resalte=True)
                 puestos.append("diap. 1: {{report.month}}")
+            elif (marcador := ROTULOS_DE_PORTADA.get(_sin_tildes(texto))) is not None:
+                _escribir(parrafo, marcador, quitar_resalte=True)
+                puestos.append(f"diap. 1: {marcador}")
     return puestos
 
 
@@ -680,18 +728,32 @@ def _marcar_por_patron(slide: Slide, numero: int) -> list[str]:
     return []
 
 
-def _escribir(parrafo: object, texto: str) -> None:
+def _escribir(parrafo: object, texto: str, *, quitar_resalte: bool = False) -> None:
     """Cambia el texto **conservando el formato del primer `run`**.
 
     Vaciar el párrafo y añadir texto suelto le quitaría la tipografía, el cuerpo
     y el color, que es justo lo que no se puede tocar de la plantilla de un
     cliente. Se escribe en el primer `run` y se borran los demás, que es lo que
     hace la propia sustitución de marcadores al generar.
+
+    `quitar_resalte` es la única excepción, y solo la usa la portada. Tres de
+    las cuatro plantillas escriben su «PROYECTO» / «PROJECT» **resaltado en
+    amarillo**: no es diseño, es la marca de «esto hay que rellenarlo», igual
+    que las `XXX` de la castellana. Conservarlo sacaba el informe con el nombre
+    del cliente subrayado en amarillo fosforito en la portada, que fue lo que se
+    vio al renderizar. Se quita solo ahí, solo en el `run` que se reescribe.
     """
     runs = list(parrafo.runs)  # type: ignore[attr-defined]
     if not runs:
         return
     runs[0].text = texto
+    if quitar_resalte:
+        propiedades = runs[0]._r.find("{http://schemas.openxmlformats.org/drawingml/2006/main}rPr")
+        if propiedades is not None:
+            for resalte in propiedades.findall(
+                "{http://schemas.openxmlformats.org/drawingml/2006/main}highlight"
+            ):
+                propiedades.remove(resalte)
     for sobrante in runs[1:]:
         sobrante._r.getparent().remove(sobrante._r)
 

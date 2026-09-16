@@ -118,12 +118,50 @@ plantillas eran de Gotham y luego que eran solo de Century Gothic: las dos a med
 
 `tools/retipografiar_plantilla.py` las convierte **hacia** Century Gothic sin tocar el original.
 
-- [x] Pasar las cuatro por la herramienta — **172 sustituciones** por plantilla, verificado sobre el
-      Modelo A castellano: el informe generado queda con **1.566 `run`s de Century Gothic y ni uno de
-      Gotham**
+- [x] Pasar **las cuatro** por la herramienta. Ninguna lleva la misma cuenta, y ninguna se queda con
+      un solo `run` de Gotham:
+
+      | Plantilla | Gotham Light | Gotham Ultra | sustituciones | el informe generado |
+      |---|---:|---:|---:|---|
+      | Modelo A · castellano |  86 |  86 | **172** | 1.566 `run`s de Century Gothic, 0 de Gotham |
+      | Modelo A · inglés     |  94 |  94 | **188** | 1.615 `run`s de Century Gothic, 0 de Gotham |
+      | Modelo B · castellano | 128 |  89 | **217** | 1.577 `run`s de Century Gothic, 0 de Gotham |
+      | Modelo B · inglés     | 130 |  91 | **221** | 1.611 `run`s de Century Gothic, 0 de Gotham |
+
+      Comprobado además que la conversión **no toca nada más**: mismas partes en el ZIP, ni un solo
+      fichero binario modificado —imágenes, gráficos y diseño intactos— y los cuatro originales con
+      su fecha de subida sin cambiar
 - [ ] **Abrirlas en PowerPoint y mirarlas.** Century Gothic es más estrecha que Gotham, así que la
       dirección del desajuste juega a favor, pero las once portadillas llevan texto ajustado y hay que
       verlas
+- [ ] `[PDV]` **La portada, con un nombre de proyecto largo.** «Plataforma logística Getafe Norte» pasa
+      a dos líneas y la segunda se arrima a la fecha. El render de aquí sustituye la fuente por una más
+      ancha, así que puede ser del render y puede ser de verdad: es justo lo que ya no se puede medir
+      en el servidor
+
+### 1.7 bis. Lo que enseñaron las otras tres plantillas · ✅ corregido
+
+Pasar las tres que faltaban no fue un trámite: **la herramienta de marcado solo servía para el Modelo
+A castellano**, y eso no se sabía porque era la única con la que se había trabajado. Se vio contando
+los marcadores del resultado, no leyendo el código.
+
+| Lo que fallaba | Consecuencia en el informe | Por qué |
+|---|---|---|
+| El Modelo B castellano rotula la cabecera **«NOMBRE PROYECTO»**, sin el «DEL» | **Once páginas** con el rótulo literal en la cabecera | El conjunto de rótulos tenía dos grafías de las tres que usan las cuatro plantillas |
+| Tres de las cuatro portadas no ponen relleno ni fecha, sino **el nombre del campo**: «PROYECTO», «PROJECT», «FECHA», «Date» | La portada salía titulada **«PROJECT»** y sin fecha | Solo se buscaba el relleno `XXX` y una fecha de verdad, que es como está la castellana del Modelo A |
+| Las dos inglesas escriben **«Technical Due Dilligence»**, con la misma errata de dos eles que las castellanas | Las dos inglesas **no se reconocían como portada**: ni nombre ni fecha | La errata estaba contemplada solo en la grafía castellana |
+| Las dos inglesas titulan la dirección **«PLOT LOCATION»** | Sin `{{asset.address}}` | `LOCATION` a secas **no aparece en ninguna** de las cuatro: estaba puesto de memoria |
+| El Modelo A inglés dice **«LICENSE ANALYSIS»** y el B inglés **«LICENSES ANALYSIS»** | El A inglés, sin `{{docs.licencias}}` | Una letra |
+| Tres de las cuatro escriben el hueco del nombre **resaltado en amarillo** | La portada salía con el nombre del cliente en fosforito | El marcado conserva el formato del `run`, que es la regla con la plantilla de un cliente. El resalte no es diseño: es la marca de «rellénese esto» |
+
+Corregido todo, y con **pruebas**: `test_marcar_plantilla.py` no existía, y ése es el motivo de que
+esto llegara hasta aquí. Las cuatro plantillas generan ahora sin un solo rótulo sin rellenar ni un
+marcador sin resolver.
+
+`[PDV]` **Queda una diferencia que no es un fallo:** las dos plantillas inglesas desglosan la
+protección pasiva contra incendios en cuatro subsecciones —`HC.H06.03`, `.04`, `.06` y `.09`— que las
+castellanas no tienen. Es contenido distinto entre modelos, y sigue sin validar a qué objeto del árbol
+corresponden las dos que agrupan varios elementos del CTE.
 - [ ] `[PDV]` **Decidir qué se hace con lo que queda**, que no se toca por su cuenta: 44 `run`s de
       `Calibri` —un «EXECUTIVE SUMMARY» que en las portadillas va detrás de la fotografía y no se ve—,
       27 de `Arial` en portada y en la diapositiva AEO, 8 de `Californian FB` y 1 de `Lucida Sans`.

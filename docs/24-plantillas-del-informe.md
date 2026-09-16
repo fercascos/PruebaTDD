@@ -310,6 +310,18 @@ sesenta y siete diapositivas**: está en **once patrones**, uno por sección
 —«ANÁLISIS TÉCNICO ARQUITECTURA», «ESTIMACIÓN ECONÓMICA - CAPEX»…—, y es el
 patrón el que lo pinta en todas.
 
+`[REQ]` **Y no lo escriben igual las cuatro.** Hay tres grafías, y hay que
+haberlas abierto para saberlo:
+
+| Plantilla | Cómo rotula la cabecera |
+|---|---|
+| Modelo A · castellano | `NOMBRE DEL PROYECTO` |
+| Modelo B · castellano | `NOMBRE PROYECTO` —sin el «DEL»— |
+| Modelo A y B · inglés | `PROJECT NAME` |
+
+La segunda faltaba, y la consecuencia era concreta: el Modelo B castellano
+generaba **once páginas con el rótulo literal en la cabecera**.
+
 Por eso la generación sustituye marcadores **también en los patrones**. Un
 `{{project.name}}` escrito ahí rellena el informe entero de una vez; escrito
 diapositiva a diapositiva habría que ponerlo sesenta y siete veces.
@@ -326,8 +338,22 @@ mire el análisis no los encontrará abriendo las páginas.
 
 | Lo que pone la plantilla | Lo que recibe |
 |---|---|
-| El hueco de debajo del título | `{{project.name}}` |
-| «Febrero 2026» | `{{report.month}}` |
+| El hueco de debajo del título: `XXX`, `PROYECTO` o `PROJECT` | `{{project.name}}` |
+| «Febrero 2026», `FECHA` o `Date` | `{{report.month}}` |
+
+`[REQ]` **Tres formas de dejar el hueco, y solo una estaba contemplada.** El
+Modelo A castellano pone un relleno de equis y una fecha; las otras tres ponen
+**el nombre del campo**. Con solo la primera, tres de cada cuatro informes salían
+titulados «PROJECT» y sin fecha. Y las dos inglesas ni siquiera se reconocían
+como portada, porque escriben *«Technical Due Dilligence»* con la misma errata de
+dos eles que las castellanas y la errata estaba contemplada solo en castellano.
+
+`[REC]` **El resaltado amarillo del hueco no llega al informe.** Tres de las
+cuatro lo marcan así —es su forma de decir «esto hay que rellenarlo», igual que
+las equis— y conservarlo sacaba la portada con el nombre del cliente en
+fosforito. Es la **única** excepción a conservar el formato del cliente, y se
+aplica solo en la portada y solo al `run` que se reescribe: cuerpo, color y
+tipografía se mantienen.
 
 `{{report.month}}` es la fecha del informe escrita como la escribe una portada
 —«Septiembre 2026»—, no `AAAA-MM-DD`. Es el mismo dato con otro formato, no un
@@ -485,6 +511,13 @@ lo busca también ahí (`CAMPOS_POR_PATRON`), y solo lo aplica a una diapositiva
 la que no haya caído ningún otro marcador: un patrón lo comparten muchas páginas
 —el de arquitectura, hasta dieciocho— y esto tiene que alcanzar a la que va
 suelta, no a todas.
+
+`[LIM]` **Cada plantilla lo escribe a su manera, y aquí una letra cuesta una
+sección**: el Modelo A inglés pone `LICENSE ANALYSIS` y el B inglés
+`LICENSES ANALYSIS`, en plural. Lo mismo con la dirección del inmueble, que las
+dos inglesas titulan `PLOT LOCATION` y no `LOCATION`. Estas variantes no se
+adivinan: salen de abrir las cuatro plantillas y contar los marcadores del
+informe generado con cada una.
 
 ---
 
