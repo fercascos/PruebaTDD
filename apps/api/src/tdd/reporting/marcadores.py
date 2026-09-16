@@ -172,6 +172,7 @@ def globales(snapshot: dict[str, Any]) -> dict[str, str]:
 
     valores.update(_riesgo(snapshot))
     valores.update(_limitaciones(snapshot))
+    valores.update(_documentacion(snapshot))
     valores.update(_visitas(snapshot))
 
     # Fuera de una diapositiva repetida, el activo es el primero. Ver el `[SUP]`
@@ -260,6 +261,115 @@ def _limitaciones(snapshot: dict[str, Any]) -> dict[str, str]:
         "report.limitations_docs": _lista(por_origen.get("CHECKLIST", [])),
         "report.limitations_qa": _lista(por_origen.get("PREGUNTA", [])),
         "report.limitations_content": _lista(por_origen.get("DOCUMENTO", [])),
+    }
+
+
+#: La rama del árbol documental que es **urbanística**: licencias, proyectos con
+#: licencia otorgada y notificaciones del ayuntamiento. Es el prefijo del código,
+#: no una lista de nodos, así que si el cliente añade `S1.4` entra sola.
+RAMA_URBANISTICA = "S1"
+
+#: Cómo se lee cada estado de la checklist en el informe. Los cuatro primeros
+#: son los del enumerado; `NO_APLICA` no sale, porque un documento que no aplica
+#: a este edificio no es ni una ausencia ni un hallazgo: es ruido.
+#: En **plural**: encabezan una lista, y «Aportada:» seguido de tres líneas
+#: chirría. Aquí se puede elegir porque son rótulos nuestros; los grados de
+#: riesgo del resumen ejecutivo no, que son de catálogo.
+ESTADOS_DE_DOCUMENTO = {
+    "RECIBIDA": "Aportadas",
+    "PARCIAL": "Aportadas parcialmente",
+    "NO_DISPONIBLE": "No disponibles",
+    "SOLICITADA": "Pendientes de recibir",
+}
+
+#: Lo que se considera «consultado»: aportado del todo o en parte. Una casilla
+#: en «solicitada» no se ha consultado —se pidió y no llegó— y decir lo
+#: contrario en un entregable firmado es exactamente lo que no puede pasar.
+CONSULTADOS = ("RECIBIDA", "PARCIAL")
+
+
+def _vigentes(filas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Una sola fila por nodo: **manda la casilla del árbol del activo**.
+
+    `[REQ]` §3.2 b · `doc_request_item` alberga dos cosas, y el propio esquema
+    lo dice: la **casilla del árbol** de un activo, que es única por nodo, y la
+    **checklist libre** del proyecto, donde dos informes previos distintos son
+    dos líneas legítimas. Las dos pueden hablar del mismo nodo y **decir cosas
+    distintas**.
+
+    Pasa en cuanto un documento llega: se pidió al inicio y quedó anotado como
+    no disponible en la checklist, después apareció y alguien marcó la casilla
+    del árbol como recibida —que es la pantalla que se usa— y la línea de la
+    petición se quedó como estaba. El informe salía diciendo que la Licencia de
+    Primera Ocupación estaba **aportada y no disponible a la vez**.
+
+    Manda el árbol porque es el estado del nodo *para ese edificio* y es lo que
+    la aplicación mantiene al día. Las líneas libres de un nodo que no tiene
+    casilla en ningún activo se quedan: ahí siguen siendo la única fuente.
+    """
+    con_casilla = {_texto(f.get("code")) for f in filas if f.get("asset_id")}
+    return [f for f in filas if f.get("asset_id") or _texto(f.get("code")) not in con_casilla]
+
+
+def _documentacion(snapshot: dict[str, Any]) -> dict[str, str]:
+    """La checklist documental, leída para el informe.
+
+    `[REQ]` Son las dos secciones que quedaban sin rellenar de la plantilla del
+    cliente: «Documentación consultada» y «Análisis de licencias». El dato
+    estaba —la checklist con su árbol de códigos— y no llegaba al informe: el
+    snapshot solo llevaba el negativo, las limitaciones.
+    """
+    filas = _vigentes(snapshot.get("documentacion", []))
+    # El edificio solo se nombra si hay más de uno. En un proyecto de un solo
+    # activo, repetirlo en las sesenta líneas es ruido.
+    edificios = {_texto(f.get("asset_name")) for f in filas if f.get("asset_name")}
+    varios = len(edificios) > 1
+
+    def etiqueta(fila: dict[str, Any], *, con_codigo: bool) -> str:
+        nombre = _texto(fila.get("categoria")) or _texto(fila.get("title"))
+        titulo = _texto(fila.get("title")).strip()
+        # La línea libre del proyecto lleva título propio; la casilla del árbol
+        # repite el nombre de su nodo y no hace falta decirlo dos veces.
+        if titulo and titulo.lower() != nombre.lower():
+            nombre = f"{nombre} — {titulo}"
+        partes = [_texto(fila.get("code")).strip() if con_codigo else "", nombre]
+        if varios and fila.get("asset_name"):
+            partes.append(f"[{_texto(fila['asset_name'])}]")
+        return " ".join(p for p in partes if p)
+
+    consultados = [
+        etiqueta(f, con_codigo=True) + (" (parcial)" if f.get("status") == "PARCIAL" else "")
+        for f in filas
+        if f.get("status") in CONSULTADOS
+    ]
+
+    # ── Análisis de licencias: el estado de la rama urbanística ──────────────
+    #
+    # Una línea por documento y no una frase con puntos y coma: el motivo de una
+    # no disponible es un párrafo entero —«el ayuntamiento no la emitió en su
+    # día y la propiedad no tiene copia…»— y encadenado dentro de una frase deja
+    # la enumeración ilegible.
+    urbanistica: dict[str, list[str]] = {}
+    for fila in filas:
+        if not _texto(fila.get("code")).startswith(RAMA_URBANISTICA):
+            continue
+        estado = _texto(fila.get("status"))
+        if estado not in ESTADOS_DE_DOCUMENTO:
+            continue
+        motivo = _texto(fila.get("unavailable_reason")).strip()
+        linea = etiqueta(fila, con_codigo=False)
+        urbanistica.setdefault(estado, []).append(f"{linea} — {motivo}" if motivo else linea)
+
+    bloques = [
+        f"{ESTADOS_DE_DOCUMENTO[estado]}:\n{_lista(urbanistica[estado])}"
+        for estado in ESTADOS_DE_DOCUMENTO
+        if urbanistica.get(estado)
+    ]
+
+    return {
+        "docs.consultados": _lista(consultados),
+        "docs.consultados_count": str(len(consultados)),
+        "docs.licencias": "\n".join(bloques),
     }
 
 

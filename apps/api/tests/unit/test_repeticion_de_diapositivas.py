@@ -626,3 +626,133 @@ def test_la_introduccion_del_proyecto_llega_al_informe() -> None:
 
     datos = {**SNAPSHOT, "project": {**SNAPSHOT["project"], "summary_text": "Compra de la nave."}}
     assert mk.globales(datos)["project.summary"] == "Compra de la nave."
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Documentación consultada y análisis de licencias
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Lo que hay de verdad en la base: por el mismo nodo, la casilla del árbol del
+#: activo y la línea libre de la checklist del proyecto. Y no dicen lo mismo.
+DOCUMENTACION: list[dict[str, Any]] = [
+    {
+        "asset_id": "a1",
+        "asset_name": "Nave Norte",
+        "code": "S1.1.1",
+        "categoria": "Licencia de Obras",
+        "title": "Licencia de Obras",
+        "status": "RECIBIDA",
+        "unavailable_reason": None,
+    },
+    # El caso que rompía el informe: se pidió y se anotó «no disponible»;
+    # después llegó y se marcó la casilla del árbol, sin volver a tocar la
+    # petición. El informe la daba por aportada Y por no disponible.
+    {
+        "asset_id": None,
+        "asset_name": None,
+        "code": "S1.1.2",
+        "categoria": "Licencia de Primera Ocupación",
+        "title": "Licencia de primera ocupación",
+        "status": "NO_DISPONIBLE",
+        "unavailable_reason": "El cliente no la localiza",
+    },
+    {
+        "asset_id": "a1",
+        "asset_name": "Nave Norte",
+        "code": "S1.1.2",
+        "categoria": "Licencia de Primera Ocupación",
+        "title": "Licencia de Primera Ocupación",
+        "status": "RECIBIDA",
+        "unavailable_reason": None,
+    },
+    {
+        "asset_id": "a1",
+        "asset_name": "Nave Norte",
+        "code": "S1.1.4",
+        "categoria": "Licencia de Funcionamiento",
+        "title": "Licencia de Funcionamiento",
+        "status": "NO_DISPONIBLE",
+        "unavailable_reason": "El ayuntamiento no la emitió en su día",
+    },
+    {
+        "asset_id": "a1",
+        "asset_name": "Nave Norte",
+        "code": "S2.1",
+        "categoria": "Memoria técnica",
+        "title": "Memoria técnica",
+        "status": "PARCIAL",
+        "unavailable_reason": None,
+    },
+    # No aplica: ni es una ausencia ni un hallazgo. No sale.
+    {
+        "asset_id": "a1",
+        "asset_name": "Nave Norte",
+        "code": "S1.3.1",
+        "categoria": "Requerimientos",
+        "title": "Requerimientos",
+        "status": "NO_APLICA",
+        "unavailable_reason": None,
+    },
+]
+
+
+def _docs(extra: list[dict[str, Any]] | None = None) -> dict[str, str]:
+    from tdd.reporting import marcadores as mk
+
+    return mk.globales({**SNAPSHOT, "documentacion": DOCUMENTACION + (extra or [])})
+
+
+def test_el_informe_no_puede_dar_un_documento_por_aportado_y_por_ausente() -> None:
+    """`[REQ]` Manda la casilla del árbol del activo: es el estado del nodo para
+    ese edificio y es lo que la aplicación mantiene al día."""
+    licencias = _docs()["docs.licencias"]
+    assert licencias.count("Licencia de Primera Ocupación") == 1
+    assert "El cliente no la localiza" not in licencias
+
+
+def test_el_analisis_de_licencias_agrupa_por_estado() -> None:
+    assert _docs()["docs.licencias"] == (
+        "Aportadas:\n· Licencia de Obras\n· Licencia de Primera Ocupación\n"
+        "No disponibles:\n· Licencia de Funcionamiento — El ayuntamiento no la emitió en su día"
+    )
+
+
+def test_solo_la_rama_urbanistica_entra_en_el_analisis_de_licencias() -> None:
+    """`S2.1` es documentación técnica: su sitio es la documentación consultada,
+    no el análisis de licencias."""
+    assert "Memoria técnica" not in _docs()["docs.licencias"]
+
+
+def test_lo_consultado_es_lo_aportado_y_lo_parcial_se_dice() -> None:
+    """Una casilla en «solicitada» no se ha consultado —se pidió y no llegó— y
+    decir lo contrario en un entregable firmado es lo que no puede pasar."""
+    consultados = _docs()["docs.consultados"]
+    assert consultados == (
+        "· S1.1.1 Licencia de Obras\n"
+        "· S1.1.2 Licencia de Primera Ocupación\n"
+        "· S2.1 Memoria técnica (parcial)"
+    )
+    assert _docs()["docs.consultados_count"] == "3"
+
+
+def test_con_un_solo_edificio_no_se_repite_su_nombre() -> None:
+    assert "[Nave Norte]" not in _docs()["docs.consultados"]
+
+
+def test_con_varios_edificios_cada_linea_dice_de_cual_es() -> None:
+    """Sin esto, dos edificios con la misma licencia en estados distintos
+    volverían a producir dos líneas que se contradicen."""
+    otro = [
+        {
+            "asset_id": "a2",
+            "asset_name": "Nave Sur",
+            "code": "S1.1.1",
+            "categoria": "Licencia de Obras",
+            "title": "Licencia de Obras",
+            "status": "RECIBIDA",
+            "unavailable_reason": None,
+        }
+    ]
+    consultados = _docs(otro)["docs.consultados"]
+    assert "· S1.1.1 Licencia de Obras [Nave Norte]" in consultados
+    assert "· S1.1.1 Licencia de Obras [Nave Sur]" in consultados

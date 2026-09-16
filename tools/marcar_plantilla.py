@@ -158,6 +158,26 @@ CAMPOS_POR_TITULO: dict[str, str] = {
     "ARCHITECTURE:": "{{resumen:ARQUITECTURA}}",
     "INSTALACIONES:": "{{resumen:INSTALACIONES}}",
     "INSTALLATIONS:": "{{resumen:INSTALACIONES}}",
+    # ── La documentación consultada (sección 08) ────────────────────────────
+    #
+    # La plantilla castellana titula este cuadro en inglés. Se admiten los dos.
+    "CONSULTED DOCUMENTS": "{{docs.consultados}}",
+    "DOCUMENTACION CONSULTADA": "{{docs.consultados}}",
+}
+
+#: Cuando el hueco **no tiene título propio** porque lo pone el patrón.
+#:
+#: `[REQ]` Es el caso del análisis de licencias: su diapositiva es un párrafo de
+#: relleno y nada más, y «ANÁLISIS DE LICENCIAS» vive en el patrón, que es quien
+#: lo pinta. Buscar el título dentro de la diapositiva no encontraba nada.
+#:
+#: Solo se aplica a una diapositiva **en la que no haya caído ningún otro
+#: marcador**: un patrón lo comparten muchas páginas —el de arquitectura, hasta
+#: dieciocho— y esto tiene que alcanzar a la que va suelta, no a todas.
+CAMPOS_POR_PATRON: dict[str, str] = {
+    "ANALISIS DE LICENCIAS": "{{docs.licencias}}",
+    "LICENSING ANALYSIS": "{{docs.licencias}}",
+    "PLANNING ANALYSIS": "{{docs.licencias}}",
 }
 
 #: Los títulos que NO son una sección de sistema aunque estén en mayúsculas y
@@ -612,7 +632,35 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
                 _escribir(parrafo, marcador)
                 puestos.append(f"diap. {numero}: {marcador}")
                 toca_valoracion = False
-    return puestos
+
+    # Si no ha caído nada y el **patrón** dice de qué sección es, el relleno de
+    # esta diapositiva es el de esa sección. Ver `CAMPOS_POR_PATRON`.
+    return puestos or _marcar_por_patron(slide, numero)
+
+
+def _marcar_por_patron(slide: Slide, numero: int) -> list[str]:
+    """El hueco de una diapositiva cuyo título lo pone el patrón."""
+    marcador = next(
+        (
+            CAMPOS_POR_PATRON[clave]
+            for forma in slide.slide_layout.shapes
+            if (marco := _marco(forma)) is not None
+            for parrafo in marco.paragraphs
+            if (clave := _sin_tildes(parrafo.text)) in CAMPOS_POR_PATRON
+        ),
+        None,
+    )
+    if marcador is None:
+        return []
+    for forma in slide.shapes:
+        marco = _marco(forma)
+        if marco is None:
+            continue
+        for parrafo in marco.paragraphs:
+            if _es_relleno(parrafo.text.strip()):
+                _escribir(parrafo, marcador)
+                return [f"diap. {numero}: {marcador}"]
+    return []
 
 
 def _escribir(parrafo: object, texto: str) -> None:

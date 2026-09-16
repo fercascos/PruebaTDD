@@ -40,7 +40,12 @@ from sqlalchemy.orm import Session
 #:
 #: **3** añade `capex_code` a cada fotografía `[REQ]` §3.2, que es lo que la
 #: lleva a la diapositiva de su sección en el Full Report.
-VERSION_DE_FORMATO = 3
+#:
+#: **4** añade `documentacion`: la checklist documental entera, con el código de
+#: su nodo del árbol. Hasta aquí el snapshot solo llevaba el **negativo** —las
+#: limitaciones, lo que no se pudo revisar— y el informe necesita también el
+#: positivo: qué se consultó y en qué estado están las licencias.
+VERSION_DE_FORMATO = 4
 
 
 def _serializable(valor: Any) -> Any:
@@ -259,6 +264,23 @@ def construir(
         )
     )
 
+    # `[REQ]` La checklist documental **entera**, no solo lo que falta. Las
+    # limitaciones de arriba son el negativo —lo que no se pudo revisar— y el
+    # informe necesita también el positivo: qué documentación se consultó y en
+    # qué estado están las licencias. Van con el **código** de su nodo del
+    # árbol, que es lo que permite separar la rama urbanística del resto.
+    documentacion = _filas(
+        s,
+        "SELECT d.asset_id, a.name AS asset_name, c.code, c.name_es AS categoria, d.title, "
+        "CAST(d.status AS text) AS status, d.unavailable_reason, d.received_at "
+        "FROM doc_request_item d "
+        "JOIN doc_request_category c ON c.id = d.category_id "
+        "JOIN project_phase ph ON ph.id = d.project_phase_id "
+        "LEFT JOIN asset a ON a.id = d.asset_id "
+        "WHERE ph.project_id = :p ORDER BY c.code, d.display_order",
+        {"p": str(project_id)},
+    )
+
     visitas = _filas(
         s,
         "SELECT v.asset_id, CAST(v.status AS text) AS status, v.actual_date, "
@@ -327,6 +349,7 @@ def construir(
         "capex_items": lineas,
         "photos": fotos,
         "limitations": limitaciones,
+        "documentacion": documentacion,
         "visits": visitas,
         "descriptivos": descriptivos,
         "catalogs": catalogos,

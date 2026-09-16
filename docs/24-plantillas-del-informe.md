@@ -92,6 +92,9 @@ generación lo dice por su nombre en vez de dejarlo escrito en el informe.
 | `{{report.date}}` | Fecha del informe, `AAAA-MM-DD` |
 | `{{report.month}}` | «Septiembre 2026», que es como lo escribe una portada |
 | `{{report.generated_at}}` | Fecha y hora completas |
+| `{{docs.consultados}}` | La documentación aportada, con el código de su nodo |
+| `{{docs.consultados_count}}` | Cuántos documentos se consultaron |
+| `{{docs.licencias}}` | El estado de la rama urbanística, agrupado por estado |
 
 ### CAPEX · agregados del proyecto
 
@@ -407,16 +410,68 @@ no tiene un hueco declarado para ella. Dónde la quiere —abriendo el resumen
 ejecutivo, en la descripción del inmueble— es decisión suya, y se escribe el
 marcador en esa diapositiva.
 
-### Lo que **no** se rellena, y por qué
+### La documentación consultada y el análisis de licencias
 
-`[LIM]` Dos huecos de la plantilla se quedan con su relleno «XXXX»:
+Salen de la **checklist documental**, que la aplicación ya tenía y el informe no
+usaba: el snapshot solo llevaba el negativo —las limitaciones, lo que no se pudo
+revisar— y faltaba el positivo.
 
-- **Análisis de licencias**
-- **Documentación consultada**
+| Marcador | Qué escribe |
+|---|---|
+| `{{docs.consultados}}` | Lo aportado, con el código de su nodo. Lo parcial se marca como tal |
+| `{{docs.consultados_count}}` | Cuántos |
+| `{{docs.licencias}}` | El estado de la rama `S1`, agrupado por estado |
 
-La aplicación **no tiene ese dato**. Inventar un marcador para ellos daría un
-informe con apartados vacíos y aire de estar terminado; dejar el relleno hace
-visible que ahí le toca escribir a una persona.
+`{{docs.licencias}}` sale así:
+
+```
+Aportadas:
+· Licencia de Obras de nueva planta y modificaciones
+· Licencia de Primera Ocupación
+No disponibles:
+· Licencia de Funcionamiento — El ayuntamiento no la emitió en su día…
+Pendientes de recibir:
+· Licencia de Actividad
+```
+
+Una línea por documento y no una frase con puntos y coma: el motivo de una no
+disponible es un párrafo entero, y encadenado dentro de una frase deja la
+enumeración ilegible.
+
+`[REQ]` **«Consultado» es lo aportado, entero o en parte.** Una casilla en
+«solicitada» no se ha consultado —se pidió y no llegó—, y decir lo contrario en
+un entregable firmado es exactamente lo que no puede pasar. «No aplica» tampoco
+sale: no es ni una ausencia ni un hallazgo.
+
+#### Cuál manda cuando hay dos filas del mismo documento
+
+`[REQ]` §3.2 b · `doc_request_item` alberga **dos cosas**: la casilla del árbol
+de un activo, única por nodo, y la checklist libre del proyecto, donde dos
+informes previos distintos son dos líneas legítimas. Las dos pueden hablar del
+mismo nodo y **decir cosas distintas**.
+
+Pasa en cuanto un documento llega: se pidió al inicio y quedó anotado como no
+disponible; después apareció y alguien marcó la casilla del árbol —que es la
+pantalla que se usa— y la línea de la petición se quedó como estaba. El informe
+salía diciendo que la Licencia de Primera Ocupación estaba **aportada y no
+disponible a la vez**.
+
+**Manda el árbol del activo**, porque es el estado del nodo para ese edificio y
+es lo que la aplicación mantiene al día. Las líneas libres de un nodo sin casilla
+en ningún activo se quedan: ahí siguen siendo la única fuente.
+
+`[LIM]` Con **varios edificios**, cada línea dice de cuál es, entre corchetes.
+Sin eso, dos edificios con la misma licencia en estados distintos volverían a
+producir dos líneas que se contradicen.
+
+#### Dónde se declara el hueco de las licencias
+
+Esa diapositiva **no tiene título propio**: es un párrafo de relleno y nada más,
+y «ANÁLISIS DE LICENCIAS» vive en el **patrón**. Por eso `marcar_plantilla.py`
+lo busca también ahí (`CAMPOS_POR_PATRON`), y solo lo aplica a una diapositiva en
+la que no haya caído ningún otro marcador: un patrón lo comparten muchas páginas
+—el de arquitectura, hasta dieciocho— y esto tiene que alcanzar a la que va
+suelta, no a todas.
 
 ---
 
