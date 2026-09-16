@@ -104,14 +104,13 @@ class Settings(BaseSettings):
     price_source_user_agent: str = ""
 
     # ── Fuentes del informe ─────────────────────────────────────────────────
-    # P-39 cerrada: **Montserrat**, SIL OFL 1.1, del paquete `fonts-montserrat`.
-    # Sustituye a Gotham, que era comercial y no podía ni instalarse en la
-    # imagen ni incrustarse. El porqué de que no sea Segoe UI —la primera
-    # opción del cliente— está en `reporting/fonts.py`.
-    corporate_fonts_required: str = (
-        "Montserrat Light,Montserrat,Montserrat Medium,"
-        "Montserrat SemiBold,Montserrat ExtraBold,Montserrat Black"
-    )
+    # P-46 cerrada: **Century Gothic**, la de las cuatro plantillas del cliente
+    # y la que trae Microsoft Office. Sustituye a Montserrat (P-39), que no
+    # estaba en el ordenador de quien abre el informe y dejaba las tablas con
+    # una sustituta silenciosa. `[LIM]` No es libre y aquí no está instalada:
+    # la estimación de desbordamiento se pierde y se avisa. El porqué completo
+    # está en `reporting/fonts.py`.
+    corporate_fonts_required: str = "Century Gothic"
     font_fallback_warn: bool = True
     # `[LIM]` La licencia ya **permite** incrustar; el generador todavía no lo
     # hace. Sigue en `false` porque encenderlo hoy no cambiaría el fichero: es

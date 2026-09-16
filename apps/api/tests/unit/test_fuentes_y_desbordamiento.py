@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 
 from tdd.reporting.fonts import (
+    FAMILIA_DEL_INFORME,
+    FAMILIAS_MEDIBLES,
     FAMILIAS_REQUERIDAS,
     FuenteNoDisponible,
     cargar,
@@ -19,24 +21,41 @@ solo_con_fuentes = pytest.mark.skipif(
 )
 
 
-def test_se_declaran_las_seis_familias() -> None:
-    assert len(FAMILIAS_REQUERIDAS) == 6
-    assert "Montserrat Black" in FAMILIAS_REQUERIDAS
+def test_el_informe_va_en_una_sola_familia() -> None:
+    """`[REQ]` P-38 unifica y P-46 dice cuál: **Century Gothic**.
+
+    La prueba es que sea **una**, no cuál: el informe salía con cuarenta y ocho
+    páginas del cliente en una familia y seis de tablas nuestras en otra, y eso
+    es justo lo que P-38 existe para impedir.
+    """
+    assert FAMILIAS_REQUERIDAS == ("Century Gothic",)
+    assert FAMILIA_DEL_INFORME == "Century Gothic"
 
 
-def test_ninguna_familia_del_informe_es_comercial() -> None:
-    """`[REQ]` P-39. Gotham se descarta, y con ella el paso manual de montarla
-    en el despliegue: si vuelve a colarse una familia que no se puede instalar
-    con un paquete, la imagen no la tendrá y el aviso de desbordamiento se
-    quedará mudo sin que nadie se entere."""
-    assert all(f.startswith("Montserrat") for f in FAMILIAS_REQUERIDAS)
+def test_la_familia_del_informe_no_se_puede_medir_aqui() -> None:
+    """`[LIM]` P-46 se toma con los ojos abiertos: Century Gothic es de Monotype
+    y no entra en la imagen con un paquete libre. La consecuencia —ni medición
+    ni aviso de desbordamiento— no es un fallo, es la contrapartida, y esta
+    prueba está para que nadie la dé por resuelta sin instalar el fichero."""
+    cap = capacidad_del_marco(
+        ancho_in=8.79, alto_in=5.90, cuerpo_pt=10, familia=FAMILIA_DEL_INFORME
+    )
+    assert cap.fuente_real is False
+
+
+def test_las_familias_con_las_que_se_prueba_la_medicion_son_libres() -> None:
+    """Montserrat ya no es la del informe y se sigue instalando a propósito: es
+    la única familia real con la que aquí se puede comprobar que la medición
+    mide. Si dejara de ser libre, dejaría de entrar en la imagen."""
+    assert all(f.startswith("Montserrat") for f in FAMILIAS_MEDIBLES)
+    assert len(FAMILIAS_MEDIBLES) == 6
 
 
 def test_no_se_pide_una_familia_que_montserrat_no_publica() -> None:
     """«Montserrat Bold» **no es una familia**: Regular y Bold viven las dos
     dentro de «Montserrat». Pedirla daría por ausente una fuente instalada, y
     el informe avisaría de que le falta algo que sí tiene."""
-    assert "Montserrat Bold" not in FAMILIAS_REQUERIDAS
+    assert "Montserrat Bold" not in FAMILIAS_MEDIBLES
     assert localizar("Montserrat Bold") is None
 
 
@@ -72,8 +91,8 @@ def test_sin_la_fuente_la_estimacion_lo_declara() -> None:
 
 
 @solo_con_fuentes
-def test_todas_las_familias_corporativas_estan_instaladas() -> None:
-    estado = comprobar_familias()
+def test_todas_las_familias_medibles_estan_instaladas() -> None:
+    estado = comprobar_familias(FAMILIAS_MEDIBLES)
     faltan = [f for f, ok in estado.items() if not ok]
     assert not faltan, f"Faltan: {faltan}"
 
@@ -112,8 +131,15 @@ def test_el_cuerpo_de_montserrat_cabe_menos_que_el_de_gotham() -> None:
 @solo_con_fuentes
 def test_las_familias_cubren_el_espanol() -> None:
     """Un informe en español con una fuente sin `ñ` es un fallo que no debe
-    descubrirse en producción."""
-    for familia in FAMILIAS_REQUERIDAS:
+    descubrirse en producción.
+
+    `[LIM]` Tras P-46 esto **ya no cubre la familia del informe**: para mirar si
+    Century Gothic tiene la `ñ` hace falta su fichero, y aquí no está. Lo que
+    sigue comprobando es que el método funciona. Sobre la familia real no hay
+    riesgo práctico —es la de las cuatro plantillas del cliente, escritas en
+    español— pero conviene saber que la prueba no lo demuestra.
+    """
+    for familia in FAMILIAS_MEDIBLES:
         m = cargar(familia)
         faltan = [c for c in "áéíóúüñÁÉÍÓÚÑ¿¡€ºª" if ord(c) not in m.anchos]
         assert not faltan, f"«{familia}» no tiene: {''.join(faltan)}"

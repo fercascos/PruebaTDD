@@ -104,17 +104,36 @@ puede marcar hoy.
 - [ ] Qué mirar cuando algo falla: `request_id`, `/metrics`, profundidad de la cola
 - [ ] **Alguien ajeno lo recorre entero** y se corrige lo que le falle
 
-### 1.7. Las cuatro plantillas reales, retipografiadas · `[REQ]` P-39 · ≈ 1 día
+### 1.7. Las cuatro plantillas reales, retipografiadas · `[REQ]` P-46 · ≈ 2 h
 
-Llevan Gotham escrita por dentro —tema y `run`—, y según [`20`](./20-poc-pptx.md) C-8, tres
-familias repartidas. `tools/retipografiar_plantilla.py` las convierte sin tocar el original.
+`[REQ]` **Llevan dos tipografías, no una.** El grueso del cuerpo es **Century Gothic** —671 `run`s en
+las diapositivas del Modelo A castellano—, y por eso P-46 elige esa familia. Pero cada plantilla lleva
+además **86 `run`s de `Gotham Light` y 86 de `Gotham Ultra`**, concentrados en las **once portadillas
+de sección**: el «01 RESUMEN EJECUTIVO» y su fila de números 01…09. Nadie tiene Gotham instalada, así
+que esas once páginas salían con una sustituta silenciosa.
 
-- [ ] Pasar las cuatro con `--con-century-gothic`
-- [ ] **Abrirlas en PowerPoint y mirarlas.** Montserrat es más ancha: un texto ajustado al límite
-      pasa a dos líneas
-- [ ] Volver a medir el ancho de la tabla de CAPEX contra las 9,06 in `[PDV]` — la prueba que hay
-      suma anchos de columna, que no dependen de la fuente; que el **texto** siga cabiendo dentro
-      de esas columnas está sin medir
+Esto **no se vio leyendo el fichero por encima**, se vio generando el informe y contando los
+`typeface` del PPTX de salida. Las dos versiones anteriores de esta sección decían primero que las
+plantillas eran de Gotham y luego que eran solo de Century Gothic: las dos a medias.
+
+`tools/retipografiar_plantilla.py` las convierte **hacia** Century Gothic sin tocar el original.
+
+- [x] Pasar las cuatro por la herramienta — **172 sustituciones** por plantilla, verificado sobre el
+      Modelo A castellano: el informe generado queda con **1.566 `run`s de Century Gothic y ni uno de
+      Gotham**
+- [ ] **Abrirlas en PowerPoint y mirarlas.** Century Gothic es más estrecha que Gotham, así que la
+      dirección del desajuste juega a favor, pero las once portadillas llevan texto ajustado y hay que
+      verlas
+- [ ] `[PDV]` **Decidir qué se hace con lo que queda**, que no se toca por su cuenta: 44 `run`s de
+      `Calibri` —un «EXECUTIVE SUMMARY» que en las portadillas va detrás de la fotografía y no se ve—,
+      27 de `Arial` en portada y en la diapositiva AEO, 8 de `Californian FB` y 1 de `Lucida Sans`.
+      Pueden ser decisiones de diseño o restos, y eso lo dice el cliente
+- [ ] `[PDV]` **Montar Century Gothic** en `CORPORATE_FONTS_INSTALL_DIR` en el despliegue que tenga
+      licencia de Monotype. Sin ella el informe sale igual, pero **no hay estimación de
+      desbordamiento**: sale el aviso de «no se ha podido comprobar si el texto cabe»
+- [ ] `[PDV]` Con la fuente montada, volver a medir el ancho de la tabla de CAPEX contra las 9,06 in
+      — la prueba que hay suma anchos de columna, que no dependen de la fuente; que el **texto** siga
+      cabiendo dentro de esas columnas está sin medir
 
 ---
 
@@ -198,9 +217,12 @@ Estas son las que mueven el calendario sin que nadie escriba código.
 
 Para que se vea qué se ha ido cerrando, y que la lista encoge:
 
-- ✅ **La tipografía comercial.** P-39 quita Gotham. El despliegue ya no tiene el paso manual de
-  montar unos `.otf` en un volumen, del que dependía el aviso de desbordamiento del bloque 4.
-- ✅ **El contrato de licencia que nadie encontraba.** Con Montserrat (SIL OFL) no hay contrato
-  que buscar, y la fuente **va dentro de la imagen**.
+- ✅ **El contrato de licencia que nadie encontraba.** P-39 quitó Gotham y con ella el contrato que
+  el cliente llevaba meses sin localizar. Eso sigue cerrado.
 - ✅ **Las pruebas de medición tipográfica en la CI.** Llevaban desde siempre saltándose solas
-  porque Gotham no se podía instalar en un runner. Ahora corren.
+  porque Gotham no se podía instalar en un runner. Con Montserrat (SIL OFL) corren.
+- ↩️ **El paso manual de montar una fuente en un volumen vuelve, y se acepta.** P-46 pone el informe
+  en Century Gothic —la de las plantillas del cliente, la que trae Office— y eso es de Monotype. Sin
+  montarla, lo que se pierde no es el informe: es la estimación de desbordamiento, y la aplicación lo
+  dice en vez de estimarla con una sustituta. A cambio se acaba el defecto de verdad, que era un
+  informe con dos tipografías.

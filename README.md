@@ -88,8 +88,10 @@ avisa de que el worker ha muerto: la interfaz sigue respondiendo rápido y lo ú
 que los informes «tardan».
 
 `[LIM]` Lo que el `compose` **no** resuelve y hace falta para producción: TLS de entrada, secretos
-fuera del fichero, copias de seguridad y límites de recursos. Está declarado en `compose.yml`. La
-tipografía del informe **ya no está en esa lista**: tras P-39 es Montserrat y va dentro de la imagen.
+fuera del fichero, copias de seguridad y límites de recursos. Está declarado en `compose.yml`. Y **la
+tipografía del informe vuelve a esa lista**: P-39 la había sacado metiendo Montserrat en la imagen;
+P-46 la devuelve, porque Century Gothic es de Monotype. El informe se genera igual —lleva su nombre
+dentro y quien lo abre la tiene con Office—; lo que se pierde en el servidor es la medición.
 
 ---
 
@@ -166,7 +168,8 @@ Diez cuestiones que estaban abiertas y que estructuran el modelo de datos y el i
 | **P-32** | Facilitadas las **seis familias Gotham** | Verificadas una a una. El desbordamiento se mide con las fuentes reales, texto y titulares, **sin sustitutas**. `[LIM]` **Superada por P-39**: el cliente descarta Gotham. Sobrevive el método, no la fuente |
 | **P-37** | La tabla lleva **cinco columnas de plazo**, «Otro» incluida | La imagen pegada en la plantilla solo tenía cuatro: estaba desfasada respecto del Excel de trabajo. La tabla nativa se genera **desde el dato**, así que no puede volver a quedarse atrás |
 | **P-38** | **Toda la tipografía del informe unificada en una sola familia** | La tabla deja Century Gothic, que costaba un **+4,9 %** de anchura de texto —medido sobre 3.769 caracteres reales—, absorbido con el peso ligero en el cuerpo y un reajuste de columnas |
-| **P-39** | **Ni Gotham ni su contrato de licencia: Segoe UI en la aplicación, Montserrat en el informe** | Segoe UI vale en la máquina de quien abre la aplicación y **no** en el servidor, que necesita el fichero instalado para medir el desbordamiento, ni dentro de un PPTX que se envía fuera. Montserrat es **SIL OFL 1.1**: va dentro de la imagen y quita del despliegue el paso manual de montar una fuente comercial. `[LIM]` Cuesta un **7,4 %** de capacidad por diapositiva de sistema, medido |
+| **P-39** | **Ni Gotham ni su contrato de licencia: Segoe UI en la aplicación, Montserrat en el informe** | Segoe UI vale en la máquina de quien abre la aplicación y **no** en el servidor, que necesita el fichero instalado para medir el desbordamiento, ni dentro de un PPTX que se envía fuera. Montserrat es **SIL OFL 1.1**: va dentro de la imagen y quita del despliegue el paso manual de montar una fuente comercial. `[LIM]` Cuesta un **7,4 %** de capacidad por diapositiva de sistema, medido. **Superada por P-46** en la parte del informe; la aplicación web sigue en Segoe UI |
+| **P-46** | **El informe va en Century Gothic**, la de las cuatro plantillas del cliente | Lo pidió al ver el informe generado, y tenía razón: salía **mezclado**, 48 páginas suyas en Century Gothic y 6 de tablas nuestras en Montserrat, que es exactamente lo que P-38 existía para impedir. Un PPTX **no incrusta** fuentes, así que Montserrat se veía con una sustituta en la máquina del cliente; Century Gothic viene con Microsoft Office y está ahí. `[LIM]` Es de Monotype: no entra en la imagen, y la estimación de desbordamiento **deja de calcularse y se avisa** en vez de medirse con otra fuente |
 
 Con esto, **el bloque de CAPEX queda cerrado a nivel de modelo de datos** y el riesgo del bloque 4
 pasa de *alto* a *medio*, ya medido sobre las plantillas reales.
@@ -186,16 +189,35 @@ lugar **Segoe UI, o Montserrat en su defecto**.
 
 - **La aplicación web usa Segoe UI**, que está en la máquina de quien la abre. Ahí no se distribuye
   nada y no hay licencia que verificar.
-- **El informe usa Montserrat**, y no Segoe UI, por una razón técnica que no admite atajo: para avisar
-  de que un texto se desborda hay que **medirlo con el fichero de la fuente instalado en el servidor**,
-  y Segoe UI es de Microsoft —viaja con Windows, no se instala en un contenedor Linux ni se incrusta en
-  un fichero que se envía a un tercero—. Montserrat es SIL OFL 1.1: se instala con un paquete, va
-  dentro de la imagen y se puede incrustar.
-- `[LIM]` **Cuesta un 7,4 % de capacidad**, medido con las dos fuentes por el mismo código: la
-  diapositiva de sistema pasa de 4.405 caracteres a 4.080. Montserrat es más ancha.
-- `[PDV]` **Las cuatro plantillas reales siguen llevando Gotham escrita por dentro.**
-  `tools/retipografiar_plantilla.py` las convierte sin tocar el original, pero hay que pasarlas y
-  **mirar el resultado**.
+- **El informe usaba Montserrat**, y no Segoe UI, por una razón técnica que no admite atajo: para
+  avisar de que un texto se desborda hay que **medirlo con el fichero de la fuente instalado en el
+  servidor**, y Segoe UI es de Microsoft —viaja con Windows, no se instala en un contenedor Linux ni se
+  incrusta en un fichero que se envía a un tercero—. Montserrat es SIL OFL 1.1: se instala con un
+  paquete, va dentro de la imagen y se puede incrustar.
+
+**Y P-46 la ha vuelto a cambiar, mirando el resultado.** Al ver el informe generado el cliente pidió
+**Century Gothic**, y el informe le daba la razón: salía con 48 páginas suyas en Century Gothic y 6 de
+tablas nuestras en Montserrat. Dos tipografías en un documento es el defecto que P-38 existía para
+impedir, y lo introducía nuestra propia elección.
+
+- **Un PPTX no incrusta fuentes.** Montserrat no está en el ordenador de quien abre el informe, así que
+  las tablas se veían con una sustituta que nadie había elegido. Century Gothic **viene con Microsoft
+  Office**: está donde importa, que es la máquina del lector.
+- `[LIM]` **Se paga en el servidor, no en el informe.** Century Gothic es de Monotype: no hay paquete,
+  no entra en la imagen y aquí **no se puede medir**. La aplicación no inventa un número con una
+  sustituta —avisa de que no ha podido comprobar si el texto cabe—. Montarla en el volumen que el
+  Dockerfile deja preparado recupera la medición sin tocar código, y eso lo decide quien tenga licencia.
+- `[REQ]` **Las cuatro plantillas sí hay que pasarlas por la herramienta**, y esto se vio generando el
+  informe y contando los `typeface` del fichero, no leyendo código. Llevan Century Gothic en el grueso
+  del cuerpo, pero además **86 `run`s de `Gotham Light` y 86 de `Gotham Ultra`**, repartidos por las
+  **once portadillas de sección** —el «01 RESUMEN EJECUTIVO» y su fila de números—. Nadie tiene Gotham
+  instalada, así que esas once páginas salían con una sustituta. `tools/retipografiar_plantilla.py`
+  las convierte **hacia** Century Gothic sin tocar el original: 172 sustituciones, verificadas sobre
+  el informe generado, que queda con **1.566 `run`s de Century Gothic y ni uno de Gotham**.
+- `[PDV]` Lo que queda en las plantillas y **no se toca**: 44 `run`s de `Calibri` —un «EXECUTIVE
+  SUMMARY» que en las portadillas va detrás de la fotografía y no se ve—, 27 de `Arial`, 8 de
+  `Californian FB`, 1 de `Lucida Sans` y los `Wingdings` de los símbolos. Pueden ser decisiones de
+  diseño suyas o restos; convertirlos sin preguntar sería decidir por el cliente.
 
 > **Siguiente paso: entregable 24** — el código inicial del MVP, que conforme a §16 del proyecto se
 > aborda tras la validación de este diseño.
@@ -220,8 +242,9 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
   de ±10-15 %. El aviso lo dice explícitamente al usuario. Se mide con las **fuentes reales**,
   texto y titulares, sin sustitutas.
 - `[LIM]` **Un PPTX no contiene tipografías, contiene nombres de tipografía.** Que el destinatario vea
-  el informe con su tipografía depende de que la tenga instalada, no de esta aplicación. Con Montserrat
-  eso deja de ser un problema práctico —es gratuita y cualquiera puede instalarla—, pero sigue sin
+  el informe con su tipografía depende de que la tenga instalada, no de esta aplicación. Es el
+  argumento que decidió P-46: `[SUP]` Century Gothic viene con Microsoft Office, así que está donde se
+  abre el informe; Montserrat no, y se veía con una sustituta silenciosa. Sigue sin
   incrustarse. Es el mismo
   comportamiento que hoy: las cuatro plantillas facilitadas **no incrustan** las fuentes. Incrustarlas
   es posible y está valorado en [`docs/18`](docs/18-analisis-plantillas-reales.md) §18.7bis, pero
@@ -229,13 +252,15 @@ Aquí, y no enterradas en un anexo, porque condicionan expectativas:
 - `[LIM]` **La fidelidad de la tabla nativa de CAPEX no está verificada.** Su estructura —columnas,
   cabecera de dos niveles, formato— se recuperó de los metarchivos EMF de las plantillas, que son
   exactos, pero los anchos son una reconstrucción y no se ha visto ningún render. La comparación lado a
-  lado con la imagen original es criterio de salida de la prueba de concepto. Tras P-38 esa comparación
-  **no busca identidad**: la tabla no irá en Century Gothic, y el reajuste de anchos que compensa esa
-  diferencia ya está hecho.
-- `[REQ]` **Las tipografías no se versionan, se instalan por paquete.** Tras P-39 la del informe es
-  Montserrat (SIL OFL 1.1), así que **va dentro de la imagen** —`fonts-montserrat`, una línea del
-  Dockerfile— con verificación de que las seis familias resuelven por su nombre exacto. Con Gotham no
-  se podía: era comercial y el despliegue tenía que montarla a mano en un volumen.
+  lado con la imagen original es criterio de salida de la prueba de concepto. Tras P-46 la tabla vuelve
+  a ir **en Century Gothic**, la misma del Excel original, así que esa comparación sí busca identidad
+  tipográfica; el reajuste de anchos que P-38 hizo para absorber otra familia deja de hacer falta y
+  `[PDV]` habría que revisarlo con un render.
+- `[REQ]` **Las tipografías no se versionan.** Montserrat, que es SIL OFL 1.1, **va dentro de la
+  imagen** —`fonts-montserrat`, una línea del Dockerfile— con verificación de que las seis familias
+  resuelven por su nombre exacto; ya no es la del informe, es con la que se comprueba que la medición
+  mide. `[LIM]` La del informe, Century Gothic, **no va**: es de Monotype, como lo era Gotham, y el
+  despliegue que la quiera medir la monta a mano en el volumen preparado para ello.
 - `[LIM]` **No hay ninguna fuente de precios externa, ni está prevista** `[REQ]` P-06. Los precios se
   teclean y se editan a mano, sin fricción. La contrapartida, asumida a conciencia: **el catálogo de
   precios se irá desfasando**, porque nada lo actualiza solo. Por eso el módulo de Sugerencias llega en

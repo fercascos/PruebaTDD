@@ -309,8 +309,8 @@ indistinguible del original, con las fuentes del informe instaladas?»**. Pregun
 | ¿El **XLSX exportado** cuadra con la tabla del informe? | Exportar el mismo proyecto en los dos formatos y comparar celda a celda | Se corrige `CapexTableLayout`, que es la pieza compartida |
 | ¿La estimación de desbordamiento es útil (±15 %)? | Comparar con el render de LibreOffice en 20 casos | Se baja la ambición: aviso por umbral de caracteres |
 | ¿Cuánta desviación hay entre LibreOffice y PowerPoint? | Renderizar en ambos y comparar | Se ajusta la expectativa y se documenta |
-| ¿Los **4.080 caracteres** de capacidad **medida con `Montserrat Light` real** por diapositiva de sistema bastan para dos subsistemas? `[LIM]` Eran 4.405 con Gotham: P-39 quita un 7,4 % | Rellenar con textos reales de un informe emitido | Se parte la diapositiva o se acorta el texto |
-| ¿La tabla en **Montserrat** (P-38 + P-39) sigue siendo legible a cuerpo pequeño, y cabe en las 9,06 in? | Generar la tabla con descripciones reales y compararla con la imagen original | Se sube medio punto el cuerpo, o se reajustan los anchos otra vez |
+| ¿Cuántos caracteres caben de verdad en la diapositiva de sistema? `[LIM]` Con `Montserrat Light` se midieron **4.080** —eran 4.405 con Gotham—, pero tras P-46 el informe va en **Century Gothic** y **aquí no hay cifra**: la fuente no está instalada y no se inventa una con una sustituta | Rellenar con textos reales de un informe emitido, en una máquina que tenga la fuente | Se parte la diapositiva o se acorta el texto |
+| ¿La tabla en **Century Gothic** (P-38 + P-46) cabe en las 9,06 in? Es la familia del original, así que debería caber mejor que nunca, pero `[LIM]` **no se puede medir aquí**: la fuente no está instalada | Generar la tabla con descripciones reales y compararla con la imagen original, en una máquina que tenga la fuente | Se sube medio punto el cuerpo, o se reajustan los anchos otra vez |
 | ¿La resolución de catálogos **en inglés** produce un informe coherente? | Generar la misma sección con `A_ES` y `A_EN` | Se revisa el modelo de traducción (C-5) |
 
 **Coste: 2 semanas de una persona. Beneficio: conocer el riesgo mayor en la semana 3 en lugar de la
@@ -377,9 +377,9 @@ siendo crítico en impacto: si el informe sale descuadrado, el producto no se us
 | Mitigación | Cuándo |
 |---|---|
 | ✅ **Plantillas reales obtenidas y analizadas** (doc 18) | Hecho |
-| ✅ **Las seis familias del informe verificadas una a una**, con métricas reales medidas para texto y titulares. Tras P-39 son las de Montserrat, instaladas por paquete | Hecho |
+| ✅ **Seis familias verificadas una a una**, con métricas reales medidas para texto y titulares: las de Montserrat, instaladas por paquete. `[LIM]` Tras P-46 **ya no son las del informe** —es Century Gothic, que no se puede instalar aquí—: son con las que se comprueba que la medición mide | Hecho |
 | ✅ **P-31 decidida**: tabla nativa respetando el formato del Excel, con la estructura recuperada del propio EMF | Hecho |
-| ✅ **P-37, P-38 y P-39 decididas**: cinco columnas de plazo y tipografía unificada, ahora en Montserrat, con el ensanchamiento ya medido y absorbido | Hecho |
+| ✅ **P-37, P-38, P-39 y P-46 decididas**: cinco columnas de plazo y tipografía unificada, y **en Century Gothic**, que es la del original — el ensanchamiento que P-38 midió y absorbió deja de existir | Hecho |
 | Instalar las fuentes en el worker desde el artefacto privado, con verificación de arranque | Antes de la prueba de concepto |
 | Prueba de concepto dedicada de 2 semanas (§21.3) | Semanas 2-3 |
 | Contrato de plantilla + plantilla de referencia + validador | F8 |

@@ -177,6 +177,14 @@ no solo a la tabla de CAPEX. Conviene saberlo antes de preparar la plantilla pil
 > fuera «Gotham en el informe y Century Gothic en las tablas», bastaría con cambiar lo que genera la
 > aplicación. Son tres familias repartidas por 67 diapositivas, así que la plantilla hay que
 > convertirla entera: `tools/retipografiar_plantilla.py`, que no toca el original.
+>
+> ✅ **Cerrado por P-46, y este hallazgo es de donde salió.** El cliente pidió el informe en **Century
+> Gothic** al verlo generado, que es justo la familia que esta sección encontró en el cuerpo de sus
+> diapositivas. Y lo que esta sección decía sobre la mezcla **sigue valiendo entero**: contadas sobre
+> el PPTX, cada plantilla lleva 86 `run`s de `Gotham Light` y 86 de `Gotham Ultra` en sus **once
+> portadillas**. Así que hacen falta las dos cosas: cambiar lo que genera la aplicación —un cambio de
+> constante— y pasar la plantilla por `tools/retipografiar_plantilla.py`, que ahora convierte hacia
+> Century Gothic.
 
 ### C-9 · Hay una marca de agua «DRAFT»
 
@@ -273,7 +281,9 @@ técnica, es trabajo conocido: preparar las plantillas (~1,5 jornadas cada una) 
 - `[LIM]` **No se ha abierto nada en PowerPoint.** Todo el render es de LibreOffice, que no compone
   igual. La comparación LibreOffice ↔ PowerPoint sigue pendiente y **necesita una máquina con Office**.
 - `[LIM]` **Century Gothic no está instalada** en el entorno de prueba, de modo que el render la
-  sustituyó. Las longitudes de línea del render son aproximadas por ese motivo.
+  sustituyó. Las longitudes de línea del render son aproximadas por ese motivo. Tras P-46 esa
+  limitación **es la del producto**, no la del banco de pruebas: la familia del informe es ésa, y sin
+  el fichero la aplicación no mide el desbordamiento y lo declara.
 - No se han probado las **fotografías**: el bloque de evidencia todavía no existe.
 
 ---

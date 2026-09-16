@@ -147,11 +147,16 @@ fmt:  ## Formatea
 	cd apps/api && python3 -m ruff format src tests && python3 -m ruff check --fix src tests
 	python3 -m ruff format tools && python3 -m ruff check --fix tools
 
+# `[LIM]` Esto **no instala la tipografía del informe**: tras P-46 es Century
+# Gothic, que es de Monotype y no tiene paquete libre. Instala Montserrat, que
+# es con lo que las pruebas comprueban que la medición mide de verdad; sin
+# ninguna fuente instalada se saltan solas y no demuestran nada.
+#
 # Montserrat es SIL OFL 1.1, así que **se podría** versionar. No se hace: un
 # binario en el repositorio se queda ahí para siempre, se actualiza a mano y
 # nadie revisa su procedencia al año siguiente. El paquete del sistema tiene
 # versión, firma y actualizaciones, y es una línea en el Dockerfile.
-fonts-install:  ## Instala las tipografías del informe (Montserrat, SIL OFL)
+fonts-install:  ## Instala Montserrat (SIL OFL), con la que se prueba la medición
 	@if fc-list | grep -qi 'Montserrat-Light'; then echo "Montserrat ya instalada."; else \
 	  echo "Instalando fonts-montserrat (hace falta sudo)…"; \
 	  sudo apt-get update && sudo apt-get install --no-install-recommends -y fonts-montserrat; \

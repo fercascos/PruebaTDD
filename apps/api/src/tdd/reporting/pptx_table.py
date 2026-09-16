@@ -14,6 +14,7 @@ from pptx.slide import Slide
 from pptx.util import Emu, Inches, Pt
 
 from tdd.reporting.capex_layout import TITULO_GRUPO, Alineacion, CapexTableLayout
+from tdd.reporting.fonts import FAMILIA_DEL_INFORME
 
 #: Muestreados del render de la plantilla del cliente (docs/20 §20.3).
 VERDE_TITULO = RGBColor(0xA9, 0xC7, 0x8C)
@@ -35,16 +36,29 @@ COLOR_PLAZO = {
     "otro": RGBColor(0xE0, 0xE0, 0xE0),
 }
 
-#: P-38 · toda la tipografía del informe unificada en **una sola familia**. El
-#: original mezclaba Century Gothic dentro de las imágenes de tabla, porque
-#: venían de un Excel ajeno.
+#: P-38 · toda la tipografía del informe unificada en **una sola familia**, y
+#: `[REQ]` P-46 dice cuál: **Century Gothic**, la de las plantillas del cliente.
 #:
-#: P-39 la fija en **Montserrat**: el cliente descarta Gotham, y de las dos que
-#: pide —Segoe UI, o Montserrat en su defecto— es la única que se puede
-#: instalar en el servidor para medir el desbordamiento e incrustar en un PPTX
-#: que se envía fuera. Ver `reporting/fonts.py`.
-FUENTE_CUERPO = "Montserrat Light"
-FUENTE_CABECERA = "Montserrat Medium"
+#: Lo pidió así —*«el informe debería estar en Century Gothic»*— después de ver
+#: que el informe generado salía **mezclado**: cuarenta y ocho páginas suyas en
+#: Century Gothic y seis de tablas en Montserrat, que es justo lo que P-38
+#: quería evitar. La familia del informe es la de la plantilla, no la nuestra.
+#:
+#: `[LIM]` Century Gothic **no está instalada en el servidor** y no es libre, así
+#: que el aviso de desbordamiento no puede medirse: se dice al generar, con
+#: nombre y apellidos, en vez de callar. Ver `reporting/fonts.py`.
+#:
+#: `[SUP]` A cambio, es la que **sí está** en el ordenador de quien abre el
+#: informe: viene con Microsoft Office. Montserrat no, y no se incrusta en el
+#: PPTX, así que las tablas se veían con una sustituta en la máquina del cliente.
+#:
+#: Sale de `reporting/fonts.py` y no de una constante escrita aquí: la familia
+#: del informe se declara **en un solo sitio**, que es lo que impide que la
+#: tabla y el aviso de fuentes ausentes acaben hablando de familias distintas.
+FUENTE_CUERPO = FAMILIA_DEL_INFORME
+#: La misma familia: el peso de la cabecera lo da la **negrita**, que ya se
+#: aplica. Century Gothic no publica un «Medium» como familia propia.
+FUENTE_CABECERA = FAMILIA_DEL_INFORME
 
 _ALIGN = {
     Alineacion.IZQUIERDA: PP_ALIGN.LEFT,

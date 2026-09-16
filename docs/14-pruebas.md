@@ -316,8 +316,8 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Celda sin importe** | Queda **en blanco**. Una prueba busca el literal `0,00 €` en columnas de plazo y falla si aparece `[REC]` |
 | **Formato de importe** | `#.##0,00 €` en `es-ES` y el equivalente en `en-GB`, verificado carácter a carácter sobre el texto de la celda |
 | **Columna «Otro»** | Por defecto la tabla tiene **9 columnas** en los dos formatos, con «Otro» incluida `[REQ]` P-37. Con `include_other_horizon` a falso, 8 |
-| **Tipografía unificada** | Se recorre el XML de la tabla generada y se afirma que **todos** los `typeface` son de la familia del informe —`Montserrat` tras P-39—. Falla si se cuela `Century Gothic` o `Calibri` `[REQ]` P-38 |
-| **Ancho tras P-38** | Con textos de descripción reales, la tabla en el peso ligero **no excede las 9,06 in** del original. Es la prueba que cubre el ensanchamiento respecto de Century Gothic |
+| **Tipografía unificada** | Se recorre el XML de la tabla generada y se afirma que **todos** los `typeface` son de la familia del informe —`Century Gothic` tras P-46—. Falla si se cuela `Montserrat` o `Calibri` `[REQ]` P-38. Una segunda prueba recorre celda a celda: la familia tiene que estar en **todas** las que llevan texto, porque una sin declarar hereda en silencio la del patrón. Es el defecto que se coló y que solo se vio mirando el PDF |
+| **Ancho** | Con textos de descripción reales, la tabla **no excede las 9,06 in** del original. Cubría el ensanchamiento respecto de Century Gothic; tras P-46 la familia es la misma que la del original, así que lo que queda es margen a favor y la prueba sigue como red |
 | **Una sola casilla por fila** | Se recorre cada fila y se afirma que exactamente una columna de plazo lleva valor. Es P-05 comprobado en la salida |
 | **Suma cuadrada** | La suma de las columnas de plazo de la tabla coincide con el total del `data_snapshot`, al céntimo |
 | **PPTX y XLSX no divergen** | Prueba de contrato sobre `CapexTableLayout`: se genera el mismo proyecto en los dos formatos y se comparan encabezados, número de columnas, orden y valores celda a celda. **Falla si alguien añade una columna en un solo generador** `[REC]` |
@@ -330,12 +330,12 @@ diverjan**. Ambas cosas se prueban explícitamente:
 
 | Caso | Verificación |
 |---|---|
-| **Presencia en el contenedor** | Prueba de arranque: `fc-list` encuentra **las seis familias de Montserrat**, y el `Dockerfile` comprueba además que resuelven **por su nombre exacto**. **Falla el arranque del worker si falta alguna** `[REC]` |
+| **Presencia en el contenedor** | `fc-list` encuentra **las seis familias de Montserrat**, y el `Dockerfile` comprueba además que resuelven **por su nombre exacto**. `[LIM]` Ya no son las del informe: son con las que se comprueba que la medición mide. La del informe, Century Gothic, **no está** y su ausencia **no bloquea el arranque** —bloquearlo no evitaría ningún defecto: el informe sale igual y lo único que se pierde es la medición, que ya se avisa— `[REC]` |
 | **Sustitución declarada** | Si una familia falta, la estimación de desbordamiento **lo dice en el aviso** en vez de medir en silencio con una sustituta. Se prueba el texto del aviso |
-| **Métricas** | La capacidad de la diapositiva de sistema es de **4.080 caracteres con `Montserrat Light`** —eran 4.405 con Gotham—, y el interlineado natural, 1,22 em. Detecta que se haya colado una fuente distinta con el mismo nombre |
-| **Cobertura del español** | Cada familia contiene los glifos de `áéíóúüñÁÉÍÓÚÑ¿¡€ºª–—“”·`. Un informe en español con una fuente sin `ñ` es un fallo que no debe descubrirse en producción `[REC]` |
+| **Métricas** | La capacidad de la diapositiva de sistema es de **4.080 caracteres con `Montserrat Light`** —eran 4.405 con Gotham—, y el interlineado natural, 1,22 em. Detecta que se haya colado una fuente distinta con el mismo nombre. `[LIM]` La cifra equivalente **para Century Gothic no existe**: haría falta el fichero |
+| **Cobertura del español** | Cada familia **medible** contiene los glifos de `áéíóúüñÁÉÍÓÚÑ¿¡€ºª–—“”·`. Un informe en español con una fuente sin `ñ` es un fallo que no debe descubrirse en producción `[REC]`. `[LIM]` Tras P-46 esto **no cubre la familia del informe**: sin el fichero no se puede mirar. Riesgo práctico nulo —es la de las plantillas del cliente, escritas en español— pero la prueba no lo demuestra y lo dice |
 | **La generación no depende de la fuente** | Se genera un PPTX **con las fuentes desinstaladas** y se comprueba que el XML sigue llevando el `typeface` que toca. Documenta en código que el fichero de salida es correcto aunque el servidor no tenga la tipografía `[REC]` |
-| **No están en el repositorio** | `make no-fonts` en la CI falla si aparece cualquier `.otf` o `.ttf` versionado. Montserrat **se podría** versionar —es OFL— y aun así no se hace: un binario en el repositorio se actualiza a mano y nadie revisa su procedencia al año siguiente `[REC]` |
+| **No están en el repositorio** | `make no-fonts` en la CI falla si aparece cualquier `.otf` o `.ttf` versionado. Montserrat **se podría** versionar —es OFL— y aun así no se hace: un binario en el repositorio se actualiza a mano y nadie revisa su procedencia al año siguiente. Century Gothic **no se podría**: es de Monotype `[REC]` |
 
 ---
 

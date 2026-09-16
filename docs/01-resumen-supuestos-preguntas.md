@@ -139,9 +139,9 @@ porque son las que estructuran el modelo de datos y condicionan la semilla de ca
 | **P-05b** ✅ | ¿El importe tecleado ya incluye indirectos, honorarios y contingencia, o es un coste directo al que aplicar la cascada? | **Lo incluye todo**: el importe es la **base imponible final** de la línea | La aplicación **nunca** aplica la cascada por encima de un importe tecleado. El desglose por medición es una **calculadora opcional** cuyo resultado se traslada con un botón. Del perfil de costes, **solo el impuesto se aplica a todas las líneas**; indirectos, honorarios, gastos generales, beneficio industrial y contingencia se usan únicamente dentro de esa calculadora |
 | **P-31** ✅ | ¿La tabla de CAPEX del informe sigue siendo una **imagen pegada desde Excel** o pasa a ser **tabla nativa**? | **Tabla nativa respetando el formato del Excel**, y además un **botón de exportar el CAPEX a XLSX** para adjuntarlo en los envíos que el equipo haga fuera de la plataforma | La estructura de la tabla se ha recuperado de los propios metarchivos de las plantillas y está especificada en [`11`](./11-capex-precios.md) §16.8bis. El generador de PPTX y el exportador de XLSX **comparten una misma estructura intermedia**, para que no puedan divergir. La exportación queda auditada como `EXPORT_CREATED` |
 
-| **P-32** ✅ | ¿Pueden facilitarse los **ficheros de las fuentes Gotham**? | **Facilitadas las seis familias**: Light, Book, Medium, Bold, Black y Ultra | Verificadas una a una: OTF válidas, 1000 upm, 637 glifos, cobertura completa del español, y nombre de familia coincidente con el `typeface` de las plantillas. **La medición del desbordamiento ya no usa sustitutas para nada**. `[LIM]` **Superada por P-39**: el cliente descarta Gotham, y las seis familias que el informe exige hoy son las de Montserrat. Lo que sobrevive de esta pregunta es el método —familias verificadas una a una, sin sustitutas—, no la fuente |
+| **P-32** ✅ | ¿Pueden facilitarse los **ficheros de las fuentes Gotham**? | **Facilitadas las seis familias**: Light, Book, Medium, Bold, Black y Ultra | Verificadas una a una: OTF válidas, 1000 upm, 637 glifos, cobertura completa del español, y nombre de familia coincidente con el `typeface` de las plantillas. **La medición del desbordamiento ya no usa sustitutas para nada**. `[LIM]` **Superada por P-39 y luego por P-46**: el cliente descarta Gotham, y la familia del informe es hoy **Century Gothic**, que no está instalada aquí. Lo que sobrevive de esta pregunta es el método —familias verificadas una a una, sin sustitutas; y si no hay fichero, no se mide y se dice—, no la fuente |
 | **P-37** ✅ | La imagen de la plantilla tenía **cuatro** columnas de plazo. ¿Se muestra «Otro tipo de petición» como quinta? | **Sí, se deja «Otro»**: el Excel de trabajo la tiene y es la versión más actualizada | La tabla lleva **cinco columnas de plazo** en el informe y en el XLSX. El desfase entre la imagen pegada y la hoja real es el mejor argumento para la tabla nativa: **se genera desde el dato, no desde una captura** |
-| **P-38** ✅ | La tabla original venía en **Century Gothic**. ¿Se respeta o se unifica? | **Se unifica**: una sola tipografía en todo el informe | Lo que decidió P-38 fue **unificar**, y eso sigue en pie; cuál es la familia lo dice ahora P-39, que la cambia a Montserrat. El reajuste de columnas que se hizo entonces —trasvasar un 5 % de anchura de `Comments` a `Description`— se conserva: sigue haciendo falta, porque la fuente nueva también es más ancha que Century Gothic. Ver [`18`](./18-analisis-plantillas-reales.md) §18.7bis |
+| **P-38** ✅ | La tabla original venía en **Century Gothic**. ¿Se respeta o se unifica? | **Se unifica**: una sola tipografía en todo el informe | Lo que decidió P-38 fue **unificar**, y eso sigue en pie; cuál es la familia lo dice ahora **P-46**, que la devuelve a **Century Gothic**. Es decir: se unifica, y se unifica en la que ya traía la tabla. El reajuste de columnas que se hizo entonces —trasvasar un 5 % de anchura de `Comments` a `Description`— deja de ser necesario y se conserva como margen. Ver [`18`](./18-analisis-plantillas-reales.md) §18.7bis |
 
 | **P-06** ✅ | ¿Hay licencia de una base de precios externa? | **No, y no se espera.** *«A falta de conectar una base de datos de precios externa, deja esos campos editables para que cada uno modifique a mano esa parte»* | **Ninguna integración externa**, ni en el MVP ni planificada. El precio se teclea y se edita **en la propia rejilla, sin fricción**: la justificación escrita deja de bloquear y solo se exige al marcar un precio como `VALIDADO`. La trazabilidad se conserva **sin pedir nada**, vía auditoría e historial de campo. `[LIM]` Contrapartida asumida: el catálogo se desfasará, y por eso llega a la vez el módulo de Sugerencias |
 | **P-42** ✅ | *(nuevo)* Módulo de **Sugerencias** | **Se añade**: cualquier usuario propone cambios y **solo los administradores ven las propuestas** | Documento propio: [`19-sugerencias.md`](./19-sugerencias.md). Cuatro tipos, contexto capturado por referencia, visibilidad impuesta por **RLS** y no por filtro de servicio, respuesta obligatoria al rechazar. **Añade 1,5 semanas al MVP** en su alcance mínimo (F10bis) |
@@ -218,18 +218,50 @@ fuente comercial en el informe.
 
 | # | Decisión | Consecuencia |
 |---|---|---|
-| **P-39** ✅ | **Ni Gotham ni contrato.** La aplicación web usa **Segoe UI**; el informe, **Montserrat** | Segoe UI es de Microsoft y viaja con Windows: vale en la máquina de quien abre la aplicación —ahí no se distribuye nada— y **no vale en el servidor**, que necesita el fichero instalado para medir el desbordamiento, ni dentro de un PPTX que se envía a un tercero. Montserrat es **SIL OFL 1.1**: se instala con un paquete, va **dentro de la imagen** y se puede incrustar. `[LIM]` Cuesta un **7,4 % de capacidad**: la diapositiva de sistema pasa de 4.405 caracteres a 4.080, medido con las dos fuentes por el mismo código |
+| **P-39** ✅ | **Ni Gotham ni contrato.** La aplicación web usa **Segoe UI**; el informe, **Montserrat** *(la parte del informe queda superada por P-46)* | Segoe UI es de Microsoft y viaja con Windows: vale en la máquina de quien abre la aplicación —ahí no se distribuye nada— y **no vale en el servidor**, que necesita el fichero instalado para medir el desbordamiento, ni dentro de un PPTX que se envía a un tercero. Montserrat es **SIL OFL 1.1**: se instala con un paquete, va **dentro de la imagen** y se puede incrustar. `[LIM]` Cuesta un **7,4 % de capacidad**: la diapositiva de sistema pasa de 4.405 caracteres a 4.080, medido con las dos fuentes por el mismo código |
 
-Lo que esta decisión desbloquea, y no es menor: el despliegue **deja de tener un
-paso manual**. Con Gotham había que montar los ficheros en un volumen del
-contenedor, y de ese paso —que nadie iba a recordar— dependía el aviso de
+Lo que esta decisión desbloqueaba, y no era menor: el despliegue **dejaba de
+tener un paso manual**. Con Gotham había que montar los ficheros en un volumen
+del contenedor, y de ese paso —que nadie iba a recordar— dependía el aviso de
 desbordamiento del bloque 4.
 
-`[PDV]` Queda una cosa por hacer, y no es de desarrollo: **las cuatro plantillas
-reales llevan Gotham escrita por dentro**. Hay un programa que las convierte
-—`tools/retipografiar_plantilla.py`, que no toca el original— pero alguien tiene
-que pasarlas y **mirar el resultado**: Montserrat es más ancha y un texto
-ajustado al límite puede pasar a dos líneas.
+**Ese paso vuelve con P-46**, y esta vez se acepta a cambio de otra cosa. La
+historia completa está abajo.
+
+#### P-46 · el informe va en Century Gothic
+
+`[REQ]` El cliente lo pidió **al ver el informe generado**: *«el informe debería
+estar en Century Gothic»*. Y el informe le daba la razón sin necesidad de
+discutirlo: salía con **48 páginas suyas en Century Gothic y 6 de tablas
+nuestras en Montserrat**. Dos tipografías en un mismo documento es exactamente
+el defecto que P-38 existía para impedir, y quien lo introducía era nuestra
+propia elección de familia.
+
+| # | Decisión | Consecuencia |
+|---|---|---|
+| **P-46** ✅ | **El informe va en Century Gothic**, la de sus cuatro plantillas. Es una sola familia en todo el documento, incluidas nuestras tablas de CAPEX | **Donde se gana:** un PPTX **no incrusta** tipografías, solo guarda su nombre. Century Gothic `[SUP]` viene con Microsoft Office, así que está en el ordenador de quien abre el informe; Montserrat no, y las tablas se veían allí con una sustituta que nadie había elegido. **Donde se paga:** es de Monotype, no hay paquete libre, no entra en la imagen y aquí **no se puede medir**. `[LIM]` La estimación de desbordamiento deja de calcularse y sale como aviso —*«no se ha podido comprobar si el texto cabe»*— en vez de darse con una sustituta |
+
+Dos cosas que conviene no perder de vista:
+
+- `[REQ]` **Las plantillas sí hay que pasarlas por la herramienta**, y esto salió
+  de generar el informe y **contar los `typeface` del fichero**. El grueso del
+  cuerpo es Century Gothic, sí, pero cada plantilla lleva además **86 `run`s de
+  `Gotham Light` y 86 de `Gotham Ultra`** repartidos por las **once portadillas
+  de sección**: el «01 RESUMEN EJECUTIVO» y su fila de números. Nadie tiene
+  Gotham instalada, así que esas once páginas salían con una sustituta.
+  `tools/retipografiar_plantilla.py` las convierte **hacia** Century Gothic sin
+  tocar el original —172 sustituciones—, y el informe resultante queda con
+  **1.566 `run`s de Century Gothic y ni uno de Gotham**. Comprobado.
+- `[PDV]` **Lo que no se toca**: 44 `run`s de `Calibri` —un «EXECUTIVE SUMMARY»
+  que en las portadillas queda detrás de la fotografía y no se ve—, 27 de
+  `Arial` en la portada y en la diapositiva de mediciones AEO, 8 de
+  `Californian FB`, 1 de `Lucida Sans` y los `Wingdings` de los símbolos. Pueden
+  ser decisiones de diseño o restos; convertirlos sin preguntar sería decidir
+  por el cliente.
+- `[PDV]` **Century Gothic es más estrecha**, así que los textos caben mejor que
+  con Montserrat. Eso es a favor, pero **no está medido**: para medirlo hace
+  falta el fichero, y el fichero no está. Quien monte la fuente en el volumen
+  recupera la medición sin tocar código.
 
 ### 3.7. Preguntas del módulo de Sugerencias
 

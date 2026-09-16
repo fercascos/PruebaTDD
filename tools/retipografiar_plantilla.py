@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """Cambia la tipografía declarada dentro de una plantilla PPTX.
 
-`[REQ]` P-39: el cliente descarta **Gotham** y elige **Segoe UI, o Montserrat en
-su defecto**. Cambiar lo que genera la aplicación no basta, y ésta es la razón
-por la que existe este programa:
+`[REQ]` P-46: el informe va en **Century Gothic**. Una plantilla cuyo tema o
+cuyos `run` declaren otra familia sale con dos tipografías —la nuestra en lo
+generado y una sustituta silenciosa en todo lo demás, porque en el PowerPoint
+de quien lo abra esa otra familia no está—. Eso es peor que no cambiar nada: se
+nota, y no se sabe por qué. Este programa arregla la plantilla, no el generador.
 
-Las cuatro plantillas reales llevan `Gotham` escrita **por dentro** —en el tema
-y en cada `run`—. Si solo cambiamos la tabla y los textos que generamos
-nosotros, el informe sale con dos tipografías: la nuestra en lo generado y una
-sustituta silenciosa en todo lo demás, porque en el PowerPoint del que lo abra
-no hay ninguna Gotham instalada. Eso es peor que no cambiar nada: se nota, y no
-se sabe por qué.
+`[REC]` **Las cuatro plantillas reales no necesitan pasar por aquí.** Se
+comprobó: ya declaran Century Gothic —426 `run`s del Modelo A castellano—, que
+es precisamente el motivo de P-46. El programa queda para una plantilla vieja o
+para la que traiga mañana otra corporativa.
+
+`[LIM]` P-39 mandaba en sentido contrario —de Gotham a Montserrat— y la
+plantilla que ya se hubiera convertido así hay que volver a pasarla: el mapa de
+abajo también traduce Montserrat.
 
 `[REQ]` **No sobrescribe el original.** Escribe un fichero nuevo y se niega a
 pisar uno que exista, salvo `--forzar`. Las partes que no cambian se copian
@@ -22,12 +26,11 @@ Uso::
     python3 tools/retipografiar_plantilla.py informe.pptx            # qué declara
     python3 tools/retipografiar_plantilla.py informe.pptx -s nuevo.pptx
 
-`[LIM]` Cambia lo que la plantilla **declara**, no cómo se ve. Montserrat no
-tiene las mismas anchuras que Gotham —mide un 7,4 % menos de texto por
-diapositiva de sistema, medido— así que un texto ajustado al límite puede pasar
-a dos líneas. El aviso de desbordamiento de la aplicación lo detecta, porque
-mide con la fuente que la forma declara; lo que no puede es recolocar un cuadro
-de texto por su cuenta. Hay que mirar el resultado.
+`[LIM]` Cambia lo que la plantilla **declara**, no cómo se ve. Dos familias no
+tienen las mismas anchuras, así que un texto ajustado al límite puede pasar a
+dos líneas. Y aquí el aviso de desbordamiento **tampoco lo va a detectar**:
+Century Gothic no está instalada en el servidor y la aplicación prefiere no
+medir a medir con una sustituta. Hay que abrir el resultado y mirarlo.
 """
 
 from __future__ import annotations
@@ -40,31 +43,45 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
-#: Gotham reparte ocho pesos en ocho familias; Montserrat publica seis y mete
-#: Regular y Bold en la misma. El emparejamiento es **por peso**, no por
-#: nombre: `Ultra` es el más grueso de Gotham y `Black` el más grueso de
-#: Montserrat, así que un titular sigue siendo un titular.
+#: La familia de destino es **una sola**, y ésa es la novedad de P-46 frente a
+#: P-39: Gotham reparte ocho pesos en ocho familias y Montserrat seis, pero
+#: Century Gothic publica Regular y Bold **dentro de la misma familia**. No hay
+#: a qué emparejar por peso.
 #:
-#: `[SUP]` `Book` es el peso de texto de Gotham y equivale al Regular. Si
-#: apareciera un peso que no está aquí, el programa lo dice y no lo toca: es
-#: mejor una familia sin traducir y señalada que una traducida a ojo.
-EQUIVALENCIAS: dict[str, str] = {
-    "Gotham Thin": "Montserrat Thin",
-    "Gotham XLight": "Montserrat ExtraLight",
-    "Gotham Extra Light": "Montserrat ExtraLight",
-    "Gotham Light": "Montserrat Light",
-    "Gotham Book": "Montserrat",
-    "Gotham": "Montserrat",
-    "Gotham Medium": "Montserrat Medium",
-    "Gotham Bold": "Montserrat SemiBold",
-    "Gotham Black": "Montserrat ExtraBold",
-    "Gotham Ultra": "Montserrat Black",
-}
+#: `[LIM]` Y eso se paga: un titular declarado `Gotham Ultra` pierde el grosor,
+#: porque en el destino no existe una familia más gruesa a la que ir. El peso
+#: que sobreviva es el que lleve el `run` en su atributo de negrita. Es lo que
+#: hacen las propias plantillas del cliente, que resuelven toda su jerarquía
+#: con Century Gothic y negrita.
+DESTINO = "Century Gothic"
 
-#: `Century Gothic` estaba en las tablas pegadas desde Excel (P-38). La tabla
-#: nativa ya no viene de ahí, pero una plantilla vieja puede conservarla en
-#: algún cuadro suelto.
-EQUIVALENCIAS_EXTRA: dict[str, str] = {"Century Gothic": "Montserrat Light"}
+#: `[SUP]` Si apareciera una familia que no está aquí, el programa lo dice y no
+#: la toca: es mejor una familia sin traducir y señalada que una traducida a
+#: ojo. El emparejamiento es por **nombre exacto** —ver `_equivalencia`—.
+EQUIVALENCIAS: dict[str, str] = dict.fromkeys(
+    (
+        "Gotham Thin",
+        "Gotham XLight",
+        "Gotham Extra Light",
+        "Gotham Light",
+        "Gotham Book",
+        "Gotham",
+        "Gotham Medium",
+        "Gotham Bold",
+        "Gotham Black",
+        "Gotham Ultra",
+        # P-39 convirtió plantillas a Montserrat. P-46 las devuelve.
+        "Montserrat Thin",
+        "Montserrat ExtraLight",
+        "Montserrat Light",
+        "Montserrat",
+        "Montserrat Medium",
+        "Montserrat SemiBold",
+        "Montserrat ExtraBold",
+        "Montserrat Black",
+    ),
+    DESTINO,
+)
 
 #: Un `typeface=""` vacío es legítimo en OOXML: significa «la del tema». No se
 #: toca.
@@ -87,9 +104,9 @@ def _equivalencia(familia: str, mapa: dict[str, str]) -> str | None:
     """La familia de destino, o `None` si no hay que tocarla.
 
     El emparejamiento es **por nombre exacto**, y no por prefijo, a propósito:
-    con «empieza por Gotham», `Gotham Ultra` habría casado con la regla de
-    `Gotham` a secas —la primera que empieza igual— y todos los titulares del
-    informe habrían acabado en el peso del cuerpo.
+    con «empieza por Gotham» se llevaría por delante `Gotham Rounded`, que es
+    otra fuente y puede estar ahí a propósito. Lo que no se sabe traducir se
+    señala, no se adivina.
     """
     return mapa.get(familia.strip())
 
@@ -121,7 +138,7 @@ def retipografiar(
                 # Solo se señala lo que huele a la tipografía que se retira:
                 # una plantilla declara además Arial, Calibri y las de los
                 # símbolos, y listarlas sería ruido.
-                if familia.lower().startswith(("gotham", "century gothic")):
+                if familia.lower().startswith(("gotham", "montserrat")):
                     sin_traducir.append(familia)
                 return m.group(0)
             if nueva != familia:
@@ -165,11 +182,6 @@ def main() -> int:
         help="fichero a escribir. Sin él solo se informa de lo que declara",
     )
     ap.add_argument("--forzar", action="store_true", help="permite pisar un fichero existente")
-    ap.add_argument(
-        "--con-century-gothic",
-        action="store_true",
-        help="traduce también Century Gothic, que venía de las tablas de Excel",
-    )
     args = ap.parse_args()
 
     if not args.plantilla.exists():
@@ -177,8 +189,6 @@ def main() -> int:
         return 1
 
     mapa = dict(EQUIVALENCIAS)
-    if args.con_century_gothic:
-        mapa.update(EQUIVALENCIAS_EXTRA)
 
     if args.salida is None:
         cuenta = declaradas(args.plantilla)

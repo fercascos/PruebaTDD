@@ -45,10 +45,11 @@ jobs:
       - name: Catálogos al día
         run: make catalogs-check
 
-      # `[REQ]` Las tipografías se instalan por paquete, no se versionan. La de
-      # ahora —Montserrat, SIL OFL— hasta se podría, y aun así no se hace: un
-      # binario en el repositorio se actualiza a mano y nadie revisa su
-      # procedencia al año siguiente. Que no entre ni por un `git add .`.
+      # `[REQ]` Las tipografías no se versionan. Montserrat, que es SIL OFL,
+      # hasta se podría, y aun así no se hace: un binario en el repositorio se
+      # actualiza a mano y nadie revisa su procedencia al año siguiente. Y
+      # Century Gothic, la del informe tras P-46, **no se puede**: es de
+      # Monotype. Que no entre ni por un `git add .`.
       - name: Sin tipografías versionadas
         run: make no-fonts
 
@@ -78,11 +79,15 @@ jobs:
           cache: pip
       - run: pip install -e "apps/api[dev]"
 
-      # Sin la tipografía instalada, las pruebas de medición de desbordamiento
-      # **se saltan solas** —lo dice su `skipif`— y llevaban desde siempre sin
-      # ejecutarse aquí, porque Gotham era comercial y no se podía instalar en
-      # un runner. Con Montserrat (SIL OFL) es un paquete, así que ahora corren.
-      - name: Tipografía del informe
+      # Sin ninguna tipografía instalada, las pruebas de medición de
+      # desbordamiento **se saltan solas** —lo dice su `skipif`— y no demuestran
+      # nada. Montserrat (SIL OFL) es un paquete, así que corren.
+      #
+      # `[LIM]` No es la tipografía del informe: tras P-46 es Century Gothic, de
+      # Monotype, que no se puede instalar en un runner. Lo que se prueba aquí
+      # es que **el método mide**; sobre la familia del informe la aplicación no
+      # mide y lo dice, que es la contrapartida asumida de P-46.
+      - name: Tipografía con la que se prueba la medición
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y fonts-montserrat

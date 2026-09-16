@@ -12,6 +12,7 @@ sean filas de sección en vez de columnas.
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
 import pytest
@@ -177,3 +178,43 @@ def test_una_actuacion_llega_entera_a_su_fila(tabla) -> None:
     assert valores[6] == "Vida útil"  # concepto
     assert valores[7] == "NO"  # recuperable
     assert valores[-1] == "412.500,00 €"  # total de la fila
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  La tipografía · `[REQ]` P-38 unifica, P-46 dice cuál
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_toda_la_tabla_va_en_la_familia_del_informe(tabla) -> None:
+    """**Esto se detectó mirando el PDF, no leyendo el código.** El informe
+    generado salía con cuarenta y ocho páginas del cliente en Century Gothic y
+    seis de tablas nuestras en Montserrat: dos tipografías en un mismo
+    documento, que es justo lo que P-38 existe para impedir.
+
+    Se recorre el XML y no las constantes del módulo a propósito: lo que llega
+    al cliente es el atributo `typeface`, y una celda a la que se le olvidara
+    ponerlo heredaría la del patrón sin que ninguna comprobación de constantes
+    lo notara.
+    """
+    from tdd.reporting.fonts import FAMILIA_DEL_INFORME
+
+    xml = tabla.table._tbl.xml
+    declaradas = set(re.findall(r'typeface="([^"]*)"', xml))
+    assert declaradas == {FAMILIA_DEL_INFORME}
+
+
+def test_ninguna_celda_se_queda_sin_declarar_la_familia(tabla) -> None:
+    """La otra mitad de lo anterior: que la familia esté en **todas** las
+    celdas con texto. Una sin declarar no rompe nada visible aquí y en
+    PowerPoint sale con la fuente del patrón."""
+    from tdd.reporting.fonts import FAMILIA_DEL_INFORME
+
+    t = tabla.table
+    sin_familia = [
+        (f, c)
+        for f in range(len(t.rows))
+        for c in range(len(t.columns))
+        if t.cell(f, c).text.strip()
+        and t.cell(f, c).text_frame.paragraphs[0].font.name != FAMILIA_DEL_INFORME
+    ]
+    assert not sin_familia, f"Celdas sin la familia del informe: {sin_familia}"

@@ -1,10 +1,10 @@
-"""`tools/retipografiar_plantilla.py` · el cambio de tipografía de P-39.
+"""`tools/retipografiar_plantilla.py` · el cambio de tipografía de P-46.
 
 La plantilla de prueba se **construye aquí**, con python-pptx: ninguna del
 cliente entra en el repositorio. Lo que se comprueba no es que sepa abrir un
 PPTX real —eso lo hace la biblioteca— sino las tres decisiones del programa:
-que empareja por peso, que no toca el original y que señala lo que no sabe
-traducir en vez de adivinarlo.
+que empareja por nombre exacto, que no toca el original y que señala lo que no
+sabe traducir en vez de adivinarlo.
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ def test_el_tema_tambien_se_convierte(tmp_path: Path) -> None:
 
     salida = tmp_path / "nueva.pptx"
     herramienta.retipografiar(origen, salida, mapa=herramienta.EQUIVALENCIAS)
-    assert _tema_de(salida) == ["Montserrat Black", "Montserrat Light"]
+    assert _tema_de(salida) == ["Century Gothic", "Century Gothic"]
 
 
 def test_declara_lo_que_hay_dentro(tmp_path: Path) -> None:
@@ -116,10 +116,12 @@ def test_declara_lo_que_hay_dentro(tmp_path: Path) -> None:
     assert cuenta["Gotham Ultra"] >= 1
 
 
-def test_empareja_por_peso_y_no_por_prefijo(tmp_path: Path) -> None:
-    """El fallo que la regla evita: con «empieza por Gotham», `Gotham Ultra`
-    habría casado con la regla de `Gotham` a secas y **todos los titulares del
-    informe** habrían acabado en el peso del cuerpo."""
+def test_todos_los_pesos_acaban_en_la_familia_del_informe(tmp_path: Path) -> None:
+    """`[LIM]` P-46 tiene esta consecuencia y conviene verla escrita: Century
+    Gothic publica Regular y Bold **dentro de la misma familia**, así que los
+    tres pesos de partida llegan al mismo destino y el titular pierde su
+    grosor de familia. Lo que quede de jerarquía lo lleva la negrita del `run`,
+    que es como lo resuelven las plantillas del cliente."""
     origen = _plantilla(
         tmp_path,
         {"Gotham Light": "cuerpo", "Gotham Ultra": "TITULAR", "Gotham Medium": "cabecera"},
@@ -130,12 +132,22 @@ def test_empareja_por_peso_y_no_por_prefijo(tmp_path: Path) -> None:
     )
 
     resultado = herramienta.declaradas(salida)
-    assert resultado["Montserrat Light"] >= 1
-    assert resultado["Montserrat Black"] >= 1  # Ultra es el peso de titular
-    assert resultado["Montserrat Medium"] >= 1
+    assert resultado["Century Gothic"] >= 3
     assert not any(f.startswith("Gotham") for f in resultado)
     assert not sin_traducir
     assert isinstance(cambios, Counter)
+
+
+def test_una_plantilla_convertida_por_p39_se_devuelve(tmp_path: Path) -> None:
+    """P-39 pasó plantillas a Montserrat. P-46 manda al revés, y una plantilla
+    a medio camino sale con dos tipografías: la peor de las salidas."""
+    origen = _plantilla(tmp_path, {"Montserrat Light": "cuerpo", "Montserrat Black": "TITULAR"})
+    salida = tmp_path / "nueva.pptx"
+    herramienta.retipografiar(origen, salida, mapa=herramienta.EQUIVALENCIAS)
+
+    resultado = herramienta.declaradas(salida)
+    assert not any(f.startswith("Montserrat") for f in resultado)
+    assert resultado["Century Gothic"] >= 2
 
 
 def test_el_original_no_se_toca(tmp_path: Path) -> None:
@@ -187,18 +199,17 @@ def test_lo_que_no_es_tipografia_se_copia_byte_a_byte(tmp_path: Path) -> None:
     assert len(distintas) == 1
 
 
-def test_century_gothic_solo_si_se_pide(tmp_path: Path) -> None:
-    """Venía de las tablas pegadas desde Excel (P-38). No se traduce por
-    omisión: en una plantilla puede ser una decisión de diseño y no un resto."""
-    origen = _plantilla(tmp_path, {"Century Gothic": "tabla vieja"})
-    sin, con = tmp_path / "sin.pptx", tmp_path / "con.pptx"
-
-    herramienta.retipografiar(origen, sin, mapa=herramienta.EQUIVALENCIAS)
-    assert herramienta.declaradas(sin)["Century Gothic"] >= 1
-
-    mapa = {**herramienta.EQUIVALENCIAS, **herramienta.EQUIVALENCIAS_EXTRA}
-    herramienta.retipografiar(origen, con, mapa=mapa)
-    assert "Century Gothic" not in herramienta.declaradas(con)
+def test_una_plantilla_que_ya_esta_bien_no_se_toca(tmp_path: Path) -> None:
+    """Las cuatro reales están en este caso: ya declaran Century Gothic. Pasarlas
+    por aquí no debe cambiar ni un `typeface`."""
+    origen = _plantilla(tmp_path, {"Century Gothic": "cuerpo"})
+    salida = tmp_path / "nueva.pptx"
+    cambios, sin_traducir = herramienta.retipografiar(
+        origen, salida, mapa=herramienta.EQUIVALENCIAS
+    )
+    assert sum(cambios.values()) == 0
+    assert not sin_traducir
+    assert herramienta.declaradas(salida)["Century Gothic"] >= 1
 
 
 def test_es_idempotente(tmp_path: Path) -> None:
@@ -210,14 +221,10 @@ def test_es_idempotente(tmp_path: Path) -> None:
     assert herramienta.declaradas(dos) == herramienta.declaradas(una)
 
 
-def test_las_equivalencias_apuntan_a_familias_que_el_informe_declara() -> None:
-    """Traducir a una familia que el informe no exige dejaría la plantilla
-    apuntando a algo que la imagen no instala."""
-    from tdd.reporting.fonts import FAMILIAS_REQUERIDAS
+def test_las_equivalencias_apuntan_a_la_familia_del_informe() -> None:
+    """Traducir a otra familia dejaría la plantilla apuntando a algo que el
+    informe no declara: dos tipografías otra vez, que es el defecto que P-46
+    viene a cerrar."""
+    from tdd.reporting.fonts import FAMILIA_DEL_INFORME
 
-    # Thin y ExtraLight existen en Montserrat pero el informe no los exige: no
-    # se usan en las plantillas y no tiene sentido bloquear el arranque por
-    # ellos. El resto sí tiene que estar entre las requeridas.
-    sueltas = {"Montserrat Thin", "Montserrat ExtraLight"}
-    destinos = set(herramienta.EQUIVALENCIAS.values()) - sueltas
-    assert destinos <= set(FAMILIAS_REQUERIDAS)
+    assert set(herramienta.EQUIVALENCIAS.values()) == {FAMILIA_DEL_INFORME}

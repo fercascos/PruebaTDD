@@ -422,14 +422,15 @@ PPTX_MAX_UNCOMPRESSED_MB=200
 PPTX_RENDER_TIMEOUT_SECONDS=180
 
 # ── Fuentes del informe ─────────────────────────────────────
-# P-39: Montserrat (SIL OFL 1.1), instalada por paquete DENTRO de la imagen.
-# Estas dos variables solo hacen falta si un despliegue monta además una
-# fuente propia.
+# P-46: Century Gothic, la de las plantillas del cliente. Es de Monotype y NO
+# va dentro de la imagen; estas variables son justamente por donde un
+# despliegue con licencia la monta y recupera la medición de desbordamiento.
 CORPORATE_FONTS_BUCKET= · CORPORATE_FONTS_PREFIX=fonts/
 CORPORATE_FONTS_INSTALL_DIR=/usr/share/fonts/corporativas
-# Familias exigidas. El arranque FALLA si fc-list no las encuentra todas.
-# Century Gothic NO está en la lista: P-38 unifica toda la tipografía.
-CORPORATE_FONTS_REQUIRED=Montserrat Light,Montserrat,Montserrat Medium,Montserrat SemiBold,Montserrat ExtraBold,Montserrat Black
+# Sobre qué familias se informa al generar. Si falta, NO bloquea el arranque:
+# el informe sale igual —lleva el nombre dentro— y lo que se pierde es la
+# estimación de desbordamiento, que se declara como aviso.
+CORPORATE_FONTS_REQUIRED=Century Gothic
 FONT_FALLBACK_WARN=true            # si falta una familia, el aviso lo declara
 # Incrustar las fuentes en el PPTX generado. Desactivado: los ficheros lo
 # permiten (fsType = Preview & Print) pero está PENDIENTE de confirmar contra

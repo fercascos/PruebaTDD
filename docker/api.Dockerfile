@@ -63,11 +63,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # completas ya incluyen fontconfig, las `slim` no—, para que la misma receta
 # valga con cualquier base y no se pague una descarga de paquetes cuando no
 # hace falta.
-# Y **Montserrat va dentro de la imagen**, que es lo que P-39 desbloquea: es
-# SIL OFL 1.1, así que distribuirla con cada copia de la imagen es exactamente
-# lo que la licencia permite. Con Gotham no se podía —era comercial— y el
-# despliegue tenía que montarla a mano en un volumen: un paso manual del que
-# dependía una función del bloque 4, y que nadie iba a recordar.
+# `[LIM]` **La tipografía del informe no va aquí dentro.** Tras P-46 es Century
+# Gothic, de Monotype: no hay paquete libre y distribuirla con cada copia de la
+# imagen no es nuestro para decidirlo. La consecuencia está asumida y se avisa
+# al generar —no se mide el desbordamiento, en vez de medirlo con una
+# sustituta—, y quien tenga licencia la monta en el volumen de abajo.
+#
+# Montserrat **sí** se instala, y ya no como tipografía del informe: es la
+# única familia real con la que se puede comprobar aquí que la medición mide
+# —que `fc-match` no cuela una sustituta y que los anchos salen del fichero—.
+# Sin ninguna fuente instalada, esas pruebas se saltan solas.
 #
 # `fonts-montserrat` se instala siempre, `fontconfig` solo si la base no lo
 # trae: las imágenes `python:3.11-bookworm` completas ya lo incluyen y las
@@ -82,18 +87,20 @@ RUN apt-get update \
  && fc-match --version
 
 # Que estén no basta: tienen que resolverse **por su nombre exacto**, que es
-# como las pide `reporting/fonts.py`. Un paquete que cambiara de nombres de
-# familia dejaría el aviso de desbordamiento mudo, y en tiempo de ejecución eso
-# no se distingue de «este texto cabe».
+# como las pide `reporting/fonts.py` (`FAMILIAS_MEDIBLES`). Un paquete que
+# cambiara de nombres de familia dejaría sin cobertura real la medición, y en
+# tiempo de ejecución un aviso mudo no se distingue de «este texto cabe».
 RUN for f in "Montserrat Light" "Montserrat" "Montserrat Medium" \
              "Montserrat SemiBold" "Montserrat ExtraBold" "Montserrat Black"; do \
       fc-match -f '%{family}' "$f" | tr ',' '\n' | grep -qixF "$f" \
         || { echo "FALTA la familia $f"; exit 1; }; \
     done \
- && echo "Las seis familias del informe resuelven por nombre exacto."
+ && echo "Las seis familias medibles resuelven por nombre exacto."
 
-# Sitio para una tipografía adicional que un cliente quiera montar en su
-# despliegue. Vacío por omisión: el informe ya no depende de ello.
+# Aquí es donde se monta Century Gothic, la tipografía del informe, en el
+# despliegue que tenga licencia para hacerlo. Vacío por omisión, y el informe
+# **se genera igual** sin ella: lo que se recupera montándola es la estimación
+# de desbordamiento, que hoy sale como aviso de «no se ha podido comprobar».
 RUN mkdir -p /usr/share/fonts/corporativas
 
 # Sin privilegios. Que la aplicación no pueda escribir en su propio código es

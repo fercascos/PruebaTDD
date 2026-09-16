@@ -297,14 +297,19 @@ desbordamiento como la previsualización pierden buena parte de su valor en un i
 diapositivas cuyo riesgo principal es, precisamente, el texto que se sale.
 
 > ✅ **Superado por P-39 · fuera Gotham.** El cliente la descarta y elige **Segoe UI, o Montserrat en
-> su defecto**. El informe usa **Montserrat**, que es SIL OFL 1.1 y por tanto **va dentro de la imagen
-> del contenedor**: el requisito de fase F0 de esta sección —«obtener los ficheros e instalarlos»—
-> desaparece, y con él el paso manual del despliegue del que dependía el aviso de desbordamiento. Todo
-> lo que este documento mide **sobre las plantillas** sigue valiendo: describen lo que esos ficheros
-> declaran hoy, y seguirán declarando Gotham hasta que alguien los pase por
-> `tools/retipografiar_plantilla.py`. Lo que ya no vale es la conclusión de que hace falta una fuente
-> comercial. `[LIM]` Montserrat es más ancha: la diapositiva de sistema baja de 4.405 a 4.080
-> caracteres, un 7,4 %.
+> su defecto**. El informe pasó a **Montserrat**, que es SIL OFL 1.1 y por tanto **iba dentro de la
+> imagen del contenedor**: el requisito de fase F0 de esta sección —«obtener los ficheros e
+> instalarlos»— desaparecía, y con él el paso manual del despliegue. `[LIM]` Montserrat es más ancha:
+> la diapositiva de sistema bajaba de 4.405 a 4.080 caracteres, un 7,4 %.
+>
+> ↩️ **Y corregido otra vez por P-46 · el informe va en Century Gothic.** Con las cuentas hechas
+> sobre el fichero, que es lo que faltaba: cada plantilla lleva **Century Gothic en el grueso del
+> cuerpo** —671 `run`s en las diapositivas del Modelo A castellano— y **86 `run`s de `Gotham Light`
+> más 86 de `Gotham Ultra`** en las once portadillas de sección. Ni «es Gotham» ni «no hay Gotham»:
+> son las dos, y por eso la herramienta sigue haciendo falta, ahora convirtiendo **hacia** Century
+> Gothic. El requisito de F0 **vuelve** —Century Gothic es de Monotype— pero en una versión más
+> barata: sin la fuente el informe **sale igual**, y lo único que se pierde es la estimación de
+> desbordamiento, que se declara como aviso.
 >
 > ✅ **Resuelto en su momento.** El cliente facilitó **las seis familias Gotham**, verificadas en §18.7bis. Los
 > dos problemas de arriba desaparecen. Conviene además leer §18.7bis para deshacer un malentendido que
@@ -609,7 +614,7 @@ Drafting of Projects and Technical Management (DF)               1.040.078,95 �
 | Título de bloque (`…: ARCHITECTURE`) | Fila de título o marcador de la diapositiva, según el mapeo |
 | **Columnas de plazo** | **Cinco**, incluyendo «Otro» ✅ P-37 |
 | Anchos de columna | Parten de la geometría medida en el EMF (9,06 in de ancho total), reajustados por P-38 |
-| **Tipografía** | **Gotham** ✅ P-38 — *no* Century Gothic, que es lo que llevaba el Excel original |
+| **Tipografía** | **Century Gothic** ✅ P-38 unifica, **P-46** elige — y elige la que llevaba el Excel original. Por el camino se dijo Gotham y luego Montserrat |
 | Formato de importe | `#.##0,00 €`, separador de miles con punto y decimal con coma, como en el original |
 | Celdas vacías | En blanco, no «0,00 €» — es como está hoy |
 | Partición | 18 filas por diapositiva, encabezado repetido, subtotales por capítulo |
@@ -687,7 +692,7 @@ Consecuencias:
 | **P-35** | Las diapositivas de **Mediciones AEO** (42-49) y **Disclaimer** (63-66) son contenido fijo. ¿Se marcan como intocables (`@keep`) o alguna parte se rellena? | Bajo | `@keep`, salvo indicación contraria |
 | **P-36** | ¿Qué diferencia funcional hay entre **Modelo A y Modelo B**, más allá de portada e índice? ¿Cuándo se usa cada uno? | Medio | Se tratan como dos variantes de portada del mismo mapeo |
 | ~~**P-37**~~ | ~~¿«Otro tipo de petición» sale como quinta columna del informe?~~ | — | ✅ **CERRADA: sí.** El Excel de trabajo la tiene y es la versión más actualizada; la imagen de la plantilla estaba desfasada. **Cinco columnas de plazo** |
-| ~~**P-38**~~ | ~~¿La tabla nativa mantiene Century Gothic o se unifica?~~ | — | ✅ **CERRADA: todo en Gotham.** Cuesta un **+4,9 %** de anchura de texto, absorbible con Gotham Light y un reajuste de columnas |
+| ~~**P-38**~~ | ~~¿La tabla nativa mantiene Century Gothic o se unifica?~~ | — | ✅ **CERRADA: se unifica.** La familia fue Gotham (+4,9 % de anchura, absorbido con un reajuste de columnas), luego Montserrat (P-39) y por fin **Century Gothic** (P-46): se unifica en la que la tabla ya traía, y el sobrecoste de anchura desaparece |
 
 ---
 
