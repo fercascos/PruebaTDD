@@ -483,12 +483,32 @@ antiguo mostrase huecos. Es la diferencia entre archivar un PDF y poder reconstr
 | 🟠 ALTA | `DRAFT_FINDINGS_EXCLUDED` | Hallazgos en «borrador» que el informe deja fuera, con su importe | No, pero **muy visible** `[REC]` |
 | 🟡 MEDIA | `UNVALIDATED_PRICES` | Líneas con precio sin validar, con su importe | No, pero **muy visible** `[REC]` |
 | 🟡 MEDIA | `MISSING_PHOTO` | Activo o hallazgo sin fotos seleccionadas | No |
+| 🟡 MEDIA | `MISSING_ASSESSMENT` | Sección con el **descriptivo escrito y la valoración en blanco**: sale el rótulo y debajo nada `[REQ]` | No |
 | 🟡 MEDIA | `SMARTART_DETECTED` | SmartArt en zona de datos | No |
 | 🟡 MEDIA | `FONT_NOT_AVAILABLE` | Fuente del tema no instalada | No |
 | 🟡 MEDIA | `PENDING_DOC_REQUESTS` | Documentación aún en «solicitada» `[REC]` | No |
 | ⚪ BAJA | `EMPTY_FIELD` | Campo vacío; se insertará texto vacío | No |
 | ⚪ BAJA | `MISSING_CAPTION` | Foto sin pie | No |
 | ⚪ BAJA | `AUTOFIT_WILL_SHRINK` | PowerPoint reducirá la fuente | No |
+
+`[REQ]` **`MISSING_ASSESSMENT` salió de abrir el PDF, no de leer el código.** La
+sección imprimía su descriptivo entero y debajo el rótulo «Valoración» sin nada
+detrás. No se escapaba ningún marcador ni ningún «N/D» inventado —eso está
+cuidado y tiene su prueba—, y por eso desde dentro de la aplicación **todo
+parecía correcto**: el descriptivo lo rellena la extracción de la memoria
+técnica, la valoración no la rellena ningún documento y la escribe el técnico.
+
+Se cuenta **por capítulo**, que es lo que dibuja el informe: la plantilla pide
+`{{valoracion:HC.H08}}` y eso agrega lo de todos sus objetos, así que basta con
+que uno lo tenga para que el hueco no salga vacío. Avisar por objeto daría
+catorce avisos de una sola diapositiva, y una lista que siempre trae catorce
+entradas no la lee nadie.
+
+Solo entran los descriptivos **validados**, que es el mismo filtro del snapshot:
+sin él se avisaría de secciones que el informe ni siquiera va a imprimir. Y una
+sección de la que no se ha escrito **nada** tampoco entra: ésa sale en blanco
+entera, que es otro caso y ya está cubierto. Éste avisa de lo que sale **a
+medias**, que es lo que se cuela.
 
 `[REC]` `UNVALIDATED_PRICES` merece atención: generar con precios sin validar es legítimo (un borrador
 interno), pero enviarlo al cliente sin darse cuenta es un problema real. Aparece en la

@@ -83,6 +83,7 @@ def test_solo_bloquean_los_cinco_que_producirian_un_documento_incorrecto() -> No
         desbordamientos=(("system.description", 0.35),),
         diapositivas_de_tabla=3,
         fuentes_ausentes=("Montserrat Medium",),
+        secciones_sin_valoracion=(("HC.H08", "Climatización y ventilación"),),
         campos_vacios=("asset.city",),
         solicitudes_pendientes=4,
         hallazgos_en_borrador=8,
@@ -168,6 +169,46 @@ def test_una_fuente_ausente_avisa_sin_bloquear() -> None:
     aviso = next(a for a in avisos if a.codigo == "FONT_NOT_AVAILABLE")
     assert aviso.bloquea is False
     assert "por nombre" in aviso.mensaje
+
+
+def test_una_seccion_sin_valoracion_avisa_sin_bloquear() -> None:
+    """`[REQ]` El hueco que se vio **abriendo el PDF**: la sección sale con su
+    descriptivo entero y debajo el rótulo «Valoración» sin nada detrás.
+
+    No sale ningún marcador ni ningún «N/D» —eso está cuidado y tiene su
+    prueba— y por eso mismo desde dentro de la aplicación no se nota: todo
+    parece correcto hasta que alguien abre el documento. Este aviso es lo que
+    lo hace visible antes de enviarlo.
+
+    No bloquea, por lo mismo que no bloquea un pie de foto vacío: un borrador
+    interno con la valoración a medias es legítimo.
+    """
+    avisos = evaluar(
+        EstadoDelInforme(secciones_sin_valoracion=(("HC.H08", "Climatización y ventilación"),))
+    )
+    aviso = next(a for a in avisos if a.codigo == "MISSING_ASSESSMENT")
+    assert aviso.bloquea is False
+    assert "Climatización y ventilación" in aviso.mensaje
+    assert "HC.H08" in aviso.mensaje
+    # Dice **por qué** está vacío: no es un fallo de la aplicación, es que a
+    # esto no lo rellena ningún documento. Sin esa frase el usuario busca el
+    # error donde no está.
+    assert "escribe el técnico" in aviso.mensaje
+
+
+def test_se_avisa_una_vez_por_seccion_y_no_por_objeto() -> None:
+    """La plantilla pide `{{valoracion:HC.H08}}`, que agrega lo de todos los
+    objetos del capítulo: basta con que uno lo tenga para que el hueco no salga
+    vacío. Avisar por objeto daría catorce avisos de una sola diapositiva."""
+    avisos = evaluar(
+        EstadoDelInforme(
+            secciones_sin_valoracion=(
+                ("HC.H02", "Cubierta"),
+                ("HC.H08", "Climatización y ventilación"),
+            )
+        )
+    )
+    assert len([a for a in avisos if a.codigo == "MISSING_ASSESSMENT"]) == 2
 
 
 def test_un_campo_vacio_avisa_de_que_saldra_vacio() -> None:

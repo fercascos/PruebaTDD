@@ -75,6 +75,9 @@ class EstadoDelInforme:
     #: En cuántas diapositivas se partirá la tabla de CAPEX.
     diapositivas_de_tabla: int = 1
     fuentes_ausentes: tuple[str, ...] = ()
+    #: Secciones que van al informe con el descriptivo escrito y la valoración
+    #: en blanco, como `(código, nombre)`. Ver `MISSING_ASSESSMENT`.
+    secciones_sin_valoracion: tuple[tuple[str, str], ...] = ()
     campos_vacios: tuple[str, ...] = ()
     solicitudes_pendientes: int = 0
     hay_marca_de_borrador_en_plantilla: bool = False
@@ -223,6 +226,27 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 "El activo no tiene ninguna fotografía seleccionada para el informe.",
                 "asset",
                 activo,
+            )
+        )
+    for codigo, nombre in estado.secciones_sin_valoracion:
+        avisos.append(
+            Aviso(
+                "MISSING_ASSESSMENT",
+                Severidad.MEDIA,
+                # `[REQ]` Es el hueco que se vio **mirando el PDF**: la sección
+                # sale con su descriptivo entero y debajo el rótulo
+                # «Valoración» con nada detrás. No sale ningún marcador ni
+                # ningún «N/D» —eso está cuidado—, y por eso mismo desde dentro
+                # de la aplicación no se nota: hay que abrir el informe.
+                #
+                # No bloquea, por la misma razón que no bloquea un pie de foto
+                # vacío: un borrador interno con la valoración a medias es
+                # legítimo. Lo que no es legítimo es enviarlo sin saberlo, y
+                # para eso está el aviso.
+                f"La sección «{nombre}» ({codigo}) va al informe con la valoración en "
+                "blanco: sale su descriptivo y debajo el rótulo vacío. La valoración "
+                "no la rellena ningún documento, la escribe el técnico.",
+                "capex_code",
             )
         )
     for fuente in estado.fuentes_ausentes:

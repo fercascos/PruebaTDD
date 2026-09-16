@@ -430,6 +430,38 @@ def _reunir_estado(
         {"p": str(project_id)},
     ).scalar_one()
 
+    # `[REQ]` Secciones que salen con el descriptivo escrito y la valoración en
+    # blanco. Ver `MISSING_ASSESSMENT`.
+    #
+    # Se agrupa **por capítulo**, que es la unidad que el informe dibuja: la
+    # plantilla pide `{{valoracion:HC.H08}}` y eso agrega lo de todos sus
+    # objetos, así que basta con que UNO lo tenga para que el hueco no salga
+    # vacío. Avisar por objeto daría catorce avisos de una sola diapositiva.
+    #
+    # El `validado_at IS NOT NULL` es el mismo filtro que usa el snapshot, y no
+    # es un detalle: sin él se avisaría de secciones que el informe ni siquiera
+    # va a imprimir, y se callaría de una cuyo único texto validado no lleva
+    # valoración.
+    sin_valoracion = tuple(
+        (fila.code, fila.name)
+        for fila in s.execute(
+            text(
+                "SELECT cap.code AS code, cap.name_es AS name "
+                "FROM descriptivo_objeto d "
+                "JOIN capex_code cc ON cc.id = d.capex_code_id "
+                "JOIN capex_code cap ON cap.id = cc.parent_id "
+                "JOIN asset a ON a.id = d.asset_id "
+                "WHERE a.project_id = :p AND a.deleted_at IS NULL "
+                "  AND d.validado_at IS NOT NULL "
+                "GROUP BY cap.code, cap.name_es "
+                "HAVING bool_or(COALESCE(d.texto, '') <> '') "
+                "   AND NOT bool_or(COALESCE(d.valoracion, '') <> '') "
+                "ORDER BY cap.code"
+            ),
+            {"p": str(project_id)},
+        )
+    )
+
     from tdd.reporting.fonts import comprobar_familias
 
     ausentes = tuple(f for f, ok in comprobar_familias().items() if not ok)
@@ -448,6 +480,7 @@ def _reunir_estado(
         importe_sin_validar=Decimal(precios.importe),
         lineas_con_zona_a_revisar=tuple(zonas_rotas),
         fuentes_ausentes=ausentes,
+        secciones_sin_valoracion=sin_valoracion,
         solicitudes_pendientes=pendientes,
         hallazgos_en_borrador=borradores.hallazgos,
         importe_en_borrador=Decimal(borradores.importe),

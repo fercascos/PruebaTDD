@@ -1053,3 +1053,171 @@ def test_el_pptx_y_el_excel_del_informe_llevan_las_mismas_actuaciones(
     # Y el Excel es la plantilla del cliente, no un libro construido a mano.
     with zipfile.ZipFile(io.BytesIO(xlsx)) as z:
         assert "xl/pivotTables/pivotTable1.xml" in z.namelist()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  La sección que va al informe con la valoración en blanco
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _objetos_del_mismo_capitulo(motor_admin: Engine) -> list[dict[str, Any]]:
+    """Dos objetos de nivel 3 que cuelgan del mismo capítulo, y su capítulo."""
+    with motor_admin.begin() as conn:
+        filas = conn.execute(
+            text(
+                "SELECT o.id, cap.code AS chapter_code, cap.name_es AS chapter_name "
+                "FROM capex_code o JOIN capex_code cap ON cap.id = o.parent_id "
+                "WHERE o.level = 3 AND cap.id = ("
+                "  SELECT parent_id FROM capex_code WHERE level = 3 "
+                "  GROUP BY parent_id HAVING count(*) >= 2 LIMIT 1) "
+                "ORDER BY o.code LIMIT 2"
+            )
+        ).all()
+    return [
+        {"id": f.id, "chapter_code": f.chapter_code, "chapter_name": f.chapter_name} for f in filas
+    ]
+
+
+def _guardar_descriptivos(
+    cliente: TestClient, cab: Any, activo: str, lineas: list[dict[str, Any]]
+) -> None:
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={"lineas": lineas},
+    )
+    assert r.status_code == 200, r.text
+
+
+def _avisos(cliente: TestClient, cab: Any, proyecto: str, plantilla: Any, mapeo: Any) -> list[Any]:
+    return cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": plantilla["id"], "mapping_id": mapeo["id"]},
+    ).json()["warnings"]
+
+
+def test_una_seccion_con_descriptivo_y_sin_valoracion_avisa(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+    motor_admin: Engine,
+) -> None:
+    """`[REQ]` Es el hueco que se vio **abriendo el PDF**: la sección sale con su
+    descriptivo entero y debajo el rótulo «Valoración» sin nada detrás.
+
+    Ningún marcador queda a la vista y no se inventa ningún «N/D», así que desde
+    la aplicación todo parece correcto. Por eso hace falta decirlo antes de
+    generar y no después de haberlo enviado.
+    """
+    objetos = _objetos_del_mismo_capitulo(motor_admin)
+    _guardar_descriptivos(
+        cliente,
+        cab,
+        con_hallazgo["asset"]["id"],
+        [
+            {
+                "capex_code_id": str(objetos[0]["id"]),
+                "texto": "Cubierta deck sobre chapa grecada, con lámina asfáltica bicapa.",
+                "valoracion": "",
+                "validado": True,
+            }
+        ],
+    )
+
+    aviso = next(
+        a
+        for a in _avisos(cliente, cab, proyecto, plantilla, mapeo)
+        if a["codigo"] == "MISSING_ASSESSMENT"
+    )
+    assert aviso["bloquea"] is False
+    assert objetos[0]["chapter_code"] in aviso["mensaje"]
+    assert objetos[0]["chapter_name"] in aviso["mensaje"]
+
+
+def test_basta_con_que_un_objeto_del_capitulo_tenga_valoracion(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+    motor_admin: Engine,
+) -> None:
+    """La plantilla pide `{{valoracion:HC.H08}}`, que **agrega** lo de todos los
+    objetos del capítulo: con que uno lo tenga, el hueco no sale vacío.
+
+    Avisar por objeto daría catorce avisos de una sola diapositiva, y una lista
+    de avisos que siempre tiene catorce entradas no la lee nadie."""
+    objetos = _objetos_del_mismo_capitulo(motor_admin)
+    _guardar_descriptivos(
+        cliente,
+        cab,
+        con_hallazgo["asset"]["id"],
+        [
+            {
+                "capex_code_id": str(objetos[0]["id"]),
+                "texto": "Cubierta deck sobre chapa grecada.",
+                "valoracion": "",
+                "validado": True,
+            },
+            {
+                "capex_code_id": str(objetos[1]["id"]),
+                "texto": "Lucernarios de policarbonato celular.",
+                "valoracion": "Al final de su vida útil: sustitución a corto plazo.",
+                "validado": True,
+            },
+        ],
+    )
+
+    avisos = _avisos(cliente, cab, proyecto, plantilla, mapeo)
+    assert not [a for a in avisos if a["codigo"] == "MISSING_ASSESSMENT"]
+
+
+def test_un_descriptivo_sin_validar_no_dispara_el_aviso(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+    motor_admin: Engine,
+) -> None:
+    """Es el mismo filtro que usa el snapshot, y no es un detalle: sin él se
+    avisaría de secciones que el informe **ni siquiera va a imprimir**, y la
+    lista de avisos se llenaría de borradores que nadie ha decidido publicar."""
+    objetos = _objetos_del_mismo_capitulo(motor_admin)
+    _guardar_descriptivos(
+        cliente,
+        cab,
+        con_hallazgo["asset"]["id"],
+        [
+            {
+                "capex_code_id": str(objetos[0]["id"]),
+                "texto": "Borrador de descriptivo, todavía sin validar.",
+                "valoracion": "",
+                "validado": False,
+            }
+        ],
+    )
+
+    avisos = _avisos(cliente, cab, proyecto, plantilla, mapeo)
+    assert not [a for a in avisos if a["codigo"] == "MISSING_ASSESSMENT"]
+
+
+def test_sin_descriptivos_no_hay_nada_de_lo_que_avisar(
+    cliente: TestClient,
+    cab: Any,
+    proyecto: str,
+    plantilla: dict[str, Any],
+    mapeo: dict[str, Any],
+    con_hallazgo: dict[str, Any],
+) -> None:
+    """Una sección de la que no se ha escrito nada sale **en blanco entera**, y
+    eso ya lo cubre el aviso de sección sin datos. Este avisa de lo otro: lo que
+    sale a medias, que es lo que se cuela."""
+    avisos = _avisos(cliente, cab, proyecto, plantilla, mapeo)
+    assert not [a for a in avisos if a["codigo"] == "MISSING_ASSESSMENT"]

@@ -32,22 +32,35 @@ comprobar en las 19 pantallas.
 
 ## 1. Lo que bloquea el go-live
 
-### 1.1. Valoración por sistema técnico · `[REQ]` ≈ 5-7 días
+### 1.1. Valoración por sistema técnico · ✅ construida · queda escribirla
 
-**El hueco funcional que queda del bloque 4.** Las diapositivas de sistema de la plantilla llevan
-seis marcadores —`system.name`, `system.description`, `system.assessment` y sus gemelos
-`system2.*`— y **no hay dónde escribir eso**: no existe la tabla ni el campo. Comprobado sobre
-`schema.sql`, no recordado.
+**Esta sección estaba obsoleta y decía lo contrario de lo que hay.** Afirmaba que «no existe la
+tabla ni el campo», y describía unos marcadores —`system.name`, `system.assessment`…— que el
+mapeo actual ya no usa. Está construido de punta a punta, y comprobado abriendo el código, no
+recordado:
 
-El informe **no imprime `{{...}}`** —eso se cuidó y hay prueba— pero esas diapositivas salen con
-el hueco vacío, y son las primeras que mira un consultor. Mientras siga así, el criterio de
-«≥ 90 % de diapositivas sin retocar» (§20.5) **no lo puede cumplir nadie**.
+| Pieza | Dónde |
+|---|---|
+| Modelo | `descriptivo_objeto`, con `texto` y `valoracion` por objeto del árbol y por activo |
+| API | `PUT /assets/{id}/descriptivos`, la rejilla entera en una llamada, con su casilla de validado |
+| Pantalla | `InventarioDelActivo.tsx`, un campo de valoración por objeto |
+| Marcador | `{{valoracion:CÓDIGO}}`, colocado en las catorce secciones de las cuatro plantillas |
+| Generador | Agrega de objeto a capítulo y resuelve, solo con lo **validado** |
 
-- [ ] Modelo: valoración por `technical_system` y activo, con su migración y su RLS
-- [ ] API: leer, escribir y aceptar/rechazar como el resto de propuestas
-- [ ] Pantalla: un editor por sistema, dentro del proyecto
-- [ ] Generador: rellenar los seis marcadores desde el snapshot
-- [ ] Prueba de que un informe generado no deja ninguno de los seis vacío
+**Lo que falta no es código, es contenido: nadie la escribe.** En el informe de demostración salen
+**siete secciones** —Estructura, Cubierta, Fachadas, Interiores, HVAC, Electricidad y PCI activa—
+con su descriptivo entero y el rótulo «Valoración» vacío debajo. El descriptivo lo rellena la
+extracción de la memoria técnica; la valoración no la rellena ningún documento, y así debe ser:
+*«Las valoraciones no se tocan: no salen de ningún documento»*, dice la propia pantalla.
+
+- [x] **Que la aplicación lo diga antes de generar**: aviso `MISSING_ASSESSMENT`, con el código y
+      el nombre de cada sección afectada. No bloquea —un borrador interno con la valoración a
+      medias es legítimo— pero enviarlo sin saberlo no. Cuatro pruebas de integración contra
+      PostgreSQL y dos unitarias
+- [ ] `[PDV]` **Decidir qué hace el informe cuando la valoración está vacía**: hoy imprime el
+      rótulo y deja el hueco. La alternativa es retirar el rótulo, como se hace con las secciones
+      sin datos. Es decisión del cliente, porque cambia lo que ve quien recibe el documento
+- [ ] Escribir las valoraciones del proyecto de demostración, para que la muestra no salga a medias
 
 ### 1.2. Encender el antivirus · `[REQ]` §18.5 · ≈ 2-3 días
 
