@@ -405,6 +405,62 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
             ("HC.H10.10", "Rociadores automáticos en almacén", None, "Sin plano de la red."),
         ),
     ),
+    # `[REQ]` Arquitectura, para que el **resumen ejecutivo por categoría** de la
+    # demostración tenga de qué hablar. Con solo cubierta salía de una línea, y
+    # lo que el cliente pidió ahí es «un resumen más extenso de la información
+    # que salga de la Memoria Técnica».
+    (
+        "HC.H01",
+        (
+            (
+                "HC.H01.01",
+                "Cimentación por zapatas aisladas de hormigón armado",
+                None,
+                "Según memoria de estructura del proyecto de ejecución.",
+            ),
+            (
+                "HC.H01.04",
+                "Estructura de pórticos prefabricados de hormigón",
+                "42",
+                "Luz de 24 m entre pilares. Cubierta sobre jácenas delta.",
+            ),
+        ),
+    ),
+    (
+        "HC.H03",
+        (
+            (
+                "HC.H03.01",
+                "Fachada de panel prefabricado de hormigón con acabado liso",
+                "3800",
+                "Juntas selladas con masilla de poliuretano.",
+            ),
+            ("HC.H03.02", "Zócalo de hormigón visto y remates de chapa", "420", None),
+        ),
+    ),
+    (
+        "HC.H04",
+        (
+            (
+                "HC.H04.01",
+                "Particiones de placa de yeso laminado en zona de oficinas",
+                "1200",
+                None,
+            ),
+            (
+                "HC.H04.02",
+                "Carpintería exterior de aluminio con rotura de puente térmico",
+                "64",
+                None,
+            ),
+            (
+                "HC.H04.03",
+                "Solado de terrazo pulido en oficinas y solera fratasada en almacén",
+                "14200",
+                "La solera del almacén lleva tratamiento superficial de cuarzo.",
+            ),
+        ),
+    ),
 )
 
 #: La checklist **del proyecto**: líneas sueltas, con su propio título, colgadas
@@ -743,31 +799,31 @@ def sembrar(api: Api) -> str:
     if traidos["avisos"]:
         print(f"  aviso: {traidos['avisos'][0]}")
 
-    # Uno validado y otro corregido a mano: una rejilla toda igual no enseña
-    # que traer otra vez respeta lo que ya hizo una persona.
+    # `[REQ]` Todos validados menos el último, que queda corregido a mano y sin
+    # firmar. Los dos estados tienen que verse —una rejilla toda igual no enseña
+    # que traer otra vez respeta lo que ya hizo una persona—, pero **validar
+    # solo uno dejaba el informe casi vacío**: el descriptivo sin validar no
+    # sale, y el resumen ejecutivo por categoría vive justo de eso.
     descriptivos = api.get(f"/assets/{activo['id']}/descriptivos")
     if len(descriptivos) >= 2:
-        api.put(
-            f"/assets/{activo['id']}/descriptivos",
+        lineas = [
             {
-                "lineas": [
-                    {
-                        "capex_code_id": descriptivos[0]["capex_code_id"],
-                        "texto": descriptivos[0]["texto"],
-                        "validado": True,
-                    },
-                    {
-                        "capex_code_id": descriptivos[1]["capex_code_id"],
-                        "texto": (
-                            f"{descriptivos[1]['texto']} Revisado en visita: "
-                            "se confirma el estado descrito."
-                        ),
-                        "validado": False,
-                    },
-                ]
-            },
+                "capex_code_id": d["capex_code_id"],
+                "texto": d["texto"],
+                "validado": True,
+            }
+            for d in descriptivos[:-1]
+        ]
+        ultimo = descriptivos[-1]
+        lineas.append(
+            {
+                "capex_code_id": ultimo["capex_code_id"],
+                "texto": (f"{ultimo['texto']} Revisado en visita: se confirma el estado descrito."),
+                "validado": False,
+            }
         )
-        print("  uno validado por el gestor técnico y otro corregido sin validar")
+        api.put(f"/assets/{activo['id']}/descriptivos", {"lineas": lineas})
+        print(f"  {len(lineas) - 1} validados por el gestor técnico y uno corregido sin validar")
 
     # ── La visita, con su equipo implicado (§3.2 c) ─────────────────────────
     yo = api.get("/auth/me")

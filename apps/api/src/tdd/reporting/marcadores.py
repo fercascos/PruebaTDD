@@ -502,15 +502,10 @@ def _frase_de_resumen(
 ) -> str:
     """Las cifras de un ámbito, en dos frases. Vacío si no hay nada que contar.
 
-    `[SUP]` Es lo que la plantilla del cliente pide en su sección 01: una
-    diapositiva de «Arquitectura» y otra de «Instalaciones», con un párrafo
-    debajo. Qué párrafo exactamente no lo dice —el hueco trae «XXXX»—, así que
-    aquí van **los hechos** y no un juicio: cuántas deficiencias, de qué riesgo
-    y cuánto CAPEX. Nada de «el edificio está en buen estado», que es una
-    opinión y la firma una persona.
-
-    Se edita en PowerPoint como cualquier otro texto del informe, que es para
-    lo que se exporta.
+    Es el **cierre** del resumen ejecutivo, no su cuerpo: el cuerpo es el
+    descriptivo, que sale de la memoria técnica. Aquí van los hechos y no un
+    juicio —cuántas deficiencias, de qué riesgo y cuánto CAPEX—, porque «el
+    edificio está en buen estado» es una opinión y la firma una persona.
     """
     frases: list[str] = []
     total = sum(riesgos.values())
@@ -618,12 +613,23 @@ def por_codigo(snapshot: dict[str, Any]) -> dict[str, str]:
         (_texto(h.get("code")), _texto(h.get("name_es")))
         for h in catalogos.get("time_horizons", [])
     ]
-    for clave in sorted(set(riesgos) | set(plazos)):
-        frase = _frase_de_resumen(
+    # `[REQ]` El resumen ejecutivo por categoría es, con las palabras del
+    # cliente, *«un resumen más extenso de la información que salga de la
+    # Memoria Técnica»*. Eso es el **descriptivo**: `descriptivo_objeto.texto`,
+    # que el esquema define como «dato leído de un documento» frente a la
+    # valoración, que «no la dice ningún documento: la escribe quien ha ido a
+    # verlo». Así que el cuerpo son los descriptivos del ámbito, y las cifras
+    # van detrás, de cierre.
+    for clave in sorted(set(descriptivos) | set(riesgos) | set(plazos)):
+        cuerpo = valores.get(f"descriptivo:{clave}", "")
+        cifras = _frase_de_resumen(
             riesgos.get(clave, {}), plazos.get(clave, {}), orden_de_riesgo, nombre_de_plazo
         )
-        if frase:
-            valores[f"resumen:{clave}"] = frase
+        # Una línea en blanco entre el texto y las cifras: son dos cosas, y
+        # pegadas se leen como un solo párrafo que cambia de tono a mitad.
+        entero = "\n\n".join(p for p in (cuerpo, cifras) if p)
+        if entero:
+            valores[f"resumen:{clave}"] = entero
     return valores
 
 

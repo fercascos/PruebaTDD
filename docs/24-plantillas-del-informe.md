@@ -360,21 +360,34 @@ consecuencia de que la plantilla las tenga en dos páginas distintas.
 
 La sección 01 de la plantilla son **dos diapositivas**: «Arquitectura:» y
 «Instalaciones:», cada una con un párrafo debajo. Reciben `{{resumen:ARQUITECTURA}}`
-y `{{resumen:INSTALACIONES}}`, que producen las cifras del bloque:
+y `{{resumen:INSTALACIONES}}`.
+
+`[REQ]` Con las palabras del cliente, ahí va *«un resumen más extenso de la
+información que salga de la Memoria Técnica»*. Eso es el **descriptivo** de cada
+objeto del bloque, y las cifras van detrás, de cierre:
 
 ```
+· Cimentación: Cimentación por zapatas aisladas de hormigón armado — Según memoria…
+· Estructura: Estructura de pórticos prefabricados de hormigón (42 ud) — Luz de 24 m…
+· Cubierta: Cubierta deck con lámina impermeabilizante de PVC (16400 ud) — Instalada…
+· Fachadas: Fachada de panel prefabricado de hormigón con acabado liso (3800 ud) — …
+
 4 deficiencias detectadas: 1 de riesgo extremo, 1 de riesgo alto y 2 de riesgo moderado.
 CAPEX estimado: 113.757,50 € (87.707,50 € a corto plazo y 26.050,00 € a medio plazo).
 ```
 
-Cuadra con la sección 07: ese total es el mismo que el de su tabla de detalle y
-el de su matriz de riesgo, porque sale de los mismos datos.
+**El descriptivo y no la valoración**, y la diferencia importa: el esquema define
+el descriptivo como «dato leído de un documento» —la memoria técnica— y la
+valoración como algo que «no lo dice ningún documento: la escribe quien ha ido a
+verlo». Si además se quiere el estado, se añade `{{valoracion:ARQUITECTURA}}` en
+esa misma diapositiva.
 
-`[SUP]` Qué va exactamente en ese párrafo la plantilla no lo dice —el hueco trae
-«XXXX»—, así que van **los hechos** y no un juicio: cuántas deficiencias, de qué
-riesgo y cuánto CAPEX. Nada de «el edificio está en buen estado», que es una
-opinión y la firma una persona. Se edita en PowerPoint como cualquier otro texto,
-que es para lo que se exporta.
+Las cifras cuadran con la sección 07: ese total es el mismo que el de su tabla de
+detalle y el de su matriz de riesgo, porque sale de los mismos datos.
+
+`[REQ]` En las cifras van **los hechos** y no un juicio. Nada de «el edificio está
+en buen estado», que es una opinión y la firma una persona. Todo se edita en
+PowerPoint como cualquier otro texto, que es para lo que se exporta.
 
 Un bloque **sin nada** no emite el marcador, así que la diapositiva sale en
 blanco. Imprimir «0 deficiencias detectadas» afirmaría algo que nadie ha

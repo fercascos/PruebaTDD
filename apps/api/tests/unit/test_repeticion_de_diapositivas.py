@@ -782,3 +782,43 @@ def test_una_seccion_sin_fotos_retira_su_diapositiva() -> None:
     assert len(prs.slides) == 1, "la diapositiva sin fotos sigue ahí"
     assert len(avisos) == 1
     assert "HC.H02" in avisos[0] and "retirado" in avisos[0]
+
+
+def test_el_resumen_ejecutivo_es_el_texto_de_la_memoria_tecnica() -> None:
+    """`[REQ]` Con las palabras del cliente: en el resumen ejecutivo por
+    categoría va *«un resumen más extenso de la información que salga de la
+    Memoria Técnica»*.
+
+    Eso es el **descriptivo** —`descriptivo_objeto.texto`, que el esquema define
+    como «dato leído de un documento»— y no la valoración, que «no la dice
+    ningún documento: la escribe quien ha ido a verlo». Las cifras van detrás,
+    de cierre, separadas por una línea en blanco.
+    """
+    from tdd.reporting import marcadores as mk
+
+    datos = {
+        **RESUMEN,
+        "descriptivos": [
+            {
+                "capex_code": "HC.H02.01",
+                "capex_name": "Cubierta",
+                "texto": "Cubierta deck con lámina de PVC.",
+                "valoracion": "Ampollas generalizadas.",
+            },
+            {
+                "capex_code": "HC.H03.01",
+                "capex_name": "Fachadas",
+                "texto": "Panel prefabricado de hormigón.",
+                "valoracion": "",
+            },
+        ],
+    }
+    resumen = mk.por_codigo(datos)["resumen:ARQUITECTURA"]
+    cuerpo, cifras = resumen.split("\n\n")
+
+    assert cuerpo == (
+        "· Cubierta: Cubierta deck con lámina de PVC.\n· Fachadas: Panel prefabricado de hormigón."
+    )
+    assert cifras.startswith("3 deficiencias detectadas")
+    # La valoración es de la visita, no de la memoria: tiene su propio marcador.
+    assert "Ampollas" not in resumen
