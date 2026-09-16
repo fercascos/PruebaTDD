@@ -372,7 +372,12 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
                 "HC.H08.01",
                 "Enfriadora aire-agua en cubierta",
                 "2",
-                "Refrigerante R-410A. Sin sustituir desde la construcción.",
+                (
+                    "Dos unidades en la cubierta del edificio de oficinas, con compresores de "
+                    "tornillo y refrigerante R-410A. Alimentan el circuito de agua fría de los "
+                    "fancoils de planta a través de dos bombas en configuración 1+1. No se han "
+                    "sustituido desde la construcción del edificio."
+                ),
             ),
             ("HC.H08.05", "Fancoils de oficinas", "34", None),
             # Sin código: la memoria lo enumera y el catálogo no lo tiene. Sale
@@ -387,14 +392,30 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
                 "HC.H02.01",
                 "Cubierta deck con lámina impermeabilizante de PVC",
                 "16400",
-                "Instalada en 2004. Lucernarios de policarbonato celular.",
+                (
+                    "Sobre chapa grecada, con aislamiento de lana de roca y lámina de 1,5 mm de "
+                    "espesor, instalada en 2004. La evacuación de aguas se resuelve con "
+                    "sumideros sifónicos y canalones perimetrales de chapa, y se disponen "
+                    "lucernarios de policarbonato celular en las naves de almacén para aporte "
+                    "de luz natural."
+                ),
             ),
         ),
     ),
     (
         "HC.H09",
         (
-            ("HC.H09.02", "Cuadro general de baja tensión", "1", "Potencia contratada 630 kVA."),
+            (
+                "HC.H09.02",
+                "Cuadro general de baja tensión",
+                "1",
+                (
+                    "Alimentado desde centro de transformación propio de 630 kVA en media "
+                    "tensión, situado en el cuarto eléctrico de planta baja. La distribución a "
+                    "subcuadros de planta discurre por bandeja metálica perforada bajo el falso "
+                    "techo de las zonas comunes."
+                ),
+            ),
             ("HC.H09.10", "Alumbrado de almacén con luminarias de halogenuros", "220", None),
         ),
     ),
@@ -402,7 +423,17 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
         "HC.H10",
         (
             ("HC.H10.05", "Bocas de incendio equipadas de 25 mm", "18", None),
-            ("HC.H10.10", "Rociadores automáticos en almacén", None, "Sin plano de la red."),
+            (
+                "HC.H10.10",
+                "Rociadores automáticos en almacén",
+                None,
+                (
+                    "Cobertura total en las naves de almacén, alimentada desde el grupo de "
+                    "presión contra incendios y su aljibe. No se ha aportado el plano de la red "
+                    "ni el cálculo hidráulico, por lo que no se ha podido comprobar la densidad "
+                    "de diseño."
+                ),
+            ),
         ),
     ),
     # `[REQ]` Arquitectura, para que el **resumen ejecutivo por categoría** de la
@@ -416,13 +447,21 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
                 "HC.H01.01",
                 "Cimentación por zapatas aisladas de hormigón armado",
                 None,
-                "Según memoria de estructura del proyecto de ejecución.",
+                (
+                    "Bajo pilares prefabricados, arriostradas con vigas centradoras en el "
+                    "perímetro. Según la memoria de estructura del proyecto de ejecución, la "
+                    "tensión admisible del terreno considerada fue de 0,20 N/mm²."
+                ),
             ),
             (
                 "HC.H01.04",
                 "Estructura de pórticos prefabricados de hormigón",
                 "42",
-                "Luz de 24 m entre pilares. Cubierta sobre jácenas delta.",
+                (
+                    "Luz de 24 m entre pilares y modulación de 10 m en el sentido longitudinal. "
+                    "La cubierta apoya sobre jácenas delta pretensadas y correas de hormigón, y "
+                    "las juntas de dilatación se resuelven con pilares apareados cada 60 m."
+                ),
             ),
         ),
     ),
@@ -433,7 +472,11 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
                 "HC.H03.01",
                 "Fachada de panel prefabricado de hormigón con acabado liso",
                 "3800",
-                "Juntas selladas con masilla de poliuretano.",
+                (
+                    "Paneles de 16 cm de espesor dispuestos en horizontal entre pilares, con "
+                    "las juntas selladas con masilla de poliuretano sobre fondo de junta de "
+                    "polietileno."
+                ),
             ),
             ("HC.H03.02", "Zócalo de hormigón visto y remates de chapa", "420", None),
         ),
@@ -457,7 +500,12 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
                 "HC.H04.03",
                 "Solado de terrazo pulido en oficinas y solera fratasada en almacén",
                 "14200",
-                "La solera del almacén lleva tratamiento superficial de cuarzo.",
+                (
+                    "Piezas de 40 × 40 cm en oficinas y solera fratasada mecánicamente en las "
+                    "naves, con tratamiento superficial de cuarzo y juntas de retracción "
+                    "serradas. Los falsos techos de oficinas son de placa de escayola "
+                    "desmontable de 60 × 60 cm."
+                ),
             ),
         ),
     ),

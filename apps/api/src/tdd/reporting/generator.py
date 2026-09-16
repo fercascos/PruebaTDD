@@ -362,7 +362,57 @@ def _hueco_libre(
     )
 
 
-def _evaluar_marco(forma: Any) -> str | None:
+#: Lo que se reserva para el pie de página al medir un cuadro que crece. Medido
+#: sobre la plantilla del cliente, cuyo «SAVILLS | 4» está a 7,24 in de 7,50.
+PIE_RESERVADO_IN = 0.45
+
+
+def _no_medidas(familias: set[str]) -> list[str]:
+    """El aviso de que no se ha podido comprobar si el texto cabe.
+
+    `[REQ]` Callarse del todo hacía que el silencio se leyera como «todo cabe».
+    La plantilla del cliente está en **Century Gothic**, que no está instalada
+    en el servidor, así que el aviso de desbordamiento no se emitía nunca sobre
+    sus informes y nadie tenía forma de saberlo.
+
+    Se dice **una vez por familia** y no una por cuadro: sesenta avisos iguales
+    no informan de nada más que uno.
+    """
+    if not familias:
+        return []
+    return [
+        f"No se ha podido comprobar si el texto cabe: la plantilla usa "
+        f"{', '.join(sorted(familias))} y no está instalada en el servidor. "
+        "Se prefiere no medir a medir con otra tipografía y dar un número que no es."
+    ]
+
+
+def _alto_util(forma: Any, alto_pagina_in: float | None) -> float:
+    """El alto contra el que se mide de verdad.
+
+    `[REQ]` Un cuadro con **autoajuste** —`SHAPE_TO_FIT_TEXT`, que es lo que
+    tienen los del resumen ejecutivo de la plantilla del cliente— **crece con el
+    texto**: no recorta nada. Medir contra su alto declarado avisaba de un
+    desbordamiento que no existe, y un aviso que salta siempre se acaba
+    ignorando, incluido el día que sea verdad.
+
+    Lo que sí puede pasar es que crezca **más allá de la página**. Así que el
+    alto útil es lo que queda desde el borde de arriba del cuadro hasta el pie.
+    """
+    from pptx.enum.text import MSO_AUTO_SIZE
+
+    alto = Emu(forma.height).inches
+    marco = getattr(forma, "text_frame", None)
+    crece = marco is not None and marco.auto_size == MSO_AUTO_SIZE.SHAPE_TO_FIT_TEXT
+    if not crece or alto_pagina_in is None or forma.top is None:
+        return alto
+    disponible = alto_pagina_in - Emu(forma.top).inches - PIE_RESERVADO_IN
+    return max(alto, disponible)
+
+
+def _evaluar_marco(
+    forma: Any, *, alto_pagina_in: float | None = None, sin_medir: set[str] | None = None
+) -> str | None:
     """El aviso de desbordamiento de una forma, o `None` si cabe o no se sabe.
 
     La familia sale de la propia forma, no de una constante: una plantilla usa
@@ -396,14 +446,18 @@ def _evaluar_marco(forma: Any) -> str | None:
 
     capacidad = capacidad_del_marco(
         ancho_in=Emu(forma.width).inches,
-        alto_in=Emu(forma.height).inches,
+        alto_in=_alto_util(forma, alto_pagina_in),
         cuerpo_pt=cuerpo,
         familia=familia,
     )
     # `fuente_real` es la condición, no un detalle: si la familia no está
     # instalada, `capacidad` viene de una heurística y avisar con ella sería
-    # dar un número inventado con aspecto de medición.
+    # dar un número inventado con aspecto de medición. Quien llama apunta la
+    # familia para decirlo **una vez**: callarse del todo hace que el silencio
+    # se lea como «todo cabe».
     if not capacidad.fuente_real:
+        if sin_medir is not None:
+            sin_medir.add(familia)
         return None
 
     aviso = evaluar_marco(texto, capacidad)
@@ -449,6 +503,11 @@ def generar(
     valores = {**valores_de_marcadores(snapshot), **mk.por_codigo(snapshot)}
     sin_resolver: list[str] = []
     desbordamientos: list[str] = []
+    #: Familias que la plantilla usa y el servidor no tiene. Se dicen una vez.
+    sin_medir: set[str] = set()
+    # El alto de la página: es contra lo que se mide un cuadro con autoajuste,
+    # que crece con el texto en vez de recortarlo.
+    alto_pagina = Emu(prs.slide_height).inches if prs.slide_height else None
 
     def _medir(forma: Any) -> None:
         """¿Cabe lo que acaba de entrar en este marco?
@@ -458,7 +517,7 @@ def generar(
         emitía jamás sobre un informe de verdad. El consultor se enteraba
         abriendo el PPTX, o el cliente.
         """
-        aviso = _evaluar_marco(forma)
+        aviso = _evaluar_marco(forma, alto_pagina_in=alto_pagina, sin_medir=sin_medir)
         if aviso is not None:
             desbordamientos.append(aviso)
 
@@ -601,6 +660,10 @@ def generar(
         diapositivas=len(prs.slides),
         diapositivas_de_tabla=len(tablas["detalle"]),
         marcadores_sin_resolver=sorted(set(sin_resolver)),
+        # Se medían y **no se devolvían**: el campo existía con su valor por
+        # omisión y nadie lo rellenaba, así que el aviso de desbordamiento no
+        # llegaba a ninguna parte aunque se hubiera calculado.
+        desbordamientos=sorted(set(desbordamientos)) + _no_medidas(sin_medir),
         marcas_de_agua_retiradas=[m.texto for m in marcas],
         fotos_insertadas=insertadas,
         totales=tablas["detalle"][-1].totales,
