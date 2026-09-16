@@ -327,6 +327,10 @@ def listar_mapeos(template_id: uuid.UUID, s: SesionDep) -> Any:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+#: El prefijo de un rótulo atado a otro marcador. Ver `composicion.ROTULO`.
+ROTULO = "rotulo"
+
+
 def _se_sabe_resolver(marcador: str, bindings: dict[str, str]) -> bool:
     """¿Saldrá este marcador con un valor, o saldría literal en el documento?
 
@@ -342,11 +346,18 @@ def _se_sabe_resolver(marcador: str, bindings: dict[str, str]) -> bool:
     3. **Es un marcador de sección** —`{{descriptivo:HC.H02}}`—. Si el edificio
        no tiene nada de esa sección, se vacía y se informa aparte; nunca sale
        impreso. No es un fallo de plantilla, es una sección sin contenido.
+    4. **Es el rótulo de otro marcador** —`{{rotulo:valoracion:HC.H02}}`—, y
+       entonces se resuelve si se resuelve aquel: el rótulo sale con su texto
+       cuando hay algo debajo y se vacía con él cuando no. Sin este caso, poner
+       el rótulo en la plantilla **bloqueaba la generación entera**, que es
+       justo lo contrario de lo que venía a hacer.
     """
     if marcador in bindings or marcador in CAMPOS_DISPONIBLES:
         return True
-    prefijo, _, codigo = marcador.partition(":")
-    return bool(codigo) and prefijo in mk.POR_CODIGO
+    prefijo, _, resto = marcador.partition(":")
+    if prefijo == ROTULO and resto:
+        return _se_sabe_resolver(resto, bindings)
+    return bool(resto) and prefijo in mk.POR_CODIGO
 
 
 def _reunir_estado(

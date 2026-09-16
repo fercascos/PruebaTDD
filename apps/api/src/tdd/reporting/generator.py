@@ -501,6 +501,11 @@ def generar(
 
     # 1 · Marcadores, en todas las diapositivas que los tengan.
     valores = {**valores_de_marcadores(snapshot), **mk.por_codigo(snapshot)}
+    # Los rótulos atados a un marcador —«Valoración» encima del hueco de la
+    # valoración— se resuelven aquí, antes de sustituir nada: si el marcador al
+    # que acompañan viene vacío, el rótulo viene vacío con él y no se queda
+    # encabezando media página en blanco. Ver `composicion.ROTULO`.
+    composicion.resolver_rotulos(valores, composicion.rotulos_de(prs))
     sin_resolver: list[str] = []
     desbordamientos: list[str] = []
     #: Familias que la plantilla usa y el servidor no tiene. Se dicen una vez.

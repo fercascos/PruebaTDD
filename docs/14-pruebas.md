@@ -327,6 +327,16 @@ diverjan**. Ambas cosas se prueban explícitamente:
 | **Auditoría de la exportación** | Cada `202` deja un `EXPORT_CREATED` con actor, alcance, nº de líneas e importe |
 | **Comparación con el original** | `[PDV]` La tabla generada se renderiza y se compara con la **imagen EMF de la plantilla real**. Es criterio de salida de la prueba de concepto, no una prueba automatizable desde el día uno |
 
+### La valoración del técnico y su rótulo `[REQ]`
+
+| Caso | Verificación |
+|---|---|
+| **No se valida lo descrito sin valorar** | Un objeto con texto y la valoración en blanco **no se puede validar**: 422 con un mensaje que dice de quién es el trabajo que falta, y `CHECK` en la base. Es la regla que el cliente pidió |
+| **Guardar sin validar sí se puede** | La exigencia es de la **firma**, no de la escritura: el descriptivo llega de la documentación antes de que nadie visite el edificio, y bloquear su guardado obligaría a inventarse la valoración para poder trabajar |
+| **Valorar sin describir sigue valiendo** | La regla va en un solo sentido: hay elementos que se ven en la visita y no aparecen en ninguna memoria |
+| **El rótulo cae con su marcador** | Generado el informe, «Valoración» aparece **exactamente** en las secciones que tienen valoración. Sin ella no queda el rótulo encabezando media página en blanco `[REQ]` |
+| **Un rótulo atado no hay que mapearlo** | `rotulo:X` se da por resuelto si se resuelve `X`. Sin esto, poner el rótulo en la plantilla **bloqueaba la generación entera** — y así salió la primera vez que se probó contra la plantilla real |
+
 ### El marcado de las plantillas reales · `tools/marcar_plantilla.py`
 
 **Este módulo de pruebas no existía**, y por eso lo que hay en la tabla estuvo

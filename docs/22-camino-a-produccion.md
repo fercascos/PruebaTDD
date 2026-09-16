@@ -53,14 +53,24 @@ con su descriptivo entero y el rótulo «Valoración» vacío debajo. El descrip
 extracción de la memoria técnica; la valoración no la rellena ningún documento, y así debe ser:
 *«Las valoraciones no se tocan: no salen de ningún documento»*, dice la propia pantalla.
 
-- [x] **Que la aplicación lo diga antes de generar**: aviso `MISSING_ASSESSMENT`, con el código y
-      el nombre de cada sección afectada. No bloquea —un borrador interno con la valoración a
-      medias es legítimo— pero enviarlo sin saberlo no. Cuatro pruebas de integración contra
-      PostgreSQL y dos unitarias
-- [ ] `[PDV]` **Decidir qué hace el informe cuando la valoración está vacía**: hoy imprime el
-      rótulo y deja el hueco. La alternativa es retirar el rótulo, como se hace con las secciones
-      sin datos. Es decisión del cliente, porque cambia lo que ve quien recibe el documento
-- [ ] Escribir las valoraciones del proyecto de demostración, para que la muestra no salga a medias
+**Cerrado, y el cliente lo cerró por los dos extremos**: *«quita el rótulo si no hay valoración,
+aunque si hay descriptivo debería ser obligatorio que hubiera una valoración por parte del
+técnico»*. Lo primero arregla el informe de hoy; lo segundo hace que mañana no vuelva a pasar.
+
+- [x] **El rótulo cae con su hueco.** Directiva `@rotulo` —ver [`24`](./24-plantillas-del-informe.md)
+      §3 ter—: el párrafo «Valoración» queda atado a su marcador y se vacía con él. El texto viaja en
+      la plantilla y no en una constante nuestra, porque es palabra del cliente y cambia con el
+      idioma: sus plantillas ponen «Valoración» y «Valuation»
+- [x] **Validar un objeto descrito exige valorarlo.** 422 en la API con un mensaje que dice de quién
+      es el trabajo que falta, y `CHECK` en la base (migración `0028`). Al revés no se exige: hay
+      elementos que se ven en la visita y no están en ninguna memoria
+- [x] **Que la aplicación avise de lo que quedó escrito antes**: `MISSING_ASSESSMENT`, con el código
+      y el nombre de cada sección. La restricción entró `NOT VALID` para no deshacerle la validación
+      a nadie a sus espaldas, así que esas filas siguen ahí y el aviso las saca una por una
+- [x] Las valoraciones del proyecto de demostración escritas, para que la muestra no salga a medias
+- [ ] `[PDV]` **Decidir qué hacer con las filas heredadas.** Cuando el equipo termine de valorarlas,
+      `ALTER TABLE … VALIDATE CONSTRAINT` convierte la restricción en firme; hasta entonces conviven
+      con el aviso
 
 ### 1.2. Encender el antivirus · `[REQ]` §18.5 · ≈ 2-3 días
 

@@ -228,6 +228,27 @@ def guardar(asset_id: uuid.UUID, cuerpo: Edicion, s: SesionDep, usuario: Usuario
                     "No se puede marcar como validado un objeto vacío: sería firmar una "
                     "casilla en blanco. Escriba el descriptivo o la valoración.",
                 )
+            # `[REQ]` Y si hay descriptivo, tiene que haber valoración. Lo pidió
+            # el cliente: *«si hay descriptivo debería ser obligatorio que
+            # hubiera una valoración por parte del técnico»*.
+            #
+            # Es lo que hace que las dos columnas signifiquen algo distinto. El
+            # descriptivo lo rellena la extracción de la memoria técnica sin que
+            # nadie teclee nada; la valoración **no la rellena ningún
+            # documento**. Sin esta regla, validar era firmar lo que había
+            # escrito el documento y nada más, y el informe salía con el rótulo
+            # «Valoración» encabezando media página en blanco.
+            #
+            # Al revés no se exige: un objeto valorado y sin describir es
+            # legítimo —se ve en la visita y no está en ninguna memoria—.
+            if linea.validado and linea.texto.strip() and not linea.valoracion.strip():
+                raise HTTPException(
+                    status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    "Para validar un objeto descrito hace falta su valoración. El "
+                    "descriptivo dice qué hay y lo trae la documentación; la valoración "
+                    "dice en qué estado está y la escribe usted. Sin ella el informe "
+                    "saca la sección con el rótulo «Valoración» y nada debajo.",
+                )
 
     for linea in cuerpo.lineas:
         s.execute(

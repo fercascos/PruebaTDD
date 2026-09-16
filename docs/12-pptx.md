@@ -510,6 +510,21 @@ sección de la que no se ha escrito **nada** tampoco entra: ésa sale en blanco
 entera, que es otro caso y ya está cubierto. Éste avisa de lo que sale **a
 medias**, que es lo que se cuela.
 
+**Y desde que existe la regla, el aviso es una red para lo de antes.** El
+cliente cerró el caso por los dos extremos: *«quita el rótulo si no hay
+valoración, aunque si hay descriptivo debería ser obligatorio que hubiera una
+valoración por parte del técnico»*. Así que ahora:
+
+1. **Validar un objeto descrito exige valorarlo.** Lo impide la API con un 422
+   que explica de quién es el trabajo que falta, y lo impide la base con
+   `descriptivo_validado_con_valoracion`.
+2. **El rótulo cae con su hueco.** Ver `@rotulo` en
+   [`24`](./24-plantillas-del-informe.md) §3 ter: ya no queda un «Valoración»
+   encabezando media página en blanco.
+3. **`MISSING_ASSESSMENT` cubre lo que quedó escrito antes.** La restricción
+   entró `NOT VALID` para no deshacerle la validación a nadie a sus espaldas, de
+   modo que esas filas siguen ahí y el aviso las saca una por una.
+
 `[REC]` `UNVALIDATED_PRICES` merece atención: generar con precios sin validar es legítimo (un borrador
 interno), pero enviarlo al cliente sin darse cuenta es un problema real. Aparece en la
 previsualización y, si el mapeo declara un marcador de marca de agua, se inserta «BORRADOR — precios

@@ -336,6 +336,77 @@ def test_un_marcador_de_seccion_no_bloquea_aunque_no_haya_datos(
     assert not any(w["codigo"] == "UNMAPPED_PLACEHOLDER" for w in r.json()["warnings"])
 
 
+def test_un_rotulo_atado_a_un_marcador_no_hay_que_mapearlo(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """`{{rotulo:valoracion:HC.H02}}` se resuelve si se resuelve
+    `{{valoracion:HC.H02}}`: sale con su texto cuando hay algo debajo y se vacía
+    con él cuando no.
+
+    Sin este caso, poner el rótulo en la plantilla **bloqueaba la generación
+    entera** —catorce `UNMAPPED_PLACEHOLDER`, uno por sección—, que es lo
+    contrario de lo que venía a hacer. Y así salió la primera vez que se probó
+    contra la plantilla real del cliente.
+    """
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    caja = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    caja.text_frame.text = "{{rotulo:valoracion:HC.H02}}"
+    caja.text_frame.add_paragraph().text = "{{valoracion:HC.H02}}"
+    datos = io.BytesIO()
+    prs.save(datos)
+
+    subida = cliente.post(
+        f"{RUTA}/report-templates",
+        headers=cab("admin_a"),
+        files={
+            "file": ("rotulo.pptx", io.BytesIO(datos.getvalue()), "application/vnd.ms-powerpoint")
+        },
+        data={"name": f"Rotulo {uuid.uuid4().hex[:6]}", "language": "es"},
+    ).json()
+    assert "rotulo:valoracion:HC.H02" in subida["analysis"]["placeholders"]
+
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": subida["id"]},
+    ).json()
+
+    assert not [w for w in r["warnings"] if w["codigo"] == "UNMAPPED_PLACEHOLDER"]
+    assert r["can_generate"] is True
+
+
+def test_un_rotulo_atado_a_algo_desconocido_sigue_bloqueando(
+    cliente: TestClient, cab: Any, proyecto: str
+) -> None:
+    """El prefijo `rotulo:` no es un salvoconducto: lo que hay detrás tiene que
+    resolverse. Si no, se colaría en el documento el literal de un rótulo que
+    nadie sabe rellenar."""
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    caja = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(8), Inches(1))
+    caja.text_frame.text = "{{rotulo:no.existe.nada}}"
+    datos = io.BytesIO()
+    prs.save(datos)
+
+    subida = cliente.post(
+        f"{RUTA}/report-templates",
+        headers=cab("admin_a"),
+        files={
+            "file": ("rotulo.pptx", io.BytesIO(datos.getvalue()), "application/vnd.ms-powerpoint")
+        },
+        data={"name": f"Rotulo malo {uuid.uuid4().hex[:6]}", "language": "es"},
+    ).json()
+
+    r = cliente.post(
+        f"{RUTA}/projects/{proyecto}/reports/preflight",
+        headers=cab("admin_a"),
+        json={"template_id": subida["id"]},
+    ).json()
+
+    assert [w for w in r["warnings"] if w["codigo"] == "UNMAPPED_PLACEHOLDER"]
+
+
 def test_con_el_mapeo_completo_ya_se_puede_generar(
     cliente: TestClient, cab: Any, proyecto: str, plantilla: dict[str, Any], mapeo: dict[str, Any]
 ) -> None:
@@ -1089,6 +1160,45 @@ def _guardar_descriptivos(
     assert r.status_code == 200, r.text
 
 
+def _validado_sin_valoracion(
+    motor_admin: Engine, activo: str, capex_code_id: str, texto: str
+) -> None:
+    """Un descriptivo validado **sin** valoración, como los que había antes.
+
+    Ese estado ya no se puede crear: por la API validar un objeto descrito exige
+    valorarlo, y la restricción `descriptivo_validado_con_valoracion` lo impide
+    también desde SQL. Lo único que sobrevive son las filas escritas **antes de
+    que la regla existiera**, y sobreviven a propósito: la migración `0028` la
+    añade `NOT VALID` para no deshacerle la validación a nadie a sus espaldas.
+
+    Por eso el aviso sigue haciendo falta, y por eso esta prueba reproduce esas
+    filas de la única forma fiel posible: retirando la restricción, escribiendo
+    la fila y volviéndola a poner. Es literalmente lo que pasó en la base real.
+    """
+    with motor_admin.begin() as conn:
+        conn.execute(
+            text(
+                "ALTER TABLE descriptivo_objeto DROP CONSTRAINT descriptivo_validado_con_valoracion"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE descriptivo_objeto SET texto = :t, valoracion = '', "
+                "  validado_at = now(), validado_por = created_by "
+                "WHERE asset_id = CAST(:a AS uuid) AND capex_code_id = CAST(:c AS uuid)"
+            ),
+            {"t": texto, "a": activo, "c": capex_code_id},
+        )
+        conn.execute(
+            text(
+                "ALTER TABLE descriptivo_objeto "
+                "  ADD CONSTRAINT descriptivo_validado_con_valoracion "
+                "  CHECK (validado_at IS NULL OR length(trim(texto)) = 0 "
+                "         OR length(trim(valoracion)) > 0) NOT VALID"
+            )
+        )
+
+
 def _avisos(cliente: TestClient, cab: Any, proyecto: str, plantilla: Any, mapeo: Any) -> list[Any]:
     return cliente.post(
         f"{RUTA}/projects/{proyecto}/reports/preflight",
@@ -1114,18 +1224,25 @@ def test_una_seccion_con_descriptivo_y_sin_valoracion_avisa(
     generar y no después de haberlo enviado.
     """
     objetos = _objetos_del_mismo_capitulo(motor_admin)
+    activo = con_hallazgo["asset"]["id"]
     _guardar_descriptivos(
         cliente,
         cab,
-        con_hallazgo["asset"]["id"],
+        activo,
         [
             {
                 "capex_code_id": str(objetos[0]["id"]),
-                "texto": "Cubierta deck sobre chapa grecada, con lámina asfáltica bicapa.",
+                "texto": "",
                 "valoracion": "",
-                "validado": True,
+                "validado": False,
             }
         ],
+    )
+    _validado_sin_valoracion(
+        motor_admin,
+        activo,
+        str(objetos[0]["id"]),
+        "Cubierta deck sobre chapa grecada, con lámina asfáltica bicapa.",
     )
 
     aviso = next(
@@ -1153,16 +1270,17 @@ def test_basta_con_que_un_objeto_del_capitulo_tenga_valoracion(
     Avisar por objeto daría catorce avisos de una sola diapositiva, y una lista
     de avisos que siempre tiene catorce entradas no la lee nadie."""
     objetos = _objetos_del_mismo_capitulo(motor_admin)
+    activo = con_hallazgo["asset"]["id"]
     _guardar_descriptivos(
         cliente,
         cab,
-        con_hallazgo["asset"]["id"],
+        activo,
         [
             {
                 "capex_code_id": str(objetos[0]["id"]),
-                "texto": "Cubierta deck sobre chapa grecada.",
+                "texto": "",
                 "valoracion": "",
-                "validado": True,
+                "validado": False,
             },
             {
                 "capex_code_id": str(objetos[1]["id"]),
@@ -1171,6 +1289,9 @@ def test_basta_con_que_un_objeto_del_capitulo_tenga_valoracion(
                 "validado": True,
             },
         ],
+    )
+    _validado_sin_valoracion(
+        motor_admin, activo, str(objetos[0]["id"]), "Cubierta deck sobre chapa grecada."
     )
 
     avisos = _avisos(cliente, cab, proyecto, plantilla, mapeo)

@@ -511,6 +511,86 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
     ),
 )
 
+#: La **valoración** de cada objeto, que es otra cosa que el descriptivo y por
+#: eso está aquí y no en `MEMORIA`.
+#:
+#: `[REQ]` El descriptivo dice qué hay y sale de la memoria técnica; la
+#: valoración dice en qué estado está y **no la dice ningún documento**: la
+#: escribe quien ha ido a verlo. La aplicación ya no deja validar un objeto
+#: descrito sin valorarlo, así que sin esto la siembra falla —y hace bien—.
+#:
+#: `[SUP]` Son textos **inventados para la demostración**, como todo lo de este
+#: programa. Están escritos como los escribiría un técnico —lo observado y su
+#: consecuencia— porque una valoración de relleno no enseña para qué sirve el
+#: campo, pero no describen ningún edificio real.
+VALORACIONES: dict[str, str] = {
+    "HC.H08.01": (
+        "Veintiún años de servicio sin sustitución, por encima de la vida útil habitual de una "
+        "enfriadora de tornillo. El R-410A está en calendario de retirada progresiva, de modo "
+        "que una avería mayor obligaría a sustituir el equipo y no solo a repararlo."
+    ),
+    "HC.H08.05": (
+        "Funcionamiento correcto en las unidades comprobadas. Se aprecia suciedad acumulada en "
+        "las baterías y filtros de varias plantas, compatible con un mantenimiento espaciado."
+    ),
+    "HC.H02.01": (
+        "Lámina en el tramo final de su vida útil, con parcheos visibles en los encuentros con "
+        "petos y en el perímetro de varios lucernarios. No se observan filtraciones activas en "
+        "el momento de la visita, pero el estado general aconseja prever su renovación integral."
+    ),
+    "HC.H09.02": (
+        "Cuadro sin protección diferencial en dos de las líneas de salida a subcuadros de "
+        "planta. La envolvente está en buen estado y el centro de transformación no presenta "
+        "signos de sobrecarga."
+    ),
+    "HC.H09.10": (
+        "Luminarias de halogenuros metálicos con el rendimiento propio de una instalación de "
+        "esta antigüedad. Sustituirlas por tecnología LED es la actuación de amortización más "
+        "rápida del inmueble."
+    ),
+    "HC.H10.05": (
+        "Bocas accesibles y señalizadas, con presión correcta en las dos comprobadas. Falta el "
+        "certificado de mantenimiento vigente de la instalación."
+    ),
+    "HC.H10.10": (
+        "No se ha podido verificar la densidad de diseño: sin el plano de la red ni el cálculo "
+        "hidráulico, el alcance de la protección es una limitación del informe y no una "
+        "conclusión."
+    ),
+    "HC.H01.01": (
+        "No se observan asientos diferenciales, fisuras en soleras perimetrales ni humedades "
+        "por capilaridad en arranques de pilar. Sin catas ni ensayos, la valoración se limita "
+        "a lo observable en superficie."
+    ),
+    "HC.H01.04": (
+        "Estructura en buen estado general. Se aprecian coqueras superficiales en dos pilares "
+        "de la fachada norte, sin armadura vista, y ligera fisuración por retracción en algunas "
+        "jácenas, sin afección aparente a la capacidad portante."
+    ),
+    "HC.H03.01": (
+        "Sellado de juntas endurecido y con pérdida de adherencia en tramos de la fachada sur y "
+        "oeste, que es por donde entra el agua cuando llueve con viento. El panel en sí no "
+        "presenta daños estructurales."
+    ),
+    "HC.H03.02": (
+        "Remates de chapa con óxido incipiente en el lado norte y algún tramo desprendido en la "
+        "zona de muelles, probablemente por golpes de maniobra."
+    ),
+    "HC.H04.01": (
+        "Particiones en buen estado, con desperfectos puntuales de uso en zonas de paso. Nada "
+        "que exceda el mantenimiento corriente."
+    ),
+    "HC.H04.02": (
+        "Carpintería estanca y con los herrajes operativos. Se observa condensación en el canal "
+        "de varias ventanas de la fachada norte, compatible con una ventilación insuficiente "
+        "del local más que con un fallo del cerramiento."
+    ),
+    "HC.H04.03": (
+        "Terrazo con desgaste desigual en zonas de paso y dos juntas de retracción de la solera "
+        "del almacén con el sellado levantado por el tránsito de carretillas."
+    ),
+}
+
 #: La checklist **del proyecto**: líneas sueltas, con su propio título, colgadas
 #: del nodo del árbol al que pertenecen. Es lo que se pide de golpe al inicio.
 DOCUMENTOS: tuple[tuple[str, str], ...] = (
@@ -858,6 +938,12 @@ def sembrar(api: Api) -> str:
             {
                 "capex_code_id": d["capex_code_id"],
                 "texto": d["texto"],
+                # `[REQ]` Sin valoración no se puede validar, y es la regla
+                # correcta: el descriptivo lo trae el documento y la valoración
+                # la pone el técnico. Si algún objeto se quedara sin ella aquí,
+                # la siembra fallaría con un 422 antes de dejar el informe a
+                # medias, que es exactamente lo que se busca.
+                "valoracion": VALORACIONES.get(d["capex_code"], ""),
                 "validado": True,
             }
             for d in descriptivos[:-1]
@@ -867,6 +953,7 @@ def sembrar(api: Api) -> str:
             {
                 "capex_code_id": ultimo["capex_code_id"],
                 "texto": (f"{ultimo['texto']} Revisado en visita: se confirma el estado descrito."),
+                "valoracion": "",
                 "validado": False,
             }
         )

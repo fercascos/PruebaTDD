@@ -15,6 +15,7 @@ Las dos se declaran en las **notas del orador**, que no se imprimen:
 |---|---|
 | `@fotos: HC.H02` | Reparte las fotos de esa sección entre los marcos de la diapositiva |
 | `@capex` | Pone la tabla nativa **aquí**, en lugar de lo que hubiera |
+| `@rotulo: <marcador> = <texto>` | Ata un rótulo a su marcador: **cae con él** si no hay nada |
 
 ## Por qué no hay marcadores para esto
 
@@ -64,6 +65,46 @@ FOTOS = re.compile(r"@fotos\s*:\s*([A-Za-z0-9.,\s]+)", re.IGNORECASE)
 #: instalaciones—, la matriz de riesgo por plazo que va detrás de cada una, el
 #: resumen por capítulo y el presupuesto de costes duros y blandos.
 CAPEX = re.compile(r"@capex\b(?:\s*:\s*([A-Za-z:,\s]+))?", re.IGNORECASE)
+
+#: `@rotulo: <marcador> = <texto>` · un rótulo atado a su marcador.
+#:
+#: `[REQ]` La plantilla escribe «Valoración» encima del hueco de la valoración,
+#: en un párrafo aparte y con su propio formato. Cuando no hay valoración que
+#: poner —y no la hay casi nunca, porque **no la rellena ningún documento: la
+#: escribe el técnico**— el hueco se vaciaba y el rótulo se quedaba solo,
+#: encabezando media página en blanco. El cliente lo pidió así al verlo:
+#: *«quita el rótulo si no hay valoración»*.
+#:
+#: El texto va **dentro de la directiva** y no en una constante nuestra, porque
+#: es palabra suya y cambia con el idioma: sus plantillas ponen «Valoración» y
+#: «Valuation». Escribirlo aquí sería traducirle el informe sin permiso.
+#:
+#: Va en las notas, que no se imprimen, por lo mismo que `@fotos` y `@capex`: el
+#: párrafo del rótulo conserva su formato, y en su sitio queda un marcador
+#: normal, `{{rotulo:valoracion:HC.H02}}`, que se resuelve como cualquier otro.
+ROTULO = re.compile(r"@rotulo\s*:\s*([A-Za-z0-9_.:|# ]+?)\s*=\s*(.+)", re.IGNORECASE)
+
+
+def rotulos_de(prs: Presentacion) -> dict[str, str]:
+    """`{marcador referido: texto del rótulo}`, leído de todas las notas."""
+    encontrados: dict[str, str] = {}
+    for slide in prs.slides:
+        for linea in notas_de(slide).splitlines():
+            if (m := ROTULO.search(linea)) is not None:
+                encontrados[m.group(1).strip()] = m.group(2).strip()
+    return encontrados
+
+
+def resolver_rotulos(valores: dict[str, str], rotulos: dict[str, str]) -> None:
+    """Añade a `valores` un `rotulo:X` por cada rótulo, vacío si `X` lo está.
+
+    Es todo lo que hace falta: a partir de aquí lo sustituye la maquinaria
+    normal de marcadores, que ya sabe que un valor vacío deja el párrafo en
+    blanco y **nunca** escribe el literal `{{...}}`.
+    """
+    for referido, texto in rotulos.items():
+        valores[f"rotulo:{referido}"] = texto if valores.get(referido, "").strip() else ""
+
 
 #: Las tablas que se pueden pedir. `detalle` acepta un bloque detrás de dos
 #: puntos —`detalle:arquitectura`— y `riesgos` también, para la matriz que va

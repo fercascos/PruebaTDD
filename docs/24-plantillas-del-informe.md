@@ -298,6 +298,37 @@ licencias—. Nuestro árbol tiene cuatro capítulos de coste blando, y **no** e
 siete: se enseñan los nuestros. Inventar sus siete etiquetas y repartir importes
 entre ellas sería fabricar un desglose.
 
+### `@rotulo: <marcador> = <texto>` · el rótulo que cae con su marcador
+
+`[REQ]` El cliente lo pidió al ver el informe generado: *«quita el rótulo si no
+hay valoración»*. Su plantilla escribe **«Valoración»** en un párrafo aparte,
+encima del hueco, y ese párrafo no es un marcador: cuando no había valoración
+que poner, el hueco se vaciaba —como debe— y el rótulo se quedaba solo,
+encabezando media página en blanco. Un rótulo sin nada debajo se lee como un
+fallo del informe.
+
+`marcar_plantilla.py` lo ata: el párrafo del rótulo pasa a ser
+`{{rotulo:valoracion:HC.H02}}` —conservando su formato, así que se sigue viendo
+igual— y en las notas queda la línea que dice qué ponía:
+
+    @rotulo: valoracion:HC.H02 = Valoración
+
+Al generar, el rótulo sale con su texto si el marcador al que acompaña tiene
+valor, y se vacía con él si no. No hace falta nada más: a partir de ahí lo
+sustituye la maquinaria normal de marcadores.
+
+`[REQ]` **El texto viaja en la directiva y no en una constante nuestra.** Es
+palabra del cliente y cambia con el idioma: sus plantillas castellanas ponen
+«Valoración» y las inglesas **«Valuation»**. Escribirlo en el código sería
+traducirle el informe sin permiso, y además habría que acertar con la palabra
+que usa cada corporativa.
+
+`[LIM]` Un rótulo atado **no es un marcador que haya que mapear**. La
+comprobación previa lo sabe: `rotulo:X` se da por resuelto si se resuelve `X`.
+Sin eso, poner el rótulo en la plantilla **bloqueaba la generación entera**, que
+es lo contrario de lo que venía a hacer —y así salió la primera vez que se probó
+contra la plantilla real.
+
 ---
 
 ## 3 quater · La cabecera y la portada

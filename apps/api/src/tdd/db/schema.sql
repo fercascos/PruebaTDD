@@ -2076,6 +2076,33 @@ CREATE TABLE descriptivo_objeto (
         )
 );
 
+-- [REQ] Y si HAY descriptivo, tiene que haber valoración. Lo pidió el cliente:
+-- «si hay descriptivo debería ser obligatorio que hubiera una valoración por
+-- parte del técnico». Es la regla que separa de verdad las dos columnas: el
+-- descriptivo lo rellena la memoria técnica y la valoración no la rellena
+-- ningún documento, así que sin esto el objeto se quedaba a medias solo, y en
+-- el informe salía el rótulo «Valoración» encabezando media página en blanco.
+--
+-- Al revés NO se exige: hay elementos que se ven en la visita y no están en
+-- ninguna memoria, y valorarlos sin describirlos es legítimo.
+--
+-- Va en un ALTER y no dentro del CREATE TABLE por una razón concreta:
+-- `NOT VALID` **solo existe en ALTER TABLE**. PostgreSQL acepta escribirlo en
+-- la definición de la tabla y lo ignora, así que los dos caminos de creación
+-- producían restricciones distintas —una firme y otra no— y `test_migraciones`
+-- lo cantó. Y `NOT VALID` no es un detalle: en la migración `0028` la
+-- restricción entró sobre una base con filas validadas sin valoración, y
+-- comprobarlas habría obligado a inventarles una valoración —prohibido— o a
+-- quitarles la casilla de validado a espaldas de quien la marcó. Se aplica a lo
+-- nuevo; de lo viejo avisa `MISSING_ASSESSMENT` en cada previsualización.
+ALTER TABLE descriptivo_objeto
+    ADD CONSTRAINT descriptivo_validado_con_valoracion
+    CHECK (
+        validado_at IS NULL
+        OR length(trim(texto)) = 0
+        OR length(trim(valoracion)) > 0
+    ) NOT VALID;
+
 CREATE INDEX descriptivo_objeto_activo_idx ON descriptivo_objeto (asset_id);
 
 -- ── Secciones de memoria técnica → capítulos CAPEX [REQ] §5.9 ──────────────

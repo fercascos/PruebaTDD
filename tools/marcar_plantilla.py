@@ -656,6 +656,9 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
         codigo: str | None = None
         campo: str | None = None
         toca_valoracion = False
+        #: El párrafo del rótulo «Valoración», y lo que pone, para poder atarlo
+        #: a su marcador. Ver `_atar_el_rotulo`.
+        rotulo: tuple[Any, str] | None = None
         for parrafo in marco.paragraphs:
             texto = parrafo.text.strip()
             if not texto:
@@ -671,6 +674,7 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
             posible = _codigo_de(texto)
             if posible is not None:
                 codigo, campo, toca_valoracion = posible, None, False
+                rotulo = None
                 continue
             if campo is not None and _es_relleno(texto):
                 _escribir(parrafo, campo)
@@ -691,16 +695,43 @@ def _marcar_diapositiva(slide: Slide, numero: int) -> list[str]:
             # el mismo texto repetido dos veces.
             if _sin_tildes(texto) in {"VALORACION", "VALUATION", "ASSESSMENT"}:
                 toca_valoracion = True
+                rotulo = (parrafo, texto)
                 continue
             if codigo is not None and _es_relleno(texto):
-                marcador = f"{{{{{'valoracion' if toca_valoracion else 'descriptivo'}:{codigo}}}}}"
-                _escribir(parrafo, marcador)
-                puestos.append(f"diap. {numero}: {marcador}")
+                clave = f"{'valoracion' if toca_valoracion else 'descriptivo'}:{codigo}"
+                _escribir(parrafo, f"{{{{{clave}}}}}")
+                puestos.append(f"diap. {numero}: {{{{{clave}}}}}")
+                if toca_valoracion and rotulo is not None:
+                    puestos += _atar_el_rotulo(slide, numero, rotulo, clave)
+                    rotulo = None
                 toca_valoracion = False
 
     # Si no ha caído nada y el **patrón** dice de qué sección es, el relleno de
     # esta diapositiva es el de esa sección. Ver `CAMPOS_POR_PATRON`.
     return puestos or _marcar_por_patron(slide, numero)
+
+
+def _atar_el_rotulo(slide: Slide, numero: int, rotulo: tuple[Any, str], clave: str) -> list[str]:
+    """Ata el rótulo «Valoración» a su marcador para que caiga con él.
+
+    `[REQ]` El cliente lo pidió al ver el informe generado: *«quita el rótulo si
+    no hay valoración»*. Y tiene razón: la valoración **no la rellena ningún
+    documento** —la escribe el técnico, y así debe ser—, de modo que el hueco
+    salía vacío y el rótulo se quedaba solo, encabezando media página en blanco.
+    Un rótulo sin nada debajo se lee como un fallo del informe.
+
+    El párrafo pasa a ser un marcador normal, `{{rotulo:valoracion:HC.H02}}`, y
+    **conserva su formato** —`_escribir` escribe dentro del `run` que ya
+    estaba—, así que sigue viéndose igual cuando sí hay valoración. El texto
+    viaja en las notas, que no se imprimen, y no en una constante nuestra:
+    es palabra del cliente y cambia con el idioma —sus plantillas ponen
+    «Valoración» y «Valuation»—, así que escribirla en el código sería
+    traducirle el informe sin permiso.
+    """
+    parrafo, texto = rotulo
+    _escribir(parrafo, f"{{{{rotulo:{clave}}}}}")
+    _anotar(slide, f"@rotulo: {clave} = {texto}")
+    return [f"diap. {numero}: @rotulo: {clave} = {texto}"]
 
 
 def _marcar_por_patron(slide: Slide, numero: int) -> list[str]:

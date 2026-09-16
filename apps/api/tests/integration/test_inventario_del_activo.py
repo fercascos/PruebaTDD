@@ -285,6 +285,7 @@ def test_no_pisa_un_descriptivo_ya_validado(
                 {
                     "capex_code_id": validada["capex_code_id"],
                     "texto": "Texto revisado en obra.",
+                    "valoracion": "En servicio, sin daños aparentes.",
                     "validado": True,
                 }
             ]
@@ -369,6 +370,7 @@ def test_la_casilla_firma_quien_valido_y_cuando(
                 {
                     "capex_code_id": catalogo["objetos"]["HC.H02.01"],
                     "texto": "Cubierta deck con lámina de PVC.",
+                    "valoracion": "Lámina en el tramo final de su vida útil.",
                     "validado": True,
                 }
             ]
@@ -391,7 +393,16 @@ def test_volver_a_guardar_el_texto_no_mueve_la_fecha_de_validacion(
     primera = cliente.put(
         f"{RUTA}/assets/{activo}/descriptivos",
         headers=cab("consultor_a"),
-        json={"lineas": [{"capex_code_id": codigo, "texto": "Lámina de PVC.", "validado": True}]},
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": codigo,
+                    "texto": "Lámina de PVC.",
+                    "valoracion": "Sin daños aparentes.",
+                    "validado": True,
+                }
+            ]
+        },
     ).json()[0]
 
     segunda = cliente.put(
@@ -399,7 +410,12 @@ def test_volver_a_guardar_el_texto_no_mueve_la_fecha_de_validacion(
         headers=cab("consultor_a"),
         json={
             "lineas": [
-                {"capex_code_id": codigo, "texto": "Lámina de PVC de 1,5 mm.", "validado": True}
+                {
+                    "capex_code_id": codigo,
+                    "texto": "Lámina de PVC de 1,5 mm.",
+                    "valoracion": "Sin daños aparentes.",
+                    "validado": True,
+                }
             ]
         },
     ).json()[0]
@@ -417,7 +433,16 @@ def test_desvalidar_borra_el_testigo(
     cliente.put(
         f"{RUTA}/assets/{activo}/descriptivos",
         headers=cab("consultor_a"),
-        json={"lineas": [{"capex_code_id": codigo, "texto": "Lámina de PVC.", "validado": True}]},
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": codigo,
+                    "texto": "Lámina de PVC.",
+                    "valoracion": "Sin daños aparentes.",
+                    "validado": True,
+                }
+            ]
+        },
     )
 
     r = cliente.put(
@@ -430,6 +455,91 @@ def test_desvalidar_borra_el_testigo(
     assert fila["validado"] is False
     assert fila["validado_at"] is None
     assert fila["validado_por"] is None
+
+
+def test_no_se_valida_un_descriptivo_sin_valorar(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """`[REQ]` *«Si hay descriptivo debería ser obligatorio que hubiera una
+    valoración por parte del técnico.»*
+
+    Es la regla que hace que las dos columnas signifiquen cosas distintas. El
+    descriptivo lo rellena la extracción de la memoria técnica sin que nadie
+    teclee nada; la valoración **no la rellena ningún documento**. Sin esto,
+    validar era firmar lo que había escrito el documento y nada más, y el
+    informe salía con la sección a medias: su texto y, debajo, el rótulo
+    «Valoración» encabezando media página en blanco.
+    """
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": catalogo["objetos"]["HC.H02.01"],
+                    "texto": "Cubierta deck con lámina de PVC de 1,5 mm.",
+                    "valoracion": "   ",
+                    "validado": True,
+                }
+            ]
+        },
+    )
+
+    assert r.status_code == 422, r.text
+    # El mensaje explica de quién es el trabajo que falta. Un 23514 de
+    # PostgreSQL no cuenta que lo que falta es que alguien vaya a verlo.
+    assert "la escribe usted" in r.json()["detail"]
+
+
+def test_sin_validar_si_se_puede_dejar_la_valoracion_para_luego(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """La exigencia es **de la firma**, no de la escritura. El descriptivo llega
+    de la documentación antes de que nadie visite el edificio, y bloquear su
+    guardado obligaría a inventarse la valoración para poder trabajar: justo lo
+    contrario de lo que se busca."""
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": catalogo["objetos"]["HC.H02.01"],
+                    "texto": "Cubierta deck con lámina de PVC de 1,5 mm.",
+                    "valoracion": "",
+                    "validado": False,
+                }
+            ]
+        },
+    )
+
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["validado"] is False
+
+
+def test_valorar_sin_describir_sigue_valiendo(
+    cliente: TestClient, cab: Any, activo: str, catalogo: dict[str, Any]
+) -> None:
+    """La regla va en un solo sentido, a propósito: hay elementos que se ven en
+    la visita y no aparecen en ninguna memoria, y valorarlos sin descriptivo es
+    exactamente lo que hace quien está delante del edificio."""
+    r = cliente.put(
+        f"{RUTA}/assets/{activo}/descriptivos",
+        headers=cab("consultor_a"),
+        json={
+            "lineas": [
+                {
+                    "capex_code_id": catalogo["objetos"]["HC.H02.01"],
+                    "texto": "",
+                    "valoracion": "Ampollas generalizadas en el faldón sur.",
+                    "validado": True,
+                }
+            ]
+        },
+    )
+
+    assert r.status_code == 200, r.text
+    assert r.json()[0]["validado"] is True
 
 
 def test_no_se_valida_un_descriptivo_vacio(
