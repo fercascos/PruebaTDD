@@ -481,6 +481,101 @@ MEMORIA: tuple[tuple[str, tuple[tuple[str | None, str, str | None, str | None], 
             ("HC.H03.02", "Zócalo de hormigón visto y remates de chapa", "420", None),
         ),
     ),
+    # `[REQ]` Las seis secciones que faltaban para que el informe de la
+    # demostración salga **entero**. Con siete capítulos, la mitad de las
+    # diapositivas de análisis técnico salían en blanco y no se veía qué hace la
+    # aplicación con una sección completa.
+    (
+        "HC.H05",
+        (
+            (
+                "HC.H05.01",
+                "Urbanización exterior con pavimento de hormigón y muelles de carga",
+                "6200",
+                (
+                    "Viales perimetrales de hormigón fratasado para tráfico pesado, con nueve "
+                    "muelles de carga dotados de rampa niveladora y abrigo. El cerramiento de "
+                    "parcela es de malla electrosoldada sobre zócalo de hormigón."
+                ),
+            ),
+        ),
+    ),
+    (
+        "HC.H06",
+        (
+            (
+                "HC.H06.01",
+                "Sectorización entre almacén y zona de oficinas",
+                None,
+                (
+                    "Muro de sectorización de bloque de hormigón hasta cubierta con puertas "
+                    "cortafuegos correderas de EI2 60-C5 en los pasos, según el proyecto de "
+                    "actividad aportado."
+                ),
+            ),
+            ("HC.H06.04", "Protección de la estructura de hormigón prefabricado", None, None),
+        ),
+    ),
+    (
+        "HC.H07",
+        (
+            (
+                "HC.H07.01",
+                "Itinerario accesible desde vía pública hasta el acceso de oficinas",
+                None,
+                (
+                    "Rampa de acceso con pendiente del 8 % y pasamanos a doble altura, y plaza "
+                    "de aparcamiento reservada junto a la entrada principal."
+                ),
+            ),
+            ("HC.H07.05", "Aseo accesible en planta baja de oficinas", "1", None),
+        ),
+    ),
+    (
+        "HC.H11",
+        (
+            (
+                "HC.H11.01",
+                "Acometida de agua y contador general en arqueta de parcela",
+                None,
+                (
+                    "Acometida de polietileno de 63 mm desde la red municipal, con contador "
+                    "general y válvula de corte en arqueta registrable junto al vallado."
+                ),
+            ),
+            ("HC.H11.06", "Red de saneamiento separativa con arquetas registrables", None, None),
+        ),
+    ),
+    (
+        "HC.H12",
+        (
+            (
+                "HC.H12.01",
+                "Ascensor eléctrico sin cuarto de máquinas en el núcleo de oficinas",
+                "1",
+                (
+                    "Seis paradas y 630 kg de carga nominal, instalado en 2004 y con "
+                    "mantenimiento contratado. Cabina de 1,10 × 1,40 m con puertas automáticas "
+                    "de 0,80 m."
+                ),
+            ),
+        ),
+    ),
+    (
+        "HC.H14",
+        (
+            (
+                "HC.H14.03",
+                "Red de voz y datos con cableado de categoría 6 en oficinas",
+                "86",
+                (
+                    "Canalización sobre bandeja en falso techo y rack de 42 U en el cuarto de "
+                    "comunicaciones de planta baja, con SAI dedicado."
+                ),
+            ),
+            ("HC.H14.01", "Puntos de acceso WIFI en oficinas y muelles", "12", None),
+        ),
+    ),
     (
         "HC.H04",
         (
@@ -584,6 +679,50 @@ VALORACIONES: dict[str, str] = {
         "Carpintería estanca y con los herrajes operativos. Se observa condensación en el canal "
         "de varias ventanas de la fachada norte, compatible con una ventilación insuficiente "
         "del local más que con un fallo del cerramiento."
+    ),
+    "HC.H05.01": (
+        "Pavimento con fisuración y hundimientos localizados en la zona de maniobra de "
+        "camiones, y dos rampas niveladoras con el sistema hidráulico fuera de servicio. El "
+        "cerramiento de parcela está vencido en el tramo trasero."
+    ),
+    "HC.H06.01": (
+        "La sectorización se corresponde con la del proyecto de actividad en lo comprobable a "
+        "simple vista. Dos puertas cortafuegos tienen el cierrapuertas desconectado y una está "
+        "calzada en abierto, lo que anula la sectorización en servicio."
+    ),
+    "HC.H06.04": (
+        "No se ha aportado la justificación de resistencia al fuego de la estructura. Sin ella "
+        "no puede afirmarse el cumplimiento, y queda recogido como limitación del informe."
+    ),
+    "HC.H07.01": (
+        "Itinerario practicable en su recorrido principal. El pasamanos de la rampa es simple y "
+        "no a doble altura, y la plaza reservada carece de la señalización vertical exigida."
+    ),
+    "HC.H07.05": (
+        "Aseo con espacio de giro suficiente y barras abatibles, pero con el lavabo a una altura "
+        "superior a la admisible y sin espacio libre inferior."
+    ),
+    "HC.H11.01": (
+        "Acometida en servicio y sin fugas aparentes. La arqueta acumula tierra y la tapa está "
+        "deformada, lo que dificulta el acceso al contador y a la válvula de corte."
+    ),
+    "HC.H11.06": (
+        "Dos arquetas del ramal de muelles con sedimentos y una tapa rota. No se observan "
+        "retornos ni olores en el momento de la visita."
+    ),
+    "HC.H12.01": (
+        "Ascensor en servicio y con el mantenimiento al día, pero con veintiún años y sin "
+        "sustitución de maniobra. Las dimensiones de cabina no alcanzan las exigidas para un "
+        "ascensor accesible en obra nueva, condición que el edificio no tiene por su antigüedad."
+    ),
+    "HC.H14.03": (
+        "Cableado funcional y rack ordenado. No se ha aportado la certificación de la red, de "
+        "modo que no puede confirmarse la categoría real de la instalación."
+    ),
+    "HC.H14.01": (
+        "Cobertura suficiente en oficinas y discontinua en el interior del almacén, donde la "
+        "estanteria metálica genera sombras. Los puntos de acceso son de una generación anterior "
+        "a la actual."
     ),
     "HC.H04.03": (
         "Terrazo con desgaste desigual en zonas de paso y dos juntas de retracción de la solera "
@@ -927,13 +1066,25 @@ def sembrar(api: Api) -> str:
     if traidos["avisos"]:
         print(f"  aviso: {traidos['avisos'][0]}")
 
-    # `[REQ]` Todos validados menos el último, que queda corregido a mano y sin
-    # firmar. Los dos estados tienen que verse —una rejilla toda igual no enseña
-    # que traer otra vez respeta lo que ya hizo una persona—, pero **validar
-    # solo uno dejaba el informe casi vacío**: el descriptivo sin validar no
-    # sale, y el resumen ejecutivo por categoría vive justo de eso.
+    # `[REQ]` Todos validados menos uno, que queda corregido a mano y sin firmar.
+    # Los dos estados tienen que verse: una rejilla toda igual no enseña que
+    # traer los descriptivos otra vez respeta lo que ya hizo una persona.
+    #
+    # Y cuál se deja sin firmar **no da igual**. Era el último por código, y eso
+    # dejaba su sección entera fuera del informe —el descriptivo sin validar no
+    # sale—, de modo que enseñar los dos estados costaba una diapositiva en
+    # blanco. Se deja sin firmar un objeto cuyo capítulo tiene **otro** objeto ya
+    # validado: la sección sale completa y el estado «pendiente» se sigue viendo
+    # en la rejilla, que es donde importa.
     descriptivos = api.get(f"/assets/{activo['id']}/descriptivos")
     if len(descriptivos) >= 2:
+        por_capitulo: dict[str, int] = {}
+        for d in descriptivos:
+            por_capitulo[d["chapter_code"]] = por_capitulo.get(d["chapter_code"], 0) + 1
+        sin_firmar = next(
+            (d for d in reversed(descriptivos) if por_capitulo.get(d["chapter_code"], 0) > 1),
+            None,
+        )
         lineas = [
             {
                 "capex_code_id": d["capex_code_id"],
@@ -946,19 +1097,27 @@ def sembrar(api: Api) -> str:
                 "valoracion": VALORACIONES.get(d["capex_code"], ""),
                 "validado": True,
             }
-            for d in descriptivos[:-1]
+            for d in descriptivos
+            if sin_firmar is None or d["id"] != sin_firmar["id"]
         ]
-        ultimo = descriptivos[-1]
-        lineas.append(
-            {
-                "capex_code_id": ultimo["capex_code_id"],
-                "texto": (f"{ultimo['texto']} Revisado en visita: se confirma el estado descrito."),
-                "valoracion": "",
-                "validado": False,
-            }
-        )
+        if sin_firmar is not None:
+            lineas.append(
+                {
+                    "capex_code_id": sin_firmar["capex_code_id"],
+                    "texto": (
+                        f"{sin_firmar['texto']} Revisado en visita: "
+                        "se confirma el estado descrito."
+                    ),
+                    "valoracion": "",
+                    "validado": False,
+                }
+            )
         api.put(f"/assets/{activo['id']}/descriptivos", {"lineas": lineas})
-        print(f"  {len(lineas) - 1} validados por el gestor técnico y uno corregido sin validar")
+        pendientes = 0 if sin_firmar is None else 1
+        print(
+            f"  {len(lineas) - pendientes} validados por el gestor técnico"
+            + (f" y {sin_firmar['capex_code']} corregido sin validar" if sin_firmar else "")
+        )
 
     # ── La visita, con su equipo implicado (§3.2 c) ─────────────────────────
     yo = api.get("/auth/me")
