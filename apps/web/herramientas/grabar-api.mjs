@@ -19,6 +19,7 @@
 import { chromium } from 'playwright'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { EN } from '../src/i18n/textos.ts'
 
 const BASE = process.env.TDD_WEB ?? 'http://localhost:5173'
 const CORREO = process.env.TDD_EMAIL ?? 'admin@ejemplo.example'
@@ -26,13 +27,56 @@ const CLAVE = process.env.TDD_PASSWORD ?? 'cubierta invertida 2026'
 const PID = process.env.TDD_PROYECTO
 const SALIDA = process.env.TDD_GRABACION ?? 'prototipo/grabacion.json'
 
+/** El idioma en el que se graba. `[REQ]` S-05 · 0030 */
+const IDIOMA = process.env.TDD_IDIOMA ?? 'es'
+if (IDIOMA !== 'es' && IDIOMA !== 'en') {
+  console.error(`TDD_IDIOMA tiene que ser «es» o «en», no «${IDIOMA}».`)
+  process.exit(1)
+}
+
+/** El texto de un selector, en el idioma de la grabación.
+ *
+ *  `[REQ]` Este recorrido busca por **texto visible** —«Resumen», «Comprobar
+ *  antes de generar»—, así que en inglés no encontraría nada y grabaría media
+ *  aplicación sin que nada fallara: el fichero saldría más pequeño y el
+ *  prototipo tendría pantallas vacías.
+ *
+ *  Se traduce con **el mismo diccionario que la aplicación**, no con una copia:
+ *  el día que alguien cambie una traducción, este recorrido la sigue. Si
+ *  faltara la entrada sale el castellano, el selector no encuentra nada y se
+ *  ve en el recuento final.
+ */
+const t = (clave) => (IDIOMA === 'en' ? (EN[clave] ?? clave) : clave)
+
 if (!PID) {
   console.error('Falta TDD_PROYECTO: el identificador del proyecto de demostración.')
   process.exit(1)
 }
 
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH })
-const ctx = await nav.newContext({ viewport: { width: 1440, height: 950 } })
+const ctx = await nav.newContext({
+  viewport: { width: 1440, height: 950 },
+  // `[REQ]` La aplicación elige su idioma inicial de lo guardado y, si no hay
+  // nada, de `navigator.language`. Fijarlo aquí hace dos cosas de una: la
+  // interfaz arranca en el idioma pedido Y las peticiones salen con el
+  // `Accept-Language` que hace que la API devuelva los catálogos traducidos.
+  locale: IDIOMA === 'en' ? 'en-GB' : 'es-ES',
+})
+// Y por si acaso, lo guardado: es lo primero que mira la aplicación, y así la
+// grabación no depende de que el navegador respete `locale`. **Antes de abrir
+// la página**: un `addInitScript` puesto después no corre en las páginas que ya
+// existen, así que la primera —la única que se usa— arrancaría sin él.
+await ctx.addInitScript(
+  (idioma) => {
+    try {
+      localStorage.setItem('tdd.idioma', idioma)
+    } catch {
+      // Almacenamiento bloqueado: queda el `locale` del contexto.
+    }
+  },
+  IDIOMA,
+)
+
 const pg = await ctx.newPage()
 
 /** clave `MÉTODO ruta?consulta` → respuesta. */
@@ -89,7 +133,7 @@ for (const r of ['/plantillas', '/sugerencias', '/personas', '/proyectos']) awai
 // El resumen del CAPEX y su filtro: viven detrás de un botón y de un
 // desplegable, así que sus peticiones no salen solas.
 await ver(`/proyectos/${PID}/capex`)
-const resumen = pg.getByRole('tab', { name: 'Resumen' })
+const resumen = pg.getByRole('tab', { name: t('Resumen') })
 if (await resumen.count()) {
   await resumen.click()
   await pg.waitForTimeout(1500)
@@ -109,7 +153,7 @@ for (let i = 0; i < Math.min(await filas.count(), 4); i++) {
   await ver(`/proyectos/${PID}/capex`)
   await filas.nth(i).click()
   await pg.waitForTimeout(1100)
-  const precios = pg.locator('button:has-text("Ver referencias y validar el precio")')
+  const precios = pg.locator(`button:has-text("${t('Ver referencias y validar el precio')}")`)
   if (await precios.count()) {
     await precios.first().click()
     await pg.waitForTimeout(900)
@@ -133,7 +177,7 @@ for (let i = 0; i < Math.min(await fotos.count(), 4); i++) {
 
 // La comprobación previa del informe, que es lo que decide si se genera.
 await ver(`/proyectos/${PID}/informes`)
-const previo = pg.locator('button:has-text("Comprobar antes de generar")')
+const previo = pg.locator(`button:has-text("${t('Comprobar antes de generar')}")`)
 if (await previo.count()) {
   await previo.click()
   await pg.waitForTimeout(1500)
@@ -188,6 +232,6 @@ await writeFile(SALIDA, JSON.stringify(grabacion, null, 1))
 const bytes = (await import('node:fs')).statSync(SALIDA).size
 console.log(
   `${Object.keys(grabacion).length} respuestas (${binarios.size} imágenes) · ` +
-    `${(bytes / 1024 / 1024).toFixed(2)} MB · ${SALIDA}`,
+    `${(bytes / 1024 / 1024).toFixed(2)} MB · idioma ${IDIOMA} · ${SALIDA}`,
 )
 await nav.close()

@@ -1,0 +1,82 @@
+{
+ "POST /api/v1/auth/login": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiODUwYzBlMi02ODM5LTQ4NWItYTVkZC01NThjOGI5NWUxNTEiLCJvcmciOiI2YzFjYTJiYy05MzRkLTRmMDUtYjdhYS02MDI3Yzg1MzNlZGIiLCJyb2xlIjoiQURNSU4iLCJzdWciOnRydWUsImlhdCI6MTc5MTk5ODgyMSwiZXhwIjoxNzkxOTk5NzIxLCJqdGkiOiIwZjAyNWVkOC1mNjZkLTRmODYtYWRjNS02ZmY0MTIwNGVjNGMifQ.t96un_77xpihfgqLSOwPR9IuBP1gMLBx644SHaf84X4\",\"refresh_token\":\"DYrfdq8u1oBmQhUuTaaXeWbo7ZLf0NWc4_kofUfAgg4\",\"token_type\":\"bearer\",\"expires_in\":900}"
+ },
+ "GET /api/v1/projects": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[{\"id\":\"8fbb1b04-c6f6-4606-9fb7-303b0b8da523\",\"internal_code\":\"2026-66A\",\"name\":\"Getafe Norte logistics platform\",\"status\":\"BORRADOR\",\"currency\":\"EUR\",\"client_id\":\"24f81e6f-5522-4290-a796-3ee0e8450fea\",\"client_name\":\"Inversora Ficticia S.L.\",\"client_pending_validation\":false,\"start_date\":null,\"close_date\":null,\"report_due_date\":null,\"summary_text\":null}]"
+ },
+ "GET /api/v1/auth/me": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"id\":\"b850c0e2-6839-485b-a5dd-558c8b95e151\",\"organization_id\":\"6c1ca2bc-934d-4f05-b7aa-6027c8533edb\",\"email\":\"admin@ejemplo.example\",\"full_name\":\"Administradora de ejemplo\",\"org_role\":\"ADMIN\",\"can_manage_suggestions\":true,\"gestiona_sugerencias\":true}"
+ },
+ "POST /api/v1/auth/refresh": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiODUwYzBlMi02ODM5LTQ4NWItYTVkZC01NThjOGI5NWUxNTEiLCJvcmciOiI2YzFjYTJiYy05MzRkLTRmMDUtYjdhYS02MDI3Yzg1MzNlZGIiLCJyb2xlIjoiQURNSU4iLCJzdWciOnRydWUsImlhdCI6MTc5MTk5ODgyMiwiZXhwIjoxNzkxOTk5NzIyLCJqdGkiOiIxMmQwNWQzYy1kYjllLTQ0NDQtYTI5ZS03NTk2ZTAxMDFjMjkifQ.9TLborkXQNTckNCK9qs4WPXNtZB3szUE4cSYux8ynLs\",\"refresh_token\":\"MPz7-JGZ_IYmvOVvJ8BDEnVPGeUglf3Fs9sMmdfDzLc\",\"token_type\":\"bearer\",\"expires_in\":900}"
+ },
+ "GET /api/v1/projects/8fbb1b04-c6f6-4606-9fb7-303b0b8da523": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"id\":\"8fbb1b04-c6f6-4606-9fb7-303b0b8da523\",\"internal_code\":\"2026-66A\",\"name\":\"Getafe Norte logistics platform\",\"status\":\"BORRADOR\",\"currency\":\"EUR\",\"client_id\":\"24f81e6f-5522-4290-a796-3ee0e8450fea\",\"client_name\":\"Inversora Ficticia S.L.\",\"client_pending_validation\":false,\"start_date\":null,\"close_date\":null,\"report_due_date\":null,\"summary_text\":null}"
+ },
+ "GET /api/v1/projects/8fbb1b04-c6f6-4606-9fb7-303b0b8da523/phases": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[{\"id\":\"bc0a6a18-7d89-49b3-ab7b-1cf74ba01c7c\",\"code\":\"SOLICITUD_DOCUMENTACION\",\"name_es\":\"Document request\",\"status\":\"PENDIENTE\",\"es_derivado\":false,\"detalle\":\"11 de 17 resueltas\",\"owner_user_id\":null,\"display_order\":1,\"estado_sugerido\":\"EN_CURSO\"},{\"id\":\"d76665e6-a061-47ca-826a-f34332f82d1d\",\"code\":\"VISITA\",\"name_es\":\"Asset site visit\",\"status\":\"PENDIENTE\",\"es_derivado\":false,\"detalle\":\"1 de 2 activos visitados\",\"owner_user_id\":null,\"display_order\":2,\"estado_sugerido\":\"EN_CURSO\"},{\"id\":\"163b1804-ff5c-4515-a2af-4999b596a466\",\"code\":\"RED_FLAG_CAPEX\",\"name_es\":\"Red Flag / CAPEX\",\"status\":\"EN_CURSO\",\"es_derivado\":true,\"detalle\":\"10 líneas · 10 sin precio validado\",\"owner_user_id\":null,\"display_order\":3,\"estado_sugerido\":null},{\"id\":\"f644ad0e-f29e-4ff1-a568-4e7f7119adb6\",\"code\":\"FULL_REPORT\",\"name_es\":\"Full Report\",\"status\":\"PENDIENTE\",\"es_derivado\":true,\"detalle\":\"sin generar\",\"owner_user_id\":null,\"display_order\":4,\"estado_sugerido\":null}]"
+ },
+ "GET /api/v1/projects/8fbb1b04-c6f6-4606-9fb7-303b0b8da523/assets": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[{\"id\":\"71224f66-07c0-4092-9f87-c86733cb295c\",\"project_id\":\"8fbb1b04-c6f6-4606-9fb7-303b0b8da523\",\"typology_id\":\"3ea324fe-6c52-40c5-8dda-0d99592ca548\",\"name\":\"Building B · Getafe Sur\",\"asset_code\":\"GTF-B\",\"main_use\":null,\"address_line\":\"3 Avenida Inventada, Polígono Ficticio\",\"city\":\"Getafe\",\"province\":\"Madrid\",\"postal_code\":\"28906\",\"country_code\":\"ES\",\"latitude\":\"40.301200\",\"longitude\":\"-3.740100\",\"geocode_source\":null,\"plot_area_sqm\":\"6200.00\",\"total_built_sqm\":\"5400.00\",\"lettable_area_sqm\":null,\"warehouse_area_sqm\":null,\"office_area_sqm\":\"5100.00\",\"warehouse_height_m\":null,\"floors_above\":null,\"floors_below\":null,\"year_built\":2011,\"year_last_refurb\":null,\"description\":null,\"notes\":null,\"main_photo_id\":null,\"row_version\":1,\"cadastral_reference\":null,\"developer\":null,\"project_date\":null,\"secondary_use\":null,\"occupied_area_sqm\":null,\"urbanised_area_sqm\":null,\"usable_area_sqm\":null,\"max_height_m\":null,\"loading_docks\":null,\"parking_spaces\":null,\"memoria_validada_at\":null,\"memoria_validada_por\":null},{\"id\":\"874811d9-42b7-4cc6-aefd-3d31d6260b5c\",\"project_id\":\"8fbb1b04-c6f6-4606-9fb7-303b0b8da523\",\"typology_id\":\"7eba0a6d-642e-4cf4-96b4-4400a7be96f9\",\"name\":\"Unit A · Getafe Norte\",\"asset_code\":\"GTF-A\",\"main_use\":null,\"address_line\":\"14 Calle Inventada, Polígono Ficticio\",\"city\":\"Getafe\",\"province\":\"Madrid\",\"postal_code\":\"28906\",\"country_code\":\"ES\",\"latitude\":\"40.308100\",\"longitude\":\"-3.732600\",\"geocode_source\":null,\"plot_area_sqm\":\"24500.00\",\"total_built_sqm\":\"18200.00\",\"lettable_area_sqm\":null,\"warehouse_area_sqm\":\"16400.00\",\"office_area_sqm\":\"1800.00\",\"warehouse_height_m\":\"11.50\",\"floors_above\":null,\"floors_below\":null,\"year_built\":2004,\"year_last_refurb\":null,\"description\":null,\"notes\":null,\"main_photo_id\":null,\"row_version\":1,\"cadastral_reference\":null,\"developer\":null,\"project_date\":null,\"secondary_use\":null,\"occupied_area_sqm\":null,\"urbanised_area_sqm\":null,\"usable_area_sqm\":null,\"max_height_m\":null,\"loading_docks\":null,\"parking_spaces\":null,\"memoria_validada_at\":null,\"memoria_validada_por\":null}]"
+ },
+ "GET /api/v1/projects/8fbb1b04-c6f6-4606-9fb7-303b0b8da523/risk-matrix": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"horizontes\":[\"CORTO\",\"MEDIO\",\"LARGO\",\"MEJORAS\",\"OTRO\"],\"grados\":[{\"code\":\"04\",\"name\":\"Extreme\",\"score\":4,\"hallazgos\":2,\"importe\":\"10500.0000\",\"por_horizonte\":{\"CORTO\":\"10500.0000\",\"MEDIO\":\"0\",\"LARGO\":\"0\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"}},{\"code\":\"03\",\"name\":\"High\",\"score\":3,\"hallazgos\":4,\"importe\":\"164107.5000\",\"por_horizonte\":{\"CORTO\":\"115607.5000\",\"MEDIO\":\"48500.0000\",\"LARGO\":\"0\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"}},{\"code\":\"02\",\"name\":\"Moderate\",\"score\":2,\"hallazgos\":2,\"importe\":\"26050.0000\",\"por_horizonte\":{\"CORTO\":\"0\",\"MEDIO\":\"26050.0000\",\"LARGO\":\"0\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"}},{\"code\":\"01\",\"name\":\"Low\",\"score\":1,\"hallazgos\":2,\"importe\":\"49500.0000\",\"por_horizonte\":{\"CORTO\":\"18500.0000\",\"MEDIO\":\"0\",\"LARGO\":\"31000.0000\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"}},{\"code\":\"SIN_GRADO\",\"name\":\"Sin clasificar\",\"score\":null,\"hallazgos\":0,\"importe\":\"0\",\"por_horizonte\":{\"CORTO\":\"0\",\"MEDIO\":\"0\",\"LARGO\":\"0\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"}}],\"capitulos\":[{\"code\":\"HC.H02\",\"name\":\"Roof\",\"por_grado\":{\"03\":1},\"importe\":\"83407.5000\"},{\"code\":\"HC.H08\",\"name\":\"HVAC\",\"por_grado\":{\"03\":2},\"importe\":\"70900.0000\"},{\"code\":\"HC.H09\",\"name\":\"Electrical\",\"por_grado\":{\"04\":1,\"01\":1},\"importe\":\"37200.0000\"},{\"code\":\"SC.S01\",\"name\":\"Design, Engineering & Construction Management\",\"por_grado\":{\"01\":1},\"importe\":\"18500.0000\"},{\"code\":\"HC.H03\",\"name\":\"Facades\",\"por_grado\":{\"02\":1},\"importe\":\"14300.0000\"},{\"code\":\"HC.H04\",\"name\":\"Interiors\",\"por_grado\":{\"02\":1},\"importe\":\"11750.0000\"},{\"code\":\"HC.H10\",\"name\":\"Active Fire Protection\",\"por_grado\":{\"03\":1},\"importe\":\"9800.0000\"},{\"code\":\"HC.H06\",\"name\":\"Passive Fire Protection\",\"por_grado\":{\"04\":1},\"importe\":\"4300.0000\"}],\"total_por_horizonte\":{\"CORTO\":\"144607.5000\",\"MEDIO\":\"74550.0000\",\"LARGO\":\"31000.0000\",\"MEJORAS\":\"0\",\"OTRO\":\"0\"},\"total_hallazgos\":10,\"total_importe\":\"250157.5000\"}"
+ },
+ "GET /api/v1/report-templates": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[]"
+ },
+ "GET /api/v1/projects/8fbb1b04-c6f6-4606-9fb7-303b0b8da523/reports": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[]"
+ },
+ "GET /api/v1/suggestions/mine": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[]"
+ },
+ "GET /api/v1/suggestions": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[]"
+ },
+ "GET /api/v1/users?incluir_inactivos=true": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[{\"id\":\"b850c0e2-6839-485b-a5dd-558c8b95e151\",\"full_name\":\"Administradora de ejemplo\",\"email\":\"admin@ejemplo.example\",\"org_role\":\"ADMIN\",\"is_active\":true}]"
+ },
+ "GET /api/v1/assets/71224f66-07c0-4092-9f87-c86733cb295c": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "{\"id\":\"71224f66-07c0-4092-9f87-c86733cb295c\",\"project_id\":\"8fbb1b04-c6f6-4606-9fb7-303b0b8da523\",\"typology_id\":\"3ea324fe-6c52-40c5-8dda-0d99592ca548\",\"name\":\"Building B · Getafe Sur\",\"asset_code\":\"GTF-B\",\"main_use\":null,\"address_line\":\"3 Avenida Inventada, Polígono Ficticio\",\"city\":\"Getafe\",\"province\":\"Madrid\",\"postal_code\":\"28906\",\"country_code\":\"ES\",\"latitude\":\"40.301200\",\"longitude\":\"-3.740100\",\"geocode_source\":null,\"plot_area_sqm\":\"6200.00\",\"total_built_sqm\":\"5400.00\",\"lettable_area_sqm\":null,\"warehouse_area_sqm\":null,\"office_area_sqm\":\"5100.00\",\"warehouse_height_m\":null,\"floors_above\":null,\"floors_below\":null,\"year_built\":2011,\"year_last_refurb\":null,\"description\":null,\"notes\":null,\"main_photo_id\":null,\"row_version\":1,\"cadastral_reference\":null,\"developer\":null,\"project_date\":null,\"secondary_use\":null,\"occupied_area_sqm\":null,\"urbanised_area_sqm\":null,\"usable_area_sqm\":null,\"max_height_m\":null,\"loading_docks\":null,\"parking_spaces\":null,\"memoria_validada_at\":null,\"memoria_validada_por\":null}"
+ },
+ "GET /api/v1/assets/71224f66-07c0-4092-9f87-c86733cb295c/locations": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[]"
+ },
+ "GET /api/v1/catalogs/asset-typologies": {
+  "estado": 200,
+  "tipo": "application/json",
+  "texto": "[{\"id\":\"7eba0a6d-642e-4cf4-96b4-4400a7be96f9\",\"code\":\"INDUSTRIAL\",\"name_es\":\"Industrial\"},{\"id\":\"3ea324fe-6c52-40c5-8dda-0d99592ca548\",\"code\":\"OFICINAS\",\"name_es\":\"Offices\"},{\"id\":\"0bea90d6-46aa-4b29-ba67-48952b16c5a4\",\"code\":\"HOTEL\",\"name_es\":\"Hotel\"},{\"id\":\"380f027b-be20-4a8e-b80b-90dec00fc203\",\"code\":\"COMERCIAL\",\"name_es\":\"Retail\"},{\"id\":\"11e91598-eee2-444c-abde-c1c14d149f50\",\"code\":\"SANITARIO\",\"name_es\":\"Healthcare\"},{\"id\":\"57e33601-21d9-4d01-9667-e645a2a23ace\",\"code\":\"OTROS\",\"name_es\":\"Others\"}]"
+ }
+}

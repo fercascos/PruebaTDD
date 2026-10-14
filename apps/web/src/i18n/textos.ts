@@ -814,6 +814,128 @@ export const EN: Record<string, string> = {
   'Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.':
     'Reload and try again; if it happens again, it is an application bug.',
 
+  // ── El texto de ayuda, que ocupa varias líneas ────────────────────────
+  //
+  // Son los párrafos de los `<p className="ayuda">`: lo que explica una
+  // pantalla a quien la usa por primera vez, y la mitad del valor de esta
+  // aplicación para alguien de negocio.
+  //
+  // `[REQ]` Estaban SIN TRADUCIR y el extractor decía que no faltaba nada: su
+  // regla de texto JSX excluía el salto de línea a propósito —para no cruzar
+  // etiquetas— y un párrafo que el formateador parte en cuatro renglones
+  // quedaba invisible. Sesenta y siete nodos, cincuenta y cuatro de ellos con
+  // texto suelto. No lo encontró leer el código: lo encontró abrir el
+  // prototipo en inglés y ver los párrafos en castellano.
+
+  'Apagada. Ningún documento de este proyecto se analiza mientras lo esté. La autoriza quien dirige el proyecto, y queda constancia de quién lo hizo.':
+    'Off. No document in this project is analysed while it stays off. The project director authorises it, and a record is kept of who did so.',
+  'Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los grados sin importe se muestran con cero: uno que desaparece de la lista se confunde con uno que no tiene nada.':
+    'How much of the spend falls under each grade, most severe first. Grades with no amount are shown as zero: one that vanishes from the list looks the same as one with nothing in it.',
+  'Cuánto dinero hay en cada cruce de gravedad y plazo. Responde a «¿cuánto de lo grave hay que pagar en los dos primeros años?».':
+    'How much money sits at each intersection of severity and term. It answers «how much of the serious work has to be paid for in the first two years?».',
+  'El año de instalación y la vida útil esperada van juntos o no van: con solo uno de los dos no hay vida residual que calcular.':
+    'The year of installation and the expected service life go together or not at all: with only one of the two there is no remaining life to calculate.',
+  'El catálogo del CAPEX no tiene objetos cargados, así que no hay árbol que recorrer. Siembre los catálogos y vuelva a entrar.':
+    'The CAPEX catalogue has no items loaded, so there is no tree to walk. Seed the catalogues and come back.',
+  'El detalle completo: fabricante, número de serie, mantenimiento preventivo y vida residual, que se calcula al leer y nunca se teclea.':
+    'The full detail: manufacturer, serial number, planned maintenance and remaining life, which is calculated on reading and never typed in.',
+  'El enlace caduca a los 30 minutos y solo sirve una vez. Al terminar se cerrarán todas sus sesiones abiertas.':
+    'The link expires after 30 minutes and works once. When you finish, every open session of yours will be closed.',
+  'El grado nunca se identifica solo por color: cada fila lleva su código y su nombre escritos. Los importes son los del CAPEX del proyecto; lo descartado no suma.':
+    'The grade is never identified by colour alone: every row carries its code and its name in writing. The amounts are the project\'s CAPEX; what has been discarded does not count.',
+  'El proyecto todavía no tiene activos. Un equipo cuelga siempre de uno: dé de alta el edificio primero.':
+    'The project has no assets yet. A piece of equipment always hangs off one: create the building first.',
+  'Elija una referencia. Un precio conserva siempre su procedencia: si el importe no sale de ninguna de las registradas, dé de alta una manual con su origen.':
+    'Choose a reference. A price always keeps its provenance: if the amount comes from none of those on record, create a manual one stating where it came from.',
+  'En un proyecto de cartera es la cifra que entra en la negociación de cada activo.':
+    'In a portfolio project this is the figure that goes into the negotiation for each asset.',
+  'Esta casilla entra en las limitaciones del informe: declarar lo que no se ha podido revisar es una obligación profesional en una TDD.':
+    'This item goes into the limitations of the report: stating what could not be reviewed is a professional obligation in a technical due diligence.',
+  'Esta línea entra en las limitaciones del informe: declarar lo que no se ha podido revisar es una obligación profesional en una TDD.':
+    'This line goes into the limitations of the report: stating what could not be reviewed is a professional obligation in a technical due diligence.',
+  'Estas actuaciones están codificadas en códigos que ya no se ofrecen. Siguen contando en los totales —por eso salen aquí y no desaparecen—, pero conviene recodificarlas: al exportar, la plantilla no sabe en qué bloque ponerlas.':
+    'These actions are coded against codes that are no longer offered. They still count towards the totals —which is why they appear here rather than vanishing— but they are worth recoding: on export, the template does not know which block to put them in.',
+  'Este activo no tiene ninguna visita registrada. Se puede programar antes de tener fecha: la visita nace «pendiente de definir» y no obliga a inventarse un día.':
+    'This asset has no inspection on record. One can be set up before there is a date: the inspection starts out «to be confirmed» and does not force anyone to invent a day.',
+  'Este activo no tiene ubicaciones. Sin ellas las fotografías se pueden clasificar por zona, pero no se puede decir en qué sala estaban.':
+    'This asset has no locations. Without them photos can be classified by area, but there is no way to say which room they were taken in.',
+  'Este activo todavía no tiene actuaciones. Se registran desde «Hallazgos y CAPEX», desde una fotografía de la visita, o aquí mismo cuando el árbol tenga ramas.':
+    'This asset has no actions yet. They are recorded from «Findings and CAPEX», from a photo taken during the inspection, or right here once the tree has branches.',
+  'Este enlace no lleva el código de recuperación. Suele pasar al copiarlo a mano desde el correo: ábralo pulsando sobre él, o pida uno nuevo.':
+    'This link carries no recovery code. That usually happens when it is copied by hand from the email: open it by clicking on it, or request a new one.',
+  'Este navegador no garantiza guardar las fotografías pendientes: puede borrarlas si el dispositivo se queda sin espacio, y en un iPhone también tras varios días sin abrir la aplicación. Añádala a la pantalla de inicio, o súbalas antes de cerrar.':
+    'This browser gives no guarantee that pending photos will be kept: it may delete them if the device runs out of space, and on an iPhone also after several days without opening the application. Add it to your home screen, or upload them before closing.',
+  'Este objeto no tiene equipos inventariados. No siempre hace falta: una cubierta o una fachada se describen y se valoran, pero no tienen máquinas que fichar.':
+    'This item has no equipment on the inventory. It is not always needed: a roof or a facade is described and assessed, but has no machines to record.',
+  'Este proyecto no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer en alguno. Créalo antes de aceptar estas propuestas.':
+    'This project has no asset created yet, and a piece of equipment has to be born in one. Create it before accepting these proposals.',
+  'Estos campos se guardan siempre. Reclasificar el activo no los borra: si mañana vuelve a ser una nave, la altura de almacén sigue ahí.':
+    'These fields are always kept. Reclassifying the asset does not delete them: if tomorrow it becomes a warehouse unit again, the warehouse height is still there.',
+  'Habilitar una fuente exige registrar la revisión de sus condiciones de uso y requiere rol de administrador.':
+    'Enabling a source requires recording a review of its terms of use, and an administrator role.',
+  'La checklist está vacía. Añade arriba lo que hay que pedir: cada línea que quede sin recibir se convierte sola en una limitación del informe.':
+    'The checklist is empty. Add above what needs requesting: every line left unreceived turns into a limitation of the report on its own.',
+  'La próxima revisión se calcula: no se teclea. Un documento puede declarar que hay revisiones «anuales o quinquenales según el tipo de equipo» sin decir cuál le toca a cuál, y en ese caso esto se queda vacío hasta que alguien lo sepa.':
+    'The next service is calculated, not typed in. A document may state that there are «annual or five-yearly» services «depending on the type of equipment» without saying which applies to which, and in that case this stays empty until somebody knows.',
+  'Las de este activo. Se suben desde «Fotografías», también desde el móvil durante la visita, y se atan a cada equipo desde el inventario.':
+    'Those for this asset. They are uploaded from «Photos», including from a phone during the inspection, and tied to each piece of equipment from the inventory.',
+  'Llegaron al proyecto sin decir qué solicitud cubren. Se pueden revisar igual, pero no cuentan para la checklist ni para las limitaciones del informe.':
+    'They reached the project without saying which request they cover. They can still be reviewed, but they do not count towards the checklist or the limitations of the report.',
+  'Lleva dentro los activos de este proyecto y los 14 sistemas técnicos. Rellenarla a partir de ella evita que media hoja falle por una tilde en el nombre del edificio.':
+    'It already contains this project\'s assets and the 14 technical systems. Filling it in from this copy stops half the sheet failing over an accent in the building\'s name.',
+  'Marcadores disponibles: [Proyecto] [ProyectoNombre] [Activo] [Sistema] [Zona] [Espacio] [Capitulo] [Categoria] [Fecha] [Hora] [Numero] [Autor] [Etiqueta]. La extensión no forma parte de la plantilla: la fija el servidor desde el tipo real del archivo.':
+    'Available tokens: [Proyecto] [ProyectoNombre] [Activo] [Sistema] [Zona] [Espacio] [Capitulo] [Categoria] [Fecha] [Hora] [Numero] [Autor] [Etiqueta]. The file extension is not part of the pattern: the server sets it from the file\'s real type.',
+  'Ninguna fotografía de esta selección trae coordenadas. Se registran solas si el móvil tiene la localización activada al hacer la foto.':
+    'No photo in this selection carries coordinates. They are recorded automatically if location is switched on when the photo is taken.',
+  'No hay catálogo de índices en la aplicación: los dos valores los introduce usted. Publicar una cifra que nadie ha verificado sería inventar una fuente de precios.':
+    'There is no index catalogue in the application: you enter both values. Publishing a figure nobody has verified would mean inventing a price source.',
+  'No hay ninguna referencia registrada que encaje. Introduzca el precio a mano indicando de dónde sale.':
+    'No reference on record matches. Enter the price by hand, stating where it comes from.',
+  'No se ha aplicado nada todavía, y aplicarlo solo rellena el campo: sigue haciendo falta validar el precio.':
+    'Nothing has been applied yet, and applying it only fills the field: the price still needs validating.',
+  'Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí es el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.':
+    'By delivery horizon, ordered by term and not by amount: what you read here is how the spend is staged, and reordering it by size would destroy that.',
+  'Proponga cambios en precios, catálogos, textos o plantillas. Las propuestas las atiende un administrador; usted ve siempre las suyas.':
+    'Propose changes to prices, catalogues, wording or templates. An administrator handles the proposals; you can always see your own.',
+  'Queda firmado con su usuario y con la fecha. Es lo que permite preguntar de dónde salió dentro de seis meses.':
+    'It is signed with your user and the date. That is what makes it possible to ask where it came from six months later.',
+  'Quién fue. Del equipo se elige de la lista de personas; quien acompaña —el jefe de mantenimiento, el mantenedor de PCI— se escribe, porque no tiene cuenta en la aplicación.':
+    'Who attended. Team members are picked from the list of people; those accompanying —the maintenance manager, the fire-protection contractor— are typed in, because they have no account in the application.',
+  'Salen de la memoria técnica del edificio. Mientras ponga «sin validar», nadie ha revisado que sean correctos: un dato leído de un documento no es lo mismo que uno tecleado por un técnico.':
+    'They come from the building\'s technical report. While it says «not validated», nobody has checked that they are correct: a figure read from a document is not the same as one typed in by an engineer.',
+  'Se analiza al subirla: si tiene problemas, se descubren ahora y no cuando alguien esté esperando un informe.':
+    'It is analysed on upload: if there are problems, they come to light now and not while somebody is waiting for a report.',
+  'Sin equipos en el inventario. Es opcional: un proyecto se entrega igual sin él. Sirve para apuntar en la visita el fabricante, el modelo y el año de lo que después se propone sustituir.':
+    'No equipment on the inventory. It is optional: a project is delivered just the same without it. It is there to note down, during the inspection, the manufacturer, model and year of whatever is later proposed for replacement.',
+  'Sin hallazgos registrados todavía. No es lo mismo que no tener CAPEX: puede que aún no se haya visitado.':
+    'No findings recorded yet. That is not the same as having no CAPEX: it may simply not have been inspected.',
+  'Solo un administrador puede dar de alta o modificar cuentas. Aquí las ve, pero no las cambia: la API lo rechaza igualmente con un 403.':
+    'Only an administrator can create or change accounts. You can see them here but not change them: the API rejects it with a 403 regardless.',
+  'Sus fichas se sobrescribirán. Si alguien las corrigió a mano después de la visita, esos cambios se pierden.':
+    'Their records will be overwritten. If somebody corrected them by hand after the inspection, those changes are lost.',
+  'También vale una hoja propia: se reconocen varios nombres para cada columna, y las que no se entiendan se enumeran antes de importar en vez de perderse.':
+    'Your own sheet works too: several names are recognised for each column, and any that are not understood are listed before importing rather than quietly lost.',
+  'Tipo de coste → categoría → objeto. Solo se dibujan las ramas que tienen algo: el catálogo trae 175 nodos y un activo toca unos pocos.':
+    'Cost type → category → item. Only the branches with something in them are drawn: the catalogue carries 175 nodes and an asset touches a handful.',
+  'Todas las de la organización. Este listado solo lo ve quien atiende el buzón, y no porque esta pantalla lo esconda: la base de datos no devuelve las filas.':
+    'All of the organisation\'s. Only whoever handles the inbox sees this list, and not because this screen hides it: the database does not return the rows.',
+  'Todavía no hay hallazgos que clasificar. La matriz se rellena sola a medida que se registran.':
+    'There are no findings to classify yet. The matrix fills itself in as they are recorded.',
+  'Todavía no hay hallazgos. En campo también se crean desde la propia fotografía, que hereda el activo y la zona.':
+    'No findings yet. In the field they can also be created straight from a photo, which inherits the asset and the area.',
+  'Todavía no hay ninguna línea de CAPEX valorada. Este dashboard se rellena solo a medida que se registran hallazgos con su importe.':
+    'No CAPEX line has been priced yet. This dashboard fills itself in as findings are recorded with their amounts.',
+  'Todavía no hay ninguna. Salen solas al atar una fotografía de la visita a uno de estos equipos, o al clasificarla en este objeto.':
+    'There are none yet. They appear on their own when a photo from the inspection is tied to one of these units, or classified under this item.',
+  'Todavía sin importe. Es válido: en campo se anota lo que se ve antes de saber cuánto cuesta.':
+    'No amount yet. That is valid: in the field you write down what you see before knowing what it costs.',
+  'Todos los del proyecto en el mismo mapa: dos naves en el mismo polígono y una oficina a treinta kilómetros no se gestionan igual.':
+    'All of the project\'s on one map: two units on the same estate and an office thirty kilometres away are not managed the same way.',
+  'Ya puede entrar con la contraseña nueva. Se han cerrado todas las sesiones que hubiera abiertas, también en otros dispositivos.':
+    'You can now sign in with the new password. Every session that was open has been closed, including on other devices.',
+  '`[REC]` Lo correcto sería una invitación por correo. Exige SMTP y no está montado, así que de momento la fija quien da de alta. No se disimula que es un apaño.':
+    '`[REC]` The right way would be an email invitation. That needs SMTP, which is not set up, so for now whoever creates the account sets the password. No pretence that this is anything but a stopgap.',
+
   // ── Rótulos que estaban en la lógica ──────────────────────────────────
   //
   // No son una pantalla: son las cadenas que vivían dentro de la lógica —el

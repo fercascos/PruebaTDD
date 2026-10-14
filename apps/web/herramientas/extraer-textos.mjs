@@ -102,6 +102,22 @@ export function extraer() {
       for (const m of codigo.matchAll(/(?<!=)>\s*([^<>{}\n][^<>{}\n]*?)\s*</g)) {
         apuntar(m[1], fichero, true)
       }
+      // **Y el texto que ocupa varias líneas**, que es casi todo el texto de
+      // ayuda de esta aplicación: un párrafo dentro de un `<p className="ayuda">`
+      // lo parte el formateador en cuatro renglones, y la regla de arriba
+      // —que excluye `\n` a propósito, para no cruzar etiquetas— no lo veía.
+      //
+      // `[REQ]` Era un agujero grande y silencioso: el extractor decía «0 sin
+      // traducir» con **67 párrafos** sin traducir, y el prototipo en inglés
+      // los enseñaba en castellano. Lo cazó abrirlo en un navegador, no leer
+      // el código.
+      //
+      // Se exige que **cada** renglón del nodo sea texto suelto —sin `<`, `>`,
+      // `{` ni `}`—, así que un párrafo con una etiqueta o una expresión
+      // dentro no entra. Ésos siguen fuera, y están contados abajo.
+      for (const m of codigo.matchAll(/(?<!=)>[ \t]*\n((?:[ \t]*[^<>{}\n][^<>{}\n]*\n)+)[ \t]*</g)) {
+        apuntar(m[1].replace(/\s+/g, ' '), fichero, true)
+      }
     }
     // Cadenas entrecomilladas.
     for (const m of codigo.matchAll(/'([^'\\\n]{3,})'|"([^"\\\n]{3,})"/g)) {

@@ -26,6 +26,8 @@ import urllib.request
 import uuid
 from typing import Any
 
+import demo_en
+
 CORREO = "admin@ejemplo.example"
 CLAVE = "cubierta invertida 2026"
 
@@ -33,9 +35,10 @@ CLAVE = "cubierta invertida 2026"
 class Api:
     """Cliente mínimo. Sin dependencias: esto se ejecuta a mano, no en CI."""
 
-    def __init__(self, base: str) -> None:
+    def __init__(self, base: str, *, idioma: str = "es") -> None:
         self.base = base.rstrip("/") + "/api/v1"
         self.token: str | None = None
+        self.idioma = idioma
 
     def _pedir(self, metodo: str, ruta: str, cuerpo: Any = None, *, campos: Any = None) -> Any:
         url = f"{self.base}{ruta}"
@@ -43,7 +46,13 @@ class Api:
         datos = None
         if self.token:
             cabeceras["Authorization"] = f"Bearer {self.token}"
+        # El idioma en el que la API tiene que devolver los nombres de
+        # catálogo. En la siembra apenas importa —se escribe, no se lee—, pero
+        # el seeder sí LEE catálogos para codificar: sin esto, sembrar en
+        # inglés buscaría «Roof» en una lista que viene en castellano.
+        cabeceras["Accept-Language"] = self.idioma
         if campos is not None:
+            campos = demo_en.traducir(campos, self.idioma)
             frontera = uuid.uuid4().hex
             cuerpo_bin = io.BytesIO()
             for clave, valor in campos.items():
@@ -64,7 +73,7 @@ class Api:
             datos = cuerpo_bin.getvalue()
             cabeceras["Content-Type"] = f"multipart/form-data; boundary={frontera}"
         elif cuerpo is not None:
-            datos = json.dumps(cuerpo).encode()
+            datos = json.dumps(demo_en.traducir(cuerpo, self.idioma)).encode()
             cabeceras["Content-Type"] = "application/json"
 
         peticion = urllib.request.Request(url, data=datos, headers=cabeceras, method=metodo)
@@ -1194,8 +1203,28 @@ def sembrar(api: Api) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--api", default="http://localhost:8000")
+    parser.add_argument(
+        "--idioma",
+        default="es",
+        choices=("es", "en"),
+        help="Idioma del texto del encargo. Con `en` se traduce desde tools/demo_en.py.",
+    )
     args = parser.parse_args(argv)
-    print(sembrar(Api(args.api)))
+    print(sembrar(Api(args.api, idioma=args.idioma)))
+
+    # `[REQ]` Lo que ha pasado sin traducir, enumerado. Es la mitad del
+    # mecanismo: la traducción va en el borde y no puede olvidarse un sitio,
+    # pero sí puede faltarle una frase a la tabla, y entonces la demostración
+    # sale mezclada. Esto lo dice en vez de dejarlo a la vista de quien abra el
+    # prototipo.
+    if args.idioma != "es" and demo_en.SIN_TRADUCIR:
+        print(
+            f"\n[LIM] {len(demo_en.SIN_TRADUCIR)} textos han ido en castellano "
+            "porque no están en tools/demo_en.py:",
+            file=sys.stderr,
+        )
+        for texto in sorted(demo_en.SIN_TRADUCIR):
+            print(f"  {texto}", file=sys.stderr)
     return 0
 
 

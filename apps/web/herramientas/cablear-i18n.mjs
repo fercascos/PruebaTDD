@@ -90,6 +90,28 @@ for (const fichero of ficheros(FUENTE)) {
     return `${ab}${e1}{traducir(${comillas(clave)})}${e2}${ce}`
   })
 
+  // 1b · Texto JSX que ocupa **varias líneas**: los párrafos de ayuda.
+  //
+  //      <p className="ayuda">
+  //        Tipo de coste → categoría → objeto. Solo se dibujan las ramas
+  //        que tienen algo.
+  //      </p>
+  //
+  //  Se reescribe en una sola llamada y en un solo renglón, aunque quede
+  //  largo: partir el literal exigiría `+` entre trozos y la clave del
+  //  diccionario es la frase entera, así que cualquier corte la rompería.
+  //  Como el único linter del frontend es `tsc`, un renglón largo no es un
+  //  problema; una clave partida sí.
+  codigo = codigo.replace(
+    /(?<!=)(>)[ \t]*\n((?:[ \t]*[^<>{}\n][^<>{}\n]*\n)+)([ \t]*)(<)/g,
+    (todo, ab, cuerpo, sangria, ce) => {
+      const clave = cuerpo.replace(/\s+/g, ' ').trim()
+      if (!(clave in EN)) return todo
+      n += 1
+      return `${ab}\n${sangria}  {traducir(${comillas(clave)})}\n${sangria}${ce}`
+    },
+  )
+
   // 2 · Atributos de texto.
   for (const attr of ATRIBUTOS) {
     const re = new RegExp(`(\\s${attr}=)"([^"\\n]+)"`, 'g')

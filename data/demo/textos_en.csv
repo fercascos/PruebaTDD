@@ -1,0 +1,111 @@
+es,en
+Plataforma logística Getafe Norte,Getafe Norte logistics platform
+Nave A · Getafe Norte,Unit A · Getafe Norte
+Edificio B · Getafe Sur,Building B · Getafe Sur
+"Calle Inventada 14, Polígono Ficticio","14 Calle Inventada, Polígono Ficticio"
+"Avenida Inventada 3, Polígono Ficticio","3 Avenida Inventada, Polígono Ficticio"
+Marca Ficticia,Fictitious Brand
+Nombre Ficticio Uno,Fictitious Name One
+Nombre Ficticio Dos,Fictitious Name Two
+Nombre Ficticio Tres,Fictitious Name Three
+Jefe de mantenimiento del centro,Site maintenance manager
+Property manager de la propiedad,Owner's property manager
+Responsable de la visita,Inspection lead
+Planta baja,Ground floor
+Cubierta,Roof
+Cuarto eléctrico,Electrical room
+Sala Máquinas 2,Plant Room 2
+Muelle 3,Dock 3
+Lucernarios,Rooflights
+Encuentro de cubierta con el muelle,Roof-to-dock junction
+Cuadro general de BT,Main LV switchboard
+Enfriadora,Chiller
+UTA de oficinas,Office AHU
+Climatizadora de la sala de reuniones,Meeting-room air handling unit
+Grupo de presión de PCI,Fire-protection pressure booster set
+Ascensor de carga,Goods lift
+Licencia de actividad,Activity licence (Licencia de Actividad)
+Licencia de primera ocupación,First occupancy licence (Licencia de Primera Ocupación)
+Proyecto de ejecución as-built,As-built detailed design
+Certificado de instalación de baja tensión,Low-voltage installation certificate
+Contrato de mantenimiento de PCI,Fire-protection maintenance contract
+Mantenedor de PCI,Fire-protection maintenance contractor
+El cliente no la localiza,The client cannot locate it
+El ayuntamiento no la emitió en su día y la propiedad no tiene copia. Queda declarado como limitación: no se ha podido comprobar que la actividad esté en regla frente al expediente municipal.,The local authority never issued it and the owner holds no copy. Recorded as a limitation: it has not been possible to confirm that the activity complies with the municipal file.
+"Solo hay planos en PDF escaneados de 2004. Las mediciones de superficie de este informe salen de la memoria y de la visita, no de CAD.","Only scanned PDF drawings from 2004 are available. The areas in this report come from the technical report and the site inspection, not from CAD."
+Cimentación por zapatas aisladas de hormigón armado,Isolated reinforced concrete pad foundations
+"Bajo pilares prefabricados, arriostradas con vigas centradoras en el perímetro. Según la memoria de estructura del proyecto de ejecución, la tensión admisible del terreno considerada fue de 0,20 N/mm².","Beneath precast columns, tied with ground beams around the perimeter. According to the structural section of the detailed design, the allowable ground bearing pressure assumed was 0.20 N/mm²."
+Estructura de pórticos prefabricados de hormigón,Precast concrete portal frame structure
+"Luz de 24 m entre pilares y modulación de 10 m en el sentido longitudinal. La cubierta apoya sobre jácenas delta pretensadas y correas de hormigón, y las juntas de dilatación se resuelven con pilares apareados cada 60 m.","A 24 m span between columns and a 10 m grid along the length. The roof bears on prestressed delta beams and concrete purlins, and the movement joints are formed with paired columns every 60 m."
+Cubierta deck con lámina impermeabilizante de PVC,Deck roof with PVC waterproofing membrane
+"Sobre chapa grecada, con aislamiento de lana de roca y lámina de 1,5 mm de espesor, instalada en 2004. La evacuación de aguas se resuelve con sumideros sifónicos y canalones perimetrales de chapa, y se disponen lucernarios de policarbonato celular en las naves de almacén para aporte de luz natural.","Over profiled steel decking, with rock-wool insulation and a 1.5 mm membrane, installed in 2004. Rainwater is drained through trapped outlets and perimeter sheet-metal gutters, and cellular polycarbonate rooflights provide daylight to the warehouse units."
+Fachada de panel prefabricado de hormigón con acabado liso,Precast concrete panel facade with a smooth finish
+"Paneles de 16 cm de espesor dispuestos en horizontal entre pilares, con las juntas selladas con masilla de poliuretano sobre fondo de junta de polietileno.","Panels 16 cm thick laid horizontally between columns, with the joints sealed using polyurethane mastic over a polyethylene backer rod."
+Carpintería exterior de aluminio con rotura de puente térmico,Thermally broken aluminium external joinery
+Particiones de placa de yeso laminado en zona de oficinas,Plasterboard partitions in the office area
+Solado de terrazo pulido en oficinas y solera fratasada en almacén,Polished terrazzo flooring in the offices and power-floated slab in the warehouse
+"Piezas de 40 × 40 cm en oficinas y solera fratasada mecánicamente en las naves, con tratamiento superficial de cuarzo y juntas de retracción serradas. Los falsos techos de oficinas son de placa de escayola desmontable de 60 × 60 cm.","Tiles of 40 × 40 cm in the offices and a mechanically power-floated slab in the units, with a quartz surface treatment and sawn shrinkage joints. The office suspended ceilings are demountable 60 × 60 cm plaster tiles."
+Urbanización exterior con pavimento de hormigón y muelles de carga,External site works with concrete paving and loading docks
+"Viales perimetrales de hormigón fratasado para tráfico pesado, con nueve muelles de carga dotados de rampa niveladora y abrigo. El cerramiento de parcela es de malla electrosoldada sobre zócalo de hormigón.","Perimeter roadways in power-floated concrete for heavy traffic, with nine loading docks fitted with dock levellers and shelters. The site is enclosed with welded mesh fencing on a concrete plinth."
+Sectorización entre almacén y zona de oficinas,Fire compartmentation between the warehouse and the office area
+"Muro de sectorización de bloque de hormigón hasta cubierta con puertas cortafuegos correderas de EI2 60-C5 en los pasos, según el proyecto de actividad aportado.","A concrete block compartment wall up to the roof, with EI2 60-C5 sliding fire doors at the openings, in accordance with the activity design provided."
+Itinerario accesible desde vía pública hasta el acceso de oficinas,Accessible route from the public highway to the office entrance
+"Rampa de acceso con pendiente del 8 % y pasamanos a doble altura, y plaza de aparcamiento reservada junto a la entrada principal.","An access ramp with an 8 % gradient and handrails at two heights, and a reserved parking bay beside the main entrance."
+Enfriadora aire-agua en cubierta,Air-to-water chiller on the roof
+"Dos unidades en la cubierta del edificio de oficinas, con compresores de tornillo y refrigerante R-410A. Alimentan el circuito de agua fría de los fancoils de planta a través de dos bombas en configuración 1+1. No se han sustituido desde la construcción del edificio.","Two units on the roof of the office building, with screw compressors and R-410A refrigerant. They feed the chilled water circuit serving the floor fan coils through two pumps in a 1+1 arrangement. They have not been replaced since the building was built."
+Fancoils de oficinas,Office fan coil units
+Cuadro general de baja tensión,Main low-voltage switchboard
+"Alimentado desde centro de transformación propio de 630 kVA en media tensión, situado en el cuarto eléctrico de planta baja. La distribución a subcuadros de planta discurre por bandeja metálica perforada bajo el falso techo de las zonas comunes.",Fed from a dedicated 630 kVA medium-voltage substation located in the ground-floor electrical room. Distribution to the floor sub-boards runs on perforated metal tray above the suspended ceiling of the common areas.
+Alumbrado de almacén con luminarias de halogenuros,Warehouse lighting with metal halide luminaires
+Rociadores automáticos en almacén,Automatic sprinklers in the warehouse
+"Cobertura total en las naves de almacén, alimentada desde el grupo de presión contra incendios y su aljibe. No se ha aportado el plano de la red ni el cálculo hidráulico, por lo que no se ha podido comprobar la densidad de diseño.","Full coverage of the warehouse units, fed from the fire pressure booster set and its tank. Neither the layout drawing nor the hydraulic calculation was provided, so the design density could not be verified."
+Bocas de incendio equipadas de 25 mm,"Hose reels, 25 mm"
+Red de saneamiento separativa con arquetas registrables,Separate drainage system with accessible inspection chambers
+Acometida de agua y contador general en arqueta de parcela,Water service connection and main meter in a chamber on the site
+"Acometida de polietileno de 63 mm desde la red municipal, con contador general y válvula de corte en arqueta registrable junto al vallado.","A 63 mm polyethylene connection from the municipal main, with the main meter and an isolating valve in an accessible chamber next to the fence."
+Ascensor eléctrico sin cuarto de máquinas en el núcleo de oficinas,Machine-room-less electric lift in the office core
+"Seis paradas y 630 kg de carga nominal, instalado en 2004 y con mantenimiento contratado. Cabina de 1,10 × 1,40 m con puertas automáticas de 0,80 m.","Six stops and a 630 kg rated load, installed in 2004 and under a maintenance contract. The car is 1.10 × 1.40 m with 0.80 m automatic doors."
+Red de voz y datos con cableado de categoría 6 en oficinas,Voice and data network with category 6 cabling in the offices
+"Canalización sobre bandeja en falso techo y rack de 42 U en el cuarto de comunicaciones de planta baja, con SAI dedicado.","Containment on tray above the suspended ceiling and a 42 U rack in the ground-floor comms room, with a dedicated UPS."
+Puntos de acceso WIFI en oficinas y muelles,WIFI access points in the offices and at the docks
+Aseo accesible en planta baja de oficinas,Accessible WC on the office ground floor
+Lucernarios de policarbonato celular,Cellular polycarbonate rooflights
+Zócalo de hormigón visto y remates de chapa,Exposed concrete plinth and sheet-metal flashings
+Protección de la estructura de hormigón prefabricado,Fire protection of the precast concrete structure
+Redacción de proyecto y dirección de obra,Design and construction management
+"No se observan asientos diferenciales, fisuras en soleras perimetrales ni humedades por capilaridad en arranques de pilar. Sin catas ni ensayos, la valoración se limita a lo observable en superficie.","No differential settlement, cracking in the perimeter slabs or rising damp at the column bases was observed. Without trial pits or testing, this assessment is limited to what can be seen at the surface."
+"Estructura en buen estado general. Se aprecian coqueras superficiales en dos pilares de la fachada norte, sin armadura vista, y ligera fisuración por retracción en algunas jácenas, sin afección aparente a la capacidad portante.","The structure is in generally good condition. Surface honeycombing is visible on two columns of the north facade, with no exposed reinforcement, and slight shrinkage cracking in some beams, with no apparent effect on load-bearing capacity."
+"Lámina en el tramo final de su vida útil, con parcheos visibles en los encuentros con petos y en el perímetro de varios lucernarios. No se observan filtraciones activas en el momento de la visita, pero el estado general aconseja prever su renovación integral.","The membrane is at the end of its service life, with visible patching at the upstand junctions and around several rooflights. No active leaks were observed at the time of the inspection, but its overall condition means full replacement should be allowed for."
+"Sellado de juntas endurecido y con pérdida de adherencia en tramos de la fachada sur y oeste, que es por donde entra el agua cuando llueve con viento. El panel en sí no presenta daños estructurales.","The joint sealant has hardened and lost adhesion along parts of the south and west facades, which is where water gets in when it rains with wind. The panels themselves show no structural damage."
+"Carpintería estanca y con los herrajes operativos. Se observa condensación en el canal de varias ventanas de la fachada norte, compatible con una ventilación insuficiente del local más que con un fallo del cerramiento.","The joinery is weathertight and the ironmongery works. Condensation is visible in the drainage channel of several north-facade windows, consistent with inadequate ventilation of the space rather than a failure of the envelope."
+"Particiones en buen estado, con desperfectos puntuales de uso en zonas de paso. Nada que exceda el mantenimiento corriente.","The partitions are in good condition, with isolated wear in circulation areas. Nothing beyond routine maintenance."
+Terrazo con desgaste desigual en zonas de paso y dos juntas de retracción de la solera del almacén con el sellado levantado por el tránsito de carretillas.,"The terrazzo shows uneven wear in circulation areas, and the sealant has lifted from two shrinkage joints in the warehouse slab under forklift traffic."
+"Pavimento con fisuración y hundimientos localizados en la zona de maniobra de camiones, y dos rampas niveladoras con el sistema hidráulico fuera de servicio. El cerramiento de parcela está vencido en el tramo trasero.","The paving is cracked with localised settlement in the lorry manoeuvring area, and two dock levellers have their hydraulics out of service. The site fence is leaning along the rear stretch."
+"La sectorización se corresponde con la del proyecto de actividad en lo comprobable a simple vista. Dos puertas cortafuegos tienen el cierrapuertas desconectado y una está calzada en abierto, lo que anula la sectorización en servicio.","The compartmentation matches the activity design as far as can be checked by eye. Two fire doors have their closers disconnected and one is wedged open, which defeats the compartmentation in use."
+"Itinerario practicable en su recorrido principal. El pasamanos de la rampa es simple y no a doble altura, y la plaza reservada carece de la señalización vertical exigida.","The main route is usable. The ramp has a single handrail rather than two heights, and the reserved bay lacks the required upright signage."
+"Funcionamiento correcto en las unidades comprobadas. Se aprecia suciedad acumulada en las baterías y filtros de varias plantas, compatible con un mantenimiento espaciado.","The units checked work correctly. Dirt has built up on the coils and filters on several floors, consistent with infrequent maintenance."
+"Veintiún años de servicio sin sustitución, por encima de la vida útil habitual de una enfriadora de tornillo. El R-410A está en calendario de retirada progresiva, de modo que una avería mayor obligaría a sustituir el equipo y no solo a repararlo.","Twenty-one years in service without replacement, beyond the usual service life of a screw chiller. R-410A is being phased out, so a major breakdown would mean replacing the unit rather than simply repairing it."
+Cuadro sin protección diferencial en dos de las líneas de salida a subcuadros de planta. La envolvente está en buen estado y el centro de transformación no presenta signos de sobrecarga.,The board has no residual current protection on two of the outgoing ways to the floor sub-boards. The enclosure is in good condition and the substation shows no signs of overload.
+Luminarias de halogenuros metálicos con el rendimiento propio de una instalación de esta antigüedad. Sustituirlas por tecnología LED es la actuación de amortización más rápida del inmueble.,Metal halide luminaires performing as expected for an installation of this age. Replacing them with LED is the fastest-paying action in the property.
+"No se ha podido verificar la densidad de diseño: sin el plano de la red ni el cálculo hidráulico, el alcance de la protección es una limitación del informe y no una conclusión.","The design density could not be verified: without the layout drawing or the hydraulic calculation, the extent of protection is a limitation of this report and not a conclusion."
+"Bocas accesibles y señalizadas, con presión correcta en las dos comprobadas. Falta el certificado de mantenimiento vigente de la instalación.","The hose reels are accessible and signed, with correct pressure in the two checked. The current maintenance certificate for the installation is missing."
+Dos arquetas del ramal de muelles con sedimentos y una tapa rota. No se observan retornos ni olores en el momento de la visita.,Two chambers on the dock branch contain silt and one cover is broken. No backflow or odours were observed at the time of the inspection.
+"Acometida en servicio y sin fugas aparentes. La arqueta acumula tierra y la tapa está deformada, lo que dificulta el acceso al contador y a la válvula de corte.","The connection is in service with no apparent leaks. The chamber has filled with soil and the cover is distorted, which makes access to the meter and the isolating valve difficult."
+"Ascensor en servicio y con el mantenimiento al día, pero con veintiún años y sin sustitución de maniobra. Las dimensiones de cabina no alcanzan las exigidas para un ascensor accesible en obra nueva, condición que el edificio no tiene por su antigüedad.","The lift is in service and its maintenance is up to date, but it is twenty-one years old and the controller has not been replaced. The car dimensions fall short of those required for an accessible lift in new build, a requirement the building does not carry given its age."
+"Cobertura suficiente en oficinas y discontinua en el interior del almacén, donde la estanteria metálica genera sombras. Los puntos de acceso son de una generación anterior a la actual.","Coverage is adequate in the offices and patchy inside the warehouse, where the steel racking creates shadows. The access points are a generation behind the current one."
+"Aseo con espacio de giro suficiente y barras abatibles, pero con el lavabo a una altura superior a la admisible y sin espacio libre inferior.","The WC has an adequate turning circle and drop-down rails, but the basin is higher than permitted and has no clear space beneath it."
+"Remates de chapa con óxido incipiente en el lado norte y algún tramo desprendido en la zona de muelles, probablemente por golpes de maniobra.","The sheet-metal flashings show incipient rust on the north side and some sections have come away in the dock area, most likely from manoeuvring impacts."
+"No se ha aportado la justificación de resistencia al fuego de la estructura. Sin ella no puede afirmarse el cumplimiento, y queda recogido como limitación del informe.","No evidence of the fire resistance of the structure was provided. Without it compliance cannot be stated, and this is recorded as a limitation of the report."
+Lámina de cubierta con ampollas generalizadas,Widespread blistering of the roof membrane
+Juntas de dilatación abiertas en fachada norte,Open movement joints on the north facade
+Falso techo con manchas de humedad en dos plantas,Damp staining to the suspended ceiling on two floors
+Enfriadora al final de su vida útil,Chiller at the end of its service life
+Climatizadora de oficinas fuera de servicio,Office air handling unit out of service
+Cuadro general sin protección diferencial en dos líneas,Main board without residual current protection on two ways
+Luminarias de almacén sin sustituir a LED,Warehouse luminaires not yet converted to LED
+Red de PCI sin certificado de mantenimiento vigente,Fire-protection system without a current maintenance certificate
+Escalera de emergencia sin señalización fotoluminiscente,Escape stair without photoluminescent signage
+"Observado durante la visita. Importe estimado, sin oferta.","Observed during the inspection. Estimated amount, no quotation obtained."
+"Visita de una jornada con el jefe de mantenimiento. Se recorrieron cubierta, sala de máquinas, cuarto eléctrico y muelles.","A one-day inspection with the maintenance manager. The roof, plant room, electrical room and docks were walked."
+"Entrada por el muelle 4, portón norte. Preguntar por el jefe de mantenimiento; hay que firmar el libro de visitas en garita.","Entry via dock 4, north gate. Ask for the maintenance manager; the visitors' book must be signed at the gatehouse."
+"No se accedió al interior del centro de transformación: la llave la tiene la compañía distribuidora. Tampoco a la cubierta del edificio de oficinas por lluvia. Lo que se dice de las dos sale de documentación, no de inspección.","The inside of the substation was not accessed: the distribution company holds the key. Nor was the roof of the office building, because of rain. What is said about both comes from documentation, not from inspection."
