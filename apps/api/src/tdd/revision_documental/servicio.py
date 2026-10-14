@@ -125,7 +125,8 @@ def comprobaciones_vigentes(s: Session) -> list[Comprobacion]:
     filas = (
         s.execute(
             text(
-                "SELECT code, name_es, description_es FROM doc_check_type "
+                "SELECT code, nombre(name_es, name_en) AS name_es, description_es FROM "
+                "doc_check_type "
                 "WHERE is_active ORDER BY display_order, code"
             )
         )
@@ -146,7 +147,7 @@ def _documento_para_revisar(s: Session, document_id: uuid.UUID) -> dict[str, Any
                 "d.display_name, d.original_filename, d.file_extension, d.mime_type, "
                 "d.sha256, d.status, CAST(d.confidentiality AS text) AS confidentiality, "
                 "o.storage_key, i.title AS solicitado, "
-                "c.name_es AS categoria "
+                "nombre(c.name_es, c.name_en) AS categoria "
                 "FROM document d "
                 "JOIN stored_object o ON o.id = d.stored_object_id "
                 "LEFT JOIN doc_request_item i ON i.id = d.doc_request_item_id "

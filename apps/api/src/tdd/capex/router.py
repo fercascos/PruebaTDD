@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core import concurrencia as cc
+from tdd.core.db import fijar_idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.exports.plantilla_capex import Idioma
 from tdd.findings.riesgos import SIN_GRADO
@@ -210,7 +211,7 @@ def resumen_por_activo(project_id: uuid.UUID, s: SesionDep) -> Any:
         s.execute(
             text(
                 "SELECT a.id AS asset_id, a.name AS asset_name, a.asset_code, "
-                "t.name_es AS typology_name, "
+                "nombre(t.name_es, t.name_en) AS typology_name, "
                 "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
                 "COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
@@ -220,7 +221,7 @@ def resumen_por_activo(project_id: uuid.UUID, s: SesionDep) -> Any:
                 "LEFT JOIN finding f ON f.asset_id = a.id AND f.deleted_at IS NULL "
                 "LEFT JOIN capex_item ci ON ci.finding_id = f.id "
                 "WHERE a.project_id = :p AND a.deleted_at IS NULL "
-                "GROUP BY a.id, a.name, a.asset_code, t.name_es ORDER BY a.name"
+                "GROUP BY a.id, a.name, a.asset_code, nombre(t.name_es, t.name_en) ORDER BY a.name"
             ),
             {"p": project_id},
         )
@@ -269,7 +270,8 @@ def resumen_por_horizonte(
     filas = (
         s.execute(
             text(
-                "SELECT th.code AS time_horizon_code, th.name_es AS time_horizon_name, "
+                "SELECT th.code AS time_horizon_code, nombre(th.name_es, th.name_en) AS "
+                "time_horizon_name, "
                 "count(ci.id) AS lines, COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.tax_amount), 0) AS tax_amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
@@ -288,7 +290,8 @@ def resumen_por_horizonte(
                 + ") ci ON ci.time_horizon_id = th.id "
                 # Los cinco plazos salen siempre, con ceros: un plazo que
                 # desaparece de la lista se confunde con uno que no toca.
-                "GROUP BY th.code, th.name_es, th.sort_order ORDER BY th.sort_order"
+                "GROUP BY th.code, nombre(th.name_es, th.name_en), th.sort_order ORDER BY "
+                "th.sort_order"
             ),
             {"p": project_id, "a": _activos(asset_id)},
         )
@@ -353,14 +356,15 @@ def resumen_por_concepto(
         s.execute(
             text(
                 "SELECT COALESCE(cc.code, 'SIN_CONCEPTO') AS capex_concept_code, "
-                "COALESCE(cc.name_es, 'Sin concepto') AS capex_concept_name, "
+                "COALESCE(nombre(cc.name_es, cc.name_en), 'Sin concepto') AS capex_concept_name, "
                 "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
                 "COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
                 "FROM capex_item ci "
                 "JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
                 "LEFT JOIN capex_concept cc ON cc.id = f.capex_concept_id "
-                "WHERE ci.project_id = :p " + FILTRO_DE_ACTIVOS + "GROUP BY cc.code, cc.name_es "
+                "WHERE ci.project_id = :p " + FILTRO_DE_ACTIVOS + "GROUP BY cc.code, "
+                "nombre(cc.name_es, cc.name_en) "
                 # De mayor a menor: es el orden en el que se lee un reparto, y
                 # el que permite doblar la cola en «Otros» sin recalcular nada.
                 "ORDER BY sum(ci.amount) DESC"
@@ -404,7 +408,8 @@ def resumen_por_capitulo(
     filas = (
         s.execute(
             text(
-                "SELECT cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                "SELECT cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS "
+                "chapter_name, "
                 "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
                 "COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
@@ -417,7 +422,7 @@ def resumen_por_capitulo(
                 "                                     THEN cod.parent_id ELSE cod.id END "
                 "WHERE ci.project_id = :p "
                 + FILTRO_DE_ACTIVOS
-                + "GROUP BY cap.code, cap.name_es ORDER BY sum(ci.amount) DESC"
+                + "GROUP BY cap.code, nombre(cap.name_es, cap.name_en) ORDER BY sum(ci.amount) DESC"
             ),
             {"p": project_id, "a": _activos(asset_id)},
         )
@@ -477,7 +482,7 @@ def resumen_por_riesgo(
                 # Qué grados ve esta organización lo decide la RLS del catálogo,
                 # no un `WHERE` aquí: una organización con sus propios grados
                 # los vería filtrados en un sitio y no en el otro.
-                "  SELECT rl.code AS risk_code, rl.name_es AS risk_name, "
+                "  SELECT rl.code AS risk_code, nombre(rl.name_es, rl.name_en) AS risk_name, "
                 "         rl.score AS risk_score, "
                 "         count(DISTINCT ci.finding_id) AS findings, "
                 "         count(ci.id) AS lines, "
@@ -489,7 +494,7 @@ def resumen_por_riesgo(
                 "    JOIN finding f ON f.id = ci.finding_id AND f.deleted_at IS NULL "
                 "    WHERE ci.project_id = :p " + FILTRO_DE_ACTIVOS + "  ) ci "
                 "    ON ci.risk_level_id = rl.id "
-                "  GROUP BY rl.code, rl.name_es, rl.score "
+                "  GROUP BY rl.code, nombre(rl.name_es, rl.name_en), rl.score "
                 # Y la fila de los que nadie clasificó, solo si la hay.
                 "  UNION ALL "
                 "  SELECT :sin, 'Sin clasificar', NULL, "
@@ -546,10 +551,11 @@ def resumen_por_objeto(
     filas = (
         s.execute(
             text(
-                "SELECT cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                "SELECT cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS "
+                "chapter_name, "
                 # El objeto solo existe si el hallazgo bajó al nivel 3.
                 "CASE WHEN cod.level = 3 THEN cod.code END AS object_code, "
-                "CASE WHEN cod.level = 3 THEN cod.name_es END AS object_name, "
+                "CASE WHEN cod.level = 3 THEN nombre(cod.name_es, cod.name_en) END AS object_name, "
                 "count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
                 "COALESCE(sum(ci.amount), 0) AS amount, "
                 "COALESCE(sum(ci.total_cost), 0) AS total_cost "
@@ -560,7 +566,8 @@ def resumen_por_objeto(
                 "                                     THEN cod.parent_id ELSE cod.id END "
                 "WHERE ci.project_id = :p "
                 + FILTRO_DE_ACTIVOS
-                + "GROUP BY cap.code, cap.name_es, cod.level, cod.code, cod.name_es "
+                + "GROUP BY cap.code, nombre(cap.name_es, cap.name_en), cod.level, cod.code, "
+                "nombre(cod.name_es, cod.name_en) "
                 # El capítulo se ordena por SU total, no por el del trozo: si no,
                 # las barras saldrían intercaladas y dejaría de leerse.
                 "ORDER BY sum(sum(ci.amount)) OVER (PARTITION BY cap.code) DESC, "
@@ -594,10 +601,17 @@ class ResumenPorPagador(BaseModel):
 #: pagar, cuánto acaba recayendo sobre quien compra. «Sin determinar» al final y
 #: **no es una tercera forma de pagar**: es una casilla sin rellenar, depende de
 #: los contratos de arrendamiento y lo decide una persona actuación a actuación.
-PAGADORES: tuple[tuple[str, str, int], ...] = (
-    ("NO", "Lo asume la propiedad", 1),
-    ("SI", "Repercutible al inquilino", 2),
-    ("NA", "Sin determinar", 3),
+#: El inglés va al lado y no en un `if`: estos tres rótulos son el único
+#: catálogo de la aplicación que vive en Python y no en la base, así que se
+#: meten en el `VALUES` con sus dos idiomas y los resuelve la misma función
+#: `nombre()` que todo lo demás. Un solo mecanismo. `[REQ]` 0030
+#:
+#: «Recoverable» es el término del cliente —así titula la columna en su
+#: plantilla inglesa—; el resto de la frase es nuestro.
+PAGADORES: tuple[tuple[str, str, str, int], ...] = (
+    ("NO", "Lo asume la propiedad", "Borne by the landlord", 1),
+    ("SI", "Repercutible al inquilino", "Recoverable from the tenant", 2),
+    ("NA", "Sin determinar", "Not determined", 3),
 )
 
 
@@ -634,25 +648,27 @@ def resumen_por_pagador(
                 # de activos va en el `ON` y no en un `WHERE`: en un `WHERE`
                 # convertiría el `LEFT JOIN` en interno y se perderían las filas
                 # vacías, que son justo las que hay que enseñar.
-                "SELECT p.code AS tenant_recoverable, p.name_es, "
+                "SELECT p.code AS tenant_recoverable, "
+                "       nombre(p.name_es, p.name_en) AS name_es, "
                 "       count(DISTINCT f.id) AS findings, count(ci.id) AS lines, "
                 "       COALESCE(sum(ci.amount), 0) AS amount, "
                 "       COALESCE(sum(ci.total_cost), 0) AS total_cost "
                 "FROM (VALUES "
-                + ", ".join(f"(:c{i}, :n{i}, :o{i})" for i in range(len(PAGADORES)))
-                + ") AS p(code, name_es, orden) "
+                + ", ".join(f"(:c{i}, :n{i}, :e{i}, :o{i})" for i in range(len(PAGADORES)))
+                + ") AS p(code, name_es, name_en, orden) "
                 "LEFT JOIN finding f ON CAST(f.tenant_recoverable AS text) = p.code "
                 "     AND f.project_id = :p AND f.deleted_at IS NULL "
                 + FILTRO_DE_ACTIVOS
                 + "LEFT JOIN capex_item ci ON ci.finding_id = f.id "
-                "GROUP BY p.code, p.name_es, p.orden ORDER BY p.orden"
+                "GROUP BY p.code, nombre(p.name_es, p.name_en), p.orden ORDER BY p.orden"
             ),
             {
                 "p": project_id,
                 "a": _activos(asset_id),
-                **{f"c{i}": c for i, (c, _, _) in enumerate(PAGADORES)},
-                **{f"n{i}": n for i, (_, n, _) in enumerate(PAGADORES)},
-                **{f"o{i}": o for i, (_, _, o) in enumerate(PAGADORES)},
+                **{f"c{i}": c for i, (c, _, _, _) in enumerate(PAGADORES)},
+                **{f"n{i}": n for i, (_, n, _, _) in enumerate(PAGADORES)},
+                **{f"e{i}": e for i, (_, _, e, _) in enumerate(PAGADORES)},
+                **{f"o{i}": o for i, (_, _, _, o) in enumerate(PAGADORES)},
             },
         )
         .mappings()
@@ -701,7 +717,7 @@ def exportar_xlsx(
     """
     from tdd.exports import capex_desde_snapshot as puente
 
-    datos = _snapshot_de_trabajo(s, project_id)
+    datos = _snapshot_de_trabajo(s, project_id, idioma=idioma)
     proyecto = datos["project"]
     prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
 
@@ -725,16 +741,27 @@ def exportar_xlsx(
     )
 
 
-def _snapshot_de_trabajo(s: Session, project_id: uuid.UUID) -> dict[str, Any]:
+def _snapshot_de_trabajo(
+    s: Session, project_id: uuid.UUID, *, idioma: Idioma | None = None
+) -> dict[str, Any]:
     """El estado actual del proyecto, con los borradores dentro.
 
     Estados de TRABAJO, no los publicables: el equipo comparte el CAPEX
     mientras todavía lo construye, y un fichero que se deja fuera las líneas en
     borrador da un total que no cuadra con la pantalla desde la que se pulsó el
     botón. Lo descartado sigue fuera.
+
+    `idioma` manda sobre la cabecera de la petición cuando lo que se está
+    construyendo es un **entregable**: la descarga del CAPEX lleva su propio
+    desplegable de idioma, que es el que decide cuál de las dos plantillas del
+    cliente se rellena, y los nombres de dentro tienen que ir en ese idioma y
+    no en el de la pantalla. Sin él —las pantallas que solo miran— vale el de
+    la petición. `[REQ]` 0030
     """
     from tdd.reporting import snapshot as snap
 
+    if idioma is not None:
+        fijar_idioma(s, idioma.value)
     return snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
 
 
@@ -801,7 +828,7 @@ def exportar_cartera_zip(
 
     from tdd.exports import capex_desde_snapshot as puente
 
-    datos = _snapshot_de_trabajo(s, project_id)
+    datos = _snapshot_de_trabajo(s, project_id, idioma=idioma)
     proyecto = datos["project"]
     prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
     partes = puente.separar_por_activo(datos)

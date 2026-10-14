@@ -28,6 +28,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd import cola
+from tdd.core.db import fijar_idioma
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import guardia, images
 from tdd.evidence.router import AlmacenDep, AntivirusDep
@@ -457,14 +458,14 @@ def _reunir_estado(
         (fila.code, fila.name)
         for fila in s.execute(
             text(
-                "SELECT cap.code AS code, cap.name_es AS name "
+                "SELECT cap.code AS code, nombre(cap.name_es, cap.name_en) AS name "
                 "FROM descriptivo_objeto d "
                 "JOIN capex_code cc ON cc.id = d.capex_code_id "
                 "JOIN capex_code cap ON cap.id = cc.parent_id "
                 "JOIN asset a ON a.id = d.asset_id "
                 "WHERE a.project_id = :p AND a.deleted_at IS NULL "
                 "  AND d.validado_at IS NOT NULL "
-                "GROUP BY cap.code, cap.name_es "
+                "GROUP BY cap.code, nombre(cap.name_es, cap.name_en) "
                 "HAVING bool_or(COALESCE(d.texto, '') <> '') "
                 "   AND NOT bool_or(COALESCE(d.valoracion, '') <> '') "
                 "ORDER BY cap.code"
@@ -638,6 +639,17 @@ def generar(
             status.HTTP_409_CONFLICT,
             "No se puede generar el informe: " + "; ".join(motivos_de_bloqueo(avisos)),
         )
+
+    # `[REQ]` 0030 · El idioma del informe es **el de su plantilla**, no el de
+    # la pantalla de quien lo pide. Alguien que trabaja con la interfaz en
+    # castellano y elige la plantilla inglesa quiere un informe en inglés: la
+    # plantilla ES la elección del idioma, y por eso hay una por idioma.
+    #
+    # Se fija justo antes de congelar porque el snapshot es lo que acaba
+    # impreso: los nombres de catálogo entran ya traducidos y el worker no
+    # tiene que saber nada del idioma. `SET LOCAL` lo deja en esta
+    # transacción, así que no contamina la conexión al volver al pool.
+    fijar_idioma(s, str(plantilla["language"]))
 
     # [REQ] §17.6 · El snapshot ES la versión de los datos del informe. Se
     # congela AQUÍ, en la petición, y no en el worker: entre pulsar «Generar» y

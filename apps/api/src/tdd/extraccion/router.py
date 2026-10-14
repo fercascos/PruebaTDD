@@ -660,7 +660,7 @@ def listar_equipos_propuestos(
             text(
                 "SELECT e.id, e.equipment_type, CAST(e.quantity AS text) AS quantity, e.unit, "
                 "e.descripcion, CAST(e.estado AS text) AS estado, e.technical_system_id, "
-                "ts.name_es AS technical_system_name, e.document_id, "
+                "nombre(ts.name_es, ts.name_en) AS technical_system_name, e.document_id, "
                 "CAST(e.doc_type AS text) AS doc_type, e.seccion, e.evidencia, e.extractor, "
                 "e.es_simulada, e.decidida_por, e.equipment_id, d.display_name AS documento "
                 "FROM propuesta_de_equipo e "

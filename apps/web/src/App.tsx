@@ -1,7 +1,7 @@
 import { type ComponentType, type ReactNode, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { alCambiarSesion, haySesion, restaurarSesion } from './api/cliente'
-import { ProveedorDeIdioma, traducir } from './i18n/idioma'
+import { ProveedorDeIdioma, traducir, useIdioma } from './i18n/idioma'
 import { Marco } from './ui/Marco'
 import { Entrar } from './paginas/Entrar'
 import { Recuperar, Restablecer } from './paginas/Recuperar'
@@ -46,7 +46,42 @@ export function App({
 
   return (
     <ProveedorDeIdioma>
-    <Enrutador>
+      <Contenido Enrutador={Enrutador} autenticado={autenticado} />
+    </ProveedorDeIdioma>
+  )
+}
+
+/**
+ * El árbol de rutas, **remontado al cambiar de idioma**.
+ *
+ * `[REQ]` 0030 · La mitad del texto de una pantalla no está en el código: los
+ * nombres de las zonas, los capítulos de CAPEX y los conceptos vienen de la
+ * API, que los devuelve en el idioma de la cabecera `Accept-Language`. Traducir
+ * los rótulos repinta, pero **no vuelve a pedir los datos**, así que al pulsar
+ * «EN» la pantalla quedaba a medias: los botones en inglés y las zonas en
+ * castellano.
+ *
+ * `key={idioma}` lo arregla sin tocar ni una pantalla: React desmonta el
+ * subárbol y lo monta de nuevo, así que cada `useEffect` que pide datos se
+ * ejecuta otra vez, ahora con la cabecera nueva.
+ *
+ * `[LIM]` Es una maza, no un bisturí: se pierde el estado local de la pantalla
+ * —un formulario a medio rellenar, un acordeón abierto, el desplazamiento—. Se
+ * acepta porque cambiar de idioma es una acción deliberada y poco frecuente, y
+ * porque la alternativa —que cada pantalla meta el idioma en las dependencias
+ * de su `useEffect`— son cincuenta sitios donde olvidarse, y olvidarse no
+ * falla: deja media pantalla en el otro idioma.
+ */
+function Contenido({
+  Enrutador,
+  autenticado,
+}: {
+  Enrutador: ComponentType<{ children: ReactNode }>
+  autenticado: boolean
+}) {
+  const { idioma } = useIdioma()
+  return (
+    <Enrutador key={idioma}>
       <Routes>
         <Route
           path="/entrar"
@@ -79,6 +114,5 @@ export function App({
         />
       </Routes>
     </Enrutador>
-    </ProveedorDeIdioma>
   )
 }

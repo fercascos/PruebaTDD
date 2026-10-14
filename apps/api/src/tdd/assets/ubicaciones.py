@@ -76,7 +76,7 @@ class ActualizarNodo(BaseModel):
 
 _CAMPOS = """
     SELECT n.id, n.asset_id, n.parent_id, CAST(n.node_type AS text) AS node_type,
-           n.zone_id, z.name_es AS zone_name, n.code, n.name, n.level_order,
+           n.zone_id, nombre(z.name_es, z.name_en) AS zone_name, n.code, n.name, n.level_order,
            nlevel(n.path) - 1 AS profundidad,
            (SELECT string_agg(a.name, ' › ' ORDER BY nlevel(a.path))
               FROM location_node a

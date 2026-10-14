@@ -880,7 +880,7 @@ def mapa(project_id: uuid.UUID, s: SesionDep, asset_id: uuid.UUID | None = None)
             text(
                 "SELECT p.id, p.gps_latitude AS latitude, p.gps_longitude AS longitude, "
                 "p.display_name, p.caption, p.taken_at, p.asset_id, "
-                "a.name AS asset_name, z.name_es AS zone_name "
+                "a.name AS asset_name, nombre(z.name_es, z.name_en) AS zone_name "
                 "FROM photo p "
                 "LEFT JOIN asset a ON a.id = p.asset_id "
                 "LEFT JOIN zone z ON z.id = p.zone_id "

@@ -133,7 +133,7 @@ class Solicitud(BaseModel):
 
 
 _SOLICITUD = """
-    SELECT d.id, d.category_id, c.name_es AS category_name, d.asset_id, d.title,
+    SELECT d.id, d.category_id, nombre(c.name_es, c.name_en) AS category_name, d.asset_id, d.title,
            d.description, CAST(d.status AS text) AS status, d.unavailable_reason,
            d.requested_at, d.received_at, d.affects_report_limitations, d.display_order,
            d.row_version

@@ -53,7 +53,8 @@ def listar(project_id: uuid.UUID, s: SesionDep) -> Any:
     filas = (
         s.execute(
             text(
-                "SELECT ph.id, pd.code, pd.name_es, CAST(ph.status AS text) AS status, "
+                "SELECT ph.id, pd.code, nombre(pd.name_es, pd.name_en) AS name_es, CAST(ph.status "
+                "AS text) AS status, "
                 "pd.status_is_derived, ph.owner_user_id, ph.display_order "
                 "FROM project_phase ph JOIN phase_definition pd ON pd.id = ph.phase_definition_id "
                 "WHERE ph.project_id = :p ORDER BY ph.display_order, pd.display_order"

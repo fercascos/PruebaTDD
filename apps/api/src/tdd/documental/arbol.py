@@ -137,7 +137,7 @@ def _fase_documental(s: Session, project_id: uuid.UUID) -> uuid.UUID:
 
 
 _NODOS = """
-    SELECT id AS category_id, code, name_es
+    SELECT id AS category_id, code, nombre(name_es, name_en) AS name_es
     FROM doc_request_category
     WHERE organization_id IS NULL AND code ~ '^S[0-9]'
     ORDER BY display_order, code
@@ -246,7 +246,7 @@ def fijar_estado(
     nodo = (
         s.execute(
             text(
-                "SELECT id, name_es FROM doc_request_category "
+                "SELECT id, nombre(name_es, name_en) AS name_es FROM doc_request_category "
                 "WHERE organization_id IS NULL AND code = :c"
             ),
             {"c": code},

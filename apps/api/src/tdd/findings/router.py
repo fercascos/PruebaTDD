@@ -593,8 +593,9 @@ def matriz_de_riesgos(
         s.execute(
             text(
                 "SELECT f.id::text AS finding_id, "
-                "  rl.code AS risk_code, rl.name_es AS risk_name, rl.score AS risk_score, "
-                "  cap.code AS chapter_code, cap.name_es AS chapter_name, "
+                "  rl.code AS risk_code, nombre(rl.name_es, rl.name_en) AS risk_name, rl.score AS "
+                "risk_score, "
+                "  cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS chapter_name, "
                 "  th.code AS horizonte, COALESCE(ci.amount, 0) AS importe "
                 "FROM finding f "
                 "LEFT JOIN risk_level rl ON rl.id = f.risk_level_id "
@@ -625,7 +626,12 @@ def matriz_de_riesgos(
 
     catalogo = [
         (f.code, f.name_es, f.score)
-        for f in s.execute(text("SELECT code, name_es, score FROM risk_level ORDER BY score")).all()
+        for f in s.execute(
+            text(
+                "SELECT code, nombre(name_es, name_en) AS name_es, score "
+                "FROM risk_level ORDER BY score"
+            )
+        ).all()
     ]
     horizontes = [
         f[0] for f in s.execute(text("SELECT code FROM time_horizon ORDER BY sort_order")).all()

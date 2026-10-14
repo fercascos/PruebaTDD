@@ -122,8 +122,8 @@ class Traidos(BaseModel):
 
 
 _CAMPOS = """
-    d.id, d.capex_code_id, cc.code AS capex_code, cc.name_es AS capex_name,
-    cap.code AS chapter_code, cap.name_es AS chapter_name,
+    d.id, d.capex_code_id, cc.code AS capex_code, nombre(cc.name_es, cc.name_en) AS capex_name,
+    cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS chapter_name,
     d.texto, d.valoracion, d.document_id, d.origen, d.es_simulada,
     d.validado_at IS NOT NULL AS validado,
     CAST(d.validado_at AS text) AS validado_at, d.validado_por,

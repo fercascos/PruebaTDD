@@ -51,6 +51,43 @@ CREATE TABLE app_user (
     UNIQUE (organization_id, email)
 );
 
+-- ── El nombre de un catálogo, en el idioma de la sesión [REQ] 0030 ──────────
+--
+-- Tres sitios leen los nombres de los catálogos y los tres tienen que decir lo
+-- mismo: la API, el generador de informes PPTX y la exportación a XLSX. El
+-- tercero corre en un worker, sin petición HTTP de la que sacar un
+-- `Accept-Language`, así que resolver el idioma en Python acabaría con dos
+-- mecanismos, y dos mecanismos discrepan.
+--
+-- Por eso el idioma viaja por donde ya viaja el contexto de la organización:
+-- una variable de sesión que fija `aplicar_contexto()` con
+-- `set_config(..., TRUE)` al abrir la transacción. La misma pieza que hace que
+-- la RLS no se pueda olvidar hace que el idioma no se pueda olvidar.
+--
+-- STABLE y no IMMUTABLE: depende de `current_setting`, que cambia entre
+-- transacciones. Con IMMUTABLE, PostgreSQL podría cachear un plan con el valor
+-- de otra sesión y una pantalla en inglés saldría en castellano sin motivo
+-- aparente. STABLE basta para usarla en un GROUP BY, que es lo que hace falta.
+--
+-- El TRUE de `current_setting` es *missing_ok*: sin él, una consulta fuera de
+-- una petición —psql, una migración, el worker antes de fijar el contexto—
+-- reventaría en vez de devolver el castellano.
+CREATE FUNCTION nombre(es TEXT, en TEXT) RETURNS TEXT
+    LANGUAGE sql
+    STABLE
+    PARALLEL SAFE
+AS $$
+    SELECT CASE
+        WHEN current_setting('app.idioma', TRUE) = 'en' THEN COALESCE(en, es)
+        ELSE es
+    END
+$$;
+
+COMMENT ON FUNCTION nombre(TEXT, TEXT) IS
+'[REQ] 0030 · El nombre de un catalogo en el idioma de la sesion. '
+'Lee app.idioma, que fija aplicar_contexto() igual que el contexto RLS. '
+'Si no hay traduccion devuelve el castellano, a proposito.';
+
 -- ── Catálogos del sistema ───────────────────────────────────────────────────
 -- organization_id NULL = fila del sistema, no editable por nadie.
 --

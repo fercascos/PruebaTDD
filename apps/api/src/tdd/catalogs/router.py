@@ -54,7 +54,12 @@ class SistemaTecnico(ElementoCatalogo):
 @router.get("/asset-typologies", response_model=list[ElementoCatalogo])
 def tipologias(s: SesionDep) -> Any:
     filas = (
-        s.execute(text("SELECT id, code, name_es FROM asset_typology ORDER BY sort_order"))
+        s.execute(
+            text(
+                "SELECT id, code, nombre(name_es, name_en) AS name_es "
+                "FROM asset_typology ORDER BY sort_order"
+            )
+        )
         .mappings()
         .all()
     )
@@ -86,7 +91,10 @@ def categorias_de_solicitud(s: SesionDep) -> Any:
     """
     filas = (
         s.execute(
-            text("SELECT id, code, name_es FROM doc_request_category ORDER BY display_order, code")
+            text(
+                "SELECT id, code, nombre(name_es, name_en) AS name_es "
+                "FROM doc_request_category ORDER BY display_order, code"
+            )
         )
         .mappings()
         .all()
@@ -113,7 +121,12 @@ def zonas(s: SesionDep, typology_id: uuid.UUID | None = None) -> Any:
     """
     if typology_id is None:
         filas = (
-            s.execute(text("SELECT id, code, name_es FROM zone ORDER BY sort_order"))
+            s.execute(
+                text(
+                    "SELECT id, code, nombre(name_es, name_en) AS name_es "
+                    "FROM zone ORDER BY sort_order"
+                )
+            )
             .mappings()
             .all()
         )
@@ -121,7 +134,7 @@ def zonas(s: SesionDep, typology_id: uuid.UUID | None = None) -> Any:
         filas = (
             s.execute(
                 text(
-                    "SELECT z.id, z.code, z.name_es FROM zone z "
+                    "SELECT z.id, z.code, nombre(z.name_es, z.name_en) AS name_es FROM zone z "
                     "JOIN zone_typology zt ON zt.zone_id = z.id "
                     "WHERE zt.typology_id = :t ORDER BY z.sort_order"
                 ),
@@ -137,7 +150,11 @@ def zonas(s: SesionDep, typology_id: uuid.UUID | None = None) -> Any:
 def riesgos(s: SesionDep) -> Any:
     filas = (
         s.execute(
-            text("SELECT id, code, name_es, score, definition_es FROM risk_level ORDER BY score")
+            text(
+                "SELECT id, code, nombre(name_es, name_en) AS name_es, score, "
+                "       nombre(definition_es, definition_en) AS definition_es "
+                "FROM risk_level ORDER BY score"
+            )
         )
         .mappings()
         .all()
@@ -150,7 +167,8 @@ def horizontes(s: SesionDep) -> Any:
     filas = (
         s.execute(
             text(
-                "SELECT id, code, name_es, year_from, year_to, is_execution_term "
+                "SELECT id, code, nombre(name_es, name_en) AS name_es, year_from, year_to, "
+                "is_execution_term "
                 "FROM time_horizon ORDER BY sort_order"
             )
         )
@@ -171,7 +189,8 @@ def sistemas_tecnicos(s: SesionDep) -> Any:
     filas = (
         s.execute(
             text(
-                "SELECT id, code, name_es, capex_chapter FROM technical_system "
+                "SELECT id, code, nombre(name_es, name_en) AS name_es, capex_chapter FROM "
+                "technical_system "
                 "ORDER BY sort_order, name_es"
             )
         )
@@ -184,7 +203,12 @@ def sistemas_tecnicos(s: SesionDep) -> Any:
 @router.get("/capex-concepts", response_model=list[ElementoCatalogo])
 def conceptos(s: SesionDep) -> Any:
     filas = (
-        s.execute(text("SELECT id, code, name_es FROM capex_concept ORDER BY code"))
+        s.execute(
+            text(
+                "SELECT id, code, nombre(name_es, name_en) AS name_es "
+                "FROM capex_concept ORDER BY code"
+            )
+        )
         .mappings()
         .all()
     )
@@ -201,14 +225,21 @@ def codigos(
     filas = (
         s.execute(
             text(
-                "SELECT id, code, name_es, level, parent_id FROM capex_code "
+                "SELECT id, code, nombre(name_es, name_en) AS name_es, level, parent_id FROM "
+                "capex_code "
                 "WHERE deprecated_at IS NULL "
                 # Los `CAST` no son adorno: PostgreSQL no puede inferir el tipo
                 # de un parámetro que solo aparece en `IS NULL` y dentro de una
                 # concatenación, y falla con «could not determine data type».
                 "  AND (CAST(:level AS int) IS NULL OR level = CAST(:level AS int)) "
                 "  AND (CAST(:parent AS uuid) IS NULL OR parent_id = CAST(:parent AS uuid)) "
+                # La búsqueda mira **los dos idiomas**, no el de la sesión. Es a
+                # propósito: un técnico español que atiende un encargo en inglés
+                # escribe «cubierta» y tiene que encontrar «Roof». Buscar solo
+                # por el idioma activo le quitaría resultados sin decirle por
+                # qué. `COALESCE` porque `name_en` puede faltar.
                 "  AND (CAST(:q AS text) IS NULL OR name_es ILIKE '%' || :q || '%' "
+                "       OR COALESCE(name_en, '') ILIKE '%' || :q || '%' "
                 "       OR code ILIKE '%' || :q || '%') "
                 "ORDER BY code"
             ),
@@ -246,7 +277,8 @@ def zona_permitida(zone_id: uuid.UUID, typology_id: uuid.UUID, s: SesionDep) -> 
         return {"permitida": True, "motivo": None}
     nombres = s.execute(
         text(
-            "SELECT z.name_es, t.name_es FROM zone z, asset_typology t "
+            "SELECT nombre(z.name_es, z.name_en), nombre(t.name_es, t.name_en) FROM zone z, "
+            "asset_typology t "
             "WHERE z.id = :z AND t.id = :t"
         ),
         {"z": zone_id, "t": typology_id},

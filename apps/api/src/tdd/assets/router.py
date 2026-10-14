@@ -330,9 +330,9 @@ def zonas_permitidas(asset_id: uuid.UUID, s: SesionDep) -> Any:
     filas = (
         s.execute(
             text(
-                "SELECT z.id, z.code, z.name_es FROM zone z "
+                "SELECT z.id, z.code, nombre(z.name_es, z.name_en) AS name_es FROM zone z "
                 "JOIN zone_typology zt ON zt.zone_id = z.id "
-                "WHERE zt.typology_id = :t ORDER BY z.sort_order, z.name_es"
+                "WHERE zt.typology_id = :t ORDER BY z.sort_order, nombre(z.name_es, z.name_en)"
             ),
             {"t": str(activo["typology_id"])},
         )
@@ -368,9 +368,9 @@ def zonas_del_activo(asset_id: uuid.UUID, s: SesionDep) -> Any:
         s.execute(
             text(
                 "SELECT az.id, az.zone_id, CAST(az.tenure AS text) AS tenure, az.area_sqm, "
-                "az.notes, z.code AS zone_code, z.name_es AS zone_name "
+                "az.notes, z.code AS zone_code, nombre(z.name_es, z.name_en) AS zone_name "
                 "FROM asset_zone az JOIN zone z ON z.id = az.zone_id "
-                "WHERE az.asset_id = :a ORDER BY z.sort_order, z.name_es"
+                "WHERE az.asset_id = :a ORDER BY z.sort_order, nombre(z.name_es, z.name_en)"
             ),
             {"a": str(asset_id)},
         )

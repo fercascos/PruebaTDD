@@ -142,7 +142,7 @@ def construir(
         # El **código** de tipología, no solo el nombre: la plantilla ofrece
         # una lista de zonas distinta por tipo de edificio, y para escribir la
         # etiqueta que espera su desplegable hace falta saber cuál es.
-        "t.code AS typology_code, t.name_es AS typology_name "
+        "t.code AS typology_code, nombre(t.name_es, t.name_en) AS typology_name "
         "FROM asset a JOIN asset_typology t ON t.id = a.typology_id "
         "WHERE a.project_id = :p AND a.deleted_at IS NULL ORDER BY a.name",
         {"p": str(project_id)},
@@ -154,18 +154,19 @@ def construir(
         "SELECT f.id, f.asset_id, f.title, f.description, f.comments, f.recommendation, "
         "CAST(f.status AS text) AS status, "
         "CAST(f.tenant_recoverable AS text) AS tenant_recoverable, "
-        "z.code AS zone_code, z.name_es AS zone_name, "
-        "cc.code AS capex_code, cc.name_es AS capex_name, "
+        "z.code AS zone_code, nombre(z.name_es, z.name_en) AS zone_name, "
+        "cc.code AS capex_code, nombre(cc.name_es, cc.name_en) AS capex_name, "
         # `[REQ]` Los ancestros viajan **resueltos** en el snapshot, no como una
         # referencia a resolver luego. La tabla del informe agrupa por tipo de
         # coste y por capítulo igual que la plantilla del cliente, y un informe
         # de hace seis meses tiene que poder reconstruirse aunque el catálogo
         # haya cambiado de nombre desde entonces.
-        "tipo.code AS capex_type_code, tipo.name_es AS capex_type_name, "
-        "cap.code AS capex_chapter_code, cap.name_es AS capex_chapter_name, "
-        "CASE WHEN cc.level = 3 THEN cc.name_es END AS capex_item_name, "
-        "rl.code AS risk_code, rl.name_es AS risk_name, rl.score AS risk_score, "
-        "con.code AS concept_code, con.name_es AS concept_name "
+        "tipo.code AS capex_type_code, nombre(tipo.name_es, tipo.name_en) AS capex_type_name, "
+        "cap.code AS capex_chapter_code, nombre(cap.name_es, cap.name_en) AS capex_chapter_name, "
+        "CASE WHEN cc.level = 3 THEN nombre(cc.name_es, cc.name_en) END AS capex_item_name, "
+        "rl.code AS risk_code, nombre(rl.name_es, rl.name_en) AS risk_name, rl.score AS "
+        "risk_score, "
+        "con.code AS concept_code, nombre(con.name_es, con.name_en) AS concept_name "
         "FROM finding f "
         "JOIN zone z ON z.id = f.zone_id "
         "JOIN capex_code cc ON cc.id = f.capex_code_id "
@@ -188,7 +189,7 @@ def construir(
         "SELECT ci.id, ci.finding_id, ci.amount, ci.tax_pct, ci.tax_amount, ci.total_cost, "
         "CAST(ci.price_status AS text) AS price_status, ci.measurement_unit, "
         "ci.measurement_quantity, ci.measurement_unit_price, "
-        "th.code AS time_horizon_code, th.name_es AS time_horizon_name "
+        "th.code AS time_horizon_code, nombre(th.name_es, th.name_en) AS time_horizon_name "
         "FROM capex_item ci "
         "JOIN time_horizon th ON th.id = ci.time_horizon_id "
         "JOIN finding f ON f.id = ci.finding_id "
@@ -271,7 +272,8 @@ def construir(
     # árbol, que es lo que permite separar la rama urbanística del resto.
     documentacion = _filas(
         s,
-        "SELECT d.asset_id, a.name AS asset_name, c.code, c.name_es AS categoria, d.title, "
+        "SELECT d.asset_id, a.name AS asset_name, c.code, nombre(c.name_es, c.name_en) AS "
+        "categoria, d.title, "
         "CAST(d.status AS text) AS status, d.unavailable_reason, d.received_at "
         "FROM doc_request_item d "
         "JOIN doc_request_category c ON c.id = d.category_id "
@@ -297,8 +299,8 @@ def construir(
     # firmado le quitaría a esa casilla todo su sentido.
     descriptivos = _filas(
         s,
-        "SELECT d.asset_id, cc.code AS capex_code, cc.name_es AS capex_name, "
-        "cap.code AS chapter_code, cap.name_es AS chapter_name, "
+        "SELECT d.asset_id, cc.code AS capex_code, nombre(cc.name_es, cc.name_en) AS capex_name, "
+        "cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS chapter_name, "
         "d.texto, d.valoracion, d.es_simulada "
         "FROM descriptivo_objeto d "
         "JOIN capex_code cc ON cc.id = d.capex_code_id "
@@ -317,23 +319,31 @@ def construir(
         # La definición íntegra del riesgo se vuelca al informe como leyenda:
         # sin ella, «Alto» es una palabra sin criterio detrás.
         "risk_levels": _filas(
-            s, "SELECT code, name_es, score, definition_es FROM risk_level ORDER BY score", {}
+            s,
+            "SELECT code, nombre(name_es, name_en) AS name_es, score, "
+            "       nombre(definition_es, definition_en) AS definition_es "
+            "FROM risk_level ORDER BY score",
+            {},
         ),
         "time_horizons": _filas(
-            s, "SELECT code, name_es, sort_order FROM time_horizon ORDER BY sort_order", {}
+            s,
+            "SELECT code, nombre(name_es, name_en) AS name_es, sort_order "
+            "FROM time_horizon ORDER BY sort_order",
+            {},
         ),
         # Solo los códigos y zonas realmente usados: copiar los 125 nodos del
         # árbol en cada informe engordaría el snapshot sin aportar nada.
         "capex_codes": _filas(
             s,
-            "SELECT DISTINCT cc.code, cc.name_es, cc.level FROM capex_code cc "
+            "SELECT DISTINCT cc.code, nombre(cc.name_es, cc.name_en) AS name_es, cc.level FROM "
+            "capex_code cc "
             "JOIN finding f ON f.capex_code_id = cc.id "
             "WHERE f.project_id = :p AND f.deleted_at IS NULL ORDER BY cc.code",
             {"p": str(project_id)},
         ),
         "zones": _filas(
             s,
-            "SELECT DISTINCT z.code, z.name_es FROM zone z "
+            "SELECT DISTINCT z.code, nombre(z.name_es, z.name_en) AS name_es FROM zone z "
             "JOIN finding f ON f.zone_id = z.id "
             "WHERE f.project_id = :p AND f.deleted_at IS NULL ORDER BY z.code",
             {"p": str(project_id)},

@@ -167,7 +167,7 @@ def _leer(s: Session, asset_id: uuid.UUID) -> dict[str, Any]:
         s.execute(
             text(
                 "SELECT mc.id, mc.capex_code_id, mc.notes, cc.code AS capex_code, "
-                "cc.name_es AS capex_name FROM memoria_categoria mc "
+                "nombre(cc.name_es, cc.name_en) AS capex_name FROM memoria_categoria mc "
                 "JOIN capex_code cc ON cc.id = mc.capex_code_id "
                 "WHERE mc.memoria_id = :m ORDER BY mc.orden, cc.code"
             ),

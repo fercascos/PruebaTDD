@@ -64,6 +64,39 @@ def obtener_usuario(
     )
 
 
+def idioma_de(request: Request) -> str:
+    """El idioma de la petición, de `Accept-Language`. `[REQ]` 0030.
+
+    Una cabecera y no un parámetro de ruta ni un campo del token:
+
+    * **Un parámetro** habría que acordarse de pasarlo en cada una de las
+      llamadas del frontend, y la que se olvide sale en castellano en una
+      pantalla inglesa sin que nada avise.
+    * **El token** ataría el idioma a la sesión: cambiar de idioma exigiría
+      volver a entrar, y dos pestañas no podrían estar en idiomas distintos.
+      El idioma es una preferencia de la vista, no de la cuenta.
+
+    `[LIM]` La negociación es deliberadamente tonta: se mira **el primer**
+    idioma de la lista y nada más. No se interpretan los pesos (`q=`) ni se
+    ordena, porque quien manda esta cabecera es el frontend de esta aplicación
+    con un valor que él mismo fija —`en` o `es`—, no un navegador negociando.
+    Si algún día la consume un tercero, esto se queda corto y hay que ordenar
+    por `q`.
+
+    Lo que sí hace bien es **reconocer la etiqueta**: `en` o `en-algo`, no
+    «cualquier cosa que empiece por en». La primera versión usaba
+    `startswith("en")` y daba inglés para `english` y para `enm`, que es el
+    inglés medio; lo cazó la prueba de cabeceras raras. `es` y `es-419` son
+    castellano por el mismo camino.
+
+    Cualquier otra cosa, incluida la ausencia de cabecera, es castellano.
+    """
+    cabecera = request.headers.get("accept-language", "")
+    primero = cabecera.split(",")[0].strip().lower()
+    etiqueta = primero.split("-")[0]
+    return "en" if etiqueta == "en" else "es"
+
+
 def obtener_sesion(
     request: Request,
     usuario: Annotated[UsuarioActual, Depends(obtener_usuario)],
@@ -91,6 +124,7 @@ def obtener_sesion(
                 # leen las políticas RLS, y tiene que decir lo mismo que la
                 # comprobación de la API o se producen 500 en vez de 403.
                 can_manage_suggestions=usuario.gestiona_sugerencias,
+                idioma=idioma_de(request),
             ),
         )
         yield session

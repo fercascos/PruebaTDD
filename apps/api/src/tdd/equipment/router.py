@@ -169,9 +169,10 @@ _CAMPOS = """
     CAST(e.criticality AS text) AS criticality,
     e.quantity, e.unit, e.has_documentation, e.notes, e.pasa_a_capex, e.row_version,
     e.maintenance_months, e.last_maintenance_date, e.next_maintenance_due,
-    ts.name_es AS technical_system_name, z.name_es AS zone_name,
-    e.capex_code_id, cc.code AS capex_code, cc.name_es AS capex_name,
-    cap.code AS chapter_code, cap.name_es AS chapter_name
+    nombre(ts.name_es, ts.name_en) AS technical_system_name,
+       nombre(z.name_es, z.name_en) AS zone_name,
+    e.capex_code_id, cc.code AS capex_code, nombre(cc.name_es, cc.name_en) AS capex_name,
+    cap.code AS chapter_code, nombre(cap.name_es, cap.name_en) AS chapter_name
 """
 
 _DESDE = """
@@ -206,7 +207,8 @@ def _horizontes(s: Session) -> list[service.Horizonte]:
     filas = (
         s.execute(
             text(
-                "SELECT code, name_es, year_from, year_to FROM time_horizon "
+                "SELECT code, nombre(name_es, name_en) AS name_es, year_from, year_to FROM "
+                "time_horizon "
                 "WHERE is_execution_term ORDER BY sort_order"
             )
         )
@@ -510,7 +512,8 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
         s.execute(
             text(
                 "SELECT e.id, e.tag, e.equipment_type, e.manufacturer, e.model, "
-                "       e.capex_code_id, ts.name_es AS sistema, ts.capex_chapter "
+                "       e.capex_code_id, nombre(ts.name_es, ts.name_en) AS sistema, "
+                "ts.capex_chapter "
                 "FROM equipment e "
                 "LEFT JOIN technical_system ts ON ts.id = e.technical_system_id "
                 "WHERE e.asset_id = :a AND e.pasa_a_capex AND e.deleted_at IS NULL "
@@ -727,7 +730,10 @@ def _catalogos(s: Session, project_id: uuid.UUID) -> tuple[Any, Any, Any]:
     sistemas = [
         importacion.Sistema(id=str(f["id"]), code=f["code"], name_es=f["name_es"])
         for f in s.execute(
-            text("SELECT id, code, name_es FROM technical_system ORDER BY sort_order")
+            text(
+                "SELECT id, code, nombre(name_es, name_en) AS name_es "
+                "FROM technical_system ORDER BY sort_order"
+            )
         )
         .mappings()
         .all()

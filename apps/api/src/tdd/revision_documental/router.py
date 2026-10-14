@@ -129,7 +129,7 @@ def _revision(s: Any, revision_id: uuid.UUID) -> dict[str, Any]:
     obs = (
         s.execute(
             text(
-                "SELECT f.id, t.code AS check_code, t.name_es AS check_name, "
+                "SELECT f.id, t.code AS check_code, nombre(t.name_es, t.name_en) AS check_name, "
                 "CAST(f.verdict AS text) AS verdict, f.summary, f.evidence_text, "
                 "f.evidence_page, f.confidence, CAST(f.decision AS text) AS decision, "
                 "f.decided_by, f.decision_note "
@@ -220,7 +220,7 @@ def decidir(finding_id: uuid.UUID, cuerpo: Decision, s: SesionDep, usuario: Usua
     fila = (
         s.execute(
             text(
-                "SELECT f.id, t.code AS check_code, t.name_es AS check_name, "
+                "SELECT f.id, t.code AS check_code, nombre(t.name_es, t.name_en) AS check_name, "
                 "CAST(f.verdict AS text) AS verdict, f.summary, f.evidence_text, "
                 "f.evidence_page, f.confidence, CAST(f.decision AS text) AS decision, "
                 "f.decided_by, f.decision_note "

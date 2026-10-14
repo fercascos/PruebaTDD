@@ -14,6 +14,7 @@
  *    dos rotarían el token, la segunda presentaría uno ya rotado y el servidor
  *    revocaría la familia entera por reutilización, echando al usuario.
  */
+import { idiomaEnVivo } from '../i18n/traducir'
 
 const BASE = '/api/v1'
 const CLAVE_REFRESCO = 'tdd.refresh'
@@ -129,6 +130,17 @@ type Opciones = {
 async function peticion(ruta: string, opciones: Opciones = {}): Promise<Response> {
   const cabeceras: Record<string, string> = {}
   if (tokenDeAcceso) cabeceras.Authorization = `Bearer ${tokenDeAcceso}`
+
+  /* `[REQ]` 0030 · El idioma en el que la API tiene que devolver los nombres
+     de catálogo —zonas, capítulos de CAPEX, conceptos—, que viven en la base y
+     no en `i18n/textos.ts`. Va aquí, en el único sitio por el que pasan todas
+     las peticiones, y no en cada llamada: una llamada que se olvidara de
+     pasarlo devolvería castellano en una pantalla inglesa sin que nada
+     avisara, y eso no se ve hasta que lo ve un cliente.
+
+     Se lee de `idiomaEnVivo()` y no de un `hook` porque esto no es un
+     componente. Es la razón de que el traductor viva en un módulo sin React. */
+  cabeceras['Accept-Language'] = idiomaEnVivo()
 
   // Comillas dobles y sin `W/`: `If-Match` exige comparación fuerte.
   if (opciones.version !== undefined) cabeceras['If-Match'] = `"${opciones.version}"`
