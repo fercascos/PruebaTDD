@@ -181,7 +181,7 @@ export function PestanaEquipo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Buscar" ayuda={traducir('Fabricante, modelo, número de serie…')}>
+        <Campo etiqueta={traducir('Buscar')} ayuda={traducir('Fabricante, modelo, número de serie…')}>
           <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </Campo>
         <label className="casilla">
@@ -229,9 +229,7 @@ export function PestanaEquipo({
         <>
           {vencidos > 0 && (
             <Mensaje tipo="aviso">
-              {vencidos} equipo(s) han agotado su vida útil esperada. Es una estimación a partir del
-              año de instalación, no un dictamen: un equipo con mantenimiento puede seguir dando
-              servicio.
+              {vencidos} {traducir('equipo(s) han agotado su vida útil esperada. Es una estimación a partir del año de instalación, no un dictamen: un equipo con mantenimiento puede seguir dando servicio.')}
             </Mensaje>
           )}
           <div className="desbordable">
@@ -525,14 +523,14 @@ function FichaDeEquipo({
           </Campo>
         </Rejilla>
         <Rejilla>
-          <Campo etiqueta="Fabricante">
+          <Campo etiqueta={traducir('Fabricante')}>
             <input
               value={f.manufacturer}
               maxLength={120}
               onChange={(e) => cambiar('manufacturer', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Modelo">
+          <Campo etiqueta={traducir('Modelo')}>
             <input
               value={f.model}
               maxLength={120}
@@ -546,7 +544,7 @@ function FichaDeEquipo({
               onChange={(e) => cambiar('serial_number', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Cantidad">
+          <Campo etiqueta={traducir('Cantidad')}>
             <input
               type="number"
               step="0.01"

@@ -71,8 +71,32 @@ export function normalizar(texto) {
  * y al menos tres caracteres.
  */
 export function esVisible(texto) {
-  return texto.length >= 3 && /\p{L}/u.test(texto)
+  if (texto.length < 3 || !/\p{L}/u.test(texto)) return false
+  return !NO_SE_TRADUCE.some((r) => r.test(texto))
 }
+
+/** Lo que el parser da por texto y **no se traduce**, en una lista explícita.
+ *
+ *  `[REQ]` Es corta y cerrada a propósito: una heurística aquí vuelve a
+ *  esconder texto de verdad, que es el error que se ha corregido dos veces en
+ *  este fichero. Son nombres que se escriben igual en los dos idiomas porque
+ *  **no son palabras**: una ruta, una variable de entorno, un formato de
+ *  fichero, un marcador de plantilla, un correo de ejemplo.
+ */
+const NO_SE_TRADUCE = [
+  /^[A-Z][A-Z0-9_]{2,}$/, // VITE_MAP_TILE_URL, PPTX, XLSX
+  /^[\w.-]+\.(md|example|json|ts|tsx|html|csv|py|sql)$/, // docs/07-...md, .env.example
+  /^\S+@\S+\.\S+$/, // nombre@ejemplo.example
+  /^\[\w+\]$/, // [Espacio], [Proyecto]
+  /^[\w./-]+\/[\w./-]+$/, // docs/07-roles-permisos.md
+  // Unidades: se escriben igual en los dos idiomas y son símbolos, no
+  // palabras. El separador de al lado entra con ellas porque el formateador
+  // las deja juntas: «px ·».
+  /^(?:px|KB|MB|GB|mm|cm|m|m²|kg|kVA|kW|ud)(?:\s*[·×/])?$/,
+  // El marcador de requisito —«`[REQ]` §15.2 ·»— es una referencia al
+  // documento de requisitos, no una frase, e igual en los dos idiomas.
+  /^`?\[(?:REQ|REC|SUP|LIM|PDV)\]`?(?:\s*§[\d.]+)?(?:\s*·)?$/,
+]
 
 /**
  * Los trozos de texto visible de un fichero, con su posición exacta.

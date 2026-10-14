@@ -211,9 +211,7 @@ export function Anotador({
       </div>
 
       <p className="ayuda">
-        `[REQ]` §15.2 · <strong>{traducir('El original no se toca.')}</strong> Esto crea una versión nueva con la
-        capa encima; el fichero de la cámara sigue igual y las anotaciones se pueden volver a
-        editar. Se queman sobre la imagen solo al generar el informe.
+        `[REQ]` §15.2 · <strong>{traducir('El original no se toca.')}</strong> {traducir('Esto crea una versión nueva con la capa encima; el fichero de la cámara sigue igual y las anotaciones se pueden volver a editar. Se queman sobre la imagen solo al generar el informe.')}
       </p>
 
       <div className="acciones">

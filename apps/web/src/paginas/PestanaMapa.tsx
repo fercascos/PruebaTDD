@@ -208,17 +208,13 @@ export function PestanaMapa({
           que cuatro chinchetas se lean como «se hicieron cuatro fotos». */}
       {datos.sin_coordenadas > 0 && (
         <Mensaje tipo="aviso">
-          {datos.sin_coordenadas} fotografías no llevan coordenadas y no salen aquí. En un sótano no
-          hay señal, y muchos móviles van con la localización apagada. No se infiere ninguna
-          posición: si no vino en el EXIF, no está.
+          {datos.sin_coordenadas} {traducir('fotografías no llevan coordenadas y no salen aquí. En un sótano no hay señal, y muchos móviles van con la localización apagada. No se infiere ninguna posición: si no vino en el EXIF, no está.')}
         </Mensaje>
       )}
 
       {!TESELAS && (
         <Mensaje tipo="aviso">
-          Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no
-          contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la
-          escala—. Para ver el mapa, defina <code>VITE_MAP_TILE_URL</code> con un proveedor cuyas
+          {traducir('Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la escala—. Para ver el mapa, defina')}{' '}<code>VITE_MAP_TILE_URL</code> con un proveedor cuyas
           condiciones de uso permitan este caso. Ver <code>.env.example</code>.
         </Mensaje>
       )}

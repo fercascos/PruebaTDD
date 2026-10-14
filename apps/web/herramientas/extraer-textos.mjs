@@ -89,6 +89,13 @@ export function extraer() {
     encontrados.get(t).add(relative(RAIZ, fichero))
   }
 
+  /** Apunta sin preguntar si parece texto: ya lo ha dicho el parser. */
+  const apuntarSinFiltro = (texto, fichero) => {
+    const t = texto.trim().replace(/\s+/g, ' ')
+    if (!encontrados.has(t)) encontrados.set(t, new Set())
+    encontrados.get(t).add(relative(RAIZ, fichero))
+  }
+
   for (const fichero of ficheros(FUENTE)) {
     if (fichero.includes(`${join('src', 'i18n')}`)) continue // el propio catálogo
     const codigo = readFileSync(fichero, 'utf8')
@@ -103,7 +110,14 @@ export function extraer() {
       // dentro del mismo párrafo. Los dos salían «0 sin traducir» mientras el
       // prototipo en inglés los enseñaba en castellano.
       for (const trozo of textoVisible(codigo, fichero)) {
-        apuntar(trozo.texto, fichero, true)
+        // **Sin filtrar.** Lo que el parser llama `JsxText` es texto de la
+        // interfaz por definición del lenguaje, así que pasarlo por `esTexto()`
+        // solo puede quitar aciertos. Y quitaba muchos: esa función se escribió
+        // para la época de la expresión regular, cuando había que adivinar, y
+        // descarta el texto que empieza en minúscula —«, y en el total pesan
+        // igual.», «sin validar», «con fecha de esta visita»—, que es
+        // exactamente la forma de un trozo de frase que sigue a un `<strong>`.
+        apuntarSinFiltro(trozo.texto, fichero)
       }
     }
     // Cadenas entrecomilladas.

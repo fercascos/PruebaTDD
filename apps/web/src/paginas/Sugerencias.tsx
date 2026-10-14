@@ -248,7 +248,7 @@ function NuevaSugerencia({
         alGuardar()
       }}
     >
-      <Campo etiqueta="Tipo">
+      <Campo etiqueta={traducir('Tipo')}>
         <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
           {TIPOS.map((t) => (
             <option key={t.code} value={t.code}>

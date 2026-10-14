@@ -80,7 +80,7 @@ export function Personas() {
     <>
       <h1>{traducir('Personas')}</h1>
       <p className="ayuda">
-        Quién puede entrar y con qué rol. La matriz completa de permisos está en{' '}
+        {traducir('Quién puede entrar y con qué rol. La matriz completa de permisos está en')}{' '}
         <code>docs/07-roles-permisos.md</code>.
       </p>
 
@@ -252,7 +252,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
         {traducir('Atiende el buzón de sugerencias')}
       </label>
       <p className="ayuda">
-        `[REQ]` P-41 · El permiso es separable del rol para que alguien pueda atender el buzón{' '}
+        {traducir('`[REQ]` P-41 · El permiso es separable del rol para que alguien pueda atender el buzón')}{' '}
         <strong>sin</strong> ser administrador. Un administrador lo atiende igualmente, lleve o no la
         marca.
       </p>

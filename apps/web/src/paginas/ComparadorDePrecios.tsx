@@ -231,7 +231,7 @@ export function ComparadorDePrecios({
                           setImporte(sinCerosSobrantes(r.unit_price))
                         }}
                       />
-                      <span className="oculto-visual">Elegir {r.source_name}</span>
+                      <span className="oculto-visual">{traducir('Elegir')}{' '}{r.source_name}</span>
                     </label>
                   </td>
                   <td>
@@ -292,8 +292,8 @@ export function ComparadorDePrecios({
 
         {difiere && referencia && (
           <Mensaje tipo="aviso">
-            El importe no coincide con la referencia elegida (
-            {euros.format(Number(referencia.unit_price))}). Explique por qué.
+            {traducir('El importe no coincide con la referencia elegida (')}
+            {euros.format(Number(referencia.unit_price))}{traducir('). Explique por qué.')}
           </Mensaje>
         )}
 
@@ -417,7 +417,7 @@ function ActualizacionPorIndice({
         <>
           <p className="formula">{resultado.formula}</p>
           <button type="button" className="secundario" onClick={() => alAplicar(resultado.resultado)}>
-            Llevar {euros.format(Number(resultado.resultado))} al importe
+            {traducir('Llevar')}{' '}{euros.format(Number(resultado.resultado))} al importe
           </button>
           <p className="ayuda">
             {traducir('No se ha aplicado nada todavía, y aplicarlo solo rellena el campo: sigue haciendo falta validar el precio.')}

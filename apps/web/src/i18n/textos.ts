@@ -814,6 +814,144 @@ export const EN: Record<string, string> = {
   'Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.':
     'Reload and try again; if it happens again, it is an application bug.',
 
+  // ── Y los trozos que empiezan en minúscula ────────────────────────────
+  //
+  // `[REQ]` La cuarta tanda, y la última de esta clase. Al pasar el extractor
+  // al parser quedó un filtro de la época anterior —`esTexto()`, que adivinaba
+  // si una cadena «parecía» texto— y seguía descartando lo que empieza en
+  // minúscula: «sin validar», «con fecha de esta visita», «, y en el total
+  // pesan igual.». Es exactamente la forma de un trozo de frase que sigue a un
+  // `<strong>`, y era la mitad de lo que quedaba en castellano en el
+  // prototipo.
+  //
+  // Ahora el extractor **no filtra** lo que viene del parser: un nodo de texto
+  // JSX es texto de la interfaz, y adivinarlo solo podía quitar aciertos. Lo
+  // único que se descarta es una lista corta y explícita de cosas que no son
+  // palabras —rutas, variables de entorno, unidades, marcadores—, en
+  // `herramientas/jsx.mjs`.
+
+  '% del total': '% of the total',
+  ', no dos en el mismo. El plazo ya usado no aparece en la lista.':
+    ', not two in the same one. A term already used does not appear in the list.',
+  ', y': ', and',
+  ', y en el total pesan igual.': ', and they weigh the same in the total.',
+  '. Aceptarlo lo': '. Accepting it makes it',
+  '. Generar así es legítimo para un borrador interno; enviarlo al cliente sin revisarlo, no.':
+    '. Generating it like this is legitimate for an internal draft; sending it to the client unreviewed is not.',
+  '. Las que no tienen estado están pendientes de pedir.':
+    '. Those with no status are still to be requested.',
+  '. Los documentos que se suban podrán analizarse a petición.':
+    '. Documents uploaded may be analysed on request.',
+  '. Se ofrece, no se impone: el responsable puede tener motivos que la aplicación no conoce.':
+    '. It is offered, not imposed: whoever is responsible may have reasons the application does not know about.',
+  '. Sin ellas no hay nada que importar.': '. Without them there is nothing to import.',
+  '. Todavía no hay proveedor de IA elegido, así que nadie ha leído este documento: las observaciones de abajo ocupan el sitio de las que vendrán y no dicen nada sobre su contenido.':
+    '. No AI provider has been chosen yet, so nobody has read this document: the observations below stand in for the ones that will come and say nothing about its contents.',
+  '. Un botón que no está no se puede preguntar por qué no está.':
+    '. Nobody can ask why a button is missing if it was never there.',
+  '. Van tocadas': '. They are ticked',
+  '1 si no aplica': '1 if not applicable',
+  '1 · La plantilla': '1 · The template',
+  '2 · Subir la hoja': '2 · Upload the sheet',
+  '3 · Qué va a pasar': '3 · What is going to happen',
+  ': entre la propuesta y el entregable hay una persona decidiendo.':
+    ': between the proposal and the deliverable there is a person deciding.',
+  'Alcance:': 'Scope:',
+  'Comentarios:': 'Comments:',
+  'Respuesta:': 'Answer:',
+  'activos': 'assets',
+  'activos con actuaciones': 'assets with actions',
+  'agregados': 'aggregated',
+  'al importe': 'to the amount',
+  'avisos ·': 'warnings ·',
+  'calculada': 'calculated',
+  'casillas': 'boxes',
+  'cliente sin validar': 'client, unvalidated',
+  'con GPS': 'with GPS',
+  'con error ·': 'with an error ·',
+  'con fecha de esta visita': 'dated to this inspection',
+  'con su motivo': 'with its reason',
+  'con un proveedor cuyas condiciones de uso permitan este caso.':
+    'with a provider whose terms of use allow this case.',
+  'con un proveedor cuyas condiciones de uso permitan este caso. Ver':
+    'with a provider whose terms of use allow this case. See',
+  'contra': 'against',
+  'de 8.000 caracteres': 'of 8,000 characters',
+  'del CAPEX del proyecto': 'of the project\'s CAPEX',
+  'del activo': 'of the asset',
+  'del proyecto, agregados ·': 'of the project, aggregated ·',
+  'editables': 'editable',
+  'elegir': 'choose',
+  'en el informe': 'in the report',
+  'en pantalla': 'on screen',
+  'en tabla': 'in a table',
+  'equipos que ya existen con lo que dice la hoja':
+    'existing items of equipment with what the sheet says',
+  'equipos ·': 'items of equipment ·',
+  'es su propia cuenta': 'is your own account',
+  'fallidas': 'failed',
+  'hallazgos ·': 'findings ·',
+  'hojas y solo se lee «': 'sheets and only «',
+  'inmutable': 'immutable',
+  'lo exigido por normativa hay que ejecutarlo y una mejora es discrecional':
+    'what regulation requires has to be carried out and an improvement is discretionary',
+  'lo incluye todo': 'includes everything',
+  'marcados para CAPEX': 'flagged for CAPEX',
+  'no se ha podido cargar': 'could not be loaded',
+  'no se importan': 'are not imported',
+  'nodos': 'nodes',
+  'objetos': 'items',
+  'objetos con contenido ·': 'items with content ·',
+  'opcional': 'optional',
+  'pendientes': 'pending',
+  'por una persona': 'by a person',
+  'recurrente': 'recurring',
+  'renombradas': 'renamed',
+  'seleccionadas': 'selected',
+  'ser administrador. Un administrador lo atiende igualmente, lleve o no la marca.':
+    'being an administrator. An administrator handles it either way, flagged or not.',
+  'simulada': 'simulated',
+  'sin': 'with no',
+  'sin EXIF · no se infiere': 'no EXIF · nothing inferred',
+  'sin GPS': 'no GPS',
+  'sin activo': 'with no asset',
+  'sin cantidad': 'with no quantity',
+  'sin datos': 'with no data',
+  'sin fecha': 'with no date',
+  'sin sistema': 'with no system',
+  'sin validar': 'unvalidated',
+  'situadas': 'located',
+  'subidas ·': 'uploaded ·',
+  'sustituye': 'replaces',
+  'toca el': 'due on',
+  'validada': 'validated',
+  'validados ·': 'validated ·',
+  'van al informe': 'go into the report',
+  'ver los': 'view the',
+  'visitas a este activo': 'inspections of this asset',
+  'y del sistema': 'and of the system',
+  'ya decidida(s): volver a extraer no las reabre':
+    'already decided: extracting again does not reopen them',
+  'ya estaban ·': 'already there ·',
+  'zona:': 'area:',
+  '«Sin determinar» no es una tercera forma de pagar':
+    '«Not determined» is not a third way of paying',
+  '· Sale de «': '· Comes from «',
+  '· recurrente': '· recurring',
+  '· sin valor:': '· with no value:',
+  '— elija el objeto —': '— choose the item —',
+  '— elija un elemento —': '— choose an element —',
+  '— elija una persona —': '— choose a person —',
+  '— sin asignar —': '— unassigned —',
+  '— sin clasificar —': '— unclassified —',
+  '— sin espacio —': '— no location —',
+  '— sin mapeo —': '— no mapping —',
+  '— sin origen —': '— no source —',
+  '— sin valorar —': '— not assessed —',
+  '— sin zona —': '— no area —',
+  '— todos —': '— all —',
+  '← Todos los activos': '← All assets',
+
   // ── Los trozos de frase que conviven con una etiqueta ─────────────────
   //
   // `[REQ]` La tercera tanda, y la que obligó a cambiar de herramienta. Son

@@ -172,7 +172,7 @@ export function ImportarInventario({
               <>
                 {' · '}
                 <span className="ayuda">
-                  El libro tiene {vista.total_hojas} hojas y solo se lee «{vista.hoja}».
+                  {traducir('El libro tiene')}{' '}{vista.total_hojas} hojas y solo se lee «{vista.hoja}».
                 </span>
               </>
             )}
@@ -180,7 +180,7 @@ export function ImportarInventario({
 
           {vista.columnas_ausentes.length > 0 && (
             <Mensaje tipo="error">
-              Faltan columnas obligatorias: {vista.columnas_ausentes.join(', ')}. Sin ellas no hay
+              {traducir('Faltan columnas obligatorias:')}{' '}{vista.columnas_ausentes.join(', ')}. Sin ellas no hay
               nada que importar.
             </Mensaje>
           )}
@@ -251,7 +251,7 @@ export function ImportarInventario({
                     checked={actualizar}
                     onChange={(e) => setActualizar(e.target.checked)}
                   />
-                  Actualizar los {vista.ya_existen} equipos que ya existen con lo que dice la hoja
+                  {traducir('Actualizar los')}{' '}{vista.ya_existen} equipos que ya existen con lo que dice la hoja
                 </label>
               )}
               {vista.ya_existen > 0 && actualizar && (

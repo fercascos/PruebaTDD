@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useId, useState } from 'react'
 import { porcentaje } from './formato'
 import { colorDePorcion } from './paleta'
@@ -145,7 +146,7 @@ export function Tarta({
             <span className="marca" style={{ background: t.color }} aria-hidden="true" />
             <span className="nombre">
               {t.nombre}
-              {t.agrupa !== undefined && <span className="ayuda"> · {t.agrupa} conceptos</span>}
+              {t.agrupa !== undefined && <span className="ayuda"> · {t.agrupa} {traducir('conceptos')}</span>}
             </span>
             <span className="porcentaje">{t.parte}</span>
             <span className="importe">{formatear(t.valor)}</span>

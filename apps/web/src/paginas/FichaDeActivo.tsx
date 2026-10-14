@@ -165,7 +165,7 @@ export function FichaDeActivo({
       </Rejilla>
 
       <h3>
-        Datos de nave{' '}
+        {traducir('Datos de nave')}{' '}
         {!esIndustrial && (
           <span className="candado">
             {traducir('no aplican a esta tipología · lo que escriba se conserva igualmente')}
@@ -197,7 +197,7 @@ export function FichaDeActivo({
           bloque porque tiene otro origen: los de arriba los teclea quien da de
           alta el proyecto, éstos salen del documento que entrega la propiedad. */}
       <h3>
-        Datos de la memoria técnica{' '}
+        {traducir('Datos de la memoria técnica')}{' '}
         {activo?.memoria_validada_at ? (
           <span className="candado">validada</span>
         ) : (
@@ -211,7 +211,7 @@ export function FichaDeActivo({
         <Campo etiqueta={traducir('Referencia catastral')}>
           <input value={catastro} maxLength={30} onChange={(e) => setCatastro(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Promotor">
+        <Campo etiqueta={traducir('Promotor')}>
           <input value={promotor} maxLength={200} onChange={(e) => setPromotor(e.target.value)} />
         </Campo>
         <Campo etiqueta={traducir('Fecha del proyecto')}>

@@ -3,18 +3,35 @@
  *      node herramientas/cablear-i18n.mjs --ver     # qué tocaría, sin tocar
  *      node herramientas/cablear-i18n.mjs
  *
- *  Son ~600 sitios en 50 ficheros. A mano es media jornada y un puñado de
+ *  Son ~770 sitios en 50 ficheros. A mano es una jornada y un puñado de
  *  despistes; a lo bruto con una expresión regular es romper la aplicación. La
  *  línea que separa las dos cosas es ésta: **solo se sustituye lo que está en
  *  el diccionario**. El diccionario lo construyó el extractor a partir de este
  *  mismo código y lo revisó una persona, así que es una lista blanca, no una
  *  heurística.
  *
- *  Lo que toca, y nada más:
+ *  ## Lo lee el parser de TypeScript, no una expresión regular
  *
- *  1. **Texto suelto dentro de JSX**: `<h1>Proyectos</h1>`.
- *  2. **Atributos de texto** de una lista corta y explícita: `placeholder`,
- *     `title`, `aria-label`, `alt`.
+ *  La primera versión usaba expresiones regulares y se dejó fuera dos clases
+ *  enteras de texto, las dos en silencio:
+ *
+ *  1. El párrafo que el formateador parte en varios renglones —67 nodos—.
+ *  2. El trozo de frase que comparte párrafo con un `<strong>` o un enlace
+ *     —80 más—, que son tres nodos de texto y no uno.
+ *
+ *  Las dos las descubrió **abrir el prototipo en inglés y ver castellano**, no
+ *  leer el código. Ahora se recorre el árbol de sintaxis (`jsx.mjs`): un nodo
+ *  `JsxText` es texto de la interfaz por definición del lenguaje.
+ *
+ *  ## El espacio en blanco, que es donde esto se rompe
+ *
+ *  JSX decide si un espacio cuenta según dónde esté: el que rodea un salto de
+ *  línea **desaparece**, y el que está en el mismo renglón **se queda**. Así
+ *  que `>\n  Hola\n<` pinta «Hola» y `> Hola <` pinta « Hola ».
+ *
+ *  Por eso no se sustituye el nodo entero: se conserva su espacio tal cual y
+ *  solo se cambia el texto de dentro. Cambiarlo hubiera juntado palabras —
+ *  «…de él:Descriptivo»— en los sitios donde el texto va pegado a una etiqueta.
  *
  *  `[LIM]` Lo que **no** toca, a propósito, porque distinguirlo exige entender
  *  el programa y no solo leerlo: las cadenas sueltas en la lógica —un `const`
@@ -28,9 +45,7 @@
  *
  *  - `ArbolDeCapex.tsx` «Código retirado» y `DocumentacionDelActivo.tsx`
  *    «Pendiente de pedir» son rótulos que viajan dentro de un dato —el nombre
- *    de un nodo del árbol, el de una opción— y los traduce quien los pinta. El
- *    informe de arriba las ve porque son argumentos de una llamada, no valores
- *    de una tabla, y esa diferencia no se lee en el renglón.
+ *    de un nodo del árbol, el de una opción— y los traduce quien los pinta.
  *  - `PestanaEquipo.tsx` «vencido» es una **clase CSS** que se llama igual que
  *    un rótulo del catálogo. Traducirla rompería la hoja de estilos.
  *  - `Plantillas.tsx` «Estándar» es **dato**: el nombre con el que se da de
@@ -42,19 +57,11 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { EN } from '../src/i18n/textos.ts'
+import { textoVisible } from './jsx.mjs'
 
 const RAIZ = new URL('..', import.meta.url).pathname.replace(/^\/@fs/, '')
 const FUENTE = join(RAIZ, 'src')
 const VER = process.argv.includes('--ver')
-
-/** Atributos y props cuyo valor lee una persona. El resto son nombres y rutas.
- *
- *  `etiqueta`, `ayuda` y `titulo` no son del HTML: son las props de los
- *  componentes de formulario de esta aplicación (`ui/Formulario.tsx`), y entre
- *  las tres son 140 textos. Sin ellas el cableado automático se dejaba fuera
- *  casi todas las etiquetas de los formularios, que es donde más texto hay.
- */
-const ATRIBUTOS = ['placeholder', 'title', 'aria-label', 'alt', 'etiqueta', 'ayuda', 'titulo']
 
 function ficheros(dir) {
   const salida = []
@@ -71,6 +78,28 @@ function comillas(s) {
   return `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 }
 
+/** El espacio de un borde del nodo, con la regla de JSX.
+ *
+ *  Si lleva un salto de línea, JSX lo descarta y aquí se descarta igual —se
+ *  conserva tal cual para no estropear la sangría del fichero—. Si no, es un
+ *  espacio que **se pinta** y hay que mantenerlo dentro de las llaves o se
+ *  pierde.
+ */
+function bordes(bruto) {
+  const izq = bruto.match(/^\s*/)[0]
+  const der = bruto.match(/\s*$/)[0]
+  // Con salto de línea, JSX descarta el espacio: se vuelve a escribir tal cual
+  // para no estropear la sangría y no hay nada que reponer. Sin salto, el
+  // espacio **se pinta**, así que se sustituye por un `{' '}` explícito y el
+  // original NO se reescribe: dejar los dos pintaría dos espacios.
+  return {
+    izqFichero: izq.includes('\n') ? izq : '',
+    derFichero: der.includes('\n') ? der : '',
+    izqPintado: izq.includes('\n') || !izq ? '' : "{' '}",
+    derPintado: der.includes('\n') || !der ? '' : "{' '}",
+  }
+}
+
 let tocados = 0
 let sustituciones = 0
 const sinTocar = new Map()
@@ -81,51 +110,36 @@ for (const fichero of ficheros(FUENTE)) {
   let codigo = original
   let n = 0
 
-  // 1 · Texto suelto dentro de JSX. El `(?<!=)` descarta la flecha de una
-  //     función, que con el genérico de al lado parece una etiqueta.
-  codigo = codigo.replace(/(?<!=)(>)(\s*)([^<>{}\n][^<>{}\n]*?)(\s*)(<)/g, (todo, ab, e1, texto, e2, ce) => {
-    const clave = texto.trim().replace(/\s+/g, ' ')
-    if (!(clave in EN)) return todo
+  // **De atrás hacia delante**: cada sustitución mueve todo lo que viene
+  // después, así que recorrer en orden invalidaría las posiciones restantes.
+  const trozos = textoVisible(original, fichero).reverse()
+  for (const trozo of trozos) {
+    if (!(trozo.texto in EN)) continue
+    const bruto = original.slice(trozo.inicio, trozo.fin)
+    if (trozo.tipo === 'attr') {
+      // `etiqueta="Zona"` → `etiqueta={traducir('Zona')}`. El literal incluye
+      // sus comillas, así que se sustituye entero.
+      codigo =
+        codigo.slice(0, trozo.inicio) +
+        `{traducir(${comillas(trozo.texto)})}` +
+        codigo.slice(trozo.fin)
+    } else {
+      const b = bordes(bruto)
+      codigo =
+        codigo.slice(0, trozo.inicio) +
+        b.izqFichero +
+        b.izqPintado +
+        `{traducir(${comillas(trozo.texto)})}` +
+        b.derPintado +
+        b.derFichero +
+        codigo.slice(trozo.fin)
+    }
     n += 1
-    return `${ab}${e1}{traducir(${comillas(clave)})}${e2}${ce}`
-  })
-
-  // 1b · Texto JSX que ocupa **varias líneas**: los párrafos de ayuda.
-  //
-  //      <p className="ayuda">
-  //        Tipo de coste → categoría → objeto. Solo se dibujan las ramas
-  //        que tienen algo.
-  //      </p>
-  //
-  //  Se reescribe en una sola llamada y en un solo renglón, aunque quede
-  //  largo: partir el literal exigiría `+` entre trozos y la clave del
-  //  diccionario es la frase entera, así que cualquier corte la rompería.
-  //  Como el único linter del frontend es `tsc`, un renglón largo no es un
-  //  problema; una clave partida sí.
-  codigo = codigo.replace(
-    /(?<!=)(>)[ \t]*\n((?:[ \t]*[^<>{}\n][^<>{}\n]*\n)+)([ \t]*)(<)/g,
-    (todo, ab, cuerpo, sangria, ce) => {
-      const clave = cuerpo.replace(/\s+/g, ' ').trim()
-      if (!(clave in EN)) return todo
-      n += 1
-      return `${ab}\n${sangria}  {traducir(${comillas(clave)})}\n${sangria}${ce}`
-    },
-  )
-
-  // 2 · Atributos de texto.
-  for (const attr of ATRIBUTOS) {
-    const re = new RegExp(`(\\s${attr}=)"([^"\\n]+)"`, 'g')
-    codigo = codigo.replace(re, (todo, izq, texto) => {
-      const clave = texto.trim().replace(/\s+/g, ' ')
-      if (!(clave in EN)) return todo
-      n += 1
-      return `${izq}{traducir(${comillas(clave)})}`
-    })
   }
 
   if (n === 0) continue
 
-  // El import, una sola vez y después del último `import` que ya haya.
+  // El import, una sola vez.
   if (!codigo.includes("from '../i18n/idioma'") && !codigo.includes("from './i18n/idioma'")) {
     const profundidad = relative(FUENTE, fichero).split('/').length - 1
     const ruta = profundidad === 0 ? './i18n/idioma' : `${'../'.repeat(profundidad)}i18n/idioma`

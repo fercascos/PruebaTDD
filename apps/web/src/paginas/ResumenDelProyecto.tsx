@@ -82,9 +82,7 @@ export function ResumenDelProyecto({
       <section className="introduccion">
         <h3>{traducir('Introducción del proyecto')}</h3>
         <p className="ayuda">
-          La información básica: qué se compra, para quién, con qué alcance se revisa y qué
-          queda fuera. <strong>{traducir('Abre el informe final tal como se escriba aquí')}</strong>, así que
-          la redacta una persona y no se genera sola.
+          {traducir('La información básica: qué se compra, para quién, con qué alcance se revisa y qué queda fuera.')}{' '}<strong>{traducir('Abre el informe final tal como se escriba aquí')}</strong>{traducir(', así que la redacta una persona y no se genera sola.')}
         </p>
         <textarea
           className="texto-introduccion"

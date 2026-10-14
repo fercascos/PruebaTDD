@@ -227,8 +227,7 @@ export function Subida({
       {recuperadas > 0 && !enCurso && (
         <div className="mensaje aviso recuperadas">
           <p>
-            {traducir('Quedaron')} <strong>{recuperadas}</strong> fotografías sin subir de una sesión anterior.
-            Siguen guardadas en este dispositivo.
+            {traducir('Quedaron')} <strong>{recuperadas}</strong> {traducir('fotografías sin subir de una sesión anterior. Siguen guardadas en este dispositivo.')}
           </p>
           <button
             type="button"
@@ -250,7 +249,7 @@ export function Subida({
 
       {descartados.length > 0 && (
         <p className="mensaje aviso">
-          No son imágenes y se han dejado fuera: {descartados.join(', ')}
+          {traducir('No son imágenes y se han dejado fuera:')}{' '}{descartados.join(', ')}
         </p>
       )}
 
@@ -265,7 +264,7 @@ export function Subida({
           </p>
           {!enCurso && resumen.fallidas > 0 && (
             <button type="button" className="secundario" onClick={() => void reintentar()}>
-              Reintentar las {resumen.fallidas} fallidas
+              {traducir('Reintentar las')}{' '}{resumen.fallidas} fallidas
             </button>
           )}
         </div>

@@ -154,7 +154,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
       {previo && (
         <section className="previo">
           <h3>
-            {previo.summary.total} avisos · {previo.summary.blocking} bloquean la generación
+            {previo.summary.total} avisos · {previo.summary.blocking} {traducir('bloquean la generación')}
           </h3>
           {ORDEN_DE_SEVERIDAD.map((severidad) => {
             const lista = previo.warnings.filter((w) => w.severidad === severidad)

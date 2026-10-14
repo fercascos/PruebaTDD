@@ -203,9 +203,8 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
      una acabaría quedándose atrás. */
   const conmutador = (
     <p className="ayuda ir-al-dashboard">
-      El desglose económico está en el{' '}
-      <Link to={`/proyectos/${projectId}/dashboard`}>{traducir('Dashboard')}</Link>: distribución por concepto de
-      gasto, perfil temporal, exposición por riesgo, categoría con sus objetos y activo.
+      {traducir('El desglose económico está en el')}{' '}
+      <Link to={`/proyectos/${projectId}/dashboard`}>{traducir('Dashboard')}</Link>{traducir(': distribución por concepto de gasto, perfil temporal, exposición por riesgo, categoría con sus objetos y activo.')}
     </p>
   )
 
@@ -301,7 +300,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
       {avisoExport}
       {sinValidar.length > 0 && (
         <Mensaje tipo="aviso">
-          {sinValidar.length} líneas con precio sin validar, por{' '}
+          {sinValidar.length} {traducir('líneas con precio sin validar, por')}{' '}
           {euros.format(sinValidar.reduce((a, l) => a + Number(l.amount), 0))}. Generar así es
           legítimo para un borrador interno; enviarlo al cliente sin revisarlo, no.
         </Mensaje>
@@ -365,7 +364,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
                 {traducir('Sin activo en el proyecto')}
                 <em className="ayuda">
                   {' '}
-                  · su activo se borró después de registrarlos. Siguen contando en el total.
+                  {traducir('· su activo se borró después de registrarlos. Siguen contando en el total.')}
                 </em>
               </th>
             </tr>

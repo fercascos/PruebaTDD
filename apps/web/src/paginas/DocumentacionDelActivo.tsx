@@ -434,7 +434,7 @@ function Casilla({
         </label>
 
         {nodo.received_at && (
-          <span className="pastilla">Recibida el {nodo.received_at.slice(0, 10)}</span>
+          <span className="pastilla">{traducir('Recibida el')}{' '}{nodo.received_at.slice(0, 10)}</span>
         )}
       </div>
 

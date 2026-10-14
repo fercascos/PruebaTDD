@@ -181,7 +181,7 @@ export function FichaDeHallazgo({
             onChange={(e) => setDescripcion(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Comentarios" ayuda={traducir('Notas internas del equipo')}>
+        <Campo etiqueta={traducir('Comentarios')} ayuda={traducir('Notas internas del equipo')}>
           <textarea
             rows={2}
             value={comentarios}
@@ -345,7 +345,7 @@ function Linea({
   return (
     <div className="linea-capex">
       <Rejilla>
-        <Campo etiqueta="Plazo">
+        <Campo etiqueta={traducir('Plazo')}>
           <input value={linea.time_horizon_code} readOnly />
         </Campo>
         <Campo
@@ -377,7 +377,7 @@ function Linea({
         {traducir('Con impuesto:')} <strong>{euros.format(Number(linea.total_cost))}</strong>
         {linea.computed_base && (
           <>
-            {' · '}base calculada por medición: {euros.format(Number(linea.computed_base))}
+            {' · '}{traducir('base calculada por medición:')}{' '}{euros.format(Number(linea.computed_base))}
           </>
         )}
       </p>
@@ -394,8 +394,7 @@ function Linea({
           </>
         ) : (
           <>
-            <strong>{traducir('Sin procedencia registrada.')}</strong> El importe se ha tecleado; no está
-            respaldado por ninguna referencia.
+            <strong>{traducir('Sin procedencia registrada.')}</strong> {traducir('El importe se ha tecleado; no está respaldado por ninguna referencia.')}
           </>
         )}
       </p>

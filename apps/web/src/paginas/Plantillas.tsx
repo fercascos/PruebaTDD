@@ -178,7 +178,7 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
 
   return (
     <div className="dialogo">
-      <h3>Mapeo de «{plantilla.name}»</h3>
+      <h3>{traducir('Mapeo de «')}{plantilla.name}»</h3>
 
       <label>
         {traducir('Nombre del mapeo')}
@@ -187,8 +187,7 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
 
       {sinMapear.length > 0 && (
         <Mensaje tipo="aviso">
-          {sinMapear.length} marcadores sin origen. Si se genera así, saldrían literalmente en el
-          documento: la generación lo impide.
+          {sinMapear.length} {traducir('marcadores sin origen. Si se genera así, saldrían literalmente en el documento: la generación lo impide.')}
         </Mensaje>
       )}
       {guardado && <Mensaje tipo="ok">{traducir('Mapeo guardado.')}</Mensaje>}

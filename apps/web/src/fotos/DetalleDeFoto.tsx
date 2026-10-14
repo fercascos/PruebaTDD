@@ -167,7 +167,7 @@ export function DetalleDeFoto({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Zona" ayuda={traducir('Clasificación del catálogo: es lo que agrega el informe')}>
+          <Campo etiqueta={traducir('Zona')} ayuda={traducir('Clasificación del catálogo: es lo que agrega el informe')}>
             <select value={zona} onChange={(e) => setZona(e.target.value)} disabled={!activo}>
               <option value="">— sin zona —</option>
               {zonas.map((z) => (
@@ -178,7 +178,7 @@ export function DetalleDeFoto({
             </select>
           </Campo>
           <Campo
-            etiqueta="Espacio"
+            etiqueta={traducir('Espacio')}
             ayuda={
               espacios.length === 0
                 ? traducir('Este activo no tiene árbol de ubicaciones todavía')
@@ -211,7 +211,7 @@ export function DetalleDeFoto({
         <Campo etiqueta={traducir('Pie de foto')} ayuda={traducir('Es el texto que se inserta bajo la imagen en el PPTX')}>
           <input value={pie} onChange={(e) => setPie(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Etiquetas" ayuda={traducir('Separadas por comas')}>
+        <Campo etiqueta={traducir('Etiquetas')} ayuda={traducir('Separadas por comas')}>
           <input value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} />
         </Campo>
 

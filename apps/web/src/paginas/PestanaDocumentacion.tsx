@@ -204,7 +204,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
 
       {sinLinea.length > 0 && (
         <details className="sueltos">
-          <summary>{sinLinea.length} documento(s) sin línea de checklist</summary>
+          <summary>{sinLinea.length} {traducir('documento(s) sin línea de checklist')}</summary>
           <p className="detalle">
             {traducir('Llegaron al proyecto sin decir qué solicitud cubren. Se pueden revisar igual, pero no cuentan para la checklist ni para las limitaciones del informe.')}
           </p>
@@ -263,7 +263,7 @@ function Autorizacion({
         <strong>{traducir('Revisión de documentación con IA')}</strong>
         {permiso.activo ? (
           <p className="detalle">
-            Autorizada para este proyecto{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
+            {traducir('Autorizada para este proyecto')}{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
             Los documentos que se suban podrán analizarse a petición.
           </p>
         ) : (
@@ -432,7 +432,7 @@ function Linea({
           onChange={(e) => setMotivo(e.target.value)}
           onBlur={() => void cambiarEstado('NO_DISPONIBLE')}
           placeholder={traducir('Por qué no está disponible')}
-          aria-label="Motivo"
+          aria-label={traducir('Motivo')}
         />
       )}
 
@@ -536,7 +536,7 @@ function FichaDocumento({
       {ultima && <Revision revision={ultima} alDecidir={cargar} alFallar={alFallar} />}
       {revisiones && revisiones.length > 1 && (
         <p className="detalle">
-          Hay {revisiones.length} revisiones de este documento. Se muestra la más reciente.
+          {traducir('Hay')}{' '}{revisiones.length} {traducir('revisiones de este documento. Se muestra la más reciente.')}
         </p>
       )}
 
@@ -626,8 +626,7 @@ function Extraccion({
 
       {resultado?.es_simulada && (
         <Mensaje tipo="aviso">
-          {traducir('Lectura')} <strong>simulada</strong>: nadie ha leído este documento. Lo de abajo ocupa el
-          sitio de lo que vendrá y no dice nada sobre su contenido.
+          {traducir('Lectura')} <strong>simulada</strong>{traducir(': nadie ha leído este documento. Lo de abajo ocupa el sitio de lo que vendrá y no dice nada sobre su contenido.')}
         </Mensaje>
       )}
 
@@ -640,8 +639,7 @@ function Extraccion({
       {resultado && Object.keys(resultado.desconocidos).length > 0 && (
         <details className="desconocidos">
           <summary>
-            {Object.keys(resultado.desconocidos).length} etiqueta(s) leídas que no se han sabido
-            encajar
+            {Object.keys(resultado.desconocidos).length} {traducir('etiqueta(s) leídas que no se han sabido encajar')}
           </summary>
           {/* No se pierden. Es como se descubre el sinónimo que falta, y es lo
               que separa «no venía el dato» de «no lo supe leer». */}
@@ -758,7 +756,7 @@ function Revision({
   alFallar: (m: string) => void
 }) {
   if (revision.status === 'FALLIDA') {
-    return <Mensaje tipo="error">No se pudo revisar: {revision.error_message}</Mensaje>
+    return <Mensaje tipo="error">{traducir('No se pudo revisar:')}{' '}{revision.error_message}</Mensaje>
   }
 
   return (
@@ -815,7 +813,7 @@ function Observacion({
       {obs.evidence_text && (
         <blockquote className="evidencia">
           {obs.evidence_text}
-          {obs.evidence_page !== null && <cite>página {obs.evidence_page}</cite>}
+          {obs.evidence_page !== null && <cite>{traducir('página')}{' '}{obs.evidence_page}</cite>}
         </blockquote>
       )}
 
@@ -934,8 +932,7 @@ function Limitaciones({
     <section className="limitaciones-doc">
       <h3>{traducir('Lo que la documentación dice sobre sí misma')}</h3>
       <p className="ayuda">
-        {traducir('Salen de leer los documentos, no de lo que falta.')} <strong>Solo las aceptadas entran en
-        el apartado de limitaciones del informe</strong>: entre la propuesta y el entregable hay
+        {traducir('Salen de leer los documentos, no de lo que falta.')} <strong>{traducir('Solo las aceptadas entran en el apartado de limitaciones del informe')}</strong>: entre la propuesta y el entregable hay
         una persona decidiendo.
       </p>
 
@@ -985,7 +982,7 @@ function Limitaciones({
           {/* Descartar no es borrar: si el cliente pregunta por qué el informe
               no menciona algo, la respuesta tiene que estar aquí y no en la
               memoria de nadie. */}
-          <summary>{descartadas.length} descartada(s), con constancia de quién fue</summary>
+          <summary>{descartadas.length} {traducir('descartada(s), con constancia de quién fue')}</summary>
           <ul>
             {descartadas.map((l) => (
               <li key={l.id}>
@@ -1079,8 +1076,7 @@ function EquiposPropuestos({
     <section className="equipos-propuestos">
       <h3>{traducir('Medios que declara la documentación')}</h3>
       <p className="ayuda">
-        {traducir('Salen del capítulo de medios de autoprotección.')} <strong>Aceptar crea la ficha de
-        equipo</strong>{traducir(', así que hay que decir en qué activo va: el documento no lo dice.')}
+        {traducir('Salen del capítulo de medios de autoprotección.')} <strong>{traducir('Aceptar crea la ficha de equipo')}</strong>{traducir(', así que hay que decir en qué activo va: el documento no lo dice.')}
       </p>
 
       {activos.length === 0 && pendientes.length > 0 && (
@@ -1158,7 +1154,7 @@ function EquiposPropuestos({
 
       {aceptados.length > 0 && (
         <details className="decididas" open>
-          <summary>{aceptados.length} añadido(s) al inventario</summary>
+          <summary>{aceptados.length} {traducir('añadido(s) al inventario')}</summary>
           <ul>
             {aceptados.map((e) => (
               <li key={e.id}>

@@ -189,7 +189,7 @@ export function PestanaFotos({
               className="secundario"
               onClick={() => void enLote({ technical_system_id: sistemaElegido })}
             >
-              Clasificar en {sistemas.find((s) => s.id === sistemaElegido)?.name_es}
+              {traducir('Clasificar en')}{' '}{sistemas.find((s) => s.id === sistemaElegido)?.name_es}
             </button>
           )}
           <RenombradoEnLote

@@ -324,8 +324,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>{traducir('Distribución por concepto de gasto')}</h3>
             <p className="ayuda">
-              Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal
-              mantenido:{' '}
+              {traducir('Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal mantenido:')}{' '}
               <strong>
                 lo exigido por normativa hay que ejecutarlo y una mejora es discrecional
               </strong>
@@ -366,9 +365,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <h3>{traducir('Reparto de la inversión por pagador')}</h3>
             <p className="ayuda">
               {traducir('Cuánto del CAPEX recae sobre la propiedad y cuánto es repercutible al inquilino.')}
-              <strong> «Sin determinar» no es una tercera forma de pagar</strong>: es una
-              casilla sin rellenar —depende de los contratos de arrendamiento y se decide
-              actuación por actuación—, y por eso va en gris y no con un color de serie.
+              <strong> «Sin determinar» no es una tercera forma de pagar</strong>{traducir(': es una casilla sin rellenar —depende de los contratos de arrendamiento y se decide actuación por actuación—, y por eso va en gris y no con un color de serie.')}
             </p>
             <Tarta
               porciones={porcionesDePagador}
@@ -432,10 +429,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>{traducir('Desglose por categoría y objeto')}</h3>
             <p className="ayuda">
-              {traducir('Cada barra es una')} <strong>{traducir('categoría')}</strong> del árbol de CAPEX y los tramos de
-              dentro son sus <strong>objetos</strong>, de mayor a menor. Un hallazgo codificado
-              en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es
-              lo mismo que un objeto denominado «General».
+              {traducir('Cada barra es una')} <strong>{traducir('categoría')}</strong> {traducir('del árbol de CAPEX y los tramos de dentro son sus')}{' '}<strong>objetos</strong>{traducir(', de mayor a menor. Un hallazgo codificado en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es lo mismo que un objeto denominado «General».')}
             </p>
             <BarrasApiladas filas={filtrado.objeto} />
           </section>
@@ -451,9 +445,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
               <h3>{traducir('Distribución por activo')}</h3>
               <p className="ayuda">
                   {traducir('En un proyecto de cartera es la cifra que entra en la negociación de cada activo.')}
-                <strong> {traducir('Este bloque no se filtra nunca')}</strong>: es la referencia contra la que
-                se lee el resto. Los activos sin actuaciones se muestran con cero: uno que
-                desaparece de la lista se confunde con uno que se visitó y no tenía nada.
+                <strong> {traducir('Este bloque no se filtra nunca')}</strong>{traducir(': es la referencia contra la que se lee el resto. Los activos sin actuaciones se muestran con cero: uno que desaparece de la lista se confunde con uno que se visitó y no tenía nada.')}
               </p>
               <p className="ayuda">
                 {traducir('Pulse una barra para incorporar ese activo a la selección o retirarlo de ella.')}
@@ -540,7 +532,7 @@ function Cabecera({
             {eurosExactos.format(totalDelProyecto)}
           </>
         ) : (
-          <>Alcance: un solo activo · {eurosExactos.format(totalDelProyecto)}</>
+          <>{traducir('Alcance: un solo activo ·')}{' '}{eurosExactos.format(totalDelProyecto)}</>
         )}
       </p>
       {cartera && (
@@ -713,7 +705,7 @@ function BarrasApiladas({ filas }: { filas: ResumenPorObjeto[] }) {
       </ul>
 
       <details className="detalle-tabla">
-        <summary>Ver los {filas.length} objetos en tabla, con su categoría</summary>
+        <summary>{traducir('Ver los')}{' '}{filas.length} {traducir('objetos en tabla, con su categoría')}</summary>
         <div className="desbordable">
           <table className="tabla">
             <thead>
@@ -820,7 +812,7 @@ function Tabla({
   return (
     <details className="detalle-tabla">
       <summary>
-        Ver {filas.length === 1 ? 'la fila' : `los ${filas.length} ${plural}`} en tabla
+        {traducir('Ver')}{' '}{filas.length === 1 ? 'la fila' : `los ${filas.length} ${plural}`} en tabla
       </summary>
       <div className="desbordable">
         <table className="tabla">

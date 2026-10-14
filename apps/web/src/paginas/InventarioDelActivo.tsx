@@ -371,11 +371,8 @@ export function InventarioDelActivo({
     <section className="inventario-activo" aria-busy={trabajando}>
       <h3>{traducir('Inventario del activo')}</h3>
       <p className="ayuda">
-        El árbol del cliente, categoría a categoría, y dentro de cada objeto lo que se sabe de
-        él: <strong>{traducir('qué hay')}</strong> (Descriptivo, que sale de la memoria técnica) y{' '}
-        <strong>{traducir('en qué estado está')}</strong> (Valoración, que la escribe quien lo ha visto), con
-        sus equipos y sus fotografías. Las categorías nacen plegadas; se abren solas las que ya
-        tienen trabajo hecho.
+        {traducir('El árbol del cliente, categoría a categoría, y dentro de cada objeto lo que se sabe de él:')}{' '}<strong>{traducir('qué hay')}</strong> {traducir('(Descriptivo, que sale de la memoria técnica) y')}{' '}
+        <strong>{traducir('en qué estado está')}</strong> {traducir('(Valoración, que la escribe quien lo ha visto), con sus equipos y sus fotografías. Las categorías nacen plegadas; se abren solas las que ya tienen trabajo hecho.')}
       </p>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
@@ -405,14 +402,14 @@ export function InventarioDelActivo({
           disabled={trabajando || sucias.length === 0}
           onClick={() => void guardar()}
         >
-          Guardar el inventario {sucias.length > 0 ? `(${sucias.length})` : ''}
+          {traducir('Guardar el inventario')}{' '}{sucias.length > 0 ? `(${sucias.length})` : ''}
         </button>
         <button
           type="button"
           disabled={trabajando || marcados === 0}
           onClick={() => void generar()}
         >
-          Generar actuaciones de los marcados ({marcados})
+          {traducir('Generar actuaciones de los marcados (')}{marcados})
         </button>
       </div>
 
@@ -490,12 +487,9 @@ export function InventarioDelActivo({
 
       {sinObjeto.length > 0 && (
         <section className="sin-clasificar">
-          <h4>Equipos sin objeto ({sinObjeto.length})</h4>
+          <h4>{traducir('Equipos sin objeto (')}{sinObjeto.length})</h4>
           <p className="ayuda">
-            Se dieron de alta antes de que el inventario preguntara de qué objeto cuelga cada
-            equipo. <strong>{traducir('No se les ha puesto uno automáticamente')}</strong>: un capítulo tiene
-            once objetos y elegir por usted sería adivinar dónde está la máquina. Colóquelos y
-            dejarán de estar aquí —y su actuación sabrá dónde ir.
+            {traducir('Se dieron de alta antes de que el inventario preguntara de qué objeto cuelga cada equipo.')}{' '}<strong>{traducir('No se les ha puesto uno automáticamente')}</strong>{traducir(': un capítulo tiene once objetos y elegir por usted sería adivinar dónde está la máquina. Colóquelos y dejarán de estar aquí —y su actuación sabrá dónde ir.')}
           </p>
           <div className="desbordable">
             <table className="tabla">

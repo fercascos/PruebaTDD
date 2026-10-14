@@ -87,9 +87,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
     <section className="ubicaciones">
       <h3>{traducir('Ubicaciones del edificio')}</h3>
       <p className="ayuda">
-        Dónde está cada cosa dentro de este activo. Es distinto de la zona: la zona clasifica para el
-        informe («Cubierta»), esto localiza para volver a encontrarlo («Cubierta › Sala Máquinas 2»).
-        Lo que se elija aquí alimenta el token <code>[Espacio]</code> {traducir('al renombrar fotografías.')}
+        {traducir('Dónde está cada cosa dentro de este activo. Es distinto de la zona: la zona clasifica para el informe («Cubierta»), esto localiza para volver a encontrarlo («Cubierta › Sala Máquinas 2»). Lo que se elija aquí alimenta el token')}{' '}<code>[Espacio]</code> {traducir('al renombrar fotografías.')}
       </p>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}

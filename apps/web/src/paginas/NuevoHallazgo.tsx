@@ -202,7 +202,7 @@ export function NuevoHallazgo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Zona" ayuda={traducir('Solo las que admite la tipología del activo')}>
+        <Campo etiqueta={traducir('Zona')} ayuda={traducir('Solo las que admite la tipología del activo')}>
           <select required value={zona} onChange={(e) => setZona(e.target.value)}>
             {zonas.map((z) => (
               <option key={z.id} value={z.id}>
@@ -256,7 +256,7 @@ export function NuevoHallazgo({
 
       {!photoId && (
         <>
-          <Campo etiqueta="Comentarios">
+          <Campo etiqueta={traducir('Comentarios')}>
             <textarea
               rows={2}
               value={comentarios}
@@ -275,15 +275,12 @@ export function NuevoHallazgo({
 
       <h3>{traducir('Importe')}</h3>
       <p className="ayuda">
-        {traducir('Una línea por plazo. El importe que teclee')} <strong>lo incluye todo</strong>: indirectos,
-        honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima.
-        Añada otra línea solo si la actuación es <em>recurrente</em> —hace falta ahora y otra vez
-        más adelante—, que es lo que P-44 permite.
+        {traducir('Una línea por plazo. El importe que teclee')} <strong>lo incluye todo</strong>{traducir(': indirectos, honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima. Añada otra línea solo si la actuación es')}{' '}<em>recurrente</em> {traducir('—hace falta ahora y otra vez más adelante—, que es lo que P-44 permite.')}
       </p>
 
       {lineas.map((linea, indice) => (
         <Rejilla key={indice}>
-          <Campo etiqueta="Plazo">
+          <Campo etiqueta={traducir('Plazo')}>
             <select
               value={linea.plazo}
               onChange={(e) =>

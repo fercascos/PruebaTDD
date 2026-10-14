@@ -86,7 +86,7 @@ export function RenombradoEnLote({
 
   return (
     <div className="dialogo">
-      <h3>Renombrar {photoIds.length} fotografías</h3>
+      <h3>{traducir('Renombrar')}{' '}{photoIds.length} {traducir('fotografías')}</h3>
 
       <label>
         {traducir('Plantilla')}
@@ -113,7 +113,7 @@ export function RenombradoEnLote({
           // obligatoria y no es un consejo.
           disabled={trabajando || plan === null || cambian.length === 0}
         >
-          Aplicar a {cambian.length}
+          {traducir('Aplicar a')}{' '}{cambian.length}
         </button>
         <button type="button" className="secundario" onClick={() => setAbierto(false)}>
           {traducir('Cerrar')}
@@ -124,8 +124,7 @@ export function RenombradoEnLote({
         <>
           {plan.colisiones_resueltas.length > 0 && (
             <p className="mensaje aviso">
-              {plan.colisiones_resueltas.length} nombres coincidían y han recibido un sufijo
-              alfabético (_b, _c…) para no pisarse.
+              {plan.colisiones_resueltas.length} {traducir('nombres coincidían y han recibido un sufijo alfabético (_b, _c…) para no pisarse.')}
             </p>
           )}
           {plan.aplicados > 0 && (

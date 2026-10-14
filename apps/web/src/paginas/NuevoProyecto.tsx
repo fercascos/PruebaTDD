@@ -152,9 +152,7 @@ export function NuevoProyecto() {
 
         <h3>{traducir('Fases aplicables')}</h3>
         <p className="ayuda">
-          Se crean solo las que marque. Un proyecto sin Q&amp;A no arrastra una fase vacía que nadie
-          va a rellenar. Las marcadas como <em>calculada</em> no se marcan a mano después: su estado
-          sale del trabajo que hay debajo.
+          {traducir('Se crean solo las que marque. Un proyecto sin Q&A no arrastra una fase vacía que nadie va a rellenar. Las marcadas como')}{' '}<em>calculada</em> {traducir('no se marcan a mano después: su estado sale del trabajo que hay debajo.')}
         </p>
         <ul className="lista-fases">
           {FASES.map((f) => (
