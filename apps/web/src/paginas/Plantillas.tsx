@@ -52,7 +52,7 @@ export function Plantillas() {
       recargar()
       setElegida(nueva)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido subir la plantilla')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido subir la plantilla'))
     } finally {
       setSubiendo(false)
     }
@@ -65,7 +65,7 @@ export function Plantillas() {
 
       <div className="filtro">
         <button type="button" onClick={() => entrada.current?.click()} disabled={subiendo}>
-          {subiendo ? 'Analizando…' : 'Subir una plantilla PPTX'}
+          {subiendo ? traducir('Analizando…') : traducir('Subir una plantilla PPTX')}
         </button>
         <input
           ref={entrada}
@@ -171,7 +171,7 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
       })
       setGuardado(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido guardar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido guardar'))
     }
   }
 

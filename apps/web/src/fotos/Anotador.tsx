@@ -61,7 +61,7 @@ export function Anotador({
         img.onload = () => vigente && setFondo(img)
         img.src = url
       })
-      .catch(() => setError('No se ha podido cargar la fotografía'))
+      .catch(() => setError(traducir('No se ha podido cargar la fotografía')))
     return () => {
       vigente = false
       if (url) URL.revokeObjectURL(url)
@@ -218,7 +218,9 @@ export function Anotador({
 
       <div className="acciones">
         <button type="button" onClick={() => void guardar()} disabled={guardando || !fondo}>
-          {guardando ? 'Guardando…' : `Guardar ${formas.length} anotaciones`}
+          {guardando
+            ? traducir('Guardando…')
+            : traducir('Guardar {cuantas} anotaciones', { cuantas: formas.length })}
         </button>
         <button type="button" className="secundario" onClick={alCerrar}>
           {traducir('Cancelar')}

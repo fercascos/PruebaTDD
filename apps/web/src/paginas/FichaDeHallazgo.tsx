@@ -210,7 +210,7 @@ export function FichaDeHallazgo({
         {definicion && <p className="definicion-riesgo">{definicion}</p>}
 
         <button type="button" onClick={() => void guardarCabecera()} disabled={guardando}>
-          {guardando ? 'Guardando…' : 'Guardar cambios'}
+          {guardando ? traducir('Guardando…') : traducir('Guardar cambios')}
         </button>
       </section>
 
@@ -351,7 +351,9 @@ function Linea({
         </Campo>
         <Campo
           etiqueta={traducir('Importe (€)')}
-          ayuda={`Precio: ${PRECIO[linea.price_status] ?? linea.price_status}`}
+          ayuda={traducir('Precio: {estado}', {
+            estado: traducir(PRECIO[linea.price_status] ?? linea.price_status),
+          })}
         >
           <input
             type="number"
@@ -387,7 +389,7 @@ function Linea({
       <p className={`procedencia p-${linea.price_status.toLowerCase()}`}>
         {linea.price_reference_label ? (
           <>
-            <strong>{PRECIO[linea.price_status] ?? linea.price_status}</strong> contra{' '}
+            <strong>{traducir(PRECIO[linea.price_status] ?? linea.price_status)}</strong> contra{' '}
             {linea.price_reference_label}
             {linea.price_validation_note && <> — «{linea.price_validation_note}»</>}
           </>
@@ -511,7 +513,7 @@ function NuevaLinea({
           <select value={plazo} onChange={(e) => setPlazo(e.target.value)}>
             {libres.map((l) => (
               <option key={l.code} value={l.code}>
-                {l.nombre}
+                {traducir(l.nombre)}
               </option>
             ))}
           </select>

@@ -151,9 +151,9 @@ export function ImportarInventario({
         />
         <div className="selector-de-fichero">
           <button type="button" className="secundario" onClick={() => entrada.current?.click()}>
-            {fichero ? 'Elegir otra hoja' : 'Elegir la hoja…'}
+            {fichero ? traducir('Elegir otra hoja') : traducir('Elegir la hoja…')}
           </button>
-          <label htmlFor="hoja-de-inventario">{fichero ? fichero.name : 'Ningún fichero elegido'}</label>
+          <label htmlFor="hoja-de-inventario">{fichero ? fichero.name : traducir('Ningún fichero elegido')}</label>
         </div>
         {ocupado && !resultado && <p className="cargando">{traducir('Leyendo la hoja…')}</p>}
       </section>
@@ -208,7 +208,7 @@ export function ImportarInventario({
                     <th scope="col">{traducir('Qué pasa')}</th>
                     {COLUMNAS.map(([, titulo]) => (
                       <th key={titulo} scope="col">
-                        {titulo}
+                        {traducir(titulo)}
                       </th>
                     ))}
                     <th scope="col">{traducir('Observaciones')}</th>
@@ -221,7 +221,7 @@ export function ImportarInventario({
                       {/* El estado va escrito, no solo en color: esto se
                           revisa a veces impreso y uno de cada doce hombres es
                           daltónico. */}
-                      <td>{ETIQUETA[f.estado] ?? f.estado}</td>
+                      <td>{traducir(ETIQUETA[f.estado] ?? f.estado)}</td>
                       {COLUMNAS.map(([campo]) => (
                         <td key={campo}>{f.crudo[campo] || '—'}</td>
                       ))}

@@ -56,7 +56,7 @@ export function Recuperar() {
         {aviso && <Mensaje tipo="ok">{aviso}</Mensaje>}
 
         <button type="submit" disabled={enviando || !email}>
-          {enviando ? 'Enviando…' : 'Enviarme el enlace'}
+          {enviando ? traducir('Enviando…') : traducir('Enviarme el enlace')}
         </button>
         <Link className="enlace" to="/entrar">
           {traducir('Volver a entrar')}
@@ -170,7 +170,7 @@ export function Restablecer() {
         {error && <Mensaje tipo="error">{error}</Mensaje>}
 
         <button type="submit" disabled={enviando || !clave || noCoinciden}>
-          {enviando ? 'Guardando…' : 'Guardar la contraseña'}
+          {enviando ? traducir('Guardando…') : traducir('Guardar la contraseña')}
         </button>
         <Link className="enlace" to="/recuperar">
           {traducir('Pedir un enlace nuevo')}

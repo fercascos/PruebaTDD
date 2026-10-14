@@ -80,7 +80,7 @@ export function NuevoProyecto() {
       <Formulario
         titulo={traducir('Datos del proyecto')}
         enviar={guardar}
-        textoDeEnvio="Crear proyecto"
+        textoDeEnvio={traducir('Crear proyecto')}
         alCancelar={() => navegar('/proyectos')}
       >
         <Rejilla>
@@ -165,7 +165,7 @@ export function NuevoProyecto() {
                   checked={fases.has(f.code)}
                   onChange={() => alternar(f.code)}
                 />
-                {f.nombre}
+                {traducir(f.nombre)}
                 {'calculada' in f && f.calculada && <span className="candado">calculada</span>}
               </label>
             </li>

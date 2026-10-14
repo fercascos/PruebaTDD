@@ -16,6 +16,8 @@
  * 3. **Nada se pierde en silencio.** Cada elemento acaba en un estado visible,
  *    y el recuento de pendientes está siempre a la vista.
  */
+import { traducir } from '../i18n/traducir'
+
 
 export type EstadoDeElemento = 'PENDIENTE' | 'SUBIENDO' | 'HECHO' | 'DUPLICADO' | 'FALLIDO'
 
@@ -164,7 +166,7 @@ export async function procesar(
         const resultado: ResultadoDeSubida = await subir(elemento).catch(
           (e: unknown): ResultadoDeSubida => ({
             tipo: 'error',
-            mensaje: e instanceof Error ? e.message : 'Fallo de red',
+            mensaje: e instanceof Error ? e.message : traducir('Fallo de red'),
           }),
         )
 

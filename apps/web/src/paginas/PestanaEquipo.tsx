@@ -307,12 +307,12 @@ export function PestanaEquipo({
                     <td className="mantenimiento">
                       {e.next_maintenance_due === null ? (
                         <span className="ayuda">
-                          {e.maintenance_months ? 'sin última revisión' : 'sin plan'}
+                          {e.maintenance_months ? traducir('sin última revisión') : traducir('sin plan')}
                         </span>
                       ) : (
                         <>
                           <strong className={e.next_maintenance_due < hoy ? 'fuera-de-plazo' : ''}>
-                            {e.next_maintenance_due < hoy ? 'vencido' : 'al día'}
+                            {e.next_maintenance_due < hoy ? traducir('vencido') : traducir('al día')}
                           </strong>
                           <div className="ayuda">
                             toca el {e.next_maintenance_due}
@@ -474,7 +474,7 @@ function FichaDeEquipo({
   return (
     <div className="ficha-equipo">
       <div className="titular">
-        <h2>{equipo ? 'Editar equipo' : 'Nuevo equipo'}</h2>
+        <h2>{equipo ? traducir('Editar equipo') : traducir('Nuevo equipo')}</h2>
         <button type="button" className="secundario" onClick={alCerrar}>
           {traducir('Cerrar')}
         </button>
@@ -660,7 +660,7 @@ function FichaDeEquipo({
               <option value="">— sin valorar —</option>
               {CONDICION.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.nombre}
+                  {traducir(c.nombre)}
                 </option>
               ))}
             </select>
@@ -676,7 +676,7 @@ function FichaDeEquipo({
               <option value="">— sin valorar —</option>
               {OBSOLESCENCIA.map((o) => (
                 <option key={o.code} value={o.code}>
-                  {o.nombre}
+                  {traducir(o.nombre)}
                 </option>
               ))}
             </select>
@@ -686,7 +686,7 @@ function FichaDeEquipo({
               <option value="">— sin valorar —</option>
               {CRITICIDAD.map((c) => (
                 <option key={c.code} value={c.code}>
-                  {c.nombre}
+                  {traducir(c.nombre)}
                 </option>
               ))}
             </select>
@@ -711,7 +711,7 @@ function FichaDeEquipo({
           onClick={() => void guardar()}
           disabled={guardando || !f.equipment_type.trim() || !f.asset_id || mediaVida}
         >
-          {guardando ? 'Guardando…' : 'Guardar equipo'}
+          {guardando ? traducir('Guardando…') : traducir('Guardar equipo')}
         </button>
         <button type="button" className="secundario" onClick={alCerrar}>
           {traducir('Cancelar')}

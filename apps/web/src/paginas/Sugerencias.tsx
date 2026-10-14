@@ -184,7 +184,7 @@ function Acciones({ sugerencia, alCambiar }: { sugerencia: Sugerencia; alCambiar
     if (exigeNota && !nota.trim()) {
       // El servidor lo exige igualmente con un 422; decirlo aquí ahorra el
       // viaje y deja claro qué falta.
-      setError('Rechazar una propuesta exige explicar por qué: lo lee quien la escribió')
+      setError(traducir('Rechazar una propuesta exige explicar por qué: lo lee quien la escribió'))
       return
     }
     try {
@@ -194,7 +194,7 @@ function Acciones({ sugerencia, alCambiar }: { sugerencia: Sugerencia; alCambiar
       })
       alCambiar()
     } catch (e) {
-      setError(e instanceof ErrorDeApi ? e.message : 'No se ha podido resolver')
+      setError(e instanceof ErrorDeApi ? e.message : traducir('No se ha podido resolver'))
     }
   }
 
@@ -215,7 +215,7 @@ function Acciones({ sugerencia, alCambiar }: { sugerencia: Sugerencia; alCambiar
           className="secundario"
           onClick={() => void resolver(destino, RESOLUCIONES[destino].exigeNota)}
         >
-          {RESOLUCIONES[destino].etiqueta}
+          {traducir(RESOLUCIONES[destino].etiqueta)}
         </button>
       ))}
       {error && <Mensaje tipo="error">{error}</Mensaje>}
@@ -237,7 +237,7 @@ function NuevaSugerencia({
   return (
     <Formulario
       titulo={traducir('Proponer un cambio')}
-      textoDeEnvio="Enviar propuesta"
+      textoDeEnvio={traducir('Enviar propuesta')}
       alCancelar={alCancelar}
       enviar={async () => {
         // Nótese lo que NO se envía: ni la organización ni el autor. Se toman
@@ -254,7 +254,7 @@ function NuevaSugerencia({
         <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
           {TIPOS.map((t) => (
             <option key={t.code} value={t.code}>
-              {t.nombre}
+              {traducir(t.nombre)}
             </option>
           ))}
         </select>

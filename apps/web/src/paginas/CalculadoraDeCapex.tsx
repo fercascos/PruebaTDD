@@ -148,7 +148,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
       </p>
       <Rejilla>
         {Object.entries(pcts).map(([clave, valor]) => (
-          <Campo key={clave} etiqueta={ETIQUETAS[clave] ?? clave}>
+          <Campo key={clave} etiqueta={ETIQUETAS[clave] ? traducir(ETIQUETAS[clave]) : clave}>
             <input
               type="number"
               step="0.01"

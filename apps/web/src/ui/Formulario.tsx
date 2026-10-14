@@ -16,7 +16,10 @@ export function Formulario({
   titulo,
   enviar,
   children,
-  textoDeEnvio = 'Guardar',
+  // El valor por omisión de un parámetro se evalúa en cada llamada, y esta
+  // función es el cuerpo del componente: aquí `traducir()` sí corre en cada
+  // repintado, al contrario que en una constante de módulo.
+  textoDeEnvio = traducir('Guardar'),
   alCancelar,
 }: {
   titulo: string
@@ -40,7 +43,7 @@ export function Formulario({
           ? e.message
           : e instanceof Error
             ? e.message
-            : 'No se ha podido guardar',
+            : traducir('No se ha podido guardar'),
       )
     } finally {
       setEnviando(false)
@@ -54,7 +57,7 @@ export function Formulario({
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       <div className="acciones">
         <button type="submit" disabled={enviando}>
-          {enviando ? 'Guardando…' : textoDeEnvio}
+          {enviando ? traducir('Guardando…') : textoDeEnvio}
         </button>
         {alCancelar && (
           <button type="button" className="secundario" onClick={alCancelar}>

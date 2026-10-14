@@ -176,9 +176,9 @@ export function NuevoHallazgo({
 
   return (
     <Formulario
-      titulo={photoId ? 'Nuevo hallazgo desde la fotografía' : 'Nuevo hallazgo'}
+      titulo={photoId ? traducir('Nuevo hallazgo desde la fotografía') : traducir('Nuevo hallazgo')}
       enviar={guardar}
-      textoDeEnvio="Crear hallazgo"
+      textoDeEnvio={traducir('Crear hallazgo')}
       alCancelar={alCancelar}
     >
       {photoId && (
@@ -300,7 +300,7 @@ export function NuevoHallazgo({
                   // servidor lo rechaza con un 409. Mejor no ofrecerlo.
                   disabled={p.code !== linea.plazo && plazosUsados.has(p.code)}
                 >
-                  {p.nombre}
+                  {traducir(p.nombre)}
                 </option>
               ))}
             </select>

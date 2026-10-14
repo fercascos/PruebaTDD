@@ -157,8 +157,10 @@ export function MapaDeActivos({
       ) : situados.length === 0 ? (
         <Vacio>
           {activos.length === 1
-            ? 'Este activo no tiene coordenadas. Se ponen en su ficha, a mano o proponiéndolas desde la dirección.'
-            : 'Ningún activo tiene coordenadas todavía. Se ponen en la ficha de cada uno.'}
+            ? traducir(
+                'Este activo no tiene coordenadas. Se ponen en su ficha, a mano o proponiéndolas desde la dirección.',
+              )
+            : traducir('Ningún activo tiene coordenadas todavía. Se ponen en la ficha de cada uno.')}
         </Vacio>
       ) : (
         <div className="mapa" ref={montarMapa} />

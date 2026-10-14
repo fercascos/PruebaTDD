@@ -91,7 +91,7 @@ export function DetalleDeFoto({
       )
       alGuardar()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido guardar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido guardar'))
     } finally {
       setGuardando(false)
     }
@@ -181,8 +181,8 @@ export function DetalleDeFoto({
             etiqueta="Espacio"
             ayuda={
               espacios.length === 0
-                ? 'Este activo no tiene árbol de ubicaciones todavía'
-                : 'Dónde está exactamente. Alimenta el token [Espacio] al renombrar'
+                ? traducir('Este activo no tiene árbol de ubicaciones todavía')
+                : traducir('Dónde está exactamente. Alimenta el token [Espacio] al renombrar')
             }
           >
             {/* La sangría se calcula con `profundidad`, que ya viene de la API:
@@ -247,7 +247,7 @@ export function DetalleDeFoto({
 
         <div className="acciones">
           <button type="button" onClick={() => void guardar()} disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Guardar'}
+            {guardando ? traducir('Guardando…') : traducir('Guardar')}
           </button>
           <button type="button" className="secundario" onClick={() => setAnotando(true)}>
             {traducir('Anotar')}

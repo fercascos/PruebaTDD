@@ -303,8 +303,8 @@ export function ComparadorDePrecios({
           etiqueta={traducir('Justificación')}
           ayuda={
             difiere
-              ? 'Obligatoria: el importe difiere de la referencia'
-              : 'Opcional cuando el importe es el de la referencia'
+              ? traducir('Obligatoria: el importe difiere de la referencia')
+              : traducir('Opcional cuando el importe es el de la referencia')
           }
         >
           <textarea
@@ -328,7 +328,7 @@ export function ComparadorDePrecios({
             onClick={() => void validar()}
             disabled={guardando || elegida === null}
           >
-            {guardando ? 'Validando…' : 'Validar precio'}
+            {guardando ? traducir('Validando…') : traducir('Validar precio')}
           </button>
           <button type="button" className="secundario" onClick={alCerrar}>
             {traducir('Cancelar')}

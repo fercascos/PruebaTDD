@@ -39,7 +39,7 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
       await borrar(`/assets/${activo.id}`)
       recargar()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido borrar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido borrar'))
     }
   }
 

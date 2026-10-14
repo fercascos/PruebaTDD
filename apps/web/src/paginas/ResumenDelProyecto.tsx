@@ -68,7 +68,7 @@ export function ResumenDelProyecto({
       setHecho(true)
       alGuardar()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido guardar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido guardar'))
     } finally {
       setGuardando(false)
     }

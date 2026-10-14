@@ -41,6 +41,7 @@
  * no antes.
  */
 
+import { traducir } from '../i18n/traducir'
 import type { ElementoDeCola, EstadoDeElemento, Origen } from './cola'
 
 const BASE = 'tdd-fotos'
@@ -104,7 +105,7 @@ function abrir(): Promise<IDBDatabase> {
       }
     }
     peticion.onsuccess = () => resolver(peticion.result)
-    peticion.onerror = () => rechazar(peticion.error ?? new Error('No se pudo abrir IndexedDB'))
+    peticion.onerror = () => rechazar(peticion.error ?? new Error(traducir('No se pudo abrir IndexedDB')))
   })
 }
 
@@ -126,7 +127,7 @@ function transaccion<T>(
         }
         tx.onerror = tx.onabort = () => {
           db.close()
-          rechazar(tx.error ?? new Error('Transacción rechazada'))
+          rechazar(tx.error ?? new Error(traducir('Transacción rechazada')))
         }
       }),
   )

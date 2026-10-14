@@ -281,16 +281,16 @@ export function Dashboard({ projectId }: { projectId: string }) {
         <li>
           <span className="valor">{eurosExactos.format(total)}</span>
           <span className="rotulo">
-            {deQuien ? `CAPEX de ${deQuien}` : 'CAPEX del proyecto'}
+            {deQuien ? traducir('CAPEX de {quien}', { quien: deQuien }) : traducir('CAPEX del proyecto')}
           </span>
         </li>
         <li>
           <span className="valor">{hallazgos}</span>
-          <span className="rotulo">{hallazgos === 1 ? 'hallazgo' : 'hallazgos'}</span>
+          <span className="rotulo">{hallazgos === 1 ? traducir('hallazgo') : traducir('hallazgos')}</span>
         </li>
         <li>
           <span className="valor">{lineas}</span>
-          <span className="rotulo">{lineas === 1 ? 'línea de CAPEX' : 'líneas de CAPEX'}</span>
+          <span className="rotulo">{lineas === 1 ? traducir('línea de CAPEX') : traducir('líneas de CAPEX')}</span>
         </li>
         {seleccion.length ? (
           /* Con una selección puesta, «activos con actuaciones» no dice nada:
@@ -314,8 +314,11 @@ export function Dashboard({ projectId }: { projectId: string }) {
       {total <= 0 ? (
         <Vacio>
           {deQuien
-            ? `«${deQuien}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.`
-            : 'Todavía no hay ninguna línea de CAPEX valorada.'}
+            ? traducir(
+                '«{quien}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.',
+                { quien: deQuien },
+              )
+            : traducir('Todavía no hay ninguna línea de CAPEX valorada.')}
         </Vacio>
       ) : (
         <>
@@ -333,19 +336,19 @@ export function Dashboard({ projectId }: { projectId: string }) {
               porciones={porciones}
               titulo={
                 deQuien
-                  ? `Reparto del CAPEX de ${deQuien} por concepto de gasto`
-                  : 'Reparto del CAPEX del proyecto por concepto de gasto'
+                  ? traducir('Reparto del CAPEX de {quien} por concepto de gasto', { quien: deQuien })
+                  : traducir('Reparto del CAPEX del proyecto por concepto de gasto')
               }
               formatear={(v) => eurosExactos.format(v)}
             />
             <Tabla
-              columna="Concepto"
-              plural="conceptos"
+              columna={traducir('Concepto')}
+              plural={traducir('conceptos')}
               filas={filtrado.concepto.map((c) => ({
                 clave: c.capex_concept_code,
                 nombre: c.capex_concept_name,
                 importe: Number(c.amount),
-                detalle: `${c.findings} ${c.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+                detalle: `${c.findings} ${c.findings === 1 ? traducir('hallazgo') : traducir('hallazgos')}`,
               }))}
               total={total}
             />
@@ -372,19 +375,19 @@ export function Dashboard({ projectId }: { projectId: string }) {
               porciones={porcionesDePagador}
               titulo={
                 deQuien
-                  ? `Reparto del CAPEX de ${deQuien} entre propiedad e inquilinos`
-                  : 'Reparto del CAPEX del proyecto entre propiedad e inquilinos'
+                  ? traducir('Reparto del CAPEX de {quien} entre propiedad e inquilinos', { quien: deQuien })
+                  : traducir('Reparto del CAPEX del proyecto entre propiedad e inquilinos')
               }
               formatear={(v) => eurosExactos.format(v)}
             />
             <Tabla
-              columna="Quién lo paga"
-              plural="pagadores"
+              columna={traducir('Quién lo paga')}
+              plural={traducir('pagadores')}
               filas={filtrado.pagador.map((p) => ({
                 clave: p.tenant_recoverable,
                 nombre: p.name_es,
                 importe: Number(p.amount),
-                detalle: `${p.findings} ${p.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+                detalle: `${p.findings} ${p.findings === 1 ? traducir('hallazgo') : traducir('hallazgos')}`,
               }))}
               total={total}
             />
@@ -401,7 +404,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
                 clave: h.time_horizon_code,
                 nombre: h.time_horizon_name,
                 importe: Number(h.amount),
-                detalle: `${h.lines} ${h.lines === 1 ? 'línea' : 'líneas'}`,
+                detalle: `${h.lines} ${h.lines === 1 ? traducir('línea') : traducir('líneas')}`,
               }))}
             />
           </section>
@@ -424,7 +427,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
                 nombre:
                   r.risk_code === 'SIN_GRADO' ? r.risk_name : `${r.risk_code} · ${r.risk_name}`,
                 importe: Number(r.amount),
-                detalle: `${r.findings} ${r.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+                detalle: `${r.findings} ${r.findings === 1 ? traducir('hallazgo') : traducir('hallazgos')}`,
                 clase: `grado-${r.risk_code.toLowerCase()}`,
               }))}
             />
@@ -470,7 +473,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
                     clave: a.asset_id,
                     nombre: a.asset_name,
                     importe: Number(a.amount),
-                    detalle: `${a.findings} ${a.findings === 1 ? 'hallazgo' : 'hallazgos'}`,
+                    detalle: `${a.findings} ${a.findings === 1 ? traducir('hallazgo') : traducir('hallazgos')}`,
                   }))}
                 alElegir={alternar}
                 puestas={elegidos}
@@ -783,7 +786,7 @@ function agruparPorCategoria(filas: ResumenPorObjeto[]): Apilada[] {
       // Un hallazgo codificado en la propia categoría no trae objeto, y no es
       // lo mismo que uno llamado «General»: se dice, no se inventa un nombre.
       clave: f.object_code ?? `${f.chapter_code}·sin-detallar`,
-      nombre: f.object_name ?? 'Sin detallar',
+      nombre: f.object_name ?? traducir('Sin detallar'),
       importe,
       hallazgos: f.findings,
     })

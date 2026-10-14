@@ -151,11 +151,15 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
         disabled={exportando || !hallazgos?.length}
         title={
           separado
-            ? 'Un libro por activo, cada uno con su cabecera y sus zonas, en un ZIP'
-            : 'Rellena la plantilla CAPEX del cliente y la descarga'
+            ? traducir('Un libro por activo, cada uno con su cabecera y sus zonas, en un ZIP')
+            : traducir('Rellena la plantilla CAPEX del cliente y la descarga')
         }
       >
-        {exportando ? 'Preparando…' : separado ? 'Exportar por activo (ZIP)' : 'Exportar a XLSX'}
+        {exportando
+            ? traducir('Preparando…')
+            : separado
+              ? traducir('Exportar por activo (ZIP)')
+              : traducir('Exportar a XLSX')}
       </button>
       {/* `[REQ]` Hay una plantilla por idioma, y no es solo la cabecera: las
           etiquetas de zona, riesgo y concepto salen de listas cerradas de la

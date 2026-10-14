@@ -42,6 +42,10 @@ const ESTADOS: EstadoSolicitud[] = [
   'NO_APLICA',
 ]
 
+/** `[REQ]` Castellano sin envolver, a propósito: una constante de módulo se
+ *  evalúa al importar y congelaría el idioma. Traduce quien la pinta. Ver
+ *  `i18n/idioma.tsx`, «dónde se llama a `traducir()`». Vale igual para `CAMPO`
+ *  y `MOTIVO`, más abajo. */
 const VEREDICTO: Record<string, string> = {
   CONFORME: 'Conforme',
   NO_CONFORME: 'No conforme',
@@ -272,7 +276,7 @@ function Autorizacion({
         )}
       </div>
       <button type="button" onClick={() => void cambiar()} disabled={ocupado}>
-        {permiso.activo ? 'Retirar la autorización' : 'Autorizar'}
+        {permiso.activo ? traducir('Retirar la autorización') : traducir('Autorizar')}
       </button>
     </div>
   )
@@ -365,7 +369,11 @@ function Linea({
     // `NO_DISPONIBLE` sin motivo lo rechaza la base: se pide antes de enviarlo
     // para que el error llegue como una pregunta y no como un 500.
     if (status === 'NO_DISPONIBLE' && !motivo.trim()) {
-      alFallar('Para marcar «no disponible» hace falta decir por qué: es lo que explica la limitación en el informe.')
+      alFallar(
+        traducir(
+          'Para marcar «no disponible» hace falta decir por qué: es lo que explica la limitación en el informe.',
+        ),
+      )
       return
     }
     try {
@@ -454,7 +462,7 @@ function Linea({
             e.target.value = ''
           }}
         />
-        <span>{subiendo ? 'Subiendo…' : 'Adjuntar documento'}</span>
+        <span>{subiendo ? traducir('Subiendo…') : traducir('Adjuntar documento')}</span>
       </label>
     </li>
   )
@@ -520,7 +528,11 @@ function FichaDocumento({
             onClick={() => void revisar()}
             disabled={revisando}
           >
-            {revisando ? 'Revisando…' : ultima ? 'Revisar otra vez' : 'Revisar con IA'}
+            {revisando
+              ? traducir('Revisando…')
+              : ultima
+                ? traducir('Revisar otra vez')
+                : traducir('Revisar con IA')}
           </button>
         )}
       </div>
@@ -601,7 +613,11 @@ function Extraccion({
     <div className="extraccion">
       <div className="cabecera">
         <button type="button" onClick={() => void extraer()} disabled={extrayendo}>
-          {extrayendo ? 'Leyendo…' : propuestas?.length ? 'Volver a extraer' : 'Extraer datos'}
+          {extrayendo
+            ? traducir('Leyendo…')
+            : propuestas?.length
+              ? traducir('Volver a extraer')
+              : traducir('Extraer datos')}
         </button>
         {/* Volver a extraer no reabre lo ya resuelto. Decirlo antes de pulsar
             evita la duda de si se va a perder lo decidido. */}
@@ -700,7 +716,7 @@ function Propuesta({
   return (
     <li className={`propuesta${contradice ? ' contradice' : ''}`}>
       <div className="cabecera">
-        <span className="criterio">{CAMPO[propuesta.campo] ?? propuesta.campo}</span>
+        <span className="criterio">{traducir(CAMPO[propuesta.campo] ?? propuesta.campo)}</span>
         <span className="valor">{propuesta.valor}</span>
       </div>
 
@@ -796,7 +812,7 @@ function Observacion({
     <li className={`observacion v-${obs.verdict.toLowerCase()} d-${obs.decision.toLowerCase()}`}>
       <div className="cabecera">
         <span className="criterio">{obs.check_name}</span>
-        <span className="veredicto">{VEREDICTO[obs.verdict] ?? obs.verdict}</span>
+        <span className="veredicto">{traducir(VEREDICTO[obs.verdict] ?? obs.verdict)}</span>
       </div>
       <p className="resumen">{obs.summary}</p>
 
@@ -932,12 +948,12 @@ function Limitaciones({
           {pendientes.map((l) => (
             <li key={l.id} className={`propuesta limitacion m-${l.motivo.toLowerCase()}`}>
               <div className="cabecera">
-                <span className="criterio">{MOTIVO[l.motivo].etiqueta}</span>
+                <span className="criterio">{traducir(MOTIVO[l.motivo].etiqueta)}</span>
                 {l.es_simulada && <span className="veredicto">simulada</span>}
               </div>
               <p className="resumen">{l.texto}</p>
               <p className="detalle">
-                {MOTIVO[l.motivo].explica}
+                {traducir(MOTIVO[l.motivo].explica)}
                 {l.documento && <> · Sale de «{l.documento}»</>}
                 {l.seccion && <> · {l.seccion}</>}
               </p>
@@ -961,7 +977,7 @@ function Limitaciones({
           <ul>
             {aceptadas.map((l) => (
               <li key={l.id}>
-                <strong>{MOTIVO[l.motivo].etiqueta}</strong> · {l.texto}
+                <strong>{traducir(MOTIVO[l.motivo].etiqueta)}</strong> · {l.texto}
               </li>
             ))}
           </ul>
@@ -977,7 +993,7 @@ function Limitaciones({
           <ul>
             {descartadas.map((l) => (
               <li key={l.id}>
-                <strong>{MOTIVO[l.motivo].etiqueta}</strong> · {l.texto}
+                <strong>{traducir(MOTIVO[l.motivo].etiqueta)}</strong> · {l.texto}
               </li>
             ))}
           </ul>
@@ -1095,7 +1111,7 @@ function EquiposPropuestos({
                 </span>
               </div>
               <p className="detalle">
-                {e.technical_system_name ?? 'sin sistema técnico'}
+                {e.technical_system_name ?? traducir('sin sistema técnico')}
                 {e.documento && <> · Sale de «{e.documento}»</>}
                 {e.seccion && <> · {e.seccion}</>}
               </p>

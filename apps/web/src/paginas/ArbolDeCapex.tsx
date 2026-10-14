@@ -197,7 +197,7 @@ export function ArbolDeCapex({ projectId, assetId }: { projectId: string; assetI
         <>
           <p className="alcance">
             <strong>{hallazgos.length}</strong>{' '}
-            {hallazgos.length === 1 ? 'actuación' : 'actuaciones'} ·{' '}
+            {hallazgos.length === 1 ? traducir('actuación') : traducir('actuaciones')} ·{' '}
             <strong>{euros.format(total)}</strong>
           </p>
           <ul className="ramas">
@@ -251,10 +251,10 @@ function Rama({
         <summary>
           <span className="nodo">
             {!retirado && <span className="codigo">{nodo.code}</span>}
-            <span className="nombre">{nodo.nombre}</span>
+            <span className="nombre">{traducir(nodo.nombre)}</span>
           </span>
           <span className="cifra">
-            {nodo.cuantas} {nodo.cuantas === 1 ? 'actuación' : 'actuaciones'}
+            {nodo.cuantas} {nodo.cuantas === 1 ? traducir('actuación') : traducir('actuaciones')}
           </span>
           <span className="cifra importe">{euros.format(nodo.total)}</span>
         </summary>
@@ -304,10 +304,13 @@ function Rama({
             <button
               type="button"
               className="enlace"
-              aria-label={`Añadir actuación en ${nodo.nombre} (${nodo.code})`}
+              aria-label={traducir('Añadir actuación en {nodo} ({codigo})', {
+                nodo: traducir(nodo.nombre),
+                codigo: nodo.code,
+              })}
               onClick={() => alCrear(nodo.clave)}
             >
-              Añadir actuación en {nodo.nombre}
+              {traducir('Añadir actuación en {nodo}', { nodo: traducir(nodo.nombre) })}
             </button>
           </p>
         )}
@@ -399,7 +402,7 @@ function TablaDeActuaciones({
                     ? (nombreDe.concepto.get(h.capex_concept_id)?.name_es ?? '—')
                     : '—'}
                 </td>
-                <td>{REPERCUTIBLE[h.tenant_recoverable] ?? h.tenant_recoverable}</td>
+                <td>{traducir(REPERCUTIBLE[h.tenant_recoverable] ?? h.tenant_recoverable)}</td>
                 {PLAZOS.map(([codigo]) => {
                   const linea = porPlazo.get(codigo)
                   return (

@@ -119,7 +119,7 @@ export function Subida({
         }
         return {
           tipo: 'error' as const,
-          mensaje: e instanceof Error ? e.message : 'Fallo de red',
+          mensaje: e instanceof Error ? e.message : traducir('Fallo de red'),
           status: e instanceof ErrorDeApi ? e.status : undefined,
         }
       }

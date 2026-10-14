@@ -164,7 +164,9 @@ export function DocumentacionDelActivo({
       // enviarlo para que llegue como una petición y no como un error.
       if (status === 'NO_DISPONIBLE' && !motivo.trim()) {
         setError(
-          'Marcar «no disponible» exige decir por qué: es lo que explica la limitación en el informe.',
+          traducir(
+            'Marcar «no disponible» exige decir por qué: es lo que explica la limitación en el informe.',
+          ),
         )
         return
       }
@@ -407,7 +409,7 @@ function Casilla({
             {/* La opción vacía solo existe mientras no hay estado: una vez
                 puesto no se puede volver a «sin pedir», porque la fila ya
                 existe y fingir que no sería mentirle a quien mire después. */}
-            {estado === null && <option value="">{SIN_PEDIR}</option>}
+            {estado === null && <option value="">{traducir(SIN_PEDIR)}</option>}
             {ESTADOS.map(([valor, texto]) => (
               <option key={valor} value={valor}>
                 {texto}

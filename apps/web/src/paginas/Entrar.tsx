@@ -23,7 +23,7 @@ export function Entrar() {
       setError(
         e instanceof ErrorDeApi && e.status === 429
           ? e.message
-          : 'Correo o contraseña incorrectos',
+          : traducir('Correo o contraseña incorrectos'),
       )
     } finally {
       setEnviando(false)
@@ -61,7 +61,7 @@ export function Entrar() {
         {error && <Mensaje tipo="error">{error}</Mensaje>}
 
         <button type="submit" disabled={enviando || !email || !clave}>
-          {enviando ? 'Entrando…' : 'Entrar'}
+          {enviando ? traducir('Entrando…') : traducir('Entrar')}
         </button>
         <Link className="enlace" to="/recuperar">
           {traducir('He olvidado mi contraseña')}

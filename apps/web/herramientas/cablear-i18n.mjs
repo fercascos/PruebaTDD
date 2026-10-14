@@ -20,6 +20,24 @@
  *  el programa y no solo leerlo: las cadenas sueltas en la lógica —un `const`
  *  con una lista de rótulos, un `throw new Error(...)`—. Las cuenta y las
  *  enumera al terminar para que se repasen a mano.
+ *
+ *  ## Las cinco que quedan, y por qué quedan
+ *
+ *  Se repasaron todas, una por una. Cinco siguen en la lista y **están bien
+ *  así**; se dejan dichas para que nadie las «arregle»:
+ *
+ *  - `ArbolDeCapex.tsx` «Código retirado» y `DocumentacionDelActivo.tsx`
+ *    «Pendiente de pedir» son rótulos que viajan dentro de un dato —el nombre
+ *    de un nodo del árbol, el de una opción— y los traduce quien los pinta. El
+ *    informe de arriba las ve porque son argumentos de una llamada, no valores
+ *    de una tabla, y esa diferencia no se lee en el renglón.
+ *  - `PestanaEquipo.tsx` «vencido» es una **clase CSS** que se llama igual que
+ *    un rótulo del catálogo. Traducirla rompería la hoja de estilos.
+ *  - `Plantillas.tsx` «Estándar» es **dato**: el nombre con el que se da de
+ *    alta una plantilla viaja al servidor y se guarda. Traducirlo crearía
+ *    plantillas distintas según el idioma de quien las creó.
+ *  - `Sugerencias.tsx` «Sugerencias» está **dentro de un comentario**, en una
+ *    cita literal de lo que pidió el cliente.
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -111,24 +129,60 @@ for (const fichero of ficheros(FUENTE)) {
   console.log(`${String(n).padStart(3)}  ${relative(RAIZ, fichero)}`)
 }
 
+/** Dónde está la cadena, para saber si hay algo que hacer con ella.
+ *
+ *  `[LIM]` Esto mira el renglón, no el programa, y por eso se equivoca en dos
+ *  direcciones conocidas. Hacia el silencio: una cadena dentro de un
+ *  `traducir(` que abrió en el renglón anterior se da por hecha sin
+ *  comprobarlo. Y hacia el ruido: `className={e.vencido ? 'vencido' : ''}` es
+ *  una clase CSS que se llama igual que un rótulo del catálogo, y sale en la
+ *  lista. Sirve para repasar, no para aprobar.
+ */
+function situacion(codigo, indice) {
+  const renglon = codigo.lastIndexOf('\n', indice) + 1
+  const izquierda = codigo.slice(renglon, indice)
+  // Ya traducida, en la misma línea o en la de arriba.
+  if (/\b(traducir|t)\(\s*$/.test(izquierda)) return 'hecha'
+  if (!izquierda.trim() && /\b(traducir|t)\(\s*$/.test(codigo.slice(0, renglon).trimEnd()))
+    return 'hecha'
+  // **Valor de una tabla de rótulos**: `NA: 'N. A.'`, `['tag', 'Etiqueta']`,
+  // `{ code: 'CORTO', nombre: 'Corto plazo' }`. Estas se dejan en castellano a
+  // propósito —una constante de módulo se evalúa al importar y congelaría el
+  // idioma— y traduce quien las pinta. Ver `i18n/idioma.tsx`.
+  if (/(\w+|\]):\s*$/.test(izquierda) || /\[\s*'[^']*',\s*$/.test(izquierda)) return 'tabla'
+  return 'suelta'
+}
+
 // Lo que queda suelto en la lógica, para repasarlo a mano.
+let enTablas = 0
 for (const fichero of ficheros(FUENTE)) {
   if (fichero.includes(join('src', 'i18n'))) continue
   const codigo = readFileSync(fichero, 'utf8')
   for (const m of codigo.matchAll(/'([^'\\\n]{3,})'|"([^"\\\n]{3,})"/g)) {
     const clave = (m[1] ?? m[2]).trim().replace(/\s+/g, ' ')
     if (!(clave in EN)) continue
-    // Si ya va dentro de `traducir(` o `t(`, está hecho.
-    const antes = codigo.slice(Math.max(0, m.index - 12), m.index)
-    if (/\b(traducir|t)\(\s*$/.test(antes)) continue
+    const donde = situacion(codigo, m.index)
+    if (donde === 'hecha') continue
+    if (donde === 'tabla') {
+      enTablas += 1
+      continue
+    }
     if (!sinTocar.has(relative(RAIZ, fichero))) sinTocar.set(relative(RAIZ, fichero), [])
     sinTocar.get(relative(RAIZ, fichero)).push(clave)
   }
 }
 
 console.log(`\n${sustituciones} sustituciones en ${tocados} ficheros${VER ? ' (no se ha escrito nada)' : ''}`)
+if (enTablas) {
+  console.log(
+    `\n${enTablas} valores de tablas de rótulos, en castellano a propósito:` +
+      ` los traduce quien los pinta, no su declaración.`,
+  )
+}
 if (sinTocar.size) {
   const total = [...sinTocar.values()].reduce((a, b) => a + b.length, 0)
-  console.log(`\n${total} cadenas en la lógica, para repasar a mano:`)
-  for (const [f, cs] of sinTocar) console.log(`  ${f}: ${cs.length}`)
+  console.log(`\n${total} cadenas sueltas en la lógica, para repasar a mano:`)
+  for (const [f, cs] of sinTocar) console.log(`  ${f}: ${cs.map((c) => `«${c}»`).join(', ')}`)
+} else {
+  console.log('\nNada suelto en la lógica.')
 }

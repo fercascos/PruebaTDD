@@ -1,4 +1,5 @@
 import { ErrorDeApi } from '../api/cliente'
+import { traducir } from '../i18n/traducir'
 
 /**
  * El texto que se enseña cuando otra persona tocó el registro antes.
@@ -15,8 +16,9 @@ import { ErrorDeApi } from '../api/cliente'
 export function mensajeDeConflicto(e: unknown): string {
   if (e instanceof ErrorDeApi && e.status === 428) {
     return (
-      'Esta pantalla ha intentado guardar sin decir sobre qué versión escribe. ' +
-      'Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.'
+      traducir('Esta pantalla ha intentado guardar sin decir sobre qué versión escribe.') +
+      ' ' +
+      traducir('Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.')
     )
   }
   return (e as Error).message

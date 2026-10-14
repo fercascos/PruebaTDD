@@ -71,7 +71,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
         }),
       )
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido comprobar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido comprobar'))
     } finally {
       setTrabajando(false)
     }
@@ -94,7 +94,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
           ? e.message
           : e instanceof Error
             ? e.message
-            : 'No se ha podido generar',
+            : traducir('No se ha podido generar'),
       )
     } finally {
       setTrabajando(false)
@@ -107,7 +107,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
       await enviar(`/reports/${version.id}/transitions`, { to: destino })
       recargarVersiones()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido cambiar el estado')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido cambiar el estado'))
     }
   }
 
@@ -177,7 +177,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
             // el viaje y deja claro qué hay que arreglar antes.
             disabled={!previo.can_generate || trabajando}
           >
-            {previo.can_generate ? 'Generar informe' : 'Corrija lo bloqueante para generar'}
+            {previo.can_generate ? traducir('Generar informe') : traducir('Corrija lo bloqueante para generar')}
           </button>
         </section>
       )}

@@ -174,7 +174,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
                     />
                   </span>
                   <span className="cifra">
-                    {g.hallazgos} {g.hallazgos === 1 ? 'hallazgo' : 'hallazgos'}
+                    {g.hallazgos} {g.hallazgos === 1 ? traducir('hallazgo') : traducir('hallazgos')}
                   </span>
                   <span className="cifra importe">{euros.format(Number(g.importe))}</span>
                 </li>

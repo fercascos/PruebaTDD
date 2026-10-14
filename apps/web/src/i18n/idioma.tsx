@@ -34,6 +34,25 @@
  * `[REQ]` Y para que ese respaldo no se convierta en una excusa, **una prueba
  * falla si queda una sola clave sin traducir**: el hueco es visible en la
  * pantalla y además rompe la construcción.
+ *
+ * ## Dónde se llama a `traducir()`, y dónde no
+ *
+ * `[REQ]` La regla, que no es de estilo sino de corrección:
+ *
+ * > **Se traduce donde se pinta, nunca donde se declara.**
+ *
+ * Media aplicación tiene tablas de rótulos en constantes de módulo —`const
+ * VEREDICTO = { CONFORME: 'Conforme', … }`—. Envolver ahí el valor parece lo
+ * cómodo y está mal: el cuerpo de un módulo corre **una vez**, al importarlo,
+ * cuando el idioma todavía es el inicial. La tabla se congelaría en castellano
+ * y seguiría en castellano después de pulsar «EN», sin que nada falle ni
+ * avise. Por eso las constantes guardan el castellano tal cual —que **es** la
+ * clave— y quien las lee traduce: `traducir(VEREDICTO[v])`.
+ *
+ * Y hay un tercer grupo que no se traduce en absoluto: las cadenas que son
+ * **dato**, no rótulo. El nombre con el que se da de alta una plantilla
+ * («Estándar») viaja al servidor y se guarda; traducirlo crearía plantillas
+ * distintas según el idioma de quien las creó.
  */
 import {
   createContext,
@@ -43,9 +62,12 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { EN } from './textos'
+import { fijarIdioma, type Idioma, traducir } from './traducir'
 
-export type Idioma = 'es' | 'en'
+// El traductor vive en `./traducir`, sin React, y se reexporta desde aquí para
+// que el resto del código lo importe de un solo sitio. El por qué, allí.
+export type { Idioma } from './traducir'
+export { traducir } from './traducir'
 
 /** Lo que `Intl` necesita para cada idioma. La moneda la fija el proyecto. */
 const LOCALE: Record<Idioma, string> = { es: 'es-ES', en: 'en-GB' }
@@ -67,33 +89,6 @@ function idiomaInicial(): Idioma {
   return navigator.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
 }
 
-/**
- * El idioma en vivo, fuera de React.
- *
- * `[REQ]` Existe para que `traducir()` se pueda llamar **desde cualquier
- * sitio**: una constante de módulo, un ayudante que no es componente, el
- * cuerpo de un `catch`. Con un `hook` eso no se puede, y la alternativa era
- * reestructurar cincuenta ficheros para meter el texto dentro de un componente.
- *
- * `[LIM]` Es estado fuera de React, con lo que eso implica: **no dispara el
- * repintado por sí solo**. Lo dispara `ProveedorDeIdioma`, que cambia este
- * valor y acto seguido su `useState`, y como está en la raíz del árbol
- * repinta todo lo que hay debajo. Funciona porque **ningún componente de esta
- * aplicación está memoizado**; comprobado, no supuesto. El día que alguien
- * envuelva uno en `memo`, ese componente se quedará en el idioma anterior, y
- * por eso está escrito aquí.
- */
-let idiomaActual: Idioma = 'es'
-
-/** Traduce desde fuera de un componente. Dentro, use `useT()`. */
-export function traducir(clave: string, valores?: Record<string, string | number>): string {
-  const texto = idiomaActual === 'en' ? (EN[clave] ?? clave) : clave
-  if (!valores) return texto
-  return texto.replace(/\{(\w+)\}/g, (entero, nombre) =>
-    nombre in valores ? String(valores[nombre]) : entero,
-  )
-}
-
 type Contexto = {
   idioma: Idioma
   cambiar: (a: Idioma) => void
@@ -104,7 +99,7 @@ const Ctx = createContext<Contexto>({ idioma: 'es', cambiar: () => {} })
 export function ProveedorDeIdioma({ children }: { children: ReactNode }) {
   const [idioma, setIdioma] = useState<Idioma>(() => {
     const inicial = idiomaInicial()
-    idiomaActual = inicial
+    fijarIdioma(inicial)
     return inicial
   })
 
@@ -112,7 +107,7 @@ export function ProveedorDeIdioma({ children }: { children: ReactNode }) {
     // El orden importa: primero el valor que lee `traducir()`, después el
     // estado que provoca el repintado. Al revés, la primera pasada del
     // repintado leería todavía el idioma viejo.
-    idiomaActual = a
+    fijarIdioma(a)
     setIdioma(a)
     try {
       localStorage.setItem(CLAVE_GUARDADA, a)
@@ -131,10 +126,10 @@ export function useIdioma(): Contexto {
 }
 
 /**
- * Traduce. En castellano devuelve la clave tal cual, que **es** el texto.
+ * Traduce, suscribiendo el componente al idioma.
  *
- * `interpolacion` sustituye `{nombre}` por su valor. Se resuelve después de
- * traducir, para que la frase inglesa pueda colocar los huecos en otro orden.
+ * Es `traducir()` más el repintado: dentro de un componente se usa esto, y
+ * fuera —constantes, ayudantes, un `catch`— la función suelta.
  */
 export function useT(): (clave: string, valores?: Record<string, string | number>) => string {
   // Se suscribe al contexto —para que el componente se repinte al cambiar de

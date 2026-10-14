@@ -65,7 +65,7 @@ export function Personas() {
       if (cambios.is_active === false) {
         setAviso(
           `Se han cerrado las sesiones abiertas de ${persona.full_name}. ` +
-            'Desactivar echa a alguien ahora, no cuando caduque su token de refresco.',
+            traducir('Desactivar echa a alguien ahora, no cuando caduque su token de refresco.'),
         )
       }
       recargar()
@@ -136,12 +136,15 @@ export function Personas() {
                       >
                         {ROLES.map((r) => (
                           <option key={r.code} value={r.code}>
-                            {r.nombre}
+                            {traducir(r.nombre)}
                           </option>
                         ))}
                       </select>
                     ) : (
-                      (ROLES.find((r) => r.code === p.org_role)?.nombre ?? p.org_role)
+                      (() => {
+                        const rol = ROLES.find((r) => r.code === p.org_role)
+                        return rol ? traducir(rol.nombre) : p.org_role
+                      })()
                     )}
                   </td>
                   <td>
@@ -188,7 +191,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
   return (
     <Formulario
       titulo={traducir('Nueva persona')}
-      textoDeEnvio="Dar de alta"
+      textoDeEnvio={traducir('Dar de alta')}
       alCancelar={alCancelar}
       enviar={async () => {
         await enviar('/users', {
@@ -218,7 +221,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
           <select value={rol} onChange={(e) => setRol(e.target.value)}>
             {ROLES.map((r) => (
               <option key={r.code} value={r.code}>
-                {r.nombre}
+                {traducir(r.nombre)}
               </option>
             ))}
           </select>

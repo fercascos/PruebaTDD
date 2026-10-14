@@ -270,7 +270,7 @@ export function InventarioDelActivo({
     try {
       await hacer()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido completar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido completar'))
     } finally {
       setTrabajando(false)
     }
@@ -283,9 +283,10 @@ export function InventarioDelActivo({
         {},
       )
       setHecho(
-        `${r.creados} descriptivo(s) nuevo(s), ${r.completados} completado(s) y ` +
-          `${r.respetados} respetado(s) porque ya tenían texto o estaban validados. ` +
-          'Las valoraciones no se tocan: no salen de ningún documento.',
+        traducir(
+          '{creados} descriptivo(s) nuevo(s), {completados} completado(s) y {respetados} respetado(s) porque ya tenían texto o estaban validados. Las valoraciones no se tocan: no salen de ningún documento.',
+          { creados: r.creados, completados: r.completados, respetados: r.respetados },
+        ),
       )
       if (r.avisos.length) setAviso(r.avisos)
       await recargar()
@@ -549,13 +550,13 @@ export function InventarioDelActivo({
 function marcasDe(b: Borrador, equipos: Equipo[], fotos: number): string {
   const trozos: string[] = []
   if (b.texto.trim()) trozos.push('descriptivo')
-  if (b.valoracion.trim()) trozos.push('valoración')
+  if (b.valoracion.trim()) trozos.push(traducir('valoración'))
   if (equipos.length) trozos.push(`${equipos.length} equipo${equipos.length === 1 ? '' : 's'}`)
   const capex = equipos.filter((e) => e.pasa_a_capex).length
   if (capex) trozos.push(`${capex} a CAPEX`)
   if (fotos) trozos.push(`${fotos} foto${fotos === 1 ? '' : 's'}`)
   if (b.validado) trozos.push('validado')
-  return trozos.length ? trozos.join(' · ') : 'vacío'
+  return trozos.length ? trozos.join(' · ') : traducir('vacío')
 }
 
 function Cabecera({
@@ -657,10 +658,11 @@ function FichaDeObjeto({
         <span className="recuento">
           {guardado?.validado ? (
             <>
-              {guardado.validado_por_nombre ?? 'alguien'} · {guardado.validado_at?.slice(0, 10)}
+              {guardado.validado_por_nombre ?? traducir('alguien')} ·{' '}
+              {guardado.validado_at?.slice(0, 10)}
             </>
           ) : (
-            'Mientras no se marque, el informe lo da por sin validar'
+            traducir('Mientras no se marque, el informe lo da por sin validar')
           )}
         </span>
         {guardado?.es_simulada && (

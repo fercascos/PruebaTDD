@@ -217,8 +217,8 @@ export function PestanaFotos({
       ) : fotos.length === 0 ? (
         <Vacio>
           {filtroActivo || filtroSistema || soloInforme
-            ? 'Ninguna fotografía cumple el filtro.'
-            : 'Todavía no hay fotografías. Use los botones de arriba para añadirlas.'}
+            ? traducir('Ninguna fotografía cumple el filtro.')
+            : traducir('Todavía no hay fotografías. Use los botones de arriba para añadirlas.')}
         </Vacio>
       ) : (
         <ul className="rejilla">

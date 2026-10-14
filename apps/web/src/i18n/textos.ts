@@ -443,8 +443,6 @@ export const EN: Record<string, string> = {
   'Vida residual': 'Remaining life',
   'Fotografías de este objeto': 'Photos of this item',
   'No se ha podido completar': 'Could not be completed',
-  'Las valoraciones no se tocan: no salen de ningún documento.':
-    'Assessments are never touched: they come from no document.',
   vacío: 'empty',
   'Qué hay: tipo, cantidad, características. Sale de la memoria técnica.':
     'What is there: type, quantity, characteristics. Taken from the technical report.',
@@ -815,4 +813,59 @@ export const EN: Record<string, string> = {
   // ── Conflictos de edición ─────────────────────────────────────────────
   'Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.':
     'Reload and try again; if it happens again, it is an application bug.',
+
+  // ── Rótulos que estaban en la lógica ──────────────────────────────────
+  //
+  // No son una pantalla: son las cadenas que vivían dentro de la lógica —el
+  // gerundio de un botón ocupado, el singular y el plural de un recuento, el
+  // hueco de un título con el nombre de alguien dentro— y que el cableado
+  // automático no podía distinguir de un nombre de ruta o de un valor de
+  // enumerado. Se repasaron a mano, una por una.
+  //
+  // Los gerundios van con «…» igual que en castellano: es el mismo gesto —el
+  // botón está ocupado y se queda quieto— y el cliente lo usa así en sus
+  // propias pantallas.
+  'Analizando…': 'Analysing…',
+  'Entrando…': 'Signing in…',
+  'Enviando…': 'Sending…',
+  'Guardando…': 'Saving…',
+  'Leyendo…': 'Reading…',
+  'Preparando…': 'Preparing…',
+  'Revisando…': 'Reviewing…',
+  'Subiendo…': 'Uploading…',
+  'Validando…': 'Validating…',
+
+  // Recuentos. Singular y plural como dos entradas, que es lo que hay: dos
+  // idiomas con la misma regla de plural y ninguna necesidad de una
+  // biblioteca para resolverla.
+  hallazgo: 'finding',
+  hallazgos: 'findings',
+  actuaciones: 'actions',
+  conceptos: 'purposes',
+  pagadores: 'payers',
+
+  // Mantenimiento.
+  'sin plan': 'no schedule',
+  vencido: 'overdue',
+
+  Autorizar: 'Authorise',
+
+  // Títulos y frases con un hueco. El hueco se resuelve **después** de
+  // traducir, así que la frase inglesa puede colocarlo donde le toque.
+  'CAPEX de {quien}': 'CAPEX for {quien}',
+  'Editar «{nombre}»': 'Edit “{nombre}”',
+  'Reparto del CAPEX de {quien} por concepto de gasto':
+    'CAPEX breakdown for {quien} by purpose of spend',
+  'Reparto del CAPEX de {quien} entre propiedad e inquilinos':
+    'CAPEX breakdown for {quien} between landlord and tenants',
+  '«{quien}» no tiene ninguna línea de CAPEX valorada. No es lo mismo que no tener hallazgos: puede tenerlos sin importe.':
+    '“{quien}” has no priced CAPEX line. That is not the same as having no findings: it may have findings with no amount.',
+  Guardar: 'Save',
+  alguien: 'someone',
+  'Guardar {cuantas} anotaciones': 'Save {cuantas} annotations',
+  'Precio: {estado}': 'Price: {estado}',
+  'Añadir actuación en {nodo}': 'Add action under {nodo}',
+  'Añadir actuación en {nodo} ({codigo})': 'Add action under {nodo} ({codigo})',
+  '{creados} descriptivo(s) nuevo(s), {completados} completado(s) y {respetados} respetado(s) porque ya tenían texto o estaban validados. Las valoraciones no se tocan: no salen de ningún documento.':
+    '{creados} new description(s), {completados} completed and {respetados} left alone because they already had text or were validated. Assessments are never touched: they come from no document.',
 }

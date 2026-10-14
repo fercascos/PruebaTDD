@@ -111,9 +111,9 @@ export function FichaDeActivo({
 
   return (
     <Formulario
-      titulo={activo ? `Editar «${activo.name}»` : 'Nuevo activo'}
+      titulo={activo ? traducir('Editar «{nombre}»', { nombre: activo.name }) : traducir('Nuevo activo')}
       enviar={guardar}
-      textoDeEnvio={activo ? 'Guardar cambios' : 'Crear activo'}
+      textoDeEnvio={activo ? traducir('Guardar cambios') : traducir('Crear activo')}
       alCancelar={alCancelar}
     >
       <Rejilla>
@@ -183,10 +183,10 @@ export function FichaDeActivo({
             key={clave}
             etiqueta={
               clave === 'warehouse_area_sqm'
-                ? 'Superficie de almacén (m²)'
+                ? traducir('Superficie de almacén (m²)')
                 : clave === 'office_area_sqm'
-                  ? 'Superficie de oficinas (m²)'
-                  : 'Altura libre de almacén (m)'
+                  ? traducir('Superficie de oficinas (m²)')
+                  : traducir('Altura libre de almacén (m)')
             }
           >
             <input type="number" step="0.01" min={0} {...numero(clave)} />

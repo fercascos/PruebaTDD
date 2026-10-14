@@ -101,7 +101,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
     try {
       await hacer()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se ha podido completar')
+      setError(e instanceof Error ? e.message : traducir('No se ha podido completar'))
     } finally {
       setTrabajando(false)
     }
@@ -116,7 +116,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
         // verdad. Pedirla en blanco significa que casi siempre queda vacía.
         meeting_point: [activo.address_line, activo.city].filter(Boolean).join(', ') || null,
       })
-      setHecho('Visita creada. Ponga la fecha y quién va.')
+      setHecho(traducir('Visita creada. Ponga la fecha y quién va.'))
       recargar()
     })
   }
@@ -138,7 +138,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
       setVisitas((previas) =>
         (previas ?? []).map((v) => (v.id === visita.id ? actualizada : v)),
       )
-      setHecho('Visita guardada.')
+      setHecho(traducir('Visita guardada.'))
     })
   }
 
@@ -158,7 +158,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
       setVisitas((previas) =>
         (previas ?? []).map((v) => (v.id === visita.id ? actualizada : v)),
       )
-      setHecho('Equipo implicado guardado.')
+      setHecho(traducir('Equipo implicado guardado.'))
     })
   }
 
@@ -257,9 +257,12 @@ function FichaDeVisita({
     <li className={`visita ${estado === 'VISITADO' ? 'realizada' : ''}`}>
       <details open={abierta}>
         <summary>
-          <strong>{cuando ?? 'Sin fecha'}</strong>
+          <strong>{cuando ?? traducir('Sin fecha')}</strong>
           <span className="pastilla">
-            {ESTADOS.find((e) => e.code === visita.status)?.nombre ?? visita.status}
+            {(() => {
+              const estado = ESTADOS.find((e) => e.code === visita.status)
+              return estado ? traducir(estado.nombre) : visita.status
+            })()}
           </span>
           <span className="cifra">
             {visita.asistentes.length}{' '}
@@ -278,7 +281,7 @@ function FichaDeVisita({
             >
               {ESTADOS.map((e) => (
                 <option key={e.code} value={e.code}>
-                  {e.nombre}
+                  {traducir(e.nombre)}
                 </option>
               ))}
             </select>
@@ -460,7 +463,7 @@ function FichaDeVisita({
           <Vacio>{traducir('Este activo todavía no tiene fotografías.')}</Vacio>
         ) : (
           <p className="recuento">
-            <strong>{fotos.length}</strong> {fotos.length === 1 ? 'fotografía' : 'fotografías'}{' '}
+            <strong>{fotos.length}</strong> {fotos.length === 1 ? traducir('fotografía') : traducir('fotografías')}{' '}
             del activo
             {visita.actual_date && (
               <>
