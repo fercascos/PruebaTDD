@@ -67,6 +67,33 @@ function idiomaInicial(): Idioma {
   return navigator.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
 }
 
+/**
+ * El idioma en vivo, fuera de React.
+ *
+ * `[REQ]` Existe para que `traducir()` se pueda llamar **desde cualquier
+ * sitio**: una constante de módulo, un ayudante que no es componente, el
+ * cuerpo de un `catch`. Con un `hook` eso no se puede, y la alternativa era
+ * reestructurar cincuenta ficheros para meter el texto dentro de un componente.
+ *
+ * `[LIM]` Es estado fuera de React, con lo que eso implica: **no dispara el
+ * repintado por sí solo**. Lo dispara `ProveedorDeIdioma`, que cambia este
+ * valor y acto seguido su `useState`, y como está en la raíz del árbol
+ * repinta todo lo que hay debajo. Funciona porque **ningún componente de esta
+ * aplicación está memoizado**; comprobado, no supuesto. El día que alguien
+ * envuelva uno en `memo`, ese componente se quedará en el idioma anterior, y
+ * por eso está escrito aquí.
+ */
+let idiomaActual: Idioma = 'es'
+
+/** Traduce desde fuera de un componente. Dentro, use `useT()`. */
+export function traducir(clave: string, valores?: Record<string, string | number>): string {
+  const texto = idiomaActual === 'en' ? (EN[clave] ?? clave) : clave
+  if (!valores) return texto
+  return texto.replace(/\{(\w+)\}/g, (entero, nombre) =>
+    nombre in valores ? String(valores[nombre]) : entero,
+  )
+}
+
 type Contexto = {
   idioma: Idioma
   cambiar: (a: Idioma) => void
@@ -75,9 +102,17 @@ type Contexto = {
 const Ctx = createContext<Contexto>({ idioma: 'es', cambiar: () => {} })
 
 export function ProveedorDeIdioma({ children }: { children: ReactNode }) {
-  const [idioma, setIdioma] = useState<Idioma>(idiomaInicial)
+  const [idioma, setIdioma] = useState<Idioma>(() => {
+    const inicial = idiomaInicial()
+    idiomaActual = inicial
+    return inicial
+  })
 
   const cambiar = useCallback((a: Idioma) => {
+    // El orden importa: primero el valor que lee `traducir()`, después el
+    // estado que provoca el repintado. Al revés, la primera pasada del
+    // repintado leería todavía el idioma viejo.
+    idiomaActual = a
     setIdioma(a)
     try {
       localStorage.setItem(CLAVE_GUARDADA, a)
@@ -102,17 +137,11 @@ export function useIdioma(): Contexto {
  * traducir, para que la frase inglesa pueda colocar los huecos en otro orden.
  */
 export function useT(): (clave: string, valores?: Record<string, string | number>) => string {
-  const { idioma } = useIdioma()
-  return useCallback(
-    (clave: string, valores?: Record<string, string | number>) => {
-      const texto = idioma === 'en' ? (EN[clave] ?? clave) : clave
-      if (!valores) return texto
-      return texto.replace(/\{(\w+)\}/g, (entero, nombre) =>
-        nombre in valores ? String(valores[nombre]) : entero,
-      )
-    },
-    [idioma],
-  )
+  // Se suscribe al contexto —para que el componente se repinte al cambiar de
+  // idioma— y delega en la misma función que usa todo lo demás, para que no
+  // haya dos traductores que puedan discrepar.
+  useIdioma()
+  return traducir
 }
 
 /**

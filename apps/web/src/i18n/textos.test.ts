@@ -18,15 +18,6 @@ import { describe, expect, it } from 'vitest'
 import { extraer } from '../../herramientas/extraer-textos.mjs'
 import { EN } from './textos'
 
-/**
- * Cuántas había traducidas la última vez. **Solo puede subir.**
- *
- * `[LIM]` No es 516 todavía: la traducción se hizo por pantallas, empezando
- * por el camino que recorre quien abre la aplicación. Cuando llegue al total,
- * esta constante desaparece y la prueba pasa a exigirlas todas.
- */
-const TRADUCIDAS_AL_MENOS = 204
-
 const EN_EL_CODIGO = new Set(extraer().keys())
 
 describe('el catálogo de textos', () => {
@@ -40,15 +31,16 @@ describe('el catálogo de textos', () => {
     ).toEqual([])
   })
 
-  it('no retrocede: lo traducido sigue traducido', () => {
-    const traducidas = [...EN_EL_CODIGO].filter((c) => c in EN).length
-    const faltan = EN_EL_CODIGO.size - traducidas
+  it('no deja ni un texto sin traducir', () => {
+    // Empezó siendo un trinquete —«que no baje de 204»— mientras la traducción
+    // iba por pantallas. Ya están las 602, así que la exigencia es la entera:
+    // texto nuevo en una pantalla sale aquí el día que se escribe, y no el día
+    // que alguien lo ve en castellano delante de un cliente inglés.
+    const faltan = [...EN_EL_CODIGO].filter((c: string) => !(c in EN))
     expect(
-      traducidas,
-      `Había ${TRADUCIDAS_AL_MENOS} textos traducidos y ahora hay ${traducidas}. ` +
-        `Si ha añadido texto nuevo a una pantalla, tradúzcalo; si ha retirado una ` +
-        `pantalla, baje el trinquete a conciencia. Quedan ${faltan} sin traducir.`,
-    ).toBeGreaterThanOrEqual(TRADUCIDAS_AL_MENOS)
+      faltan,
+      `Estos textos de la interfaz no tienen traducción al inglés:\n  ` + faltan.join('\n  '),
+    ).toEqual([])
   })
 
   it('no deja una traducción vacía, que es peor que no tenerla', () => {

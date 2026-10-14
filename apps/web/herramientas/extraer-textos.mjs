@@ -91,9 +91,17 @@ export function extraer() {
   for (const fichero of ficheros(FUENTE)) {
     if (fichero.includes(`${join('src', 'i18n')}`)) continue // el propio catálogo
     const codigo = readFileSync(fichero, 'utf8')
-    // Texto suelto entre etiquetas JSX.
-    for (const m of codigo.matchAll(/>\s*([^<>{}\n][^<>{}\n]*?)\s*</g)) {
-      apuntar(m[1], fichero, true)
+    // Texto suelto entre etiquetas JSX. **Solo en `.tsx`**: en un `.ts` no hay
+    // JSX, y esta misma regla recogía los genéricos de TypeScript —de
+    // `Map<string, Promise<void>>` sacaba «Promise»— y los daba por etiquetas
+    // de la interfaz.
+    if (fichero.endsWith('.tsx')) {
+      // `(?<!=)` descarta la flecha de una función: en `=> Promise<void>` el
+      // `>` del `=>` y el `<` del genérico encierran «Promise», que no es una
+      // etiqueta de nada.
+      for (const m of codigo.matchAll(/(?<!=)>\s*([^<>{}\n][^<>{}\n]*?)\s*</g)) {
+        apuntar(m[1], fichero, true)
+      }
     }
     // Cadenas entrecomilladas.
     for (const m of codigo.matchAll(/'([^'\\\n]{3,})'|"([^"\\\n]{3,})"/g)) {
