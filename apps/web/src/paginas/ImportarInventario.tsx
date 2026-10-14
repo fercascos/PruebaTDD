@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useRef, useState } from 'react'
 import { descargar, subirFichero } from '../api/cliente'
 import type { Previsualizacion, ResultadoImportacion } from '../api/tipos'
@@ -101,9 +102,9 @@ export function ImportarInventario({
   return (
     <div className="importar">
       <div className="titular">
-        <h2>Importar inventario desde Excel</h2>
+        <h2>{traducir('Importar inventario desde Excel')}</h2>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
@@ -125,7 +126,7 @@ export function ImportarInventario({
             )
           }
         >
-          Descargar la plantilla
+          {traducir('Descargar la plantilla')}
         </button>
         <p className="ayuda">
           También vale una hoja propia: se reconocen varios nombres para cada columna, y las que no
@@ -154,7 +155,7 @@ export function ImportarInventario({
           </button>
           <label htmlFor="hoja-de-inventario">{fichero ? fichero.name : 'Ningún fichero elegido'}</label>
         </div>
-        {ocupado && !resultado && <p className="cargando">Leyendo la hoja…</p>}
+        {ocupado && !resultado && <p className="cargando">{traducir('Leyendo la hoja…')}</p>}
       </section>
 
       {vista && (
@@ -191,26 +192,26 @@ export function ImportarInventario({
               hasta buscarlo meses después. */}
           {vista.columnas_ignoradas.length > 0 && (
             <Mensaje tipo="aviso">
-              Columnas que no se reconocen y <strong>no se importan</strong>:{' '}
+              {traducir('Columnas que no se reconocen y')} <strong>no se importan</strong>:{' '}
               {vista.columnas_ignoradas.join(', ')}.
             </Mensaje>
           )}
 
           {vista.filas.length === 0 ? (
-            <Vacio>La hoja no tiene filas con datos.</Vacio>
+            <Vacio>{traducir('La hoja no tiene filas con datos.')}</Vacio>
           ) : (
             <div className="desbordable">
               <table className="tabla previa-importacion">
                 <thead>
                   <tr>
-                    <th scope="col">Fila</th>
-                    <th scope="col">Qué pasa</th>
+                    <th scope="col">{traducir('Fila')}</th>
+                    <th scope="col">{traducir('Qué pasa')}</th>
                     {COLUMNAS.map(([, titulo]) => (
                       <th key={titulo} scope="col">
                         {titulo}
                       </th>
                     ))}
-                    <th scope="col">Observaciones</th>
+                    <th scope="col">{traducir('Observaciones')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -273,7 +274,7 @@ export function ImportarInventario({
                     : `Importar ${vista.nuevas + (actualizar ? vista.ya_existen : 0)} equipos`}
                 </button>
                 <button type="button" className="secundario" onClick={alCerrar}>
-                  Cancelar
+                  {traducir('Cancelar')}
                 </button>
               </div>
             </>
@@ -282,7 +283,7 @@ export function ImportarInventario({
           {resultado && (
             <div className="acciones">
               <button type="button" onClick={alCerrar}>
-                Volver al inventario
+                {traducir('Volver al inventario')}
               </button>
             </div>
           )}

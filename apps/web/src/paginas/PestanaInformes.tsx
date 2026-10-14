@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { ErrorDeApi, descargar, enviar, obtener } from '../api/cliente'
 import type { Mapeo, Plantilla, Previo, VersionDeInforme } from '../api/tipos'
@@ -113,7 +114,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
   if (plantillas.length === 0) {
     return (
       <Vacio>
-        No hay ninguna plantilla registrada. Súbala en «Plantillas» antes de generar un informe.
+        {traducir('No hay ninguna plantilla registrada. Súbala en «Plantillas» antes de generar un informe.')}
       </Vacio>
     )
   }
@@ -124,7 +125,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
 
       <div className="filtro">
         <label>
-          Plantilla
+          {traducir('Plantilla')}
           <select value={plantillaElegida} onChange={(e) => setPlantillaElegida(e.target.value)}>
             {plantillas.map((p) => (
               <option key={p.id} value={p.id}>
@@ -134,7 +135,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
           </select>
         </label>
         <label>
-          Mapeo
+          {traducir('Mapeo')}
           <select value={mapeoElegido} onChange={(e) => setMapeoElegido(e.target.value)}>
             <option value="">— sin mapeo —</option>
             {mapeos.map((m) => (
@@ -146,7 +147,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
           </select>
         </label>
         <button type="button" onClick={() => void comprobar()} disabled={trabajando}>
-          Comprobar antes de generar
+          {traducir('Comprobar antes de generar')}
         </button>
       </div>
 
@@ -181,18 +182,18 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
         </section>
       )}
 
-      <h3>Versiones</h3>
+      <h3>{traducir('Versiones')}</h3>
       {versiones.length === 0 ? (
-        <Vacio>Todavía no se ha generado ningún informe de este proyecto.</Vacio>
+        <Vacio>{traducir('Todavía no se ha generado ningún informe de este proyecto.')}</Vacio>
       ) : (
         <div className="desbordable">
           <table className="tabla">
             <thead>
               <tr>
-                <th>Versión</th>
-                <th>Estado</th>
-                <th>Huella del PPTX</th>
-                <th>Acciones</th>
+                <th>{traducir('Versión')}</th>
+                <th>{traducir('Estado')}</th>
+                <th>{traducir('Huella del PPTX')}</th>
+                <th>{traducir('Acciones')}</th>
               </tr>
             </thead>
             <tbody>
@@ -212,11 +213,11 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
                         un fallo cuando lo único que pasa es que aún se está
                         generando. */}
                     {v.status === 'GENERANDO' && (
-                      <span className="generando">Generando… se actualiza solo</span>
+                      <span className="generando">{traducir('Generando… se actualiza solo')}</span>
                     )}
                     {v.status === 'ERROR' && (
                       <span className="fallo">
-                        No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.
+                        {traducir('No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.')}
                       </span>
                     )}
                     {v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
@@ -252,10 +253,10 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
                         value=""
                         onChange={(e) => e.target.value && void cambiarEstado(v, e.target.value)}
                       >
-                        <option value="">Cambiar estado…</option>
-                        <option value="EN_REVISION">A revisión</option>
-                        <option value="APROBADO">Aprobar</option>
-                        <option value="EMITIDO">Emitir (bloquea para siempre)</option>
+                        <option value="">{traducir('Cambiar estado…')}</option>
+                        <option value="EN_REVISION">{traducir('A revisión')}</option>
+                        <option value="APROBADO">{traducir('Aprobar')}</option>
+                        <option value="EMITIDO">{traducir('Emitir (bloquea para siempre)')}</option>
                       </select>
                     )}
                   </td>

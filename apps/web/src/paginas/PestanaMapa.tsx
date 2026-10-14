@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -179,16 +180,16 @@ export function PestanaMapa({
   }, [datos, elegida, listo])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!datos) return <p className="cargando">Cargando el mapa…</p>
+  if (!datos) return <p className="cargando">{traducir('Cargando el mapa…')}</p>
 
   return (
     <>
       <div className="filtro">
         {!assetId && (
           <label>
-            Activo
+            {traducir('Activo')}
             <select value={filtroPropio} onChange={(e) => setFiltroPropio(e.target.value)}>
-              <option value="">Todos</option>
+              <option value="">{traducir('Todos')}</option>
               {activos.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}

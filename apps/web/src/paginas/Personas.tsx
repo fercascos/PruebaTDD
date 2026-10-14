@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Perfil } from '../api/tipos'
@@ -73,11 +74,11 @@ export function Personas() {
     }
   }
 
-  if (personas === null) return <p className="cargando">Cargando personas…</p>
+  if (personas === null) return <p className="cargando">{traducir('Cargando personas…')}</p>
 
   return (
     <>
-      <h1>Personas</h1>
+      <h1>{traducir('Personas')}</h1>
       <p className="ayuda">
         Quién puede entrar y con qué rol. La matriz completa de permisos está en{' '}
         <code>docs/07-roles-permisos.md</code>.
@@ -104,22 +105,22 @@ export function Personas() {
           />
         ) : (
           <button type="button" onClick={() => setDando(true)}>
-            Dar de alta a alguien
+            {traducir('Dar de alta a alguien')}
           </button>
         ))}
 
       {personas.length === 0 ? (
-        <Vacio>No hay nadie más en la organización.</Vacio>
+        <Vacio>{traducir('No hay nadie más en la organización.')}</Vacio>
       ) : (
         <div className="desbordable">
           <table className="tabla">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th>Rol</th>
-                <th>Estado</th>
-                {esAdmin && <th>Acciones</th>}
+                <th>{traducir('Nombre')}</th>
+                <th>{traducir('Correo')}</th>
+                <th>{traducir('Rol')}</th>
+                <th>{traducir('Estado')}</th>
+                {esAdmin && <th>{traducir('Acciones')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -186,7 +187,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
 
   return (
     <Formulario
-      titulo="Nueva persona"
+      titulo={traducir('Nueva persona')}
       textoDeEnvio="Dar de alta"
       alCancelar={alCancelar}
       enviar={async () => {
@@ -201,10 +202,10 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
       }}
     >
       <Rejilla>
-        <Campo etiqueta="Nombre y apellidos">
+        <Campo etiqueta={traducir('Nombre y apellidos')}>
           <input required maxLength={160} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Correo">
+        <Campo etiqueta={traducir('Correo')}>
           <input
             required
             type="email"
@@ -213,7 +214,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
             placeholder="nombre@ejemplo.example"
           />
         </Campo>
-        <Campo etiqueta="Rol">
+        <Campo etiqueta={traducir('Rol')}>
           <select value={rol} onChange={(e) => setRol(e.target.value)}>
             {ROLES.map((r) => (
               <option key={r.code} value={r.code}>
@@ -225,8 +226,8 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
       </Rejilla>
 
       <Campo
-        etiqueta="Contraseña inicial"
-        ayuda="Mínimo 12 caracteres. Comuníquela por un canal aparte; quien entre debería cambiarla"
+        etiqueta={traducir('Contraseña inicial')}
+        ayuda={traducir('Mínimo 12 caracteres. Comuníquela por un canal aparte; quien entre debería cambiarla')}
       >
         <input
           required
@@ -247,7 +248,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
           checked={gestiona}
           onChange={(e) => setGestiona(e.target.checked)}
         />
-        Atiende el buzón de sugerencias
+        {traducir('Atiende el buzón de sugerencias')}
       </label>
       <p className="ayuda">
         `[REQ]` P-41 · El permiso es separable del rol para que alguien pueda atender el buzón{' '}

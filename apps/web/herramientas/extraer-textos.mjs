@@ -107,12 +107,15 @@ export function extraer() {
     for (const m of codigo.matchAll(/'([^'\\\n]{3,})'|"([^"\\\n]{3,})"/g)) {
       apuntar(m[1] ?? m[2], fichero)
     }
-    // Y lo ya traducido: `t('Proyectos')`. Es la señal más fiable de todas
+    // Y lo ya traducido: `t('Proyectos')` o `traducir('Proyectos')`. Es la
+    // señal más fiable de todas
     // —alguien ha dicho explícitamente que eso es texto— y hace falta porque
     // al envolver una etiqueta deja de ser texto suelto de JSX y, si es una
     // sola palabra, las reglas de arriba ya no la reconocen. Sin esto, cada
     // cadena traducida desaparecía del catálogo en cuanto se traducía.
-    for (const m of codigo.matchAll(/\bt\(\s*'([^'\\\n]+)'|\bt\(\s*"([^"\\\n]+)"/g)) {
+    for (const m of codigo.matchAll(
+      /\b(?:t|traducir)\(\s*'([^'\\\n]+)'|\b(?:t|traducir)\(\s*"([^"\\\n]+)"/g,
+    )) {
       const t = (m[1] ?? m[2]).trim().replace(/\s+/g, ' ')
       if (!encontrados.has(t)) encontrados.set(t, new Set())
       encontrados.get(t).add(relative(RAIZ, fichero))

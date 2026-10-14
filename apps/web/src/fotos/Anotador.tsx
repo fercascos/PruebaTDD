@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useRef, useState } from 'react'
 import { enviar, peticionAutenticada } from '../api/cliente'
 import { Mensaje } from '../ui/Marco'
@@ -156,7 +157,7 @@ export function Anotador({
         </span>
 
         <label className="grosor">
-          Trazo
+          {traducir('Trazo')}
           <input
             type="range"
             min={1}
@@ -172,7 +173,7 @@ export function Anotador({
             value={texto}
             maxLength={200}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder="Texto de la anotación"
+            placeholder={traducir('Texto de la anotación')}
           />
         )}
 
@@ -182,7 +183,7 @@ export function Anotador({
           disabled={formas.length === 0}
           onClick={() => setFormas((previas) => previas.slice(0, -1))}
         >
-          Deshacer
+          {traducir('Deshacer')}
         </button>
         <button
           type="button"
@@ -190,14 +191,14 @@ export function Anotador({
           disabled={formas.length === 0}
           onClick={() => setFormas([])}
         >
-          Limpiar
+          {traducir('Limpiar')}
         </button>
       </div>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <div className="lienzo">
-        {!fondo && <p className="cargando">Cargando la fotografía…</p>}
+        {!fondo && <p className="cargando">{traducir('Cargando la fotografía…')}</p>}
         <canvas
           ref={lienzo}
           onPointerDown={empezar}
@@ -210,7 +211,7 @@ export function Anotador({
       </div>
 
       <p className="ayuda">
-        `[REQ]` §15.2 · <strong>El original no se toca.</strong> Esto crea una versión nueva con la
+        `[REQ]` §15.2 · <strong>{traducir('El original no se toca.')}</strong> Esto crea una versión nueva con la
         capa encima; el fichero de la cámara sigue igual y las anotaciones se pueden volver a
         editar. Se queman sobre la imagen solo al generar el informe.
       </p>
@@ -220,7 +221,7 @@ export function Anotador({
           {guardando ? 'Guardando…' : `Guardar ${formas.length} anotaciones`}
         </button>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cancelar
+          {traducir('Cancelar')}
         </button>
       </div>
     </div>

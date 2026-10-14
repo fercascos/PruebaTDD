@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { obtener } from '../api/cliente'
 import type { Activo } from '../api/tipos'
@@ -100,7 +101,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
   }, [projectId])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!datos) return <p className="cargando">Cargando la matriz…</p>
+  if (!datos) return <p className="cargando">{traducir('Cargando la matriz…')}</p>
 
   const total = Number(datos.total_importe)
   // La barra más larga marca la escala. Con el total general, un proyecto con
@@ -127,9 +128,9 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
           />
         )}
         <label>
-          Capítulo
+          {traducir('Capítulo')}
           <select value={capitulo} onChange={(e) => setCapitulo(e.target.value)}>
-            <option value="">Todos</option>
+            <option value="">{traducir('Todos')}</option>
             {datos.capitulos.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.code} · {c.name}
@@ -158,7 +159,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
       ) : (
         <>
           <section className="bloque">
-            <h3>Distribución por grado de riesgo e importe</h3>
+            <h3>{traducir('Distribución por grado de riesgo e importe')}</h3>
             <ul className="barras">
               {datos.grados.map((g) => (
                 <li key={g.code}>
@@ -182,7 +183,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
           </section>
 
           <section className="bloque">
-            <h3>Riesgo × horizonte temporal</h3>
+            <h3>{traducir('Riesgo × horizonte temporal')}</h3>
             <div className="desbordable">
               <table className="tabla matriz">
                 <caption className="ayuda">
@@ -191,14 +192,14 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
                 </caption>
                 <thead>
                   <tr>
-                    <th scope="col">Grado</th>
+                    <th scope="col">{traducir('Grado')}</th>
                     {datos.horizontes.map((h) => (
                       <th key={h} scope="col" className="numerica">
                         {NOMBRE_DE_HORIZONTE[h] ?? h}
                       </th>
                     ))}
                     <th scope="col" className="numerica">
-                      Total
+                      {traducir('Total')}
                     </th>
                   </tr>
                 </thead>
@@ -228,7 +229,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th scope="row">Total</th>
+                    <th scope="row">{traducir('Total')}</th>
                     {datos.horizontes.map((h) => (
                       <td key={h} className="numerica">
                         {euros.format(Number(datos.total_por_horizonte[h] ?? 0))}
@@ -245,8 +246,8 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
 
           {datos.capitulos.length > 0 && (
             <section className="bloque">
-              <h3>Riesgo por capítulo</h3>
-              <p className="ayuda">De mayor a menor importe.</p>
+              <h3>{traducir('Riesgo por capítulo')}</h3>
+              <p className="ayuda">{traducir('De mayor a menor importe.')}</p>
               <ul className="capitulos">
                 {datos.capitulos.map((c) => (
                   <li key={c.code}>

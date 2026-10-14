@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { AsistenteDeVisita, Activo, Foto, Persona, Visita } from '../api/tipos'
@@ -163,14 +164,14 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
 
   return (
     <section className="visita-activo">
-      <h3>Visita al activo</h3>
+      <h3>{traducir('Visita al activo')}</h3>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       {hecho && <Mensaje tipo="ok">{hecho}</Mensaje>}
 
       <div className="filtro">
         <button type="button" disabled={trabajando} onClick={() => void programar()}>
-          Programar una visita
+          {traducir('Programar una visita')}
         </button>
         {visitas && visitas.length > 1 && (
           <span className="recuento">
@@ -180,7 +181,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
       </div>
 
       {!visitas ? (
-        <p className="cargando">Cargando las visitas…</p>
+        <p className="cargando">{traducir('Cargando las visitas…')}</p>
       ) : visitas.length === 0 ? (
         <Vacio>
           Este activo no tiene ninguna visita registrada. Se puede programar antes de tener
@@ -267,13 +268,13 @@ function FichaDeVisita({
         </summary>
 
         {/* ── V1 · Datos de la visita ────────────────────────────────────── */}
-        <h4>Datos de la visita</h4>
+        <h4>{traducir('Datos de la visita')}</h4>
         <Rejilla>
-          <Campo etiqueta="Estado">
+          <Campo etiqueta={traducir('Estado')}>
             <select
               value={estado}
               onChange={(e) => setEstado(e.target.value as Visita['status'])}
-              aria-label="Estado de la visita"
+              aria-label={traducir('Estado de la visita')}
             >
               {ESTADOS.map((e) => (
                 <option key={e.code} value={e.code}>
@@ -282,7 +283,7 @@ function FichaDeVisita({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Fecha prevista">
+          <Campo etiqueta={traducir('Fecha prevista')}>
             <input type="date" {...campo('scheduled_date')} />
           </Campo>
           {/* Solo cuando ya se ha ido: pedir la fecha real de una visita que no
@@ -290,8 +291,8 @@ function FichaDeVisita({
               que acaba fechando el informe. */}
           {estado === 'VISITADO' && (
             <Campo
-              etiqueta="Fecha real"
-              ayuda="La que fecha el informe. Si la deja en blanco, se pone la de hoy al guardar"
+              etiqueta={traducir('Fecha real')}
+              ayuda={traducir('La que fecha el informe. Si la deja en blanco, se pone la de hoy al guardar')}
             >
               <input type="date" {...campo('actual_date')} />
             </Campo>
@@ -299,26 +300,26 @@ function FichaDeVisita({
         </Rejilla>
 
         <Campo
-          etiqueta="Ubicación y punto de encuentro"
-          ayuda="Por dónde se entra y con quién se queda. La dirección del edificio está en su ficha"
+          etiqueta={traducir('Ubicación y punto de encuentro')}
+          ayuda={traducir('Por dónde se entra y con quién se queda. La dirección del edificio está en su ficha')}
         >
           <textarea rows={2} {...campo('meeting_point')} />
         </Campo>
 
         <Campo
-          etiqueta="Limitaciones de acceso"
-          ayuda="Lo que no se pudo ver. Sale en el informe: «no se accedió a la cubierta» cambia lo que se puede afirmar sobre ella"
+          etiqueta={traducir('Limitaciones de acceso')}
+          ayuda={traducir('Lo que no se pudo ver. Sale en el informe: «no se accedió a la cubierta» cambia lo que se puede afirmar sobre ella')}
         >
           <textarea rows={2} {...campo('access_limitations')} />
         </Campo>
 
-        <Campo etiqueta="Resumen de la visita">
+        <Campo etiqueta={traducir('Resumen de la visita')}>
           <textarea rows={3} {...campo('summary')} />
         </Campo>
 
         <Campo
-          etiqueta="Coste de la visita"
-          ayuda="Coste interno del proyecto: NO entra en el CAPEX del edificio ni sale en el informe del cliente"
+          etiqueta={traducir('Coste de la visita')}
+          ayuda={traducir('Coste interno del proyecto: NO entra en el CAPEX del edificio ni sale en el informe del cliente')}
         >
           <input type="number" step="0.01" min={0} {...campo('cost_amount')} />
         </Campo>
@@ -329,12 +330,12 @@ function FichaDeVisita({
             disabled={trabajando}
             onClick={() => void alGuardar(visita, borrador, estado)}
           >
-            Guardar la visita
+            {traducir('Guardar la visita')}
           </button>
         </div>
 
         {/* ── V2 · Equipo implicado ──────────────────────────────────────── */}
-        <h4>Equipo implicado</h4>
+        <h4>{traducir('Equipo implicado')}</h4>
         <p className="ayuda">
           Quién fue. Del equipo se elige de la lista de personas; quien acompaña —el jefe de
           mantenimiento, el mantenedor de PCI— se escribe, porque no tiene cuenta en la
@@ -342,7 +343,7 @@ function FichaDeVisita({
         </p>
 
         {lineas.length === 0 ? (
-          <Vacio>Todavía no hay nadie apuntado a esta visita.</Vacio>
+          <Vacio>{traducir('Todavía no hay nadie apuntado a esta visita.')}</Vacio>
         ) : (
           <ul className="asistentes">
             {lineas.map((a, i) => (
@@ -354,7 +355,7 @@ function FichaDeVisita({
                     <input
                       value={a.nombre}
                       maxLength={200}
-                      placeholder="Nombre y apellidos"
+                      placeholder={traducir('Nombre y apellidos')}
                       aria-label={`Nombre del acompañante ${i + 1}`}
                       onChange={(e) =>
                         setLineas((previas) =>
@@ -370,7 +371,7 @@ function FichaDeVisita({
                   className="calidad"
                   value={a.role_note ?? ''}
                   maxLength={200}
-                  placeholder="En calidad de…"
+                  placeholder={traducir('En calidad de…')}
                   aria-label={`En calidad de qué vino ${a.nombre || `el asistente ${i + 1}`}`}
                   onChange={(e) =>
                     setLineas((previas) =>
@@ -386,7 +387,7 @@ function FichaDeVisita({
                   aria-label={`Quitar a ${a.nombre || `el asistente ${i + 1}`}`}
                   onClick={() => setLineas((previas) => previas.filter((_, j) => j !== i))}
                 >
-                  Quitar
+                  {traducir('Quitar')}
                 </button>
               </li>
             ))}
@@ -394,11 +395,11 @@ function FichaDeVisita({
         )}
 
         <div className="filtro">
-          <Campo etiqueta="Añadir del equipo">
+          <Campo etiqueta={traducir('Añadir del equipo')}>
             <select
               value=""
               disabled={libres.length === 0}
-              aria-label="Añadir una persona del equipo"
+              aria-label={traducir('Añadir una persona del equipo')}
               onChange={(e) => {
                 const p = personas.find((x) => x.id === e.target.value)
                 if (!p) return
@@ -438,25 +439,25 @@ function FichaDeVisita({
               ])
             }
           >
-            Añadir acompañante
+            {traducir('Añadir acompañante')}
           </button>
           <button
             type="button"
             disabled={trabajando || lineas.some((a) => !a.es_del_equipo && !a.nombre.trim())}
             onClick={() => void alGuardarAsistentes(visita, lineas)}
           >
-            Guardar el equipo
+            {traducir('Guardar el equipo')}
           </button>
         </div>
 
         {/* ── V3 · Fotos ─────────────────────────────────────────────────── */}
-        <h4>Fotografías</h4>
+        <h4>{traducir('Fotografías')}</h4>
         <p className="ayuda">
           Las de este activo. Se suben desde «Fotografías», también desde el móvil durante la
           visita, y se atan a cada equipo desde el inventario.
         </p>
         {fotos.length === 0 ? (
-          <Vacio>Este activo todavía no tiene fotografías.</Vacio>
+          <Vacio>{traducir('Este activo todavía no tiene fotografías.')}</Vacio>
         ) : (
           <p className="recuento">
             <strong>{fotos.length}</strong> {fotos.length === 1 ? 'fotografía' : 'fotografías'}{' '}

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { ErrorDeApi } from '../api/cliente'
@@ -57,7 +58,7 @@ export function Formulario({
         </button>
         {alCancelar && (
           <button type="button" className="secundario" onClick={alCancelar}>
-            Cancelar
+            {traducir('Cancelar')}
           </button>
         )}
       </div>

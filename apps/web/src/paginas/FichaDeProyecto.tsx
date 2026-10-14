@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { obtener } from '../api/cliente'
@@ -24,7 +25,7 @@ export function FichaDeProyecto() {
   useEffect(recargar, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!proyecto) return <p className="cargando">Cargando el proyecto…</p>
+  if (!proyecto) return <p className="cargando">{traducir('Cargando el proyecto…')}</p>
 
   return (
     <>
@@ -59,12 +60,12 @@ export function FichaDeProyecto() {
           para reconstruir a mano lo que se sabe de un edificio. */}
       <nav className="pestanas">
         <NavLink to={`/proyectos/${id}`} end>
-          Resumen
+          {traducir('Resumen')}
         </NavLink>
-        <NavLink to={`/proyectos/${id}/activos`}>Activos</NavLink>
-        <NavLink to={`/proyectos/${id}/dashboard`}>Dashboard</NavLink>
-        <NavLink to={`/proyectos/${id}/riesgos`}>Riesgos</NavLink>
-        <NavLink to={`/proyectos/${id}/informes`}>Informe final</NavLink>
+        <NavLink to={`/proyectos/${id}/activos`}>{traducir('Activos')}</NavLink>
+        <NavLink to={`/proyectos/${id}/dashboard`}>{traducir('Dashboard')}</NavLink>
+        <NavLink to={`/proyectos/${id}/riesgos`}>{traducir('Riesgos')}</NavLink>
+        <NavLink to={`/proyectos/${id}/informes`}>{traducir('Informe final')}</NavLink>
       </nav>
 
       <Routes>

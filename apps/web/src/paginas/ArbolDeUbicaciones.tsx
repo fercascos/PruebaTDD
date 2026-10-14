@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { borrar, enviar, obtener } from '../api/cliente'
 import type { NodoDeUbicacion, TipoDeNodo } from '../api/tipos'
@@ -80,15 +81,15 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
     }
   }
 
-  if (!nodos) return <p className="cargando">Cargando ubicaciones…</p>
+  if (!nodos) return <p className="cargando">{traducir('Cargando ubicaciones…')}</p>
 
   return (
     <section className="ubicaciones">
-      <h3>Ubicaciones del edificio</h3>
+      <h3>{traducir('Ubicaciones del edificio')}</h3>
       <p className="ayuda">
         Dónde está cada cosa dentro de este activo. Es distinto de la zona: la zona clasifica para el
         informe («Cubierta»), esto localiza para volver a encontrarlo («Cubierta › Sala Máquinas 2»).
-        Lo que se elija aquí alimenta el token <code>[Espacio]</code> al renombrar fotografías.
+        Lo que se elija aquí alimenta el token <code>[Espacio]</code> {traducir('al renombrar fotografías.')}
       </p>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
@@ -101,8 +102,8 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
             </option>
           ))}
         </select>
-        <select value={padre} onChange={(e) => setPadre(e.target.value)} aria-label="Dentro de">
-          <option value="">— en la raíz —</option>
+        <select value={padre} onChange={(e) => setPadre(e.target.value)} aria-label={traducir('Dentro de')}>
+          <option value="">{traducir('— en la raíz —')}</option>
           {nodos.map((n) => (
             <option key={n.id} value={n.id}>
               {n.ruta_legible}
@@ -112,12 +113,12 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
         <input
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
-          placeholder="Nombre (p. ej. «Sala Máquinas 2»)"
-          aria-label="Nombre de la ubicación"
+          placeholder={traducir('Nombre (p. ej. «Sala Máquinas 2»)')}
+          aria-label={traducir('Nombre de la ubicación')}
           maxLength={160}
         />
         <button type="submit" disabled={!nombre.trim() || ocupado}>
-          Añadir
+          {traducir('Añadir')}
         </button>
       </form>
 
@@ -138,7 +139,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
                 onChange={(e) => void mover(n, e.target.value)}
                 aria-label={`Mover ${n.name}`}
               >
-                <option value="">— en la raíz —</option>
+                <option value="">{traducir('— en la raíz —')}</option>
                 {/* Un nodo no puede colgar de sí mismo ni de su descendencia: la
                     API lo rechaza, pero ofrecerlo en la lista sería ofrecer un
                     error. Se filtra por la ruta, que ya trae el prefijo. */}
@@ -151,7 +152,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
                   ))}
               </select>
               <button type="button" className="secundario peligro" onClick={() => void eliminar(n)}>
-                Eliminar
+                {traducir('Eliminar')}
               </button>
             </li>
           ))}

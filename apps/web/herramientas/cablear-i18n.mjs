@@ -29,8 +29,14 @@ const RAIZ = new URL('..', import.meta.url).pathname.replace(/^\/@fs/, '')
 const FUENTE = join(RAIZ, 'src')
 const VER = process.argv.includes('--ver')
 
-/** Atributos cuyo valor lee una persona. El resto son nombres y rutas. */
-const ATRIBUTOS = ['placeholder', 'title', 'aria-label', 'alt']
+/** Atributos y props cuyo valor lee una persona. El resto son nombres y rutas.
+ *
+ *  `etiqueta`, `ayuda` y `titulo` no son del HTML: son las props de los
+ *  componentes de formulario de esta aplicación (`ui/Formulario.tsx`), y entre
+ *  las tres son 140 textos. Sin ellas el cableado automático se dejaba fuera
+ *  casi todas las etiquetas de los formularios, que es donde más texto hay.
+ */
+const ATRIBUTOS = ['placeholder', 'title', 'aria-label', 'alt', 'etiqueta', 'ayuda', 'titulo']
 
 function ficheros(dir) {
   const salida = []

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ErrorDeApi, subirFichero } from '../api/cliente'
 import type { Foto } from '../api/tipos'
@@ -183,17 +184,17 @@ export function Subida({
 
   return (
     <section className="subida">
-      <h3>Añadir fotografías</h3>
+      <h3>{traducir('Añadir fotografías')}</h3>
 
       <div className="origenes">
         <button type="button" onClick={() => entradas.ORDENADOR.current?.click()}>
-          Desde el ordenador
+          {traducir('Desde el ordenador')}
         </button>
         <button type="button" onClick={() => entradas.CARRETE.current?.click()}>
-          Desde el carrete
+          {traducir('Desde el carrete')}
         </button>
         <button type="button" className="destacado" onClick={() => entradas.CAMARA.current?.click()}>
-          Hacer una foto
+          {traducir('Hacer una foto')}
         </button>
       </div>
 
@@ -226,15 +227,15 @@ export function Subida({
       {recuperadas > 0 && !enCurso && (
         <div className="mensaje aviso recuperadas">
           <p>
-            Quedaron <strong>{recuperadas}</strong> fotografías sin subir de una sesión anterior.
+            {traducir('Quedaron')} <strong>{recuperadas}</strong> fotografías sin subir de una sesión anterior.
             Siguen guardadas en este dispositivo.
           </p>
           <button
             type="button"
             onClick={() => void reintentar()}
-            title="No se suben solas: la decisión de gastar datos es suya"
+            title={traducir('No se suben solas: la decisión de gastar datos es suya')}
           >
-            Subirlas ahora
+            {traducir('Subirlas ahora')}
           </button>
         </div>
       )}

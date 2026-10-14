@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { descargar, enviar, obtener, subirFichero } from '../api/cliente'
 import type { DocumentoDeCasilla, EstadoSolicitud, NodoDocumental } from '../api/tipos'
@@ -224,7 +225,7 @@ export function DocumentacionDelActivo({
   )
 
   if (error && nodos === null) return <Mensaje tipo="error">{error}</Mensaje>
-  if (nodos === null) return <p className="cargando">Cargando el árbol documental…</p>
+  if (nodos === null) return <p className="cargando">{traducir('Cargando el árbol documental…')}</p>
 
   const casillas = nodos.filter((n) => n.es_casilla)
   const pedidas = casillas.filter((n) => n.status !== null).length
@@ -244,7 +245,7 @@ export function DocumentacionDelActivo({
       </p>
 
       <p className="ayuda">
-        El árbol acordado con el cliente: <strong>{nodos.length} nodos</strong> y{' '}
+        {traducir('El árbol acordado con el cliente:')} <strong>{nodos.length} nodos</strong> y{' '}
         <strong>{casillas.length} casillas</strong>. Van tocadas {pedidas}, y{' '}
         {limitan === 0
           ? 'ninguna entra hoy en las limitaciones del informe'
@@ -396,7 +397,7 @@ function Casilla({
 
       <div className="mandos-casilla">
         <label className="campo-linea">
-          Estado
+          {traducir('Estado')}
           <select
             value={estado ?? ''}
             disabled={trabajando}
@@ -419,7 +420,7 @@ function Casilla({
             proyecto: un botón bonito que esconde el campo real cuesta un trozo
             de CSS frágil y una trampa de accesibilidad a cambio de nada. */}
         <label className="subir-casilla">
-          Adjuntar
+          {traducir('Adjuntar')}
           <input
             ref={entrada}
             type="file"
@@ -437,7 +438,7 @@ function Casilla({
 
       {estado === 'NO_DISPONIBLE' && (
         <label className="campo">
-          Por qué no está disponible
+          {traducir('Por qué no está disponible')}
           <textarea
             rows={2}
             value={motivo}

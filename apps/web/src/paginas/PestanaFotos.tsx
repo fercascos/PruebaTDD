@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Activo, Foto, SistemaTecnico } from '../api/tipos'
@@ -96,9 +97,9 @@ export function PestanaFotos({
       <div className="filtro">
         {!assetId && (
           <label>
-            Activo al que asignar lo que se suba
+            {traducir('Activo al que asignar lo que se suba')}
             <select value={elegidoAMano} onChange={(e) => setElegidoAMano(e.target.value)}>
-              <option value="">Sin asignar (se avisa, no se bloquea)</option>
+              <option value="">{traducir('Sin asignar (se avisa, no se bloquea)')}</option>
               {activos.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -111,9 +112,9 @@ export function PestanaFotos({
             además es lo que alimenta el token `[Sistema]` del nombre de
             fichero: sin él, el renombrado en lote escribe «SinSistema». */}
         <label>
-          Sistema técnico de lo que se suba
+          {traducir('Sistema técnico de lo que se suba')}
           <select value={sistemaElegido} onChange={(e) => setSistemaElegido(e.target.value)}>
-            <option value="">Sin clasificar</option>
+            <option value="">{traducir('Sin clasificar')}</option>
             {sistemas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name_es}
@@ -122,9 +123,9 @@ export function PestanaFotos({
           </select>
         </label>
         <label>
-          Ver solo las de
+          {traducir('Ver solo las de')}
           <select value={filtroActivo} onChange={(e) => setFiltroActivo(e.target.value)}>
-            <option value="">Todos los activos</option>
+            <option value="">{traducir('Todos los activos')}</option>
             {activos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
@@ -135,7 +136,7 @@ export function PestanaFotos({
         <label>
           y del sistema
           <select value={filtroSistema} onChange={(e) => setFiltroSistema(e.target.value)}>
-            <option value="">Todos los sistemas</option>
+            <option value="">{traducir('Todos los sistemas')}</option>
             {sistemas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name_es}
@@ -149,7 +150,7 @@ export function PestanaFotos({
             checked={soloInforme}
             onChange={(e) => setSoloInforme(e.target.checked)}
           />
-          Solo las seleccionadas para el informe
+          {traducir('Solo las seleccionadas para el informe')}
         </label>
       </div>
 
@@ -164,14 +165,14 @@ export function PestanaFotos({
         <div className="barra-seleccion">
           <span>{seleccion.size} seleccionadas</span>
           <button type="button" onClick={() => void enLote({ include_in_report: true })}>
-            Incluir en el informe
+            {traducir('Incluir en el informe')}
           </button>
           <button
             type="button"
             className="secundario"
             onClick={() => void enLote({ include_in_report: false })}
           >
-            Quitar del informe
+            {traducir('Quitar del informe')}
           </button>
           {activoElegido && (
             <button
@@ -179,7 +180,7 @@ export function PestanaFotos({
               className="secundario"
               onClick={() => void enLote({ asset_id: activoElegido })}
             >
-              Asignar al activo elegido
+              {traducir('Asignar al activo elegido')}
             </button>
           )}
           {sistemaElegido && (
@@ -212,7 +213,7 @@ export function PestanaFotos({
       )}
 
       {!fotos ? (
-        <p className="cargando">Cargando fotografías…</p>
+        <p className="cargando">{traducir('Cargando fotografías…')}</p>
       ) : fotos.length === 0 ? (
         <Vacio>
           {filtroActivo || filtroSistema || soloInforme
@@ -250,7 +251,7 @@ export function PestanaFotos({
                 {f.taken_at === null && <span className="marca aviso">sin fecha</span>}
                 {f.asset_id === null && <span className="marca aviso">sin activo</span>}
                 {f.technical_system_id === null && (
-                  <span className="marca aviso" title="El renombrado escribirá «SinSistema»">
+                  <span className="marca aviso" title={traducir('El renombrado escribirá «SinSistema»')}>
                     sin sistema
                   </span>
                 )}

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useMemo, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Activo, CodigoCapex, ElementoCatalogo } from '../api/tipos'
@@ -182,12 +183,12 @@ export function NuevoHallazgo({
     >
       {photoId && (
         <Mensaje tipo="ok">
-          Hereda el activo y la zona de la fotografía, y la deja enlazada como evidencia.
+          {traducir('Hereda el activo y la zona de la fotografía, y la deja enlazada como evidencia.')}
         </Mensaje>
       )}
 
       <Rejilla>
-        <Campo etiqueta="Activo">
+        <Campo etiqueta={traducir('Activo')}>
           <select
             required
             value={activo}
@@ -201,7 +202,7 @@ export function NuevoHallazgo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Zona" ayuda="Solo las que admite la tipología del activo">
+        <Campo etiqueta="Zona" ayuda={traducir('Solo las que admite la tipología del activo')}>
           <select required value={zona} onChange={(e) => setZona(e.target.value)}>
             {zonas.map((z) => (
               <option key={z.id} value={z.id}>
@@ -210,7 +211,7 @@ export function NuevoHallazgo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Código CAPEX" ayuda="Agrupado por tipo de coste">
+        <Campo etiqueta={traducir('Código CAPEX')} ayuda={traducir('Agrupado por tipo de coste')}>
           <select required value={codigo} onChange={(e) => setCodigo(e.target.value)}>
             <option value="">— elija un elemento —</option>
             {codificables.map(([tipo, lista]) => (
@@ -224,7 +225,7 @@ export function NuevoHallazgo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Grado de riesgo">
+        <Campo etiqueta={traducir('Grado de riesgo')}>
           <select value={riesgo} onChange={(e) => setRiesgo(e.target.value)}>
             <option value="">— sin clasificar —</option>
             {riesgos.map((r) => (
@@ -240,16 +241,16 @@ export function NuevoHallazgo({
           sin criterio detrás. Viene del catálogo, no del frontend. */}
       {definicion && <p className="ayuda definicion">{definicion}</p>}
 
-      <Campo etiqueta="Título de la actuación">
+      <Campo etiqueta={traducir('Título de la actuación')}>
         <input
           required
           maxLength={240}
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          placeholder="Renovación de impermeabilización"
+          placeholder={traducir('Renovación de impermeabilización')}
         />
       </Campo>
-      <Campo etiqueta="Descripción" ayuda="Es lo que lee el revisor y lo que sale en el informe">
+      <Campo etiqueta={traducir('Descripción')} ayuda={traducir('Es lo que lee el revisor y lo que sale en el informe')}>
         <textarea rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
       </Campo>
 
@@ -262,7 +263,7 @@ export function NuevoHallazgo({
               onChange={(e) => setComentarios(e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Actuación recomendada">
+          <Campo etiqueta={traducir('Actuación recomendada')}>
             <textarea
               rows={2}
               value={recomendacion}
@@ -272,9 +273,9 @@ export function NuevoHallazgo({
         </>
       )}
 
-      <h3>Importe</h3>
+      <h3>{traducir('Importe')}</h3>
       <p className="ayuda">
-        Una línea por plazo. El importe que teclee <strong>lo incluye todo</strong>: indirectos,
+        {traducir('Una línea por plazo. El importe que teclee')} <strong>lo incluye todo</strong>: indirectos,
         honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima.
         Añada otra línea solo si la actuación es <em>recurrente</em> —hace falta ahora y otra vez
         más adelante—, que es lo que P-44 permite.
@@ -304,7 +305,7 @@ export function NuevoHallazgo({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Importe (€)">
+          <Campo etiqueta={traducir('Importe (€)')}>
             <input
               type="number"
               step="0.01"
@@ -323,7 +324,7 @@ export function NuevoHallazgo({
               className="secundario"
               onClick={() => setLineas((previas) => previas.filter((_, i) => i !== indice))}
             >
-              Quitar
+              {traducir('Quitar')}
             </button>
           )}
         </Rejilla>
@@ -343,7 +344,7 @@ export function NuevoHallazgo({
             ])
           }
         >
-          Añadir otro plazo (actuación recurrente)
+          {traducir('Añadir otro plazo (actuación recurrente)')}
         </button>
       )}
     </Formulario>

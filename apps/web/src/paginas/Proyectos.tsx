@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { obtener } from '../api/cliente'
@@ -30,9 +31,9 @@ export function Proyectos() {
 
   const cabecera = (
     <header className="ficha">
-      <h1>Proyectos</h1>
+      <h1>{traducir('Proyectos')}</h1>
       <button type="button" onClick={() => navegar('/proyectos/nuevo')}>
-        Nuevo proyecto
+        {traducir('Nuevo proyecto')}
       </button>
     </header>
   )
@@ -44,12 +45,12 @@ export function Proyectos() {
   }, [])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!proyectos) return <p className="cargando">Cargando proyectos…</p>
+  if (!proyectos) return <p className="cargando">{traducir('Cargando proyectos…')}</p>
   if (proyectos.length === 0) {
     return (
       <>
         {cabecera}
-        <Vacio>Todavía no hay ningún proyecto dado de alta en esta organización.</Vacio>
+        <Vacio>{traducir('Todavía no hay ningún proyecto dado de alta en esta organización.')}</Vacio>
       </>
     )
   }
@@ -61,12 +62,12 @@ export function Proyectos() {
         <table className="tabla">
           <thead>
             <tr>
-              <th scope="col">Código</th>
-              <th scope="col">Proyecto</th>
-              <th scope="col">Cliente</th>
-              <th scope="col">Arranque</th>
-              <th scope="col">Cierre</th>
-              <th scope="col">Estado</th>
+              <th scope="col">{traducir('Código')}</th>
+              <th scope="col">{traducir('Proyecto')}</th>
+              <th scope="col">{traducir('Cliente')}</th>
+              <th scope="col">{traducir('Arranque')}</th>
+              <th scope="col">{traducir('Cierre')}</th>
+              <th scope="col">{traducir('Estado')}</th>
             </tr>
           </thead>
           <tbody>
@@ -83,7 +84,7 @@ export function Proyectos() {
                       se queda en el buzón del administrador y aquí parece un
                       cliente como los demás. */}
                   {p.client_pending_validation && (
-                    <span className="pastilla aviso" title="Escrito al dar de alta; falta validarlo">
+                    <span className="pastilla aviso" title={traducir('Escrito al dar de alta; falta validarlo')}>
                       sin validar
                     </span>
                   )}

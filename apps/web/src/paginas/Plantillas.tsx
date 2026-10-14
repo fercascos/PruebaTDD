@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { enviar, obtener, subirFichero } from '../api/cliente'
 import type { Mapeo, Plantilla } from '../api/tipos'
@@ -59,7 +60,7 @@ export function Plantillas() {
 
   return (
     <>
-      <h1>Plantillas de informe</h1>
+      <h1>{traducir('Plantillas de informe')}</h1>
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <div className="filtro">
@@ -80,17 +81,17 @@ export function Plantillas() {
       </div>
 
       {plantillas.length === 0 ? (
-        <Vacio>No hay ninguna plantilla registrada todavía.</Vacio>
+        <Vacio>{traducir('No hay ninguna plantilla registrada todavía.')}</Vacio>
       ) : (
         <div className="desbordable">
           <table className="tabla">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Idioma</th>
-                <th className="numerica">Diapositivas</th>
-                <th className="numerica">Marcadores</th>
-                <th>Avisos</th>
+                <th>{traducir('Nombre')}</th>
+                <th>{traducir('Idioma')}</th>
+                <th className="numerica">{traducir('Diapositivas')}</th>
+                <th className="numerica">{traducir('Marcadores')}</th>
+                <th>{traducir('Avisos')}</th>
                 <th />
               </tr>
             </thead>
@@ -104,13 +105,13 @@ export function Plantillas() {
                   <td>
                     {p.analysis?.has_watermark && (
                       <span className="marca aviso">
-                        lleva marca de agua · se retirará al generar
+                        {traducir('lleva marca de agua · se retirará al generar')}
                       </span>
                     )}
                   </td>
                   <td>
                     <button type="button" className="secundario" onClick={() => setElegida(p)}>
-                      Mapear
+                      {traducir('Mapear')}
                     </button>
                   </td>
                 </tr>
@@ -181,7 +182,7 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
       <h3>Mapeo de «{plantilla.name}»</h3>
 
       <label>
-        Nombre del mapeo
+        {traducir('Nombre del mapeo')}
         <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
       </label>
 
@@ -191,15 +192,15 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
           documento: la generación lo impide.
         </Mensaje>
       )}
-      {guardado && <Mensaje tipo="ok">Mapeo guardado.</Mensaje>}
+      {guardado && <Mensaje tipo="ok">{traducir('Mapeo guardado.')}</Mensaje>}
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <div className="desbordable">
         <table className="tabla compacta">
           <thead>
             <tr>
-              <th>Marcador de la plantilla</th>
-              <th>Campo del proyecto</th>
+              <th>{traducir('Marcador de la plantilla')}</th>
+              <th>{traducir('Campo del proyecto')}</th>
             </tr>
           </thead>
           <tbody>
@@ -236,10 +237,10 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
 
       <div className="acciones">
         <button type="button" onClick={() => void guardar()}>
-          Guardar mapeo
+          {traducir('Guardar mapeo')}
         </button>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
     </div>

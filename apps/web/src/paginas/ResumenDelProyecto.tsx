@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { enviar } from '../api/cliente'
 import type { Proyecto } from '../api/tipos'
@@ -76,21 +77,21 @@ export function ResumenDelProyecto({
   return (
     <div className="resumen-proyecto">
       {error && <Mensaje tipo="error">{error}</Mensaje>}
-      {hecho && !cambiado && <Mensaje tipo="ok">Introducción guardada.</Mensaje>}
+      {hecho && !cambiado && <Mensaje tipo="ok">{traducir('Introducción guardada.')}</Mensaje>}
 
       <section className="introduccion">
-        <h3>Introducción del proyecto</h3>
+        <h3>{traducir('Introducción del proyecto')}</h3>
         <p className="ayuda">
           La información básica: qué se compra, para quién, con qué alcance se revisa y qué
-          queda fuera. <strong>Abre el informe final tal como se escriba aquí</strong>, así que
+          queda fuera. <strong>{traducir('Abre el informe final tal como se escriba aquí')}</strong>, así que
           la redacta una persona y no se genera sola.
         </p>
         <textarea
           className="texto-introduccion"
           rows={9}
           maxLength={8000}
-          aria-label="Introducción del proyecto"
-          placeholder="Alcance del trabajo, tipología de los activos, fechas de visita, limitaciones generales…"
+          aria-label={traducir('Introducción del proyecto')}
+          placeholder={traducir('Alcance del trabajo, tipología de los activos, fechas de visita, limitaciones generales…')}
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
@@ -100,7 +101,7 @@ export function ResumenDelProyecto({
             disabled={guardando || !cambiado}
             onClick={() => void guardar()}
           >
-            Guardar la introducción
+            {traducir('Guardar la introducción')}
           </button>
           <span className="recuento">
             {texto.trim().length} de 8.000 caracteres
@@ -110,18 +111,18 @@ export function ResumenDelProyecto({
       </section>
 
       <section className="mapa-de-la-cartera">
-        <h3>Dónde están los activos</h3>
+        <h3>{traducir('Dónde están los activos')}</h3>
         <p className="ayuda">
           Todos los del proyecto en el mismo mapa: dos naves en el mismo polígono y una oficina
           a treinta kilómetros no se gestionan igual.
         </p>
-        <Suspense fallback={<p className="cargando">Cargando el mapa…</p>}>
+        <Suspense fallback={<p className="cargando">{traducir('Cargando el mapa…')}</p>}>
           <MapaDeActivos projectId={projectId} />
         </Suspense>
       </section>
 
       <section className="fases-del-proyecto">
-        <h3>Fases de la due diligence</h3>
+        <h3>{traducir('Fases de la due diligence')}</h3>
         <PestanaFases projectId={projectId} />
       </section>
     </div>

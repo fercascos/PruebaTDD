@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ErrorDeApi, iniciarSesion } from '../api/cliente'
@@ -32,11 +33,11 @@ export function Entrar() {
   return (
     <div className="entrar">
       <form onSubmit={(e) => void enviar(e)}>
-        <h1>Due diligence técnica</h1>
-        <p className="ayuda">Acceda con las credenciales de su organización.</p>
+        <h1>{traducir('Due diligence técnica')}</h1>
+        <p className="ayuda">{traducir('Acceda con las credenciales de su organización.')}</p>
 
         <label>
-          Correo electrónico
+          {traducir('Correo electrónico')}
           <input
             type="email"
             autoComplete="username"
@@ -47,7 +48,7 @@ export function Entrar() {
         </label>
 
         <label>
-          Contraseña
+          {traducir('Contraseña')}
           <input
             type="password"
             autoComplete="current-password"
@@ -63,7 +64,7 @@ export function Entrar() {
           {enviando ? 'Entrando…' : 'Entrar'}
         </button>
         <Link className="enlace" to="/recuperar">
-          He olvidado mi contraseña
+          {traducir('He olvidado mi contraseña')}
         </Link>
       </form>
     </div>

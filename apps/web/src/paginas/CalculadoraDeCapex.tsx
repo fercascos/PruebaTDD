@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useState } from 'react'
 import { enviar } from '../api/cliente'
 import { Campo, Rejilla } from '../ui/Formulario'
@@ -94,7 +95,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
   if (!abierta) {
     return (
       <button type="button" className="enlace" onClick={() => setAbierta(true)}>
-        Cómo se calcula · abrir la cascada
+        {traducir('Cómo se calcula · abrir la cascada')}
       </button>
     )
   }
@@ -102,14 +103,14 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
   return (
     <div className="calculadora">
       <div className="cabecera">
-        <h4>Cómo se calcula</h4>
+        <h4>{traducir('Cómo se calcula')}</h4>
         <button type="button" className="enlace" onClick={() => setAbierta(false)}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
       <Rejilla>
-        <Campo etiqueta="Medición">
+        <Campo etiqueta={traducir('Medición')}>
           <input
             type="number"
             step="0.01"
@@ -118,7 +119,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
             onChange={(e) => setCantidad(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Precio unitario (€)">
+        <Campo etiqueta={traducir('Precio unitario (€)')}>
           <input
             type="number"
             step="0.01"
@@ -127,7 +128,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
             onChange={(e) => setPrecio(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Impuesto" ayuda="Fracción: 0,21 para el 21 %">
+        <Campo etiqueta={traducir('Impuesto')} ayuda={traducir('Fracción: 0,21 para el 21 %')}>
           <input
             type="number"
             step="0.01"
@@ -142,7 +143,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
       {/* `[SUP]` La etiqueta de convención se queda en el código: al usuario
           le llegaba a pantalla con los acentos graves puestos. */}
       <p className="ayuda">
-        Porcentajes de la convención española, y <strong>editables</strong>: no hay fuente de
+        {traducir('Porcentajes de la convención española, y')} <strong>editables</strong>: no hay fuente de
         precios externa, así que esta parte se ajusta a mano hasta que la haya.
       </p>
       <Rejilla>
@@ -160,7 +161,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
       </Rejilla>
 
       <button type="button" onClick={() => void calcular()}>
-        Calcular
+        {traducir('Calcular')}
       </button>
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
@@ -169,15 +170,15 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
           <table className="tabla cascada">
             <thead>
               <tr>
-                <th>Concepto</th>
-                <th className="numerica">Sobre</th>
+                <th>{traducir('Concepto')}</th>
+                <th className="numerica">{traducir('Sobre')}</th>
                 <th className="numerica">%</th>
-                <th className="numerica">Importe</th>
+                <th className="numerica">{traducir('Importe')}</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Coste directo</td>
+                <td>{traducir('Coste directo')}</td>
                 <td className="numerica">—</td>
                 <td className="numerica">—</td>
                 <td className="numerica">{euros.format(Number(resultado.direct_cost))}</td>
@@ -197,30 +198,30 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
             <tfoot>
               {resultado.pem && (
                 <tr>
-                  <td colSpan={3}>PEM · directo + indirectos</td>
+                  <td colSpan={3}>{traducir('PEM · directo + indirectos')}</td>
                   <td className="numerica">{euros.format(Number(resultado.pem))}</td>
                 </tr>
               )}
               {resultado.pec && (
                 <tr>
-                  <td colSpan={3}>PEC · PEM + GG + BI</td>
+                  <td colSpan={3}>{traducir('PEC · PEM + GG + BI')}</td>
                   <td className="numerica">{euros.format(Number(resultado.pec))}</td>
                 </tr>
               )}
               <tr>
                 <td colSpan={3}>
-                  <strong>Base imponible</strong>
+                  <strong>{traducir('Base imponible')}</strong>
                 </td>
                 <td className="numerica">
                   <strong>{euros.format(Number(resultado.computed_base))}</strong>
                 </td>
               </tr>
               <tr>
-                <td colSpan={3}>Impuesto</td>
+                <td colSpan={3}>{traducir('Impuesto')}</td>
                 <td className="numerica">{euros.format(Number(resultado.tax_amount))}</td>
               </tr>
               <tr>
-                <td colSpan={3}>Total con impuesto</td>
+                <td colSpan={3}>{traducir('Total con impuesto')}</td>
                 <td className="numerica">{euros.format(Number(resultado.total_with_tax))}</td>
               </tr>
             </tfoot>
@@ -234,7 +235,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
             className="secundario"
             onClick={() => alAplicar(resultado.computed_base)}
           >
-            Usar la base imponible como importe
+            {traducir('Usar la base imponible como importe')}
           </button>
         </>
       )}

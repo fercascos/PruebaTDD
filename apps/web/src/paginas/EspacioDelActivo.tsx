@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { obtener } from '../api/cliente'
@@ -76,7 +77,7 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
   useEffect(recargar, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!activo) return <p className="cargando">Cargando el activo…</p>
+  if (!activo) return <p className="cargando">{traducir('Cargando el activo…')}</p>
 
   const base = `/proyectos/${projectId}/activos/${assetId}`
 
@@ -124,8 +125,8 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
                   localización del activo concreto». Va debajo de la ficha
                   porque primero se identifica el edificio y después se sitúa. */}
               <section className="mapa-del-activo">
-                <h3>Dónde está</h3>
-                <Suspense fallback={<p className="cargando">Cargando el mapa…</p>}>
+                <h3>{traducir('Dónde está')}</h3>
+                <Suspense fallback={<p className="cargando">{traducir('Cargando el mapa…')}</p>}>
                   <MapaDeActivos projectId={projectId} assetId={assetId} />
                 </Suspense>
               </section>
@@ -143,15 +144,15 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
             <>
               <VisitaDelActivo activo={activo} />
               <section className="fotos-del-activo">
-                <h3>Fotografías de la visita</h3>
+                <h3>{traducir('Fotografías de la visita')}</h3>
                 <PestanaFotos projectId={projectId} assetId={assetId} />
               </section>
               {/* `[REQ]` §15.9 · El mapa de fotografías responde a una pregunta
                   de la visita —¿se cubrió el edificio o se quedó en la
                   fachada?—, así que su sitio es este y no el Detalle. */}
               <section className="mapa-de-fotos">
-                <h3>Dónde se hizo cada fotografía</h3>
-                <Suspense fallback={<p className="cargando">Cargando el mapa…</p>}>
+                <h3>{traducir('Dónde se hizo cada fotografía')}</h3>
+                <Suspense fallback={<p className="cargando">{traducir('Cargando el mapa…')}</p>}>
                   <MapaDeFotos projectId={projectId} assetId={assetId} />
                 </Suspense>
               </section>
@@ -164,7 +165,7 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
             <>
               <InventarioDelActivo projectId={projectId} assetId={assetId} />
               <section className="equipo-del-activo">
-                <h3>Ficha de cada equipo</h3>
+                <h3>{traducir('Ficha de cada equipo')}</h3>
                 <p className="ayuda">
                   El detalle completo: fabricante, número de serie, mantenimiento preventivo y
                   vida residual, que se calcula al leer y nunca se teclea.

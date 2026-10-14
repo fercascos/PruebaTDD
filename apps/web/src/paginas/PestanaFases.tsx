@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { obtener } from '../api/cliente'
 import type { Fase } from '../api/tipos'
@@ -22,11 +23,11 @@ export function PestanaFases({ projectId }: { projectId: string }) {
   }, [projectId])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!fases) return <p className="cargando">Cargando fases…</p>
+  if (!fases) return <p className="cargando">{traducir('Cargando fases…')}</p>
   if (fases.length === 0) {
     return (
       <Vacio>
-        Este proyecto no tiene ninguna fase activa. Las fases se eligen a la carta al darlo de alta.
+        {traducir('Este proyecto no tiene ninguna fase activa. Las fases se eligen a la carta al darlo de alta.')}
       </Vacio>
     )
   }
@@ -39,7 +40,7 @@ export function PestanaFases({ projectId }: { projectId: string }) {
             <strong>{f.name_es}</strong>
             <span className={`estado e-${f.status.toLowerCase()}`}>{f.status}</span>
             {f.es_derivado && (
-              <span className="candado" title="Se calcula del trabajo hecho: no se marca a mano">
+              <span className="candado" title={traducir('Se calcula del trabajo hecho: no se marca a mano')}>
                 calculada
               </span>
             )}
@@ -47,7 +48,7 @@ export function PestanaFases({ projectId }: { projectId: string }) {
           <p className="detalle">{f.detalle}</p>
           {f.estado_sugerido && (
             <p className="sugerencia">
-              La aplicación deduce que debería estar en <strong>{f.estado_sugerido}</strong>. Se
+              {traducir('La aplicación deduce que debería estar en')} <strong>{f.estado_sugerido}</strong>. Se
               ofrece, no se impone: el responsable puede tener motivos que la aplicación no conoce.
             </p>
           )}

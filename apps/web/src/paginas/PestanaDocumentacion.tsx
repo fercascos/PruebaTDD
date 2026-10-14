@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener, subirFichero } from '../api/cliente'
 import type {
@@ -144,7 +145,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
   }, [recargar])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!lineas || !permiso) return <p className="cargando">Cargando la documentación…</p>
+  if (!lineas || !permiso) return <p className="cargando">{traducir('Cargando la documentación…')}</p>
 
   const sinLinea = documentos.filter((d) => d.doc_request_item_id === null)
 
@@ -257,7 +258,7 @@ function Autorizacion({
   return (
     <div className={`autorizacion-ia ${permiso.activo ? 'activa' : 'inactiva'}`}>
       <div>
-        <strong>Revisión de documentación con IA</strong>
+        <strong>{traducir('Revisión de documentación con IA')}</strong>
         {permiso.activo ? (
           <p className="detalle">
             Autorizada para este proyecto{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
@@ -316,7 +317,7 @@ function NuevaLinea({
       <select
         value={categoria}
         onChange={(e) => setCategoria(e.target.value)}
-        aria-label="Categoría"
+        aria-label={traducir('Categoría')}
       >
         {categorias.map((c) => (
           <option key={c.id} value={c.id}>
@@ -327,11 +328,11 @@ function NuevaLinea({
       <input
         value={titulo}
         onChange={(e) => setTitulo(e.target.value)}
-        placeholder="Qué hay que pedir (p. ej. «Licencia de actividad»)"
-        aria-label="Documento solicitado"
+        placeholder={traducir('Qué hay que pedir (p. ej. «Licencia de actividad»)')}
+        aria-label={traducir('Documento solicitado')}
       />
       <button type="submit" disabled={!titulo.trim()}>
-        Añadir a la checklist
+        {traducir('Añadir a la checklist')}
       </button>
       {fallo && <Mensaje tipo="error">{fallo}</Mensaje>}
     </form>
@@ -426,7 +427,7 @@ function Linea({
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
           onBlur={() => void cambiarEstado('NO_DISPONIBLE')}
-          placeholder="Por qué no está disponible"
+          placeholder={traducir('Por qué no está disponible')}
           aria-label="Motivo"
         />
       )}
@@ -613,7 +614,7 @@ function Extraccion({
 
       {resultado?.es_simulada && (
         <Mensaje tipo="aviso">
-          Lectura <strong>simulada</strong>: nadie ha leído este documento. Lo de abajo ocupa el
+          {traducir('Lectura')} <strong>simulada</strong>: nadie ha leído este documento. Lo de abajo ocupa el
           sitio de lo que vendrá y no dice nada sobre su contenido.
         </Mensaje>
       )}
@@ -644,7 +645,7 @@ function Extraccion({
 
       {propuestas !== null && propuestas.length === 0 && resultado && (
         <p className="detalle">
-          El documento no ha propuesto ningún dato del edificio. Los avisos de arriba dicen por qué.
+          {traducir('El documento no ha propuesto ningún dato del edificio. Los avisos de arriba dicen por qué.')}
         </p>
       )}
 
@@ -705,14 +706,14 @@ function Propuesta({
 
       <p className="resumen">
         {propuesta.valor_actual === null ? (
-          <>Hoy está vacío: aceptarlo lo rellena.</>
+          <>{traducir('Hoy está vacío: aceptarlo lo rellena.')}</>
         ) : contradice ? (
           <>
-            Hoy pone <strong>{propuesta.valor_actual}</strong>. Aceptarlo lo{' '}
+            {traducir('Hoy pone')} <strong>{propuesta.valor_actual}</strong>. Aceptarlo lo{' '}
             <strong>sustituye</strong>.
           </>
         ) : (
-          <>Coincide con lo que ya hay. Aceptarlo no cambia nada.</>
+          <>{traducir('Coincide con lo que ya hay. Aceptarlo no cambia nada.')}</>
         )}
       </p>
 
@@ -725,10 +726,10 @@ function Propuesta({
 
       <div className="decidir">
         <button type="button" onClick={() => void decidir(true)} disabled={ocupado}>
-          Aceptar
+          {traducir('Aceptar')}
         </button>
         <button type="button" onClick={() => void decidir(false)} disabled={ocupado}>
-          Descartar
+          {traducir('Descartar')}
         </button>
       </div>
     </li>
@@ -754,7 +755,7 @@ function Revision({
           proveedor, que nadie confunda esto con una revisión de verdad. */}
       {revision.is_simulated && (
         <Mensaje tipo="aviso">
-          Revisión <strong>simulada</strong>. Todavía no hay proveedor de IA elegido, así que nadie
+          {traducir('Revisión')} <strong>simulada</strong>. Todavía no hay proveedor de IA elegido, así que nadie
           ha leído este documento: las observaciones de abajo ocupan el sitio de las que vendrán y
           no dicen nada sobre su contenido.
         </Mensaje>
@@ -811,10 +812,10 @@ function Observacion({
           {/* La IA propone; aquí decide una persona. No hay forma de que una
               propuesta se acepte sola. */}
           <button type="button" onClick={() => void decidir(true)} disabled={ocupado}>
-            Aceptar
+            {traducir('Aceptar')}
           </button>
           <button type="button" onClick={() => void decidir(false)} disabled={ocupado}>
-            Rechazar
+            {traducir('Rechazar')}
           </button>
         </div>
       ) : (
@@ -919,9 +920,9 @@ function Limitaciones({
 
   return (
     <section className="limitaciones-doc">
-      <h3>Lo que la documentación dice sobre sí misma</h3>
+      <h3>{traducir('Lo que la documentación dice sobre sí misma')}</h3>
       <p className="ayuda">
-        Salen de leer los documentos, no de lo que falta. <strong>Solo las aceptadas entran en
+        {traducir('Salen de leer los documentos, no de lo que falta.')} <strong>Solo las aceptadas entran en
         el apartado de limitaciones del informe</strong>: entre la propuesta y el entregable hay
         una persona decidiendo.
       </p>
@@ -943,10 +944,10 @@ function Limitaciones({
               {l.evidencia && <blockquote className="evidencia">{l.evidencia}</blockquote>}
               <div className="decidir">
                 <button type="button" onClick={() => void decidir(l.id, true)} disabled={ocupado}>
-                  Incluir en el informe
+                  {traducir('Incluir en el informe')}
                 </button>
                 <button type="button" onClick={() => void decidir(l.id, false)} disabled={ocupado}>
-                  Descartar
+                  {traducir('Descartar')}
                 </button>
               </div>
             </li>
@@ -1064,10 +1065,10 @@ function EquiposPropuestos({
 
   return (
     <section className="equipos-propuestos">
-      <h3>Medios que declara la documentación</h3>
+      <h3>{traducir('Medios que declara la documentación')}</h3>
       <p className="ayuda">
-        Salen del capítulo de medios de autoprotección. <strong>Aceptar crea la ficha de
-        equipo</strong>, así que hay que decir en qué activo va: el documento no lo dice.
+        {traducir('Salen del capítulo de medios de autoprotección.')} <strong>Aceptar crea la ficha de
+        equipo</strong>{traducir(', así que hay que decir en qué activo va: el documento no lo dice.')}
       </p>
 
       {activos.length === 0 && pendientes.length > 0 && (
@@ -1102,7 +1103,7 @@ function EquiposPropuestos({
 
               <div className="destino">
                 <label>
-                  Activo
+                  {traducir('Activo')}
                   <select
                     value={destino[e.id] ?? activos[0]?.id ?? ''}
                     onChange={(ev) => setDestino((d) => ({ ...d, [e.id]: ev.target.value }))}
@@ -1115,7 +1116,7 @@ function EquiposPropuestos({
                   </select>
                 </label>
                 <label>
-                  Revisión cada (meses)
+                  {traducir('Revisión cada (meses)')}
                   <input
                     type="number"
                     min={1}
@@ -1133,10 +1134,10 @@ function EquiposPropuestos({
                   onClick={() => void decidir(e, true)}
                   disabled={ocupado || activos.length === 0}
                 >
-                  Añadir al inventario
+                  {traducir('Añadir al inventario')}
                 </button>
                 <button type="button" onClick={() => void decidir(e, false)} disabled={ocupado}>
-                  Descartar
+                  {traducir('Descartar')}
                 </button>
               </div>
             </li>

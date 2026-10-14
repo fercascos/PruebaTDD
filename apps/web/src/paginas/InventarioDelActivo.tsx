@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import { porTipoDeCoste } from '../api/tipos'
@@ -358,7 +359,7 @@ export function InventarioDelActivo({
   }
 
   if (!codigos || !descriptivos || !equipos) {
-    return <p className="cargando">Cargando el inventario…</p>
+    return <p className="cargando">{traducir('Cargando el inventario…')}</p>
   }
 
   return (
@@ -367,11 +368,11 @@ export function InventarioDelActivo({
     // Es además lo único a lo que se puede esperar desde fuera sin adivinar,
     // porque un mensaje de «hecho» puede ser el de la operación anterior.
     <section className="inventario-activo" aria-busy={trabajando}>
-      <h3>Inventario del activo</h3>
+      <h3>{traducir('Inventario del activo')}</h3>
       <p className="ayuda">
         El árbol del cliente, categoría a categoría, y dentro de cada objeto lo que se sabe de
-        él: <strong>qué hay</strong> (Descriptivo, que sale de la memoria técnica) y{' '}
-        <strong>en qué estado está</strong> (Valoración, que la escribe quien lo ha visto), con
+        él: <strong>{traducir('qué hay')}</strong> (Descriptivo, que sale de la memoria técnica) y{' '}
+        <strong>{traducir('en qué estado está')}</strong> (Valoración, que la escribe quien lo ha visto), con
         sus equipos y sus fotografías. Las categorías nacen plegadas; se abren solas las que ya
         tienen trabajo hecho.
       </p>
@@ -396,7 +397,7 @@ export function InventarioDelActivo({
           disabled={trabajando}
           onClick={() => void traer()}
         >
-          Traer descriptivos de la documentación
+          {traducir('Traer descriptivos de la documentación')}
         </button>
         <button
           type="button"
@@ -491,7 +492,7 @@ export function InventarioDelActivo({
           <h4>Equipos sin objeto ({sinObjeto.length})</h4>
           <p className="ayuda">
             Se dieron de alta antes de que el inventario preguntara de qué objeto cuelga cada
-            equipo. <strong>No se les ha puesto uno automáticamente</strong>: un capítulo tiene
+            equipo. <strong>{traducir('No se les ha puesto uno automáticamente')}</strong>: un capítulo tiene
             once objetos y elegir por usted sería adivinar dónde está la máquina. Colóquelos y
             dejarán de estar aquí —y su actuación sabrá dónde ir.
           </p>
@@ -499,10 +500,10 @@ export function InventarioDelActivo({
             <table className="tabla">
               <thead>
                 <tr>
-                  <th scope="col">Etiqueta</th>
-                  <th scope="col">Equipo</th>
-                  <th scope="col">Sistema</th>
-                  <th scope="col">Objeto del árbol</th>
+                  <th scope="col">{traducir('Etiqueta')}</th>
+                  <th scope="col">{traducir('Equipo')}</th>
+                  <th scope="col">{traducir('Sistema')}</th>
+                  <th scope="col">{traducir('Objeto del árbol')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -615,28 +616,28 @@ function FichaDeObjeto({
     <div className="ficha-objeto">
       <div className="dos-textos">
         <label className="campo">
-          Descriptivo
+          {traducir('Descriptivo')}
           <textarea
             rows={4}
             maxLength={4000}
-            placeholder="Qué hay: tipo, cantidad, características. Sale de la memoria técnica."
+            placeholder={traducir('Qué hay: tipo, cantidad, características. Sale de la memoria técnica.')}
             aria-label={`Descriptivo de ${codigo.name_es} (${codigo.code})`}
             value={borrador.texto}
             onChange={(e) => alEscribir('texto', e.target.value)}
           />
-          <span className="nota">Qué hay. Dato de documento, no de observación</span>
+          <span className="nota">{traducir('Qué hay. Dato de documento, no de observación')}</span>
         </label>
         <label className="campo">
-          Valoración
+          {traducir('Valoración')}
           <textarea
             rows={4}
             maxLength={4000}
-            placeholder="En qué estado está, qué se ha observado y qué se concluye."
+            placeholder={traducir('En qué estado está, qué se ha observado y qué se concluye.')}
             aria-label={`Valoración de ${codigo.name_es} (${codigo.code})`}
             value={borrador.valoracion}
             onChange={(e) => alEscribir('valoracion', e.target.value)}
           />
-          <span className="nota">En qué estado está. Lo escribe quien lo ha visto</span>
+          <span className="nota">{traducir('En qué estado está. Lo escribe quien lo ha visto')}</span>
         </label>
       </div>
 
@@ -651,7 +652,7 @@ function FichaDeObjeto({
             disabled={!hayAlgo}
             onChange={(e) => alEscribir('validado', e.target.checked)}
           />
-          Validado por un técnico
+          {traducir('Validado por un técnico')}
         </label>
         <span className="recuento">
           {guardado?.validado ? (
@@ -664,12 +665,12 @@ function FichaDeObjeto({
         </span>
         {guardado?.es_simulada && (
           <span className="recuento simulada">
-            extracción SIMULADA: léalo en el documento antes de validarlo
+            {traducir('extracción SIMULADA: léalo en el documento antes de validarlo')}
           </span>
         )}
       </div>
 
-      <h5>Inventario relacionado</h5>
+      <h5>{traducir('Inventario relacionado')}</h5>
       {equipos.length === 0 ? (
         <Vacio>
           Este objeto no tiene equipos inventariados. No siempre hace falta: una cubierta o una
@@ -680,11 +681,11 @@ function FichaDeObjeto({
           <table className="tabla equipo-capex">
             <thead>
               <tr>
-                <th scope="col">Pasa a CAPEX</th>
-                <th scope="col">Etiqueta</th>
-                <th scope="col">Equipo</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Vida residual</th>
+                <th scope="col">{traducir('Pasa a CAPEX')}</th>
+                <th scope="col">{traducir('Etiqueta')}</th>
+                <th scope="col">{traducir('Equipo')}</th>
+                <th scope="col">{traducir('Estado')}</th>
+                <th scope="col">{traducir('Vida residual')}</th>
               </tr>
             </thead>
             <tbody>
@@ -710,7 +711,7 @@ function FichaDeObjeto({
         </div>
       )}
 
-      <h5>Fotografías de este objeto</h5>
+      <h5>{traducir('Fotografías de este objeto')}</h5>
       {fotos.length === 0 ? (
         <p className="ayuda">
           Todavía no hay ninguna. Salen solas al atar una fotografía de la visita a uno de estos

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { enviar, obtener } from '../api/cliente'
@@ -75,9 +76,9 @@ export function NuevoProyecto() {
 
   return (
     <>
-      <h1>Nuevo proyecto</h1>
+      <h1>{traducir('Nuevo proyecto')}</h1>
       <Formulario
-        titulo="Datos del proyecto"
+        titulo={traducir('Datos del proyecto')}
         enviar={guardar}
         textoDeEnvio="Crear proyecto"
         alCancelar={() => navegar('/proyectos')}
@@ -88,23 +89,23 @@ export function NuevoProyecto() {
               primero que se dice por teléfono, y **no se puede cambiar
               después**: la API no tiene por dónde. */}
           <Campo
-            etiqueta="Código interno"
-            ayuda="Lo asigna la aplicación al crear el proyecto. Único e inalterable"
+            etiqueta={traducir('Código interno')}
+            ayuda={traducir('Lo asigna la aplicación al crear el proyecto. Único e inalterable')}
           >
             <div className="campo-bloqueado">
-              <output>Se genera al crear · 2026-NNN</output>
+              <output>{traducir('Se genera al crear · 2026-NNN')}</output>
             </div>
           </Campo>
-          <Campo etiqueta="Nombre del proyecto">
+          <Campo etiqueta={traducir('Nombre del proyecto')}>
             <input
               required
               maxLength={200}
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              placeholder="TDD Cartera Norte"
+              placeholder={traducir('TDD Cartera Norte')}
             />
           </Campo>
-          <Campo etiqueta="Cliente">
+          <Campo etiqueta={traducir('Cliente')}>
             <select
               value={clienteId}
               onChange={(e) => {
@@ -112,7 +113,7 @@ export function NuevoProyecto() {
                 if (e.target.value) setClienteNuevo('')
               }}
             >
-              <option value="">— no está en la lista —</option>
+              <option value="">{traducir('— no está en la lista —')}</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.projects})
@@ -122,21 +123,21 @@ export function NuevoProyecto() {
           </Campo>
           {!clienteId && (
             <Campo
-              etiqueta="Si no está en la lista, escríbalo"
-              ayuda="No bloquea: el proyecto se crea y el administrador recibe el aviso para validarlo"
+              etiqueta={traducir('Si no está en la lista, escríbalo')}
+              ayuda={traducir('No bloquea: el proyecto se crea y el administrador recibe el aviso para validarlo')}
             >
               <input
                 required
                 value={clienteNuevo}
                 onChange={(e) => setClienteNuevo(e.target.value)}
-                placeholder="Inversora Ficticia S.L."
+                placeholder={traducir('Inversora Ficticia S.L.')}
               />
             </Campo>
           )}
-          <Campo etiqueta="Fecha de arranque">
+          <Campo etiqueta={traducir('Fecha de arranque')}>
             <input type="date" value={arranque} onChange={(e) => setArranque(e.target.value)} />
           </Campo>
-          <Campo etiqueta="Fecha de cierre prevista">
+          <Campo etiqueta={traducir('Fecha de cierre prevista')}>
             <input
               type="date"
               value={cierre}
@@ -144,12 +145,12 @@ export function NuevoProyecto() {
               onChange={(e) => setCierre(e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Fecha de entrega prevista" ayuda="El compromiso de entrega del informe">
+          <Campo etiqueta={traducir('Fecha de entrega prevista')} ayuda={traducir('El compromiso de entrega del informe')}>
             <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </Campo>
         </Rejilla>
 
-        <h3>Fases aplicables</h3>
+        <h3>{traducir('Fases aplicables')}</h3>
         <p className="ayuda">
           Se crean solo las que marque. Un proyecto sin Q&amp;A no arrastra una fase vacía que nadie
           va a rellenar. Las marcadas como <em>calculada</em> no se marcan a mano después: su estado

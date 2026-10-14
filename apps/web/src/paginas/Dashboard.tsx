@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { obtener } from '../api/cliente'
 import type {
@@ -182,7 +183,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
   }, [])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!datos) return <p className="cargando">Cargando el dashboard…</p>
+  if (!datos) return <p className="cargando">{traducir('Cargando el dashboard…')}</p>
 
   // El total del PROYECTO sale de `by-asset`, que no se filtra. Es lo que
   // permite decir qué parte representa la selección sin pedirlo otra vez, y lo
@@ -220,7 +221,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
     return (
       <div className="resumen-capex">
         {cabecera}
-        <p className="cargando">Cargando los gráficos…</p>
+        <p className="cargando">{traducir('Cargando los gráficos…')}</p>
       </div>
     )
   }
@@ -319,7 +320,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
       ) : (
         <>
           <section className="bloque">
-            <h3>Distribución por concepto de gasto</h3>
+            <h3>{traducir('Distribución por concepto de gasto')}</h3>
             <p className="ayuda">
               Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal
               mantenido:{' '}
@@ -360,9 +361,9 @@ export function Dashboard({ projectId }: { projectId: string }) {
               lo paga— y leerlas seguidas es lo que convierte «300.000 € de
               normativa» en «300.000 € de normativa que paga el comprador». */}
           <section className="bloque">
-            <h3>Reparto de la inversión por pagador</h3>
+            <h3>{traducir('Reparto de la inversión por pagador')}</h3>
             <p className="ayuda">
-              Cuánto del CAPEX recae sobre la propiedad y cuánto es repercutible al inquilino.
+              {traducir('Cuánto del CAPEX recae sobre la propiedad y cuánto es repercutible al inquilino.')}
               <strong> «Sin determinar» no es una tercera forma de pagar</strong>: es una
               casilla sin rellenar —depende de los contratos de arrendamiento y se decide
               actuación por actuación—, y por eso va en gris y no con un color de serie.
@@ -390,7 +391,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           </section>
 
           <section className="bloque">
-            <h3>Perfil temporal de la inversión</h3>
+            <h3>{traducir('Perfil temporal de la inversión')}</h3>
             <p className="ayuda">
               Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí
               es el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.
@@ -411,7 +412,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
               riesgos —es el mismo dato leído de otra manera— y, como allí, el
               grado va escrito: el color solo acompaña. */}
           <section className="bloque">
-            <h3>Exposición por grado de riesgo</h3>
+            <h3>{traducir('Exposición por grado de riesgo')}</h3>
             <p className="ayuda">
               Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los
               grados sin importe se muestran con cero: uno que desaparece de la lista se
@@ -430,9 +431,9 @@ export function Dashboard({ projectId }: { projectId: string }) {
           </section>
 
           <section className="bloque">
-            <h3>Desglose por categoría y objeto</h3>
+            <h3>{traducir('Desglose por categoría y objeto')}</h3>
             <p className="ayuda">
-              Cada barra es una <strong>categoría</strong> del árbol de CAPEX y los tramos de
+              {traducir('Cada barra es una')} <strong>{traducir('categoría')}</strong> del árbol de CAPEX y los tramos de
               dentro son sus <strong>objetos</strong>, de mayor a menor. Un hallazgo codificado
               en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es
               lo mismo que un objeto denominado «General».
@@ -448,16 +449,16 @@ export function Dashboard({ projectId }: { projectId: string }) {
               tarjetas. */}
           {cartera && (
             <section className="bloque">
-              <h3>Distribución por activo</h3>
+              <h3>{traducir('Distribución por activo')}</h3>
               <p className="ayuda">
                 En un proyecto de cartera es la cifra que entra en la negociación de cada
                 activo.
-                <strong> Este bloque no se filtra nunca</strong>: es la referencia contra la que
+                <strong> {traducir('Este bloque no se filtra nunca')}</strong>: es la referencia contra la que
                 se lee el resto. Los activos sin actuaciones se muestran con cero: uno que
                 desaparece de la lista se confunde con uno que se visitó y no tenía nada.
               </p>
               <p className="ayuda">
-                Pulse una barra para incorporar ese activo a la selección o retirarlo de ella.
+                {traducir('Pulse una barra para incorporar ese activo a la selección o retirarlo de ella.')}
               </p>
               {/* De mayor a menor: es una comparación de magnitudes y la API los
                   devuelve por nombre, que aquí no significa nada. En «cuándo hay
@@ -537,7 +538,7 @@ function Cabecera({
           </>
         ) : cartera ? (
           <>
-            Alcance: los <strong>{activos.length} activos</strong> del proyecto, agregados ·{' '}
+            {traducir('Alcance: los')} <strong>{activos.length} activos</strong> del proyecto, agregados ·{' '}
             {eurosExactos.format(totalDelProyecto)}
           </>
         ) : (
@@ -719,14 +720,14 @@ function BarrasApiladas({ filas }: { filas: ResumenPorObjeto[] }) {
           <table className="tabla">
             <thead>
               <tr>
-                <th scope="col">Categoría</th>
-                <th scope="col">Objeto</th>
-                <th scope="col">Hallazgos</th>
+                <th scope="col">{traducir('Categoría')}</th>
+                <th scope="col">{traducir('Objeto')}</th>
+                <th scope="col">{traducir('Hallazgos')}</th>
                 <th scope="col" className="numerica">
-                  Importe
+                  {traducir('Importe')}
                 </th>
                 <th scope="col" className="numerica">
-                  % de su categoría
+                  {traducir('% de su categoría')}
                 </th>
               </tr>
             </thead>
@@ -748,7 +749,7 @@ function BarrasApiladas({ filas }: { filas: ResumenPorObjeto[] }) {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3}>Total</td>
+                <td colSpan={3}>{traducir('Total')}</td>
                 <td className="numerica">{eurosExactos.format(total)}</td>
                 <td className="numerica">100,0 %</td>
               </tr>
@@ -828,9 +829,9 @@ function Tabla({
           <thead>
             <tr>
               <th scope="col">{columna}</th>
-              <th scope="col">Hallazgos</th>
+              <th scope="col">{traducir('Hallazgos')}</th>
               <th scope="col" className="numerica">
-                Importe
+                {traducir('Importe')}
               </th>
               <th scope="col" className="numerica">
                 % del total
@@ -849,7 +850,7 @@ function Tabla({
           </tbody>
           <tfoot>
             <tr>
-              <td>Total</td>
+              <td>{traducir('Total')}</td>
               <td />
               <td className="numerica">{eurosExactos.format(total)}</td>
               <td className="numerica">{porcentaje(total, total)}</td>

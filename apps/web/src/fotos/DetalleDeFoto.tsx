@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Activo, ElementoCatalogo, Foto, NodoDeUbicacion } from '../api/tipos'
@@ -125,11 +126,11 @@ export function DetalleDeFoto({
 
         {/* Procedencia: no editable, porque no se inventa. */}
         <dl className="procedencia">
-          <dt>Llegó como</dt>
+          <dt>{traducir('Llegó como')}</dt>
           <dd>{foto.original_filename}</dd>
-          <dt>Origen</dt>
+          <dt>{traducir('Origen')}</dt>
           <dd>{foto.origin}</dd>
-          <dt>Fecha de captura</dt>
+          <dt>{traducir('Fecha de captura')}</dt>
           <dd>
             {foto.taken_at ? (
               new Date(foto.taken_at).toLocaleString('es-ES')
@@ -137,7 +138,7 @@ export function DetalleDeFoto({
               <em>sin EXIF · no se infiere</em>
             )}
           </dd>
-          <dt>Coordenadas</dt>
+          <dt>{traducir('Coordenadas')}</dt>
           <dd>
             {foto.gps_latitude !== null ? (
               `${foto.gps_latitude.toFixed(6)}, ${foto.gps_longitude?.toFixed(6)}`
@@ -145,18 +146,18 @@ export function DetalleDeFoto({
               <em>sin GPS</em>
             )}
           </dd>
-          <dt>Dimensiones</dt>
+          <dt>{traducir('Dimensiones')}</dt>
           <dd>
             {foto.width_px} × {foto.height_px} px · {Math.round(foto.byte_size / 1024)} KB
           </dd>
-          <dt>Huella</dt>
+          <dt>{traducir('Huella')}</dt>
           <dd>
             <code title={foto.sha256}>{foto.sha256.slice(0, 16)}…</code>
           </dd>
         </dl>
 
         <Rejilla>
-          <Campo etiqueta="Activo">
+          <Campo etiqueta={traducir('Activo')}>
             <select value={activo} onChange={(e) => setActivo(e.target.value)}>
               <option value="">— sin asignar —</option>
               {activos.map((a) => (
@@ -166,7 +167,7 @@ export function DetalleDeFoto({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Zona" ayuda="Clasificación del catálogo: es lo que agrega el informe">
+          <Campo etiqueta="Zona" ayuda={traducir('Clasificación del catálogo: es lo que agrega el informe')}>
             <select value={zona} onChange={(e) => setZona(e.target.value)} disabled={!activo}>
               <option value="">— sin zona —</option>
               {zonas.map((z) => (
@@ -204,13 +205,13 @@ export function DetalleDeFoto({
           </Campo>
         </Rejilla>
 
-        <Campo etiqueta="Nombre visible" ayuda="Sin extensión: la fija el servidor">
+        <Campo etiqueta={traducir('Nombre visible')} ayuda={traducir('Sin extensión: la fija el servidor')}>
           <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={200} />
         </Campo>
-        <Campo etiqueta="Pie de foto" ayuda="Es el texto que se inserta bajo la imagen en el PPTX">
+        <Campo etiqueta={traducir('Pie de foto')} ayuda={traducir('Es el texto que se inserta bajo la imagen en el PPTX')}>
           <input value={pie} onChange={(e) => setPie(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Etiquetas" ayuda="Separadas por comas">
+        <Campo etiqueta="Etiquetas" ayuda={traducir('Separadas por comas')}>
           <input value={etiquetas} onChange={(e) => setEtiquetas(e.target.value)} />
         </Campo>
 
@@ -221,9 +222,9 @@ export function DetalleDeFoto({
               checked={enInforme}
               onChange={(e) => setEnInforme(e.target.checked)}
             />
-            Incluir en el informe
+            {traducir('Incluir en el informe')}
           </label>
-          <Campo etiqueta="Orden de aparición">
+          <Campo etiqueta={traducir('Orden de aparición')}>
             <input
               type="number"
               min={1}
@@ -236,11 +237,11 @@ export function DetalleDeFoto({
 
         {enInforme && !activo && (
           <Mensaje tipo="aviso">
-            Seleccionada para el informe pero sin activo: no se sabría en qué diapositiva colocarla.
+            {traducir('Seleccionada para el informe pero sin activo: no se sabría en qué diapositiva colocarla.')}
           </Mensaje>
         )}
         {enInforme && !pie.trim() && (
-          <Mensaje tipo="aviso">Sin pie de foto: saldrá en el informe sin texto debajo.</Mensaje>
+          <Mensaje tipo="aviso">{traducir('Sin pie de foto: saldrá en el informe sin texto debajo.')}</Mensaje>
         )}
         {error && <Mensaje tipo="error">{error}</Mensaje>}
 
@@ -249,7 +250,7 @@ export function DetalleDeFoto({
             {guardando ? 'Guardando…' : 'Guardar'}
           </button>
           <button type="button" className="secundario" onClick={() => setAnotando(true)}>
-            Anotar
+            {traducir('Anotar')}
           </button>
           <button
             type="button"
@@ -258,10 +259,10 @@ export function DetalleDeFoto({
             disabled={!activo}
             title={activo ? '' : 'Asigne primero un activo'}
           >
-            Crear hallazgo desde esta foto
+            {traducir('Crear hallazgo desde esta foto')}
           </button>
           <button type="button" className="secundario" onClick={alCerrar}>
-            Cerrar
+            {traducir('Cerrar')}
           </button>
         </div>
       </div>

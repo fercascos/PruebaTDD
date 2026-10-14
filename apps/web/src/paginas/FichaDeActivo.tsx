@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Activo, ElementoCatalogo } from '../api/tipos'
@@ -116,13 +117,13 @@ export function FichaDeActivo({
       alCancelar={alCancelar}
     >
       <Rejilla>
-        <Campo etiqueta="Nombre">
+        <Campo etiqueta={traducir('Nombre')}>
           <input required maxLength={200} value={nombre} onChange={(e) => setNombre(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Código del cliente">
+        <Campo etiqueta={traducir('Código del cliente')}>
           <input maxLength={60} value={codigo} onChange={(e) => setCodigo(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Tipología" ayuda="Determina las zonas disponibles al registrar hallazgos">
+        <Campo etiqueta={traducir('Tipología')} ayuda={traducir('Determina las zonas disponibles al registrar hallazgos')}>
           <select required value={tipologia} onChange={(e) => setTipologia(e.target.value)}>
             {tipologias.map((t) => (
               <option key={t.id} value={t.id}>
@@ -131,10 +132,10 @@ export function FichaDeActivo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Ciudad">
+        <Campo etiqueta={traducir('Ciudad')}>
           <input maxLength={120} value={ciudad} onChange={(e) => setCiudad(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Año de construcción">
+        <Campo etiqueta={traducir('Año de construcción')}>
           <input
             type="number"
             min={1500}
@@ -143,7 +144,7 @@ export function FichaDeActivo({
             onChange={(e) => setAno(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Año de última reforma" ayuda="No puede ser anterior al de construcción">
+        <Campo etiqueta={traducir('Año de última reforma')} ayuda={traducir('No puede ser anterior al de construcción')}>
           <input
             type="number"
             min={1500}
@@ -152,13 +153,13 @@ export function FichaDeActivo({
             onChange={(e) => setReforma(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Superficie de parcela (m²)">
+        <Campo etiqueta={traducir('Superficie de parcela (m²)')}>
           <input type="number" step="0.01" min={0} {...numero('plot_area_sqm')} />
         </Campo>
-        <Campo etiqueta="Superficie construida total (m²)">
+        <Campo etiqueta={traducir('Superficie construida total (m²)')}>
           <input type="number" step="0.01" min={0} {...numero('total_built_sqm')} />
         </Campo>
-        <Campo etiqueta="Superficie alquilable (m²)">
+        <Campo etiqueta={traducir('Superficie alquilable (m²)')}>
           <input type="number" step="0.01" min={0} {...numero('lettable_area_sqm')} />
         </Campo>
       </Rejilla>
@@ -167,7 +168,7 @@ export function FichaDeActivo({
         Datos de nave{' '}
         {!esIndustrial && (
           <span className="candado">
-            no aplican a esta tipología · lo que escriba se conserva igualmente
+            {traducir('no aplican a esta tipología · lo que escriba se conserva igualmente')}
           </span>
         )}
       </h3>
@@ -210,20 +211,20 @@ export function FichaDeActivo({
         técnico.
       </p>
       <Rejilla>
-        <Campo etiqueta="Referencia catastral">
+        <Campo etiqueta={traducir('Referencia catastral')}>
           <input value={catastro} maxLength={30} onChange={(e) => setCatastro(e.target.value)} />
         </Campo>
         <Campo etiqueta="Promotor">
           <input value={promotor} maxLength={200} onChange={(e) => setPromotor(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Fecha del proyecto">
+        <Campo etiqueta={traducir('Fecha del proyecto')}>
           <input
             type="date"
             value={fechaProyecto}
             onChange={(e) => setFechaProyecto(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Uso secundario">
+        <Campo etiqueta={traducir('Uso secundario')}>
           <input
             value={usoSecundario}
             maxLength={120}
@@ -233,19 +234,19 @@ export function FichaDeActivo({
         {/* Los tres que se confunden con los de arriba. La etiqueta lo dice
             entera: «ocupación», «útil» y «del edificio» son lo que los distingue
             de la construida, la alquilable y la del almacén. */}
-        <Campo etiqueta="Ocupación (m²)" ayuda="Lo que el edificio ocupa en la parcela">
+        <Campo etiqueta={traducir('Ocupación (m²)')} ayuda={traducir('Lo que el edificio ocupa en la parcela')}>
           <input type="number" step="0.01" min={0} {...numero('occupied_area_sqm')} />
         </Campo>
-        <Campo etiqueta="Superficie urbanizada (m²)">
+        <Campo etiqueta={traducir('Superficie urbanizada (m²)')}>
           <input type="number" step="0.01" min={0} {...numero('urbanised_area_sqm')} />
         </Campo>
-        <Campo etiqueta="Superficie útil total (m²)">
+        <Campo etiqueta={traducir('Superficie útil total (m²)')}>
           <input type="number" step="0.01" min={0} {...numero('usable_area_sqm')} />
         </Campo>
-        <Campo etiqueta="Altura máxima del edificio (m)">
+        <Campo etiqueta={traducir('Altura máxima del edificio (m)')}>
           <input type="number" step="0.01" min={0} {...numero('max_height_m')} />
         </Campo>
-        <Campo etiqueta="Muelles de carga">
+        <Campo etiqueta={traducir('Muelles de carga')}>
           <input
             type="number"
             min={0}
@@ -253,7 +254,7 @@ export function FichaDeActivo({
             onChange={(e) => setMuelles(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Plazas de aparcamiento">
+        <Campo etiqueta={traducir('Plazas de aparcamiento')}>
           <input type="number" min={0} value={plazas} onChange={(e) => setPlazas(e.target.value)} />
         </Campo>
       </Rejilla>

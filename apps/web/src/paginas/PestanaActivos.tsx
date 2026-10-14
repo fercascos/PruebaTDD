@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { borrar, obtener } from '../api/cliente'
@@ -63,26 +64,26 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
     <>
       <div className="filtro">
         <button type="button" onClick={() => setCreando(true)}>
-          Añadir activo
+          {traducir('Añadir activo')}
         </button>
       </div>
 
       {!activos ? (
-        <p className="cargando">Cargando activos…</p>
+        <p className="cargando">{traducir('Cargando activos…')}</p>
       ) : activos.length === 0 ? (
         <Vacio>
-          Este proyecto todavía no tiene activos. Un proyecto sin activos no sale de borrador.
+          {traducir('Este proyecto todavía no tiene activos. Un proyecto sin activos no sale de borrador.')}
         </Vacio>
       ) : (
         <div className="desbordable">
           <table className="tabla">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Código</th>
-                <th>Ciudad</th>
-                <th>Año</th>
-                <th className="numerica">Superficie construida</th>
+                <th>{traducir('Nombre')}</th>
+                <th>{traducir('Código')}</th>
+                <th>{traducir('Ciudad')}</th>
+                <th>{traducir('Año')}</th>
+                <th className="numerica">{traducir('Superficie construida')}</th>
                 <th />
               </tr>
             </thead>
@@ -104,7 +105,7 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
                       className="secundario"
                       onClick={() => navegar(`/proyectos/${projectId}/activos/${a.id}`)}
                     >
-                      Abrir
+                      {traducir('Abrir')}
                     </button>
                     <button
                       type="button"
@@ -112,9 +113,9 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
                       onClick={() => void borrarActivo(a)}
                       // El borrado es lógico: los hallazgos ya redactados siguen
                       // referenciando este activo y el informe emitido también.
-                      title="Borrado lógico: los hallazgos ya redactados lo conservan"
+                      title={traducir('Borrado lógico: los hallazgos ya redactados lo conservan')}
                     >
-                      Borrar
+                      {traducir('Borrar')}
                     </button>
                   </td>
                 </tr>

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { obtener } from '../api/cliente'
 import { porTipoDeCoste } from '../api/tipos'
@@ -147,7 +148,7 @@ export function ArbolDeCapex({ projectId, assetId }: { projectId: string; assetI
   }, [codigos])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!hallazgos) return <p className="cargando">Cargando el CAPEX del activo…</p>
+  if (!hallazgos) return <p className="cargando">{traducir('Cargando el CAPEX del activo…')}</p>
 
   if (abierto) {
     return (
@@ -181,7 +182,7 @@ export function ArbolDeCapex({ projectId, assetId }: { projectId: string; assetI
 
   return (
     <section className="arbol-capex">
-      <h3>CAPEX del activo</h3>
+      <h3>{traducir('CAPEX del activo')}</h3>
       <p className="ayuda">
         Tipo de coste → categoría → objeto. Solo se dibujan las ramas que tienen algo: el
         catálogo trae 175 nodos y un activo toca unos pocos.
@@ -345,11 +346,11 @@ function TablaDeActuaciones({
       <table className="tabla actuaciones">
         <thead>
           <tr>
-            <th scope="col">Actuación</th>
-            <th scope="col">Zona afectada</th>
-            <th scope="col">Riesgo</th>
-            <th scope="col">Concepto</th>
-            <th scope="col">Repercutible</th>
+            <th scope="col">{traducir('Actuación')}</th>
+            <th scope="col">{traducir('Zona afectada')}</th>
+            <th scope="col">{traducir('Riesgo')}</th>
+            <th scope="col">{traducir('Concepto')}</th>
+            <th scope="col">{traducir('Repercutible')}</th>
             {/* `[REQ]` La franja económica se sombrea para separarla de la
                 descriptiva: en once columnas, «Repercutible» y «Corto» se leían
                 como vecinas cuando son cosas distintas —una clasifica, la otra
@@ -362,7 +363,7 @@ function TablaDeActuaciones({
               </th>
             ))}
             <th scope="col" className="numerica economica total">
-              Total
+              {traducir('Total')}
             </th>
           </tr>
         </thead>
@@ -420,7 +421,7 @@ function TablaDeActuaciones({
         {actuaciones.length > 1 && (
           <tfoot>
             <tr>
-              <td colSpan={5}>Total del nodo</td>
+              <td colSpan={5}>{traducir('Total del nodo')}</td>
               {PLAZOS.map(([codigo]) => (
                 <td key={codigo} className="numerica economica">
                   {suma(codigo) ? euros.format(suma(codigo)) : '—'}

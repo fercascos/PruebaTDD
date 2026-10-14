@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useState } from 'react'
 import { enviar } from '../api/cliente'
 
@@ -76,7 +77,7 @@ export function RenombradoEnLote({
   if (!abierto) {
     return (
       <button type="button" className="secundario" onClick={() => setAbierto(true)}>
-        Renombrar en lote…
+        {traducir('Renombrar en lote…')}
       </button>
     )
   }
@@ -88,7 +89,7 @@ export function RenombradoEnLote({
       <h3>Renombrar {photoIds.length} fotografías</h3>
 
       <label>
-        Plantilla
+        {traducir('Plantilla')}
         <input value={plantilla} onChange={(e) => setPlantilla(e.target.value)} />
       </label>
       <p className="ayuda">
@@ -99,12 +100,12 @@ export function RenombradoEnLote({
 
       <label className="casilla">
         <input type="checkbox" checked={numerar} onChange={(e) => setNumerar(e.target.checked)} />
-        Numerar correlativamente desde 001
+        {traducir('Numerar correlativamente desde 001')}
       </label>
 
       <div className="acciones">
         <button type="button" onClick={() => void previsualizar()} disabled={trabajando}>
-          Previsualizar
+          {traducir('Previsualizar')}
         </button>
         <button
           type="button"
@@ -117,7 +118,7 @@ export function RenombradoEnLote({
           Aplicar a {cambian.length}
         </button>
         <button type="button" className="secundario" onClick={() => setAbierto(false)}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
@@ -138,8 +139,8 @@ export function RenombradoEnLote({
           <table className="tabla compacta">
             <thead>
               <tr>
-                <th>Antes</th>
-                <th>Después</th>
+                <th>{traducir('Antes')}</th>
+                <th>{traducir('Después')}</th>
               </tr>
             </thead>
             <tbody>

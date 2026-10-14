@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { borrar, enviar, obtener } from '../api/cliente'
 import type { Activo, Equipo, SistemaTecnico } from '../api/tipos'
@@ -159,7 +160,7 @@ export function PestanaEquipo({
 
       <div className="filtro">
         {!assetId && (
-          <Campo etiqueta="Activo">
+          <Campo etiqueta={traducir('Activo')}>
             <select value={elegidoAMano} onChange={(e) => setElegidoAMano(e.target.value)}>
               <option value="">— todos —</option>
               {activos.map((a) => (
@@ -170,7 +171,7 @@ export function PestanaEquipo({
             </select>
           </Campo>
         )}
-        <Campo etiqueta="Sistema técnico">
+        <Campo etiqueta={traducir('Sistema técnico')}>
           <select value={sistema} onChange={(e) => setSistema(e.target.value)}>
             <option value="">— todos —</option>
             {sistemas.map((s) => (
@@ -180,7 +181,7 @@ export function PestanaEquipo({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Buscar" ayuda="Fabricante, modelo, número de serie…">
+        <Campo etiqueta="Buscar" ayuda={traducir('Fabricante, modelo, número de serie…')}>
           <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </Campo>
         <label className="casilla">
@@ -189,7 +190,7 @@ export function PestanaEquipo({
             checked={soloVencidos}
             onChange={(e) => setSoloVencidos(e.target.checked)}
           />
-          Solo los que han agotado su vida útil
+          {traducir('Solo los que han agotado su vida útil')}
         </label>
         <label className="casilla">
           <input
@@ -197,7 +198,7 @@ export function PestanaEquipo({
             checked={soloMantenimiento}
             onChange={(e) => setSoloMantenimiento(e.target.checked)}
           />
-          Solo los que tienen el mantenimiento vencido
+          {traducir('Solo los que tienen el mantenimiento vencido')}
         </label>
         <button
           type="button"
@@ -205,10 +206,10 @@ export function PestanaEquipo({
           onClick={() => setImportando(true)}
           disabled={activos.length === 0}
         >
-          Importar desde Excel
+          {traducir('Importar desde Excel')}
         </button>
         <button type="button" onClick={() => setCreando(true)} disabled={activos.length === 0}>
-          Añadir equipo
+          {traducir('Añadir equipo')}
         </button>
       </div>
 
@@ -220,7 +221,7 @@ export function PestanaEquipo({
       )}
 
       {!equipos ? (
-        <p className="cargando">Cargando el inventario…</p>
+        <p className="cargando">{traducir('Cargando el inventario…')}</p>
       ) : equipos.length === 0 ? (
         <Vacio>
           Sin equipos en el inventario. Es opcional: un proyecto se entrega igual sin él. Sirve para
@@ -240,23 +241,23 @@ export function PestanaEquipo({
             <table className="tabla inventario">
               <thead>
                 <tr>
-                  <th scope="col">Etiqueta</th>
-                  <th scope="col">Equipo</th>
-                  <th scope="col">Sistema</th>
-                  <th scope="col">Fabricante y modelo</th>
-                  <th scope="col">Nº de serie</th>
+                  <th scope="col">{traducir('Etiqueta')}</th>
+                  <th scope="col">{traducir('Equipo')}</th>
+                  <th scope="col">{traducir('Sistema')}</th>
+                  <th scope="col">{traducir('Fabricante y modelo')}</th>
+                  <th scope="col">{traducir('Nº de serie')}</th>
                   <th scope="col" className="numerica">
-                    Instalado
+                    {traducir('Instalado')}
                   </th>
                   <th scope="col" className="numerica">
-                    Vida útil
+                    {traducir('Vida útil')}
                   </th>
-                  <th scope="col">Vida residual</th>
-                  <th scope="col">Mantenimiento</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Obsolescencia</th>
-                  <th scope="col">Criticidad</th>
-                  <th scope="col">Acciones</th>
+                  <th scope="col">{traducir('Vida residual')}</th>
+                  <th scope="col">{traducir('Mantenimiento')}</th>
+                  <th scope="col">{traducir('Estado')}</th>
+                  <th scope="col">{traducir('Obsolescencia')}</th>
+                  <th scope="col">{traducir('Criticidad')}</th>
+                  <th scope="col">{traducir('Acciones')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -325,15 +326,15 @@ export function PestanaEquipo({
                     <td>{nombreDe(CRITICIDAD, e.criticality)}</td>
                     <td className="acciones">
                       <button type="button" className="enlace" onClick={() => setEditando(e)}>
-                        Editar
+                        {traducir('Editar')}
                       </button>
                       <button
                         type="button"
                         className="enlace"
                         onClick={() => void eliminar(e)}
-                        title="Se conserva en la base: la ficha se escribió en una visita a la que no se vuelve"
+                        title={traducir('Se conserva en la base: la ficha se escribió en una visita a la que no se vuelve')}
                       >
-                        Quitar
+                        {traducir('Quitar')}
                       </button>
                     </td>
                   </tr>
@@ -475,16 +476,16 @@ function FichaDeEquipo({
       <div className="titular">
         <h2>{equipo ? 'Editar equipo' : 'Nuevo equipo'}</h2>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <section>
-        <h3>Identificación</h3>
+        <h3>{traducir('Identificación')}</h3>
         <Rejilla>
-          <Campo etiqueta="Activo">
+          <Campo etiqueta={traducir('Activo')}>
             <select
               value={f.asset_id}
               onChange={(e) => cambiar('asset_id', e.target.value)}
@@ -497,22 +498,22 @@ function FichaDeEquipo({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Etiqueta" ayuda="Como está rotulado en la sala: CL-01, AS-Norte…">
+          <Campo etiqueta={traducir('Etiqueta')} ayuda={traducir('Como está rotulado en la sala: CL-01, AS-Norte…')}>
             <input
               value={f.tag}
               maxLength={40}
               onChange={(e) => cambiar('tag', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Tipo de equipo">
+          <Campo etiqueta={traducir('Tipo de equipo')}>
             <input
               value={f.equipment_type}
               maxLength={120}
               onChange={(e) => cambiar('equipment_type', e.target.value)}
-              placeholder="Enfriadora, ascensor, cuadro general…"
+              placeholder={traducir('Enfriadora, ascensor, cuadro general…')}
             />
           </Campo>
-          <Campo etiqueta="Sistema técnico">
+          <Campo etiqueta={traducir('Sistema técnico')}>
             <select
               value={f.technical_system_id}
               onChange={(e) => cambiar('technical_system_id', e.target.value)}
@@ -541,7 +542,7 @@ function FichaDeEquipo({
               onChange={(e) => cambiar('model', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Número de serie">
+          <Campo etiqueta={traducir('Número de serie')}>
             <input
               value={f.serial_number}
               maxLength={120}
@@ -557,7 +558,7 @@ function FichaDeEquipo({
               onChange={(e) => cambiar('quantity', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Unidad">
+          <Campo etiqueta={traducir('Unidad')}>
             <input
               value={f.unit}
               maxLength={20}
@@ -568,9 +569,9 @@ function FichaDeEquipo({
       </section>
 
       <section>
-        <h3>Vida útil</h3>
+        <h3>{traducir('Vida útil')}</h3>
         <Rejilla>
-          <Campo etiqueta="Año de instalación">
+          <Campo etiqueta={traducir('Año de instalación')}>
             <input
               type="number"
               min={1800}
@@ -579,7 +580,7 @@ function FichaDeEquipo({
               onChange={(e) => cambiar('install_year', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Vida útil esperada (años)">
+          <Campo etiqueta={traducir('Vida útil esperada (años)')}>
             <input
               type="number"
               min={1}
@@ -593,11 +594,11 @@ function FichaDeEquipo({
         {/* `[REQ]` Mantenimiento preventivo. Faltaba, y de una instalación de
             protección contra incendios es lo primero que se pregunta: no
             cuántos extintores hay, sino cuándo se revisaron. */}
-        <h3>Mantenimiento preventivo</h3>
+        <h3>{traducir('Mantenimiento preventivo')}</h3>
         <Rejilla>
           <Campo
-            etiqueta="Cada cuántos meses"
-            ayuda="Trimestral 3, semestral 6, anual 12, quinquenal 60"
+            etiqueta={traducir('Cada cuántos meses')}
+            ayuda={traducir('Trimestral 3, semestral 6, anual 12, quinquenal 60')}
           >
             <input
               type="number"
@@ -607,7 +608,7 @@ function FichaDeEquipo({
               onChange={(e) => cambiar('maintenance_months', e.target.value)}
             />
           </Campo>
-          <Campo etiqueta="Última revisión">
+          <Campo etiqueta={traducir('Última revisión')}>
             <input
               type="date"
               value={f.last_maintenance_date}
@@ -636,25 +637,25 @@ function FichaDeEquipo({
         <p className="vida-calculada">
           {fin === null ? (
             <span className="ayuda">
-              La vida residual se calcula: rellene el año de instalación y la vida útil esperada.
+              {traducir('La vida residual se calcula: rellene el año de instalación y la vida útil esperada.')}
             </span>
           ) : (
             <>
-              Agota su vida útil en <strong>{fin}</strong>
+              {traducir('Agota su vida útil en')} <strong>{fin}</strong>
               {' · '}
               {fin - anio < 0
                 ? `vencida hace ${anio - fin} año(s)`
                 : `le quedan ${fin - anio} año(s)`}
-              . <span className="ayuda">Se recalcula sola cada año: no se guarda.</span>
+              . <span className="ayuda">{traducir('Se recalcula sola cada año: no se guarda.')}</span>
             </>
           )}
         </p>
       </section>
 
       <section>
-        <h3>Valoración</h3>
+        <h3>{traducir('Valoración')}</h3>
         <Rejilla>
-          <Campo etiqueta="Estado de conservación">
+          <Campo etiqueta={traducir('Estado de conservación')}>
             <select value={f.condition} onChange={(e) => cambiar('condition', e.target.value)}>
               <option value="">— sin valorar —</option>
               {CONDICION.map((c) => (
@@ -665,8 +666,8 @@ function FichaDeEquipo({
             </select>
           </Campo>
           <Campo
-            etiqueta="Obsolescencia"
-            ayuda="No es lo mismo que el estado: un equipo bien conservado puede no tener repuestos"
+            etiqueta={traducir('Obsolescencia')}
+            ayuda={traducir('No es lo mismo que el estado: un equipo bien conservado puede no tener repuestos')}
           >
             <select
               value={f.obsolescence}
@@ -680,7 +681,7 @@ function FichaDeEquipo({
               ))}
             </select>
           </Campo>
-          <Campo etiqueta="Criticidad" ayuda="Qué pasa si se para">
+          <Campo etiqueta={traducir('Criticidad')} ayuda={traducir('Qué pasa si se para')}>
             <select value={f.criticality} onChange={(e) => cambiar('criticality', e.target.value)}>
               <option value="">— sin valorar —</option>
               {CRITICIDAD.map((c) => (
@@ -697,9 +698,9 @@ function FichaDeEquipo({
             checked={f.has_documentation}
             onChange={(e) => cambiar('has_documentation', e.target.checked)}
           />
-          Hay documentación del equipo (manual, ficha técnica, contrato de mantenimiento)
+          {traducir('Hay documentación del equipo (manual, ficha técnica, contrato de mantenimiento)')}
         </label>
-        <Campo etiqueta="Observaciones">
+        <Campo etiqueta={traducir('Observaciones')}>
           <textarea rows={3} value={f.notes} onChange={(e) => cambiar('notes', e.target.value)} />
         </Campo>
       </section>
@@ -713,7 +714,7 @@ function FichaDeEquipo({
           {guardando ? 'Guardando…' : 'Guardar equipo'}
         </button>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cancelar
+          {traducir('Cancelar')}
         </button>
       </div>
     </div>

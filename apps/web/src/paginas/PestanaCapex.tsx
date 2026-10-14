@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { descargar, obtener } from '../api/cliente'
 import type { Activo, Hallazgo } from '../api/tipos'
@@ -141,7 +142,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   const alta = (
     <div className="filtro">
       <button type="button" onClick={() => setCreando(true)}>
-        Registrar hallazgo
+        {traducir('Registrar hallazgo')}
       </button>
       <button
         type="button"
@@ -160,28 +161,28 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
           etiquetas de zona, riesgo y concepto salen de listas cerradas de la
           propia plantilla, así que el idioma se elige ANTES de descargar. */}
       <label className="idioma">
-        Idioma
+        {traducir('Idioma')}
         <select
           value={idioma}
           onChange={(e) => setIdioma(e.target.value as Idioma)}
           disabled={exportando}
         >
-          <option value="es">Español</option>
-          <option value="en">English</option>
+          <option value="es">{traducir('Español')}</option>
+          <option value="en">{traducir('English')}</option>
         </select>
       </label>
       {/* Solo aparece si hay más de un activo: en un proyecto de un edificio la
           elección no existe y el control sobraría. */}
       {cartera && (
         <label className="alcance">
-          Alcance
+          {traducir('Alcance')}
           <select
             value={alcance}
             onChange={(e) => setAlcance(e.target.value as Alcance)}
             disabled={exportando}
           >
-            <option value="por-activo">Un libro por activo</option>
-            <option value="conjunto">Un libro para todo el proyecto</option>
+            <option value="por-activo">{traducir('Un libro por activo')}</option>
+            <option value="conjunto">{traducir('Un libro para todo el proyecto')}</option>
           </select>
         </label>
       )}
@@ -199,12 +200,12 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
   const conmutador = (
     <p className="ayuda ir-al-dashboard">
       El desglose económico está en el{' '}
-      <Link to={`/proyectos/${projectId}/dashboard`}>Dashboard</Link>: distribución por concepto de
+      <Link to={`/proyectos/${projectId}/dashboard`}>{traducir('Dashboard')}</Link>: distribución por concepto de
       gasto, perfil temporal, exposición por riesgo, categoría con sus objetos y activo.
     </p>
   )
 
-  if (!hallazgos) return <p className="cargando">Cargando hallazgos…</p>
+  if (!hallazgos) return <p className="cargando">{traducir('Cargando hallazgos…')}</p>
   if (hallazgos.length === 0) {
     return (
       <>
@@ -270,7 +271,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
           <button type="button" className="enlace" onClick={() => setAbierto(h)}>
             {h.title}
           </button>
-          {h.capex_lines.length > 1 && <em className="ayuda"> · actuación recurrente</em>}
+          {h.capex_lines.length > 1 && <em className="ayuda"> {traducir('· actuación recurrente')}</em>}
         </td>
         <td>
           <span className={`estado e-${h.status.toLowerCase()}`}>{h.status}</span>
@@ -306,14 +307,14 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
       <table className="tabla capex">
         <thead>
           <tr>
-            <th>Actuación</th>
-            <th>Estado</th>
+            <th>{traducir('Actuación')}</th>
+            <th>{traducir('Estado')}</th>
             {PLAZOS.map((p) => (
               <th key={p} className="numerica">
                 {p}
               </th>
             ))}
-            <th className="numerica">Total</th>
+            <th className="numerica">{traducir('Total')}</th>
           </tr>
         </thead>
         {grupos.map(({ activo, suyos }) => (
@@ -328,9 +329,9 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
                     className="enlace"
                     onClick={() => exportarActivo(activo)}
                     disabled={exportando || suyos.length === 0}
-                    title="Descarga la plantilla CAPEX rellena solo con este activo"
+                    title={traducir('Descarga la plantilla CAPEX rellena solo con este activo')}
                   >
-                    Exportar este activo
+                    {traducir('Exportar este activo')}
                   </button>
                 </th>
                 {PLAZOS.map((p) => (
@@ -359,7 +360,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
           <tbody className="grupo-activo">
             <tr className="cabecera-grupo">
               <th colSpan={2 + PLAZOS.length + 1} scope="colgroup">
-                Sin activo en el proyecto
+                {traducir('Sin activo en el proyecto')}
                 <em className="ayuda">
                   {' '}
                   · su activo se borró después de registrarlos. Siguen contando en el total.
@@ -371,7 +372,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
         )}
         <tfoot>
           <tr>
-            <td colSpan={2}>Total</td>
+            <td colSpan={2}>{traducir('Total')}</td>
             {PLAZOS.map((p) => (
               <td key={p} className="numerica">
                 {totales.has(p) ? euros.format(totales.get(p) ?? 0) : '—'}

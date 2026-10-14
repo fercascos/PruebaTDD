@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Hallazgo } from '../api/tipos'
@@ -140,17 +141,17 @@ export function ComparadorDePrecios({
     }
   }
 
-  if (!datos) return <p className="cargando">Cargando referencias…</p>
+  if (!datos) return <p className="cargando">{traducir('Cargando referencias…')}</p>
 
   return (
     <div className="comparador">
       <div className="titular">
         <div>
-          <h2>Referencias de precio</h2>
+          <h2>{traducir('Referencias de precio')}</h2>
           <p className="ayuda">{descripcion}</p>
         </div>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
@@ -161,18 +162,18 @@ export function ComparadorDePrecios({
 
       <div className="filtro">
         <label>
-          Buscar entre las registradas
+          {traducir('Buscar entre las registradas')}
           <input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="enfriadora, lámina, ascensor…"
+            placeholder={traducir('enfriadora, lámina, ascensor…')}
           />
         </label>
         <button type="button" className="secundario" onClick={() => setAlta(true)}>
-          Introducir precio manual
+          {traducir('Introducir precio manual')}
         </button>
         <span className="ayuda">
-          No hay búsqueda en proveedores externos: la aplicación no consulta ninguno.
+          {traducir('No hay búsqueda en proveedores externos: la aplicación no consulta ninguno.')}
         </span>
       </div>
 
@@ -198,20 +199,20 @@ export function ComparadorDePrecios({
           <table className="tabla referencias">
             <thead>
               <tr>
-                <th scope="col">Elegir</th>
-                <th scope="col">Fuente</th>
-                <th scope="col">Descripción</th>
+                <th scope="col">{traducir('Elegir')}</th>
+                <th scope="col">{traducir('Fuente')}</th>
+                <th scope="col">{traducir('Descripción')}</th>
                 <th scope="col" className="numerica">
-                  Precio unitario
+                  {traducir('Precio unitario')}
                 </th>
-                <th scope="col">Unidad</th>
-                <th scope="col">Fecha del precio</th>
-                <th scope="col">Registrada</th>
-                <th scope="col">Ámbito</th>
-                <th scope="col">Impuestos</th>
-                <th scope="col">Instalación</th>
-                <th scope="col">Incluye</th>
-                <th scope="col">Excluye</th>
+                <th scope="col">{traducir('Unidad')}</th>
+                <th scope="col">{traducir('Fecha del precio')}</th>
+                <th scope="col">{traducir('Registrada')}</th>
+                <th scope="col">{traducir('Ámbito')}</th>
+                <th scope="col">{traducir('Impuestos')}</th>
+                <th scope="col">{traducir('Instalación')}</th>
+                <th scope="col">{traducir('Incluye')}</th>
+                <th scope="col">{traducir('Excluye')}</th>
               </tr>
             </thead>
             <tbody>
@@ -260,7 +261,7 @@ export function ComparadorDePrecios({
           una lista de resultados sugiere que se ha buscado en todas partes. */}
       {datos.no_consultadas.length > 0 && (
         <section className="no-consultadas">
-          <h3>Fuentes no consultadas</h3>
+          <h3>{traducir('Fuentes no consultadas')}</h3>
           <ul>
             {datos.no_consultadas.map((f) => (
               <li key={f.code}>
@@ -278,9 +279,9 @@ export function ComparadorDePrecios({
       <ActualizacionPorIndice base={importe} alAplicar={setImporte} />
 
       <section className="aplicar">
-        <h3>Precio que se aplicará</h3>
+        <h3>{traducir('Precio que se aplicará')}</h3>
         <Rejilla>
-          <Campo etiqueta="Importe (€)" ayuda="Editable: puede no ser el de ninguna referencia">
+          <Campo etiqueta={traducir('Importe (€)')} ayuda={traducir('Editable: puede no ser el de ninguna referencia')}>
             <input
               type="number"
               step="0.01"
@@ -299,7 +300,7 @@ export function ComparadorDePrecios({
         )}
 
         <Campo
-          etiqueta="Justificación"
+          etiqueta={traducir('Justificación')}
           ayuda={
             difiere
               ? 'Obligatoria: el importe difiere de la referencia'
@@ -310,7 +311,7 @@ export function ComparadorDePrecios({
             rows={2}
             value={justificacion}
             onChange={(e) => setJustificacion(e.target.value)}
-            placeholder="Oferta en firme del proveedor, incluye puesta en marcha…"
+            placeholder={traducir('Oferta en firme del proveedor, incluye puesta en marcha…')}
           />
         </Campo>
 
@@ -330,7 +331,7 @@ export function ComparadorDePrecios({
             {guardando ? 'Validando…' : 'Validar precio'}
           </button>
           <button type="button" className="secundario" onClick={alCerrar}>
-            Cancelar
+            {traducir('Cancelar')}
           </button>
         </div>
       </section>
@@ -356,7 +357,7 @@ function ActualizacionPorIndice({
   if (!abierto) {
     return (
       <button type="button" className="enlace" onClick={() => setAbierto(true)}>
-        Actualizar el precio por un índice
+        {traducir('Actualizar el precio por un índice')}
       </button>
     )
   }
@@ -380,9 +381,9 @@ function ActualizacionPorIndice({
   return (
     <section className="por-indice">
       <div className="titular">
-        <h3>Actualización por índice</h3>
+        <h3>{traducir('Actualización por índice')}</h3>
         <button type="button" className="enlace" onClick={() => setAbierto(false)}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
       <p className="ayuda">
@@ -390,7 +391,7 @@ function ActualizacionPorIndice({
         una cifra que nadie ha verificado sería inventar una fuente de precios.
       </p>
       <Rejilla>
-        <Campo etiqueta="Índice en la fecha del precio">
+        <Campo etiqueta={traducir('Índice en la fecha del precio')}>
           <input
             type="number"
             step="0.01"
@@ -399,7 +400,7 @@ function ActualizacionPorIndice({
             placeholder="112,7"
           />
         </Campo>
-        <Campo etiqueta="Índice hoy">
+        <Campo etiqueta={traducir('Índice hoy')}>
           <input
             type="number"
             step="0.01"
@@ -408,12 +409,12 @@ function ActualizacionPorIndice({
             placeholder="118,4"
           />
         </Campo>
-        <Campo etiqueta="Factor geográfico" ayuda="1 si no aplica">
+        <Campo etiqueta={traducir('Factor geográfico')} ayuda="1 si no aplica">
           <input type="number" step="0.01" value={geo} onChange={(e) => setGeo(e.target.value)} />
         </Campo>
       </Rejilla>
       <button type="button" className="secundario" onClick={() => void calcular()}>
-        Calcular
+        {traducir('Calcular')}
       </button>
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       {resultado && (
@@ -480,13 +481,13 @@ function NuevaReferencia({
 
   return (
     <section className="nueva-referencia">
-      <h3>Introducir un precio a mano</h3>
+      <h3>{traducir('Introducir un precio a mano')}</h3>
       <p className="ayuda">
         Queda firmado con su usuario y con la fecha. Es lo que permite preguntar de dónde salió
         dentro de seis meses.
       </p>
       <Rejilla>
-        <Campo etiqueta="Fuente">
+        <Campo etiqueta={traducir('Fuente')}>
           <select value={fuente} onChange={(e) => setFuente(e.target.value)}>
             {fuentes.map((f) => (
               <option key={f.id} value={f.id}>
@@ -495,10 +496,10 @@ function NuevaReferencia({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Unidad">
+        <Campo etiqueta={traducir('Unidad')}>
           <input value={unidad} onChange={(e) => setUnidad(e.target.value)} maxLength={20} />
         </Campo>
-        <Campo etiqueta="Precio unitario (€)">
+        <Campo etiqueta={traducir('Precio unitario (€)')}>
           <input
             type="number"
             step="0.01"
@@ -507,38 +508,38 @@ function NuevaReferencia({
             onChange={(e) => setPrecio(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Fecha del precio">
+        <Campo etiqueta={traducir('Fecha del precio')}>
           <input
             type="date"
             value={fechaPrecio}
             onChange={(e) => setFechaPrecio(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Ámbito" ayuda="ES-MAD, nacional…">
+        <Campo etiqueta={traducir('Ámbito')} ayuda={traducir('ES-MAD, nacional…')}>
           <input value={ambito} onChange={(e) => setAmbito(e.target.value)} maxLength={40} />
         </Campo>
       </Rejilla>
-      <Campo etiqueta="Descripción">
+      <Campo etiqueta={traducir('Descripción')}>
         <input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
       </Campo>
       <Rejilla>
-        <Campo etiqueta="Incluye">
+        <Campo etiqueta={traducir('Incluye')}>
           <input value={incluye} onChange={(e) => setIncluye(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Excluye">
+        <Campo etiqueta={traducir('Excluye')}>
           <input value={excluye} onChange={(e) => setExcluye(e.target.value)} />
         </Campo>
       </Rejilla>
-      <Campo etiqueta="De dónde sale" ayuda="Oferta adjunta, catálogo, llamada al fabricante…">
+      <Campo etiqueta={traducir('De dónde sale')} ayuda={traducir('Oferta adjunta, catálogo, llamada al fabricante…')}>
         <input value={origen} onChange={(e) => setOrigen(e.target.value)} />
       </Campo>
       {error && <Mensaje tipo="error">{error}</Mensaje>}
       <div className="acciones">
         <button type="button" onClick={() => void crear()} disabled={!fuente || !precio}>
-          Registrar referencia
+          {traducir('Registrar referencia')}
         </button>
         <button type="button" className="secundario" onClick={alCancelar}>
-          Cancelar
+          {traducir('Cancelar')}
         </button>
       </div>
     </section>

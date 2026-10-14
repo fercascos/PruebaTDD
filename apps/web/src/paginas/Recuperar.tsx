@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { enviar } from '../api/cliente'
@@ -35,13 +36,13 @@ export function Recuperar() {
   return (
     <div className="entrar">
       <form onSubmit={(e) => void pedir(e)}>
-        <h1>Recuperar el acceso</h1>
+        <h1>{traducir('Recuperar el acceso')}</h1>
         <p className="ayuda">
-          Escriba su correo y le enviaremos un enlace para elegir una contraseña nueva.
+          {traducir('Escriba su correo y le enviaremos un enlace para elegir una contraseña nueva.')}
         </p>
 
         <label>
-          Correo electrónico
+          {traducir('Correo electrónico')}
           <input
             type="email"
             autoComplete="username"
@@ -58,7 +59,7 @@ export function Recuperar() {
           {enviando ? 'Enviando…' : 'Enviarme el enlace'}
         </button>
         <Link className="enlace" to="/entrar">
-          Volver a entrar
+          {traducir('Volver a entrar')}
         </Link>
       </form>
     </div>
@@ -101,13 +102,13 @@ export function Restablecer() {
     return (
       <div className="entrar">
         <form onSubmit={(e) => e.preventDefault()}>
-          <h1>Enlace incompleto</h1>
+          <h1>{traducir('Enlace incompleto')}</h1>
           <Mensaje tipo="error">
             Este enlace no lleva el código de recuperación. Suele pasar al copiarlo a mano desde el
             correo: ábralo pulsando sobre él, o pida uno nuevo.
           </Mensaje>
           <Link className="enlace" to="/recuperar">
-            Pedir un enlace nuevo
+            {traducir('Pedir un enlace nuevo')}
           </Link>
         </form>
       </div>
@@ -118,13 +119,13 @@ export function Restablecer() {
     return (
       <div className="entrar">
         <form onSubmit={(e) => e.preventDefault()}>
-          <h1>Contraseña cambiada</h1>
+          <h1>{traducir('Contraseña cambiada')}</h1>
           <Mensaje tipo="ok">
             Ya puede entrar con la contraseña nueva. Se han cerrado todas las sesiones que hubiera
             abiertas, también en otros dispositivos.
           </Mensaje>
           <button type="button" onClick={() => navegar('/entrar')}>
-            Entrar
+            {traducir('Entrar')}
           </button>
         </form>
       </div>
@@ -134,14 +135,14 @@ export function Restablecer() {
   return (
     <div className="entrar">
       <form onSubmit={(e) => void guardar(e)}>
-        <h1>Elegir contraseña nueva</h1>
+        <h1>{traducir('Elegir contraseña nueva')}</h1>
         <p className="ayuda">
           El enlace caduca a los 30 minutos y solo sirve una vez. Al terminar se cerrarán todas sus
           sesiones abiertas.
         </p>
 
         <label>
-          Contraseña nueva
+          {traducir('Contraseña nueva')}
           <input
             type="password"
             autoComplete="new-password"
@@ -152,7 +153,7 @@ export function Restablecer() {
         </label>
 
         <label>
-          Repítala
+          {traducir('Repítala')}
           <input
             type="password"
             autoComplete="new-password"
@@ -165,14 +166,14 @@ export function Restablecer() {
         {/* Se comprueba aquí y no en el servidor: es un error de tecleo, no una
             regla de negocio, y esperar a la respuesta para decirlo gastaría un
             viaje por una errata. */}
-        {noCoinciden && <Mensaje tipo="aviso">Las dos contraseñas no coinciden.</Mensaje>}
+        {noCoinciden && <Mensaje tipo="aviso">{traducir('Las dos contraseñas no coinciden.')}</Mensaje>}
         {error && <Mensaje tipo="error">{error}</Mensaje>}
 
         <button type="submit" disabled={enviando || !clave || noCoinciden}>
           {enviando ? 'Guardando…' : 'Guardar la contraseña'}
         </button>
         <Link className="enlace" to="/recuperar">
-          Pedir un enlace nuevo
+          {traducir('Pedir un enlace nuevo')}
         </Link>
       </form>
     </div>

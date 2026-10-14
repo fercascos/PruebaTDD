@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { borrar, enviar, obtener } from '../api/cliente'
 import { esConflictoDeVersion, mensajeDeConflicto } from '../ui/conflictos'
@@ -149,7 +150,7 @@ export function FichaDeHallazgo({
         <h2>{hallazgo.title}</h2>
         <span className={`estado e-${hallazgo.status.toLowerCase()}`}>{hallazgo.status}</span>
         <button type="button" className="secundario" onClick={alCerrar}>
-          Cerrar
+          {traducir('Cerrar')}
         </button>
       </div>
 
@@ -160,7 +161,7 @@ export function FichaDeHallazgo({
             {choque && (
               <p className="acciones-conflicto">
                 <button type="button" className="secundario" onClick={() => void recargar()}>
-                  Recargar con los cambios de la otra persona
+                  {traducir('Recargar con los cambios de la otra persona')}
                 </button>
               </p>
             )}
@@ -169,32 +170,32 @@ export function FichaDeHallazgo({
       )}
 
       <section>
-        <h3>Descripción</h3>
-        <Campo etiqueta="Título">
+        <h3>{traducir('Descripción')}</h3>
+        <Campo etiqueta={traducir('Título')}>
           <input maxLength={240} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
         </Campo>
-        <Campo etiqueta="Descripción" ayuda="Lo que se observa. Es lo que va al informe">
+        <Campo etiqueta={traducir('Descripción')} ayuda={traducir('Lo que se observa. Es lo que va al informe')}>
           <textarea
             rows={3}
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Comentarios" ayuda="Notas internas del equipo">
+        <Campo etiqueta="Comentarios" ayuda={traducir('Notas internas del equipo')}>
           <textarea
             rows={2}
             value={comentarios}
             onChange={(e) => setComentarios(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Recomendación">
+        <Campo etiqueta={traducir('Recomendación')}>
           <textarea
             rows={2}
             value={recomendacion}
             onChange={(e) => setRecomendacion(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Grado de riesgo">
+        <Campo etiqueta={traducir('Grado de riesgo')}>
           <select value={riesgo} onChange={(e) => setRiesgo(e.target.value)}>
             <option value="">— sin clasificar —</option>
             {riesgos.map((r) => (
@@ -214,10 +215,10 @@ export function FichaDeHallazgo({
       </section>
 
       <section>
-        <h3>Líneas de CAPEX</h3>
+        <h3>{traducir('Líneas de CAPEX')}</h3>
         {/* `[REQ]` P-44. La etiqueta se queda aquí y no en la pantalla. */}
         <p className="ayuda">
-          Una actuación recurrente lleva <strong>una línea por plazo</strong>, no dos en el mismo.
+          {traducir('Una actuación recurrente lleva')} <strong>{traducir('una línea por plazo')}</strong>, no dos en el mismo.
           El plazo ya usado no aparece en la lista.
         </p>
 
@@ -249,13 +250,13 @@ export function FichaDeHallazgo({
       </section>
 
       <section>
-        <h3>Estado</h3>
+        <h3>{traducir('Estado')}</h3>
         <p className="ayuda">
-          Los botones que no se pueden pulsar salen deshabilitados <strong>con su motivo</strong>.
+          {traducir('Los botones que no se pueden pulsar salen deshabilitados')} <strong>con su motivo</strong>.
           Un botón que no está no se puede preguntar por qué no está.
         </p>
         <div className="acciones">
-          {destinos.length === 0 && <em className="ayuda">Sin transiciones desde este estado.</em>}
+          {destinos.length === 0 && <em className="ayuda">{traducir('Sin transiciones desde este estado.')}</em>}
           {destinos.map((d) => (
             <span key={d.to} className="destino">
               <button
@@ -349,7 +350,7 @@ function Linea({
           <input value={linea.time_horizon_code} readOnly />
         </Campo>
         <Campo
-          etiqueta="Importe (€)"
+          etiqueta={traducir('Importe (€)')}
           ayuda={`Precio: ${PRECIO[linea.price_status] ?? linea.price_status}`}
         >
           <input
@@ -360,7 +361,7 @@ function Linea({
             onChange={(e) => setImporte(e.target.value)}
           />
         </Campo>
-        <Campo etiqueta="Impuesto" ayuda="Fracción: 0,21 para el 21 %">
+        <Campo etiqueta={traducir('Impuesto')} ayuda={traducir('Fracción: 0,21 para el 21 %')}>
           <input
             type="number"
             step="0.01"
@@ -372,7 +373,7 @@ function Linea({
         </Campo>
       </Rejilla>
       <p className="totales">
-        Con impuesto: <strong>{euros.format(Number(linea.total_cost))}</strong>
+        {traducir('Con impuesto:')} <strong>{euros.format(Number(linea.total_cost))}</strong>
         {linea.computed_base && (
           <>
             {' · '}base calculada por medición: {euros.format(Number(linea.computed_base))}
@@ -392,7 +393,7 @@ function Linea({
           </>
         ) : (
           <>
-            <strong>Sin procedencia registrada.</strong> El importe se ha tecleado; no está
+            <strong>{traducir('Sin procedencia registrada.')}</strong> El importe se ha tecleado; no está
             respaldado por ninguna referencia.
           </>
         )}
@@ -400,7 +401,7 @@ function Linea({
 
       <div className="acciones">
         <button type="button" onClick={() => void guardar()} disabled={ocupado}>
-          Guardar línea
+          {traducir('Guardar línea')}
         </button>
         {/* `[REQ]` P-05b · El traslado es una acción EXPLÍCITA. La cascada nunca
             sustituye sola un importe tecleado: quien lo escribió puede tener un
@@ -410,7 +411,7 @@ function Linea({
             type="button"
             className="secundario"
             disabled={ocupado}
-            title="Sustituye el importe por la base calculada. No ocurre solo"
+            title={traducir('Sustituye el importe por la base calculada. No ocurre solo')}
             onClick={() =>
               void operar(() =>
                 enviar<Hallazgo>(
@@ -422,7 +423,7 @@ function Linea({
               )
             }
           >
-            Trasladar la base calculada al importe
+            {traducir('Trasladar la base calculada al importe')}
           </button>
         )}
         <button
@@ -431,7 +432,7 @@ function Linea({
           onClick={() => setComparando(true)}
           disabled={ocupado}
         >
-          Ver referencias y validar el precio
+          {traducir('Ver referencias y validar el precio')}
         </button>
         <button
           type="button"
@@ -441,7 +442,7 @@ function Linea({
           }
           disabled={ocupado}
         >
-          Eliminar
+          {traducir('Eliminar')}
         </button>
       </div>
       <Calculadora alAplicar={(base) => setImporte(base)} />
@@ -506,7 +507,7 @@ function NuevaLinea({
   return (
     <div className="linea-capex nueva">
       <Rejilla>
-        <Campo etiqueta="Añadir plazo">
+        <Campo etiqueta={traducir('Añadir plazo')}>
           <select value={plazo} onChange={(e) => setPlazo(e.target.value)}>
             {libres.map((l) => (
               <option key={l.code} value={l.code}>
@@ -515,7 +516,7 @@ function NuevaLinea({
             ))}
           </select>
         </Campo>
-        <Campo etiqueta="Importe (€)" ayuda="Puede quedar en blanco y rellenarse después">
+        <Campo etiqueta={traducir('Importe (€)')} ayuda={traducir('Puede quedar en blanco y rellenarse después')}>
           <input
             type="number"
             step="0.01"
@@ -526,7 +527,7 @@ function NuevaLinea({
         </Campo>
       </Rejilla>
       <button type="button" onClick={() => void crear()} disabled={ocupado || !plazo}>
-        Añadir línea
+        {traducir('Añadir línea')}
       </button>
     </div>
   )

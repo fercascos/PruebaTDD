@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { ErrorDeApi, enviar, obtener } from '../api/cliente'
 import type { Perfil } from '../api/tipos'
@@ -99,7 +100,7 @@ export function Sugerencias() {
 
   return (
     <>
-      <h1>Sugerencias</h1>
+      <h1>{traducir('Sugerencias')}</h1>
       <p className="ayuda">
         Proponga cambios en precios, catálogos, textos o plantillas. Las propuestas las atiende un
         administrador; usted ve siempre las suyas.
@@ -116,28 +117,28 @@ export function Sugerencias() {
         />
       ) : (
         <button type="button" onClick={() => setProponiendo(true)}>
-          Proponer un cambio
+          {traducir('Proponer un cambio')}
         </button>
       )}
 
-      <h3>Mis propuestas</h3>
+      <h3>{traducir('Mis propuestas')}</h3>
       {mias.length === 0 ? (
-        <Vacio>Todavía no ha propuesto ningún cambio.</Vacio>
+        <Vacio>{traducir('Todavía no ha propuesto ningún cambio.')}</Vacio>
       ) : (
         <Lista sugerencias={mias} />
       )}
 
       {gestiona && (
         <>
-          <h3>Bandeja de propuestas</h3>
+          <h3>{traducir('Bandeja de propuestas')}</h3>
           <p className="ayuda">
             Todas las de la organización. Este listado solo lo ve quien atiende el buzón, y no
             porque esta pantalla lo esconda: la base de datos no devuelve las filas.
           </p>
           {bandeja === null ? (
-            <p className="cargando">Cargando la bandeja…</p>
+            <p className="cargando">{traducir('Cargando la bandeja…')}</p>
           ) : bandeja.length === 0 ? (
-            <Vacio>No hay propuestas pendientes.</Vacio>
+            <Vacio>{traducir('No hay propuestas pendientes.')}</Vacio>
           ) : (
             <Lista sugerencias={bandeja} conAcciones alCambiar={recargar} />
           )}
@@ -203,7 +204,7 @@ function Acciones({ sugerencia, alCambiar }: { sugerencia: Sugerencia; alCambiar
   return (
     <div className="acciones-sugerencia">
       <input
-        placeholder="Nota de respuesta (obligatoria al rechazar)"
+        placeholder={traducir('Nota de respuesta (obligatoria al rechazar)')}
         value={nota}
         onChange={(e) => setNota(e.target.value)}
       />
@@ -235,7 +236,7 @@ function NuevaSugerencia({
 
   return (
     <Formulario
-      titulo="Proponer un cambio"
+      titulo={traducir('Proponer un cambio')}
       textoDeEnvio="Enviar propuesta"
       alCancelar={alCancelar}
       enviar={async () => {
@@ -258,22 +259,22 @@ function NuevaSugerencia({
           ))}
         </select>
       </Campo>
-      <Campo etiqueta="Título">
+      <Campo etiqueta={traducir('Título')}>
         <input
           required
           maxLength={160}
           value={titulo}
           onChange={(e) => setTitulo(e.target.value)}
-          placeholder="El precio de la impermeabilización está desfasado"
+          placeholder={traducir('El precio de la impermeabilización está desfasado')}
         />
       </Campo>
-      <Campo etiqueta="Explicación">
+      <Campo etiqueta={traducir('Explicación')}>
         <textarea
           required
           rows={4}
           value={cuerpo}
           onChange={(e) => setCuerpo(e.target.value)}
-          placeholder="Qué cambiaría y por qué"
+          placeholder={traducir('Qué cambiaría y por qué')}
         />
       </Campo>
     </Formulario>

@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import L from 'leaflet'
 // Sin esto los controles de Leaflet salen sin estilo: el zoom se solapa con
 // la escala y las chinchetas se descolocan. Lo importa cada componente que
@@ -131,7 +132,7 @@ export function MapaDeActivos({
   }, [situados, listo, assetId])
 
   if (error) return <Mensaje tipo="error">{error}</Mensaje>
-  if (!activos) return <p className="cargando">Cargando los activos…</p>
+  if (!activos) return <p className="cargando">{traducir('Cargando los activos…')}</p>
 
   const sinSituar = activos.length - situados.length
 
@@ -152,7 +153,7 @@ export function MapaDeActivos({
       )}
 
       {activos.length === 0 ? (
-        <Vacio>Este proyecto todavía no tiene activos.</Vacio>
+        <Vacio>{traducir('Este proyecto todavía no tiene activos.')}</Vacio>
       ) : situados.length === 0 ? (
         <Vacio>
           {activos.length === 1

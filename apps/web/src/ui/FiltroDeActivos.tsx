@@ -24,6 +24,8 @@
  * filtra nada y ocupa el sitio del titular. Quien lo llama decide, porque cada
  * pantalla sabe qué enseñar en su lugar.
  */
+import { traducir } from '../i18n/idioma'
+
 
 export type ActivoElegible = {
   id: string
@@ -56,9 +58,9 @@ export function FiltroDeActivos({
       <fieldset>
         {/* La leyenda, corta: se dibuja sobre el borde del `fieldset` y con dos
             renglones queda medio fuera de la caja. La explicación va debajo. */}
-        <legend>Activos</legend>
+        <legend>{traducir('Activos')}</legend>
         <p className="ayuda">
-          Uno, varios o ninguno. Sin ninguna casilla marcada se lee la cartera entera.
+          {traducir('Uno, varios o ninguno. Sin ninguna casilla marcada se lee la cartera entera.')}
         </p>
         <ul>
           {activos.map((a) => (
