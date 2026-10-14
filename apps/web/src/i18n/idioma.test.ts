@@ -3,11 +3,6 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { traducir } from './idioma'
 import { EN } from './textos'
 
-/** Cambia el idioma como lo hace el proveedor, sin montar React. */
-function en() {
-  localStorage.setItem('tdd.idioma', 'en')
-}
-
 describe('traducir()', () => {
   beforeEach(() => localStorage.clear())
 
