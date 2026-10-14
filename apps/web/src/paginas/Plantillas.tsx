@@ -75,8 +75,7 @@ export function Plantillas() {
           onChange={(e) => void subir(e.target.files?.[0])}
         />
         <p className="ayuda">
-          Se analiza al subirla: si tiene problemas, se descubren ahora y no cuando alguien esté
-          esperando un informe.
+          {traducir('Se analiza al subirla: si tiene problemas, se descubren ahora y no cuando alguien esté esperando un informe.')}
         </p>
       </div>
 

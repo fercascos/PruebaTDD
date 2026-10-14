@@ -89,8 +89,7 @@ export function Personas() {
 
       {!esAdmin && (
         <Mensaje tipo="aviso">
-          Solo un administrador puede dar de alta o modificar cuentas. Aquí las ve, pero no las
-          cambia: la API lo rechaza igualmente con un 403.
+          {traducir('Solo un administrador puede dar de alta o modificar cuentas. Aquí las ve, pero no las cambia: la API lo rechaza igualmente con un 403.')}
         </Mensaje>
       )}
 
@@ -241,8 +240,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
         />
       </Campo>
       <p className="ayuda">
-        `[REC]` Lo correcto sería una invitación por correo. Exige SMTP y no está montado, así que
-        de momento la fija quien da de alta. No se disimula que es un apaño.
+        {traducir('`[REC]` Lo correcto sería una invitación por correo. Exige SMTP y no está montado, así que de momento la fija quien da de alta. No se disimula que es un apaño.')}
       </p>
 
       <label className="casilla">

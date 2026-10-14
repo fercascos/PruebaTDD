@@ -457,8 +457,7 @@ function Casilla({
 
       {nodo.limita_el_informe && (
         <p className="limitacion">
-          Esta casilla entra en las limitaciones del informe: declarar lo que no se ha podido
-          revisar es una obligación profesional en una TDD.
+          {traducir('Esta casilla entra en las limitaciones del informe: declarar lo que no se ha podido revisar es una obligación profesional en una TDD.')}
         </p>
       )}
 

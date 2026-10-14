@@ -174,8 +174,7 @@ export function FichaDeActivo({
       </h3>
       {/* `[REQ]` P-02. La etiqueta se queda aquí y no en la pantalla. */}
       <p className="ayuda">
-        Estos campos se guardan siempre. Reclasificar el activo no los borra: si mañana vuelve a
-        ser una nave, la altura de almacén sigue ahí.
+        {traducir('Estos campos se guardan siempre. Reclasificar el activo no los borra: si mañana vuelve a ser una nave, la altura de almacén sigue ahí.')}
       </p>
       <Rejilla>
         {CAMPOS_DE_ALMACEN.map((clave) => (
@@ -206,9 +205,7 @@ export function FichaDeActivo({
         )}
       </h3>
       <p className="ayuda">
-        Salen de la memoria técnica del edificio. Mientras ponga «sin validar», nadie ha revisado
-        que sean correctos: un dato leído de un documento no es lo mismo que uno tecleado por un
-        técnico.
+        {traducir('Salen de la memoria técnica del edificio. Mientras ponga «sin validar», nadie ha revisado que sean correctos: un dato leído de un documento no es lo mismo que uno tecleado por un técnico.')}
       </p>
       <Rejilla>
         <Campo etiqueta={traducir('Referencia catastral')}>

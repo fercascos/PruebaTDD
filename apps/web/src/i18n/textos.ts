@@ -814,6 +814,155 @@ export const EN: Record<string, string> = {
   'Recargue y vuelva a intentarlo; si se repite, es un fallo de la aplicación.':
     'Reload and try again; if it happens again, it is an application bug.',
 
+  // ── Los trozos de frase que conviven con una etiqueta ─────────────────
+  //
+  // `[REQ]` La tercera tanda, y la que obligó a cambiar de herramienta. Son
+  // los pedazos de texto que comparten párrafo con un `<strong>`, un `<code>`
+  // o un enlace:
+  //
+  //     <p className="ayuda">
+  //       El árbol del cliente, y dentro de cada objeto lo que se sabe de él:{' '}
+  //       <strong>Descriptivo</strong>, que sale de la memoria técnica.
+  //     </p>
+  //
+  // Son TRES nodos de texto, y un extractor por expresión regular no ve
+  // ninguno: la regla que exige el párrafo entero limpio los descarta, y la
+  // que acepta «todo lo que hay entre > y <» recoge además el código —en
+  // `useState<Foo>()` el genérico abre y cierra igual—, trescientos falsos
+  // positivos. Se cambió a leerlo con el parser de TypeScript, que no se
+  // equivoca porque un nodo de texto JSX lo es por definición del lenguaje.
+  //
+  // Se traducen trozo a trozo y la frase inglesa conserva la estructura de la
+  // castellana. `[LIM]` Vale para «prosa, término, prosa», que es lo que hay
+  // aquí; no valdría para un idioma que exigiera mover el término de sitio.
+
+  '(Descriptivo, que sale de la memoria técnica) y':
+    '(Description, which comes from the technical report) and',
+  '(Valoración, que la escribe quien lo ha visto), con sus equipos y sus fotografías. Las categorías nacen plegadas; se abren solas las que ya tienen trabajo hecho.':
+    '(Assessment, written by whoever has seen it), with their equipment and their photos. Categories start collapsed; those with work already done open on their own.',
+  '). Explique por qué.': '). Explain why.',
+  ', así que la redacta una persona y no se genera sola.':
+    ', so a person writes it and it is not generated on its own.',
+  ', de mayor a menor. Un hallazgo codificado en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es lo mismo que un objeto denominado «General».':
+    ', largest first. A finding coded against the category itself, without going down to the item, shows as «not broken down»: that is not the same as an item named «General».',
+  ': distribución por concepto de gasto, perfil temporal, exposición por riesgo, categoría con sus objetos y activo.':
+    ': breakdown by purpose of spend, timing profile, exposure by risk, category with its items, and asset.',
+  ': es la referencia contra la que se lee el resto. Los activos sin actuaciones se muestran con cero: uno que desaparece de la lista se confunde con uno que se visitó y no tenía nada.':
+    ': it is the benchmark the rest is read against. Assets with no actions are shown as zero: one that vanishes from the list looks the same as one that was inspected and had nothing.',
+  ': es una casilla sin rellenar —depende de los contratos de arrendamiento y se decide actuación por actuación—, y por eso va en gris y no con un color de serie.':
+    ': it is an unfilled box —it depends on the lease agreements and is decided action by action— which is why it is grey and not a series colour.',
+  ': indirectos, honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima. Añada otra línea solo si la actuación es':
+    ': indirect costs, fees and contingency already included. The application never applies the cascade on top. Add another line only if the action is',
+  ': nadie ha leído este documento. Lo de abajo ocupa el sitio de lo que vendrá y no dice nada sobre su contenido.':
+    ': nobody has read this document. What follows stands in for what will come and says nothing about its contents.',
+  ': no hay fuente de precios externa, así que esta parte se ajusta a mano hasta que la haya.':
+    ': there is no external price source, so this part is adjusted by hand until there is one.',
+  ': un capítulo tiene once objetos y elegir por usted sería adivinar dónde está la máquina. Colóquelos y dejarán de estar aquí —y su actuación sabrá dónde ir.':
+    ': a chapter has eleven items and choosing for you would mean guessing where the machine is. Place them and they will stop appearing here —and their action will know where to go.',
+  'Aceptar crea la ficha de equipo': 'Accepting creates the equipment record',
+  'Actualizar los': 'Update the',
+  'Alcance: un solo activo ·': 'Scope: a single asset ·',
+  'Aplicar a': 'Apply to',
+  'Autorizada para este proyecto': 'Authorised for this project',
+  'Buscar': 'Search',
+  'Cantidad': 'Quantity',
+  'Clasificar en': 'Classify under',
+  'Comentarios': 'Comments',
+  'Datos de la memoria técnica': 'Technical report data',
+  'Datos de nave': 'Warehouse unit data',
+  'Dónde está cada cosa dentro de este activo. Es distinto de la zona: la zona clasifica para el informe («Cubierta»), esto localiza para volver a encontrarlo («Cubierta › Sala Máquinas 2»). Lo que se elija aquí alimenta el token':
+    'Where each thing is inside this asset. It is different from the area: the area classifies for the report («Roof»), this locates it so it can be found again («Roof › Plant Room 2»). What is chosen here feeds the token',
+  'El desglose económico está en el': 'The financial breakdown is in the',
+  'El importe no coincide con la referencia elegida (':
+    'The amount does not match the chosen reference (',
+  'El importe se ha tecleado; no está respaldado por ninguna referencia.':
+    'The amount was typed in; it is not backed by any reference.',
+  'El libro tiene': 'The workbook has',
+  'El árbol del cliente, categoría a categoría, y dentro de cada objeto lo que se sabe de él:':
+    'The client\'s tree, category by category, and inside each item what is known about it:',
+  'Equipos sin objeto (': 'Equipment with no item (',
+  'Espacio': 'Location',
+  'Esto crea una versión nueva con la capa encima; el fichero de la cámara sigue igual y las anotaciones se pueden volver a editar. Se queman sobre la imagen solo al generar el informe.':
+    'This creates a new version with the layer on top; the camera file stays as it is and the annotations can be edited again. They are burned onto the image only when the report is generated.',
+  'Etiquetas': 'Tags',
+  'Fabricante': 'Manufacturer',
+  'Faltan columnas obligatorias:': 'Required columns are missing:',
+  'Generar actuaciones de los marcados (': 'Generate actions for the ticked ones (',
+  'Guardar el inventario': 'Save the inventory',
+  'Hay': 'There are',
+  'La información básica: qué se compra, para quién, con qué alcance se revisa y qué queda fuera.':
+    'The basics: what is being bought, for whom, the scope of the review and what is left out.',
+  'Llevar': 'Move to',
+  'Mapeo de «': 'Mapping of «',
+  'Modelo': 'Model',
+  'Motivo': 'Reason',
+  'Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal mantenido:':
+    'The nature of the spend. It is the distinction that separates an expensive asset from a badly maintained one:',
+  'No se pudo revisar:': 'Could not be reviewed:',
+  'No son imágenes y se han dejado fuera:': 'These are not images and have been left out:',
+  'Plazo': 'Term',
+  'Promotor': 'Developer',
+  'Quién puede entrar y con qué rol. La matriz completa de permisos está en':
+    'Who can sign in and with which role. The full permissions matrix is in',
+  'Recibida el': 'Received on',
+  'Reintentar las': 'Retry the',
+  'Renombrar': 'Rename',
+  'Se crean solo las que marque. Un proyecto sin Q&A no arrastra una fase vacía que nadie va a rellenar. Las marcadas como':
+    'Only the ones you tick are created. A project with no Q&A does not carry an empty phase nobody is going to fill in. Those marked as',
+  'Se dieron de alta antes de que el inventario preguntara de qué objeto cuelga cada equipo.':
+    'They were created before the inventory started asking which item each piece of equipment hangs off.',
+  'Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la escala—. Para ver el mapa, defina':
+    'No background mapping: no tile provider is configured, so the application contacts no external server. The positions and distances are correct —use the scale bar—. To see the map, set',
+  'Solo las aceptadas entran en el apartado de limitaciones del informe':
+    'Only those accepted go into the limitations section of the report',
+  'Tipo': 'Type',
+  'Ver': 'View',
+  'Ver los': 'View the',
+  'Zona': 'Area',
+  '`[REQ]` P-41 · El permiso es separable del rol para que alguien pueda atender el buzón':
+    '`[REQ]` P-41 · The permission is separable from the role so that somebody can handle the inbox',
+  'añadido(s) al inventario': 'added to the inventory',
+  'base calculada por medición:': 'base calculated from the measurement:',
+  'bloquean la generación': 'block generation',
+  'del árbol de CAPEX y los tramos de dentro son sus':
+    'of the CAPEX tree and the bands inside are its',
+  'descartada(s), con constancia de quién fue': 'discarded, with a record of who did so',
+  'documento(s) sin línea de checklist': 'document(s) with no checklist line',
+  'equipo(s) han agotado su vida útil esperada. Es una estimación a partir del año de instalación, no un dictamen: un equipo con mantenimiento puede seguir dando servicio.':
+    'item(s) of equipment have exhausted their expected service life. That is an estimate from the year of installation, not a verdict: a maintained unit may well keep working.',
+  'etiqueta(s) leídas que no se han sabido encajar': 'tag(s) read that could not be matched',
+  'fotografías no llevan coordenadas y no salen aquí. En un sótano no hay señal, y muchos móviles van con la localización apagada. No se infiere ninguna posición: si no vino en el EXIF, no está.':
+    'photos carry no coordinates and do not appear here. There is no signal in a basement, and many phones run with location switched off. No position is inferred: if it did not come in the EXIF, it is not there.',
+  'fotografías sin subir de una sesión anterior. Siguen guardadas en este dispositivo.':
+    'photos not yet uploaded from an earlier session. They are still stored on this device.',
+  'líneas con precio sin validar, por': 'lines with an unvalidated price, totalling',
+  'marcadores sin origen. Si se genera así, saldrían literalmente en el documento: la generación lo impide.':
+    'tokens with no source. Generated like this they would appear literally in the document: generation prevents it.',
+  'no se marcan a mano después: su estado sale del trabajo que hay debajo.':
+    'are not ticked by hand afterwards: their state comes from the work underneath.',
+  'nombres coincidían y han recibido un sufijo alfabético (_b, _c…) para no pisarse.':
+    'names clashed and have been given an alphabetic suffix (_b, _c…) so they do not overwrite each other.',
+  'objetos en tabla, con su categoría': 'items in a table, with their category',
+  'página': 'page',
+  'revisiones de este documento. Se muestra la más reciente.':
+    'reviews of this document. The most recent one is shown.',
+  '· su activo se borró después de registrarlos. Siguen contando en el total.':
+    '· their asset was deleted after they were recorded. They still count towards the total.',
+  '—hace falta ahora y otra vez más adelante—, que es lo que P-44 permite.':
+    '—needed now and again later on—, which is what P-44 allows.',
+
+  // ── El estado de un proyecto ──────────────────────────────────────────
+  //
+  // `[REQ]` La pantalla enseñaba el código del enumerado —«BORRADOR»,
+  // «VISITA_PROGRAMADA»—, que en inglés no dice nada. Los rótulos están en
+  // `ui/estados.ts`; aquí va su inglés.
+  'En preparación': 'In preparation',
+  'Visita programada': 'Inspection scheduled',
+  'Visita realizada': 'Inspection completed',
+  'En análisis': 'Under analysis',
+  'En revisión': 'Under review',
+  'Informe emitido': 'Report issued',
+
   // ── El texto de ayuda, que ocupa varias líneas ────────────────────────
   //
   // Son los párrafos de los `<p className="ayuda">`: lo que explica una

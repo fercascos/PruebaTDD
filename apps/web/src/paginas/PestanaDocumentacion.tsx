@@ -166,8 +166,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
 
       {lineas.length === 0 ? (
         <Vacio>
-          La checklist está vacía. Añade arriba lo que hay que pedir: cada línea que quede sin
-          recibir se convierte sola en una limitación del informe.
+          {traducir('La checklist está vacía. Añade arriba lo que hay que pedir: cada línea que quede sin recibir se convierte sola en una limitación del informe.')}
         </Vacio>
       ) : (
         <ul className="checklist">
@@ -207,8 +206,7 @@ export function PestanaDocumentacion({ projectId }: { projectId: string }) {
         <details className="sueltos">
           <summary>{sinLinea.length} documento(s) sin línea de checklist</summary>
           <p className="detalle">
-            Llegaron al proyecto sin decir qué solicitud cubren. Se pueden revisar igual, pero no
-            cuentan para la checklist ni para las limitaciones del informe.
+            {traducir('Llegaron al proyecto sin decir qué solicitud cubren. Se pueden revisar igual, pero no cuentan para la checklist ni para las limitaciones del informe.')}
           </p>
           <ul>
             {sinLinea.map((d) => (
@@ -270,8 +268,7 @@ function Autorizacion({
           </p>
         ) : (
           <p className="detalle">
-            Apagada. Ningún documento de este proyecto se analiza mientras lo esté. La autoriza quien
-            dirige el proyecto, y queda constancia de quién lo hizo.
+            {traducir('Apagada. Ningún documento de este proyecto se analiza mientras lo esté. La autoriza quien dirige el proyecto, y queda constancia de quién lo hizo.')}
           </p>
         )}
       </div>
@@ -424,8 +421,7 @@ function Linea({
 
       {linea.affects_report_limitations && (
         <p className="limitacion">
-          Esta línea entra en las limitaciones del informe: declarar lo que no se ha podido revisar
-          es una obligación profesional en una TDD.
+          {traducir('Esta línea entra en las limitaciones del informe: declarar lo que no se ha podido revisar es una obligación profesional en una TDD.')}
         </p>
       )}
 
@@ -1089,8 +1085,7 @@ function EquiposPropuestos({
 
       {activos.length === 0 && pendientes.length > 0 && (
         <Mensaje tipo="aviso">
-          Este proyecto no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer
-          en alguno. Créalo antes de aceptar estas propuestas.
+          {traducir('Este proyecto no tiene ningún activo dado de alta todavía, y un equipo tiene que nacer en alguno. Créalo antes de aceptar estas propuestas.')}
         </Mensaje>
       )}
 

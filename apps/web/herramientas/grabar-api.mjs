@@ -116,23 +116,34 @@ await pg.click('button[type="submit"]')
 await pg.waitForURL('**/proyectos', { timeout: 15000 })
 await pg.waitForTimeout(1200)
 
-const pestanas = [
-  '',
-  '/documentacion',
-  '/activos',
-  '/fotos',
-  '/mapa',
-  '/equipo',
-  '/capex',
-  '/riesgos',
-  '/informes',
-]
-for (const p of pestanas) await ver(`/proyectos/${PID}${p}`)
+/** Las pestañas del proyecto, **tal como están hoy**.
+ *
+ *  `[REQ]` Esta lista estaba desfasada: nombraba `/documentacion`, `/fotos`,
+ *  `/mapa`, `/equipo` y `/capex` como pestañas del proyecto, y hace tiempo que
+ *  cuelgan **del activo** (`/activos/:id/...`). El efecto no era un error: era
+ *  una grabación de 16 respuestas en vez de doscientas, y un prototipo con la
+ *  mitad de las pantallas en blanco. Un recorrido que busca rutas que ya no
+ *  existen no falla, simplemente no graba.
+ *
+ *  Se comprueba abajo: si una pestaña no deja ni una petición, se avisa.
+ */
+const PESTANAS = ['', '/activos', '/dashboard', '/riesgos', '/informes']
+
+/** Y las del activo, que son las que llevan el grueso del trabajo. */
+const SECCIONES_DEL_ACTIVO = ['', '/documentacion', '/visita', '/inventario', '/capex']
+
+const vacias = []
+for (const p of PESTANAS) {
+  const antes = Object.keys(grabacion).length
+  await ver(`/proyectos/${PID}${p}`)
+  if (Object.keys(grabacion).length === antes) vacias.push(`/proyectos/${PID}${p}`)
+}
 for (const r of ['/plantillas', '/sugerencias', '/personas', '/proyectos']) await ver(r)
 
 // El resumen del CAPEX y su filtro: viven detrás de un botón y de un
-// desplegable, así que sus peticiones no salen solas.
-await ver(`/proyectos/${PID}/capex`)
+// desplegable, así que sus peticiones no salen solas. Está en `/dashboard`;
+// la ruta `/capex` del proyecto dejó de existir y aquí seguía escrita.
+await ver(`/proyectos/${PID}/dashboard`)
 const resumen = pg.getByRole('tab', { name: t('Resumen') })
 if (await resumen.count()) {
   await resumen.click()
@@ -147,10 +158,10 @@ if (await resumen.count()) {
 }
 
 // Las fichas: hallazgo con su comparador, activo con su árbol, foto.
-await ver(`/proyectos/${PID}/capex`)
+await ver(`/proyectos/${PID}/dashboard`)
 const filas = pg.locator('.tabla.capex tbody tr:not(.cabecera-grupo) button.enlace')
 for (let i = 0; i < Math.min(await filas.count(), 4); i++) {
-  await ver(`/proyectos/${PID}/capex`)
+  await ver(`/proyectos/${PID}/dashboard`)
   await filas.nth(i).click()
   await pg.waitForTimeout(1100)
   const precios = pg.locator(`button:has-text("${t('Ver referencias y validar el precio')}")`)
@@ -160,19 +171,30 @@ for (let i = 0; i < Math.min(await filas.count(), 4); i++) {
   }
 }
 
+// Los activos, y **las cinco secciones de cada uno**: ahí vive el trabajo de
+// verdad —la documentación pedida, la visita, el inventario y el CAPEX del
+// activo—, y es lo que el prototipo tiene que poder enseñar.
 await ver(`/proyectos/${PID}/activos`)
-const activos = pg.locator('.tabla tbody tr button').first()
-if (await activos.count()) {
-  await activos.click()
-  await pg.waitForTimeout(1200)
+const idsDeActivos = JSON.parse(
+  grabacion[`GET /api/v1/projects/${PID}/assets`]?.texto ?? '[]',
+).map((a) => a.id)
+for (const idActivo of idsDeActivos) {
+  for (const seccion of SECCIONES_DEL_ACTIVO) {
+    await ver(`/proyectos/${PID}/activos/${idActivo}${seccion}`)
+  }
 }
+console.log(`· ${idsDeActivos.length} activos × ${SECCIONES_DEL_ACTIVO.length} secciones`)
 
-await ver(`/proyectos/${PID}/fotos`)
-const fotos = pg.locator('.rejilla li button, .rejilla li a')
-for (let i = 0; i < Math.min(await fotos.count(), 4); i++) {
-  await ver(`/proyectos/${PID}/fotos`)
-  await fotos.nth(i).click()
-  await pg.waitForTimeout(1100)
+// Las fotografías: cuelgan de la visita del activo, no del proyecto.
+for (const idActivo of idsDeActivos) {
+  const ruta = `/proyectos/${PID}/activos/${idActivo}/visita`
+  await ver(ruta)
+  const fotos = pg.locator('.rejilla li button, .rejilla li a')
+  for (let i = 0; i < Math.min(await fotos.count(), 4); i++) {
+    await ver(ruta)
+    await fotos.nth(i).click()
+    await pg.waitForTimeout(1100)
+  }
 }
 
 // La comprobación previa del informe, que es lo que decide si se genera.
@@ -225,6 +247,15 @@ if (listado?.texto) {
   const solo = lista.filter((p) => p.id === PID)
   listado.texto = JSON.stringify(Array.isArray(todos) ? solo : { ...todos, items: solo })
   console.log(`· la lista de proyectos pasa de ${lista.length} a ${solo.length}`)
+}
+
+if (vacias.length) {
+  console.log(
+    `\n${vacias.length} rutas no han dejado NINGUNA peticion nueva. Si la pantalla pide ` +
+      `datos, la ruta ya no existe y este recorrido esta desfasado —paso una vez, y el ` +
+      `prototipo salio con la mitad de las pantallas en blanco—. Si solo reusa lo que ya ` +
+      `trajo la pantalla de arriba, es normal:\n  ${vacias.join('\n  ')}`,
+  )
 }
 
 await mkdir(dirname(SALIDA), { recursive: true })

@@ -1,23 +1,39 @@
 import { chromium } from 'playwright'
 const nav = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH })
-const ctx = await nav.newContext({ viewport: { width: 1440, height: 950 }, locale: 'en-GB' })
-await ctx.addInitScript(() => { try { localStorage.setItem('tdd.idioma','en') } catch {} })
+const ctx = await nav.newContext({ viewport: { width: 1440, height: 1200 } })
 const pg = await ctx.newPage()
-pg.on('console', m => { if (m.type()==='error') console.log('CONSOLA:', m.text().slice(0,200)) })
-pg.on('pageerror', e => console.log('PAGEERROR:', e.message.slice(0,300)))
-await pg.goto('http://localhost:5173/entrar')
-await pg.waitForTimeout(800)
-await pg.fill('input[type="email"]', 'admin@ejemplo.example')
-await pg.fill('input[type="password"]', 'cubierta invertida 2026')
-await pg.click('button[type="submit"]')
-await pg.waitForURL('**/proyectos', { timeout: 15000 })
-await pg.waitForTimeout(1500)
+const F = 'file:///home/user/PruebaTDD/apps/web/prototipo/dist/prototipo-en.html'
 const P = process.env.TDD_PROYECTO
-for (const r of ['', '/capex', '/documentacion']) {
-  await pg.goto(`http://localhost:5173/proyectos/${P}${r}`)
-  await pg.waitForTimeout(1800)
-  const txt = (await pg.locator('body').innerText()).slice(0, 320).replace(/\n+/g, ' | ')
-  console.log(`\n== ${r || '(resumen)'}\n   ${txt}`)
+const A = process.env.TDD_ACTIVOS.split(',')
+const rutas = ['#/proyectos', '#/plantillas', '#/sugerencias', '#/personas',
+  `#/proyectos/${P}`, `#/proyectos/${P}/activos`, `#/proyectos/${P}/dashboard`,
+  `#/proyectos/${P}/riesgos`, `#/proyectos/${P}/informes`]
+for (const a of A) for (const s of ['', '/documentacion', '/visita', '/inventario', '/capex'])
+  rutas.push(`#/proyectos/${P}/activos/${a}${s}`)
+
+// Palabras funcionales que no existen en ingles.
+const ES = /(?:^|[\s(«"'])(?:de|del|la|el|los|las|con|que|para|por|una|un|se|sin|los|sus|está|más|así|qué|cuánto|cómo|desde|hay|no se|todavía|ningun\w*)(?:[\s)»,.:;"']|$)/i
+const sospechosas = new Map()
+for (const r of rutas) {
+  await pg.goto(F + r)
+  await pg.waitForTimeout(1300)
+  // Abrir los <details> para ver lo que esconden.
+  await pg.evaluate(() => document.querySelectorAll('details').forEach(d => (d.open = true)))
+  await pg.waitForTimeout(300)
+  const textos = await pg.evaluate(() => {
+    const salida = []
+    const paseo = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    let n
+    while ((n = paseo.nextNode())) {
+      const t = n.textContent.replace(/\s+/g, ' ').trim()
+      if (t.length > 6) salida.push(t)
+    }
+    return salida
+  })
+  for (const t of textos) if (ES.test(t)) {
+    if (!sospechosas.has(t)) sospechosas.set(t, r)
+  }
 }
-await pg.screenshot({ path: '/tmp/claude-0/-home-user-PruebaTDD/d734f2bf-571f-536e-bdff-9397bc24c17b/scratchpad/capex.png', fullPage: true })
+console.log(`${sospechosas.size} textos que parecen castellano:`)
+for (const [t, r] of [...sospechosas].sort()) console.log(`  ${t.slice(0, 120)}`)
 await nav.close()

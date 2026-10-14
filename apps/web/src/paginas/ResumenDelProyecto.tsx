@@ -113,8 +113,7 @@ export function ResumenDelProyecto({
       <section className="mapa-de-la-cartera">
         <h3>{traducir('Dónde están los activos')}</h3>
         <p className="ayuda">
-          Todos los del proyecto en el mismo mapa: dos naves en el mismo polígono y una oficina
-          a treinta kilómetros no se gestionan igual.
+          {traducir('Todos los del proyecto en el mismo mapa: dos naves en el mismo polígono y una oficina a treinta kilómetros no se gestionan igual.')}
         </p>
         <Suspense fallback={<p className="cargando">{traducir('Cargando el mapa…')}</p>}>
           <MapaDeActivos projectId={projectId} />

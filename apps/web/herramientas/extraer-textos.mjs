@@ -17,6 +17,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { textoVisible } from './jsx.mjs'
 
 /**
  * La raíz de `apps/web`.
@@ -96,27 +97,13 @@ export function extraer() {
     // `Map<string, Promise<void>>` sacaba «Promise»— y los daba por etiquetas
     // de la interfaz.
     if (fichero.endsWith('.tsx')) {
-      // `(?<!=)` descarta la flecha de una función: en `=> Promise<void>` el
-      // `>` del `=>` y el `<` del genérico encierran «Promise», que no es una
-      // etiqueta de nada.
-      for (const m of codigo.matchAll(/(?<!=)>\s*([^<>{}\n][^<>{}\n]*?)\s*</g)) {
-        apuntar(m[1], fichero, true)
-      }
-      // **Y el texto que ocupa varias líneas**, que es casi todo el texto de
-      // ayuda de esta aplicación: un párrafo dentro de un `<p className="ayuda">`
-      // lo parte el formateador en cuatro renglones, y la regla de arriba
-      // —que excluye `\n` a propósito, para no cruzar etiquetas— no lo veía.
-      //
-      // `[REQ]` Era un agujero grande y silencioso: el extractor decía «0 sin
-      // traducir» con **67 párrafos** sin traducir, y el prototipo en inglés
-      // los enseñaba en castellano. Lo cazó abrirlo en un navegador, no leer
-      // el código.
-      //
-      // Se exige que **cada** renglón del nodo sea texto suelto —sin `<`, `>`,
-      // `{` ni `}`—, así que un párrafo con una etiqueta o una expresión
-      // dentro no entra. Ésos siguen fuera, y están contados abajo.
-      for (const m of codigo.matchAll(/(?<!=)>[ \t]*\n((?:[ \t]*[^<>{}\n][^<>{}\n]*\n)+)[ \t]*</g)) {
-        apuntar(m[1].replace(/\s+/g, ' '), fichero, true)
+      // **El parser de TypeScript, no una expresión regular.** El por qué está
+      // en `jsx.mjs`, y son dos agujeros silenciosos de verdad: un párrafo
+      // partido en varios renglones y el texto que convive con un `<strong>`
+      // dentro del mismo párrafo. Los dos salían «0 sin traducir» mientras el
+      // prototipo en inglés los enseñaba en castellano.
+      for (const trozo of textoVisible(codigo, fichero)) {
+        apuntar(trozo.texto, fichero, true)
       }
     }
     // Cadenas entrecomilladas.

@@ -153,8 +153,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
 
       {datos.total_hallazgos === 0 ? (
         <Vacio>
-          Todavía no hay hallazgos que clasificar. La matriz se rellena sola a medida que se
-          registran.
+          {traducir('Todavía no hay hallazgos que clasificar. La matriz se rellena sola a medida que se registran.')}
         </Vacio>
       ) : (
         <>
@@ -187,8 +186,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
             <div className="desbordable">
               <table className="tabla matriz">
                 <caption className="ayuda">
-                  Cuánto dinero hay en cada cruce de gravedad y plazo. Responde a «¿cuánto de lo
-                  grave hay que pagar en los dos primeros años?».
+                  {traducir('Cuánto dinero hay en cada cruce de gravedad y plazo. Responde a «¿cuánto de lo grave hay que pagar en los dos primeros años?».')}
                 </caption>
                 <thead>
                   <tr>
@@ -275,8 +273,7 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
           )}
 
           <p className="ayuda">
-            El grado nunca se identifica solo por color: cada fila lleva su código y su nombre
-            escritos. Los importes son los del CAPEX del proyecto; lo descartado no suma.
+            {traducir('El grado nunca se identifica solo por color: cada fila lleva su código y su nombre escritos. Los importes son los del CAPEX del proyecto; lo descartado no suma.')}
           </p>
         </>
       )}

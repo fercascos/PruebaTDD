@@ -18,7 +18,7 @@ import { HashRouter } from 'react-router-dom'
 import { App } from '../src/App'
 import '../src/estilos.css'
 import { type Grabacion, instalar } from './servidor'
-import grabacion from './grabacion.json'
+import grabacion from 'grabacion'
 import './prototipo.css'
 
 instalar(grabacion as unknown as Grabacion)
@@ -27,6 +27,14 @@ instalar(grabacion as unknown as Grabacion)
 // quien contesta `/auth/refresh` es la grabación. Sin esto, el prototipo abre
 // en la pantalla de inicio de sesión y no hay contraseña que valga.
 localStorage.setItem('tdd.refresh', 'prototipo')
+
+/* `[REQ]` El idioma con el que arranca, que lo fija la compilación y **tiene
+   que ser el mismo con el que se grabó**: la grabación incrustada contesta en
+   un idioma y solo en uno, así que abrir en el otro enseñaría los rótulos
+   traducidos y los datos no. El selector ES/EN sigue estando y sigue
+   funcionando para los rótulos; los datos no cambian, y por eso el fichero
+   lleva el idioma en el nombre. */
+localStorage.setItem('tdd.idioma', __TDD_IDIOMA__)
 
 function Aviso() {
   return (

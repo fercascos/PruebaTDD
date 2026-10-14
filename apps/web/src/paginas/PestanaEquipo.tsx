@@ -215,8 +215,7 @@ export function PestanaEquipo({
 
       {activos.length === 0 && (
         <Mensaje tipo="aviso">
-          El proyecto todavía no tiene activos. Un equipo cuelga siempre de uno: dé de alta el
-          edificio primero.
+          {traducir('El proyecto todavía no tiene activos. Un equipo cuelga siempre de uno: dé de alta el edificio primero.')}
         </Mensaje>
       )}
 
@@ -224,9 +223,7 @@ export function PestanaEquipo({
         <p className="cargando">{traducir('Cargando el inventario…')}</p>
       ) : equipos.length === 0 ? (
         <Vacio>
-          Sin equipos en el inventario. Es opcional: un proyecto se entrega igual sin él. Sirve para
-          apuntar en la visita el fabricante, el modelo y el año de lo que después se propone
-          sustituir.
+          {traducir('Sin equipos en el inventario. Es opcional: un proyecto se entrega igual sin él. Sirve para apuntar en la visita el fabricante, el modelo y el año de lo que después se propone sustituir.')}
         </Vacio>
       ) : (
         <>
@@ -619,15 +616,12 @@ function FichaDeEquipo({
         {/* No hay campo de «próxima revisión» y no es un descuido: la calcula la
             base a partir de los dos de arriba, igual que la vida residual. */}
         <p className="ayuda">
-          La próxima revisión se calcula: no se teclea. Un documento puede declarar que hay
-          revisiones «anuales o quinquenales según el tipo de equipo» sin decir cuál le toca a
-          cuál, y en ese caso esto se queda vacío hasta que alguien lo sepa.
+          {traducir('La próxima revisión se calcula: no se teclea. Un documento puede declarar que hay revisiones «anuales o quinquenales según el tipo de equipo» sin decir cuál le toca a cuál, y en ese caso esto se queda vacío hasta que alguien lo sepa.')}
         </p>
 
         {mediaVida && (
           <Mensaje tipo="aviso">
-            El año de instalación y la vida útil esperada van juntos o no van: con solo uno de los
-            dos no hay vida residual que calcular.
+            {traducir('El año de instalación y la vida útil esperada van juntos o no van: con solo uno de los dos no hay vida residual que calcular.')}
           </Mensaje>
         )}
 

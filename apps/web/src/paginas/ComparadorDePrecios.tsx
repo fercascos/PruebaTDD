@@ -191,8 +191,7 @@ export function ComparadorDePrecios({
 
       {datos.referencias.length === 0 ? (
         <Vacio>
-          No hay ninguna referencia registrada que encaje. Introduzca el precio a mano indicando de
-          dónde sale.
+          {traducir('No hay ninguna referencia registrada que encaje. Introduzca el precio a mano indicando de dónde sale.')}
         </Vacio>
       ) : (
         <div className="desbordable">
@@ -270,8 +269,7 @@ export function ComparadorDePrecios({
             ))}
           </ul>
           <p className="ayuda">
-            Habilitar una fuente exige registrar la revisión de sus condiciones de uso y requiere
-            rol de administrador.
+            {traducir('Habilitar una fuente exige registrar la revisión de sus condiciones de uso y requiere rol de administrador.')}
           </p>
         </section>
       )}
@@ -317,8 +315,7 @@ export function ComparadorDePrecios({
 
         {elegida === null && (
           <Mensaje tipo="aviso">
-            Elija una referencia. Un precio conserva siempre su procedencia: si el importe no sale de
-            ninguna de las registradas, dé de alta una manual con su origen.
+            {traducir('Elija una referencia. Un precio conserva siempre su procedencia: si el importe no sale de ninguna de las registradas, dé de alta una manual con su origen.')}
           </Mensaje>
         )}
 
@@ -387,8 +384,7 @@ function ActualizacionPorIndice({
         </button>
       </div>
       <p className="ayuda">
-        No hay catálogo de índices en la aplicación: los dos valores los introduce usted. Publicar
-        una cifra que nadie ha verificado sería inventar una fuente de precios.
+        {traducir('No hay catálogo de índices en la aplicación: los dos valores los introduce usted. Publicar una cifra que nadie ha verificado sería inventar una fuente de precios.')}
       </p>
       <Rejilla>
         <Campo etiqueta={traducir('Índice en la fecha del precio')}>
@@ -424,8 +420,7 @@ function ActualizacionPorIndice({
             Llevar {euros.format(Number(resultado.resultado))} al importe
           </button>
           <p className="ayuda">
-            No se ha aplicado nada todavía, y aplicarlo solo rellena el campo: sigue haciendo falta
-            validar el precio.
+            {traducir('No se ha aplicado nada todavía, y aplicarlo solo rellena el campo: sigue haciendo falta validar el precio.')}
           </p>
         </>
       )}
@@ -483,8 +478,7 @@ function NuevaReferencia({
     <section className="nueva-referencia">
       <h3>{traducir('Introducir un precio a mano')}</h3>
       <p className="ayuda">
-        Queda firmado con su usuario y con la fecha. Es lo que permite preguntar de dónde salió
-        dentro de seis meses.
+        {traducir('Queda firmado con su usuario y con la fecha. Es lo que permite preguntar de dónde salió dentro de seis meses.')}
       </p>
       <Rejilla>
         <Campo etiqueta={traducir('Fuente')}>

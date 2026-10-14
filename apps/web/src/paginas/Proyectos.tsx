@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { estadoDeProyecto } from '../ui/estados'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { obtener } from '../api/cliente'
@@ -92,7 +93,7 @@ export function Proyectos() {
                 <td className="fecha">{fecha(p.start_date)}</td>
                 <td className="fecha">{fecha(p.close_date)}</td>
                 <td>
-                  <span className={`estado e-${p.status.toLowerCase()}`}>{p.status}</span>
+                  <span className={`estado e-${p.status.toLowerCase()}`}>{estadoDeProyecto(p.status)}</span>
                 </td>
               </tr>
             ))}

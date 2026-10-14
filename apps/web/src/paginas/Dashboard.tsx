@@ -197,8 +197,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
   if (totalDelProyecto <= 0) {
     return (
       <Vacio>
-        Todavía no hay ninguna línea de CAPEX valorada. Este dashboard se rellena solo a medida
-        que se registran hallazgos con su importe.
+        {traducir('Todavía no hay ninguna línea de CAPEX valorada. Este dashboard se rellena solo a medida que se registran hallazgos con su importe.')}
       </Vacio>
     )
   }
@@ -396,8 +395,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>{traducir('Perfil temporal de la inversión')}</h3>
             <p className="ayuda">
-              Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí
-              es el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.
+              {traducir('Por horizonte de ejecución, en orden de plazo y no de importe: lo que se lee aquí es el escalonamiento del desembolso, y reordenarlo por cuantía lo destruiría.')}
             </p>
             <Barras
               filas={filtrado.horizonte.map((h) => ({
@@ -417,9 +415,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>{traducir('Exposición por grado de riesgo')}</h3>
             <p className="ayuda">
-              Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los
-              grados sin importe se muestran con cero: uno que desaparece de la lista se
-              confunde con uno que no tiene nada.
+              {traducir('Cuánta de la inversión corresponde a cada grado, del más severo al menos. Los grados sin importe se muestran con cero: uno que desaparece de la lista se confunde con uno que no tiene nada.')}
             </p>
             <Barras
               filas={filtrado.riesgo.map((r) => ({
@@ -454,8 +450,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <section className="bloque">
               <h3>{traducir('Distribución por activo')}</h3>
               <p className="ayuda">
-                En un proyecto de cartera es la cifra que entra en la negociación de cada
-                activo.
+                  {traducir('En un proyecto de cartera es la cifra que entra en la negociación de cada activo.')}
                 <strong> {traducir('Este bloque no se filtra nunca')}</strong>: es la referencia contra la que
                 se lee el resto. Los activos sin actuaciones se muestran con cero: uno que
                 desaparece de la lista se confunde con uno que se visitó y no tenía nada.

@@ -113,8 +113,7 @@ export function ImportarInventario({
       <section>
         <h3>1 · La plantilla</h3>
         <p className="ayuda">
-          Lleva dentro los activos de este proyecto y los 14 sistemas técnicos. Rellenarla a partir
-          de ella evita que media hoja falle por una tilde en el nombre del edificio.
+          {traducir('Lleva dentro los activos de este proyecto y los 14 sistemas técnicos. Rellenarla a partir de ella evita que media hoja falle por una tilde en el nombre del edificio.')}
         </p>
         <button
           type="button"
@@ -129,8 +128,7 @@ export function ImportarInventario({
           {traducir('Descargar la plantilla')}
         </button>
         <p className="ayuda">
-          También vale una hoja propia: se reconocen varios nombres para cada columna, y las que no
-          se entiendan se enumeran antes de importar en vez de perderse.
+          {traducir('También vale una hoja propia: se reconocen varios nombres para cada columna, y las que no se entiendan se enumeran antes de importar en vez de perderse.')}
         </p>
       </section>
 
@@ -258,8 +256,7 @@ export function ImportarInventario({
               )}
               {vista.ya_existen > 0 && actualizar && (
                 <Mensaje tipo="aviso">
-                  Sus fichas se sobrescribirán. Si alguien las corrigió a mano después de la visita,
-                  esos cambios se pierden.
+                  {traducir('Sus fichas se sobrescribirán. Si alguien las corrigió a mano después de la visita, esos cambios se pierden.')}
                 </Mensaje>
               )}
 

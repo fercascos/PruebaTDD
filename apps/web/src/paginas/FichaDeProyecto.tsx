@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { estadoDeProyecto } from '../ui/estados'
 import { useCallback, useEffect, useState } from 'react'
 import { NavLink, Route, Routes, useParams } from 'react-router-dom'
 import { obtener } from '../api/cliente'
@@ -46,7 +47,7 @@ export function FichaDeProyecto() {
             </p>
           )}
         </div>
-        <span className={`estado e-${proyecto.status.toLowerCase()}`}>{proyecto.status}</span>
+        <span className={`estado e-${proyecto.status.toLowerCase()}`}>{estadoDeProyecto(proyecto.status)}</span>
       </header>
 
       {/* `[REQ]` §3.1-§3.2 · **Cinco pestañas, y el orden es el que pidió el

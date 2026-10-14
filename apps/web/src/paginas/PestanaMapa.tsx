@@ -225,8 +225,7 @@ export function PestanaMapa({
 
       {datos.puntos.length === 0 && (
         <Vacio>
-          Ninguna fotografía de esta selección trae coordenadas. Se registran solas si el móvil
-          tiene la localización activada al hacer la foto.
+          {traducir('Ninguna fotografía de esta selección trae coordenadas. Se registran solas si el móvil tiene la localización activada al hacer la foto.')}
         </Vacio>
       )}
 

@@ -244,9 +244,7 @@ export function Subida({
           es ruido, y el ruido enseña a ignorar los avisos. */}
       {persistencia === 'denegada' && elementos.length > 0 && (
         <p className="mensaje aviso">
-          Este navegador no garantiza guardar las fotografías pendientes: puede borrarlas si el
-          dispositivo se queda sin espacio, y en un iPhone también tras varios días sin abrir la
-          aplicación. Añádala a la pantalla de inicio, o súbalas antes de cerrar.
+          {traducir('Este navegador no garantiza guardar las fotografías pendientes: puede borrarlas si el dispositivo se queda sin espacio, y en un iPhone también tras varios días sin abrir la aplicación. Añádala a la pantalla de inicio, o súbalas antes de cerrar.')}
         </p>
       )}
 

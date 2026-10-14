@@ -184,8 +184,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
         <p className="cargando">{traducir('Cargando las visitas…')}</p>
       ) : visitas.length === 0 ? (
         <Vacio>
-          Este activo no tiene ninguna visita registrada. Se puede programar antes de tener
-          fecha: la visita nace «pendiente de definir» y no obliga a inventarse un día.
+          {traducir('Este activo no tiene ninguna visita registrada. Se puede programar antes de tener fecha: la visita nace «pendiente de definir» y no obliga a inventarse un día.')}
         </Vacio>
       ) : (
         <ul className="visitas">
@@ -340,9 +339,7 @@ function FichaDeVisita({
         {/* ── V2 · Equipo implicado ──────────────────────────────────────── */}
         <h4>{traducir('Equipo implicado')}</h4>
         <p className="ayuda">
-          Quién fue. Del equipo se elige de la lista de personas; quien acompaña —el jefe de
-          mantenimiento, el mantenedor de PCI— se escribe, porque no tiene cuenta en la
-          aplicación.
+          {traducir('Quién fue. Del equipo se elige de la lista de personas; quien acompaña —el jefe de mantenimiento, el mantenedor de PCI— se escribe, porque no tiene cuenta en la aplicación.')}
         </p>
 
         {lineas.length === 0 ? (
@@ -456,8 +453,7 @@ function FichaDeVisita({
         {/* ── V3 · Fotos ─────────────────────────────────────────────────── */}
         <h4>{traducir('Fotografías')}</h4>
         <p className="ayuda">
-          Las de este activo. Se suben desde «Fotografías», también desde el móvil durante la
-          visita, y se atan a cada equipo desde el inventario.
+          {traducir('Las de este activo. Se suben desde «Fotografías», también desde el móvil durante la visita, y se atan a cada equipo desde el inventario.')}
         </p>
         {fotos.length === 0 ? (
           <Vacio>{traducir('Este activo todavía no tiene fotografías.')}</Vacio>

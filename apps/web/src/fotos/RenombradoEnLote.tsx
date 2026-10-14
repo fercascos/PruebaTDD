@@ -93,9 +93,7 @@ export function RenombradoEnLote({
         <input value={plantilla} onChange={(e) => setPlantilla(e.target.value)} />
       </label>
       <p className="ayuda">
-        Marcadores disponibles: [Proyecto] [ProyectoNombre] [Activo] [Sistema] [Zona] [Espacio]
-        [Capitulo] [Categoria] [Fecha] [Hora] [Numero] [Autor] [Etiqueta]. La extensión no forma
-        parte de la plantilla: la fija el servidor desde el tipo real del archivo.
+        {traducir('Marcadores disponibles: [Proyecto] [ProyectoNombre] [Activo] [Sistema] [Zona] [Espacio] [Capitulo] [Categoria] [Fecha] [Hora] [Numero] [Autor] [Etiqueta]. La extensión no forma parte de la plantilla: la fija el servidor desde el tipo real del archivo.')}
       </p>
 
       <label className="casilla">

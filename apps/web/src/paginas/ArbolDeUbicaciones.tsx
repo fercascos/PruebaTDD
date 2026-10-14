@@ -124,8 +124,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
 
       {nodos.length === 0 ? (
         <Vacio>
-          Este activo no tiene ubicaciones. Sin ellas las fotografías se pueden clasificar por zona,
-          pero no se puede decir en qué sala estaban.
+          {traducir('Este activo no tiene ubicaciones. Sin ellas las fotografías se pueden clasificar por zona, pero no se puede decir en qué sala estaban.')}
         </Vacio>
       ) : (
         <ul className="arbol">

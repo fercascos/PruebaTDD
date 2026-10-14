@@ -217,8 +217,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
         {alta}
         {avisoExport}
         <Vacio>
-          Todavía no hay hallazgos. En campo también se crean desde la propia fotografía, que hereda
-          el activo y la zona.
+          {traducir('Todavía no hay hallazgos. En campo también se crean desde la propia fotografía, que hereda el activo y la zona.')}
         </Vacio>
       </>
     )
@@ -351,8 +350,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
             {suyos.length === 0 ? (
               <tr>
                 <td colSpan={2 + PLAZOS.length + 1} className="ayuda">
-                  Sin hallazgos registrados todavía. No es lo mismo que no tener CAPEX: puede que
-                  aún no se haya visitado.
+                  {traducir('Sin hallazgos registrados todavía. No es lo mismo que no tener CAPEX: puede que aún no se haya visitado.')}
                 </td>
               </tr>
             ) : (

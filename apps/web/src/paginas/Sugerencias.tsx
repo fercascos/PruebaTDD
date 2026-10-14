@@ -102,8 +102,7 @@ export function Sugerencias() {
     <>
       <h1>{traducir('Sugerencias')}</h1>
       <p className="ayuda">
-        Proponga cambios en precios, catálogos, textos o plantillas. Las propuestas las atiende un
-        administrador; usted ve siempre las suyas.
+        {traducir('Proponga cambios en precios, catálogos, textos o plantillas. Las propuestas las atiende un administrador; usted ve siempre las suyas.')}
       </p>
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
@@ -132,8 +131,7 @@ export function Sugerencias() {
         <>
           <h3>{traducir('Bandeja de propuestas')}</h3>
           <p className="ayuda">
-            Todas las de la organización. Este listado solo lo ve quien atiende el buzón, y no
-            porque esta pantalla lo esconda: la base de datos no devuelve las filas.
+            {traducir('Todas las de la organización. Este listado solo lo ve quien atiende el buzón, y no porque esta pantalla lo esconda: la base de datos no devuelve las filas.')}
           </p>
           {bandeja === null ? (
             <p className="cargando">{traducir('Cargando la bandeja…')}</p>

@@ -224,8 +224,7 @@ export function FichaDeHallazgo({
 
         {hallazgo.capex_lines.length === 0 && (
           <p className="ayuda">
-            Todavía sin importe. Es válido: en campo se anota lo que se ve antes de saber cuánto
-            cuesta.
+            {traducir('Todavía sin importe. Es válido: en campo se anota lo que se ve antes de saber cuánto cuesta.')}
           </p>
         )}
 

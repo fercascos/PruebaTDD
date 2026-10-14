@@ -7,7 +7,15 @@
  * fichero**, que es lo que permite abrirlo con doble clic o subirlo como
  * artefacto.
  *
- *     npm run prototipo        # deja prototipo/dist/prototipo.html
+ *     npm run prototipo              # deja prototipo/dist/prototipo.html
+ *     TDD_IDIOMA=en npm run prototipo  # ...prototipo-en.html, en ingles
+ *
+ * `[REQ]` El idioma no es una bandera cosmética: elige **qué grabación se
+ * incrusta**. La mitad del texto de las pantallas —zonas, capítulos de CAPEX,
+ * conceptos, y el propio encargo de demostración— viene de la API, así que un
+ * prototipo en inglés necesita una grabación hecha en inglés. Compilar con
+ * `TDD_IDIOMA=en` y la grabación castellana daría botones en inglés y datos en
+ * castellano, que es peor que no traducirlo.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -17,6 +25,15 @@ import { type Plugin, defineConfig } from 'vite'
 
 const aqui = fileURLToPath(new URL('.', import.meta.url))
 const SALIDA = resolve(aqui, 'prototipo/dist')
+
+const IDIOMA = process.env.TDD_IDIOMA ?? 'es'
+if (IDIOMA !== 'es' && IDIOMA !== 'en') {
+  throw new Error(`TDD_IDIOMA tiene que ser «es» o «en», no «${IDIOMA}».`)
+}
+
+/** La grabación que se incrusta, y el nombre del fichero que sale. */
+const GRABACION = IDIOMA === 'es' ? 'grabacion.json' : `grabacion-${IDIOMA}.json`
+const FICHERO = IDIOMA === 'es' ? 'prototipo.html' : `prototipo-${IDIOMA}.html`
 
 /**
  * Mete el JavaScript y el CSS **dentro** del HTML.
@@ -49,11 +66,11 @@ function unSoloFichero(): Plugin {
           `<style>${readFileSync(resolve(SALIDA, href.replace(/^\.?\//, '')), 'utf-8')}</style>`,
       )
 
-      const destino = resolve(SALIDA, 'prototipo.html')
+      const destino = resolve(SALIDA, FICHERO)
       writeFileSync(destino, texto)
       const mb = (Buffer.byteLength(texto) / 1024 / 1024).toFixed(2)
       // eslint-disable-next-line no-console
-      console.log(`\nUn solo fichero: ${destino} · ${mb} MB`)
+      console.log(`\nUn solo fichero: ${destino} · ${mb} MB · idioma ${IDIOMA}`)
     },
   }
 }
@@ -64,6 +81,11 @@ export default defineConfig({
   // de un servidor ajeno, y con rutas absolutas no encontraría nada.
   base: './',
   plugins: [react(), unSoloFichero()],
+  // `grabacion` es un especificador desnudo a propósito: un `import
+  // './grabacion.json'` lo resuelve el disco antes de llegar al alias, y
+  // entonces no habría forma de elegir el idioma sin renombrar ficheros.
+  resolve: { alias: { grabacion: resolve(aqui, 'prototipo', GRABACION) } },
+  define: { __TDD_IDIOMA__: JSON.stringify(IDIOMA) },
   build: {
     outDir: SALIDA,
     emptyOutDir: true,

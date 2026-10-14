@@ -104,8 +104,7 @@ export function Restablecer() {
         <form onSubmit={(e) => e.preventDefault()}>
           <h1>{traducir('Enlace incompleto')}</h1>
           <Mensaje tipo="error">
-            Este enlace no lleva el código de recuperación. Suele pasar al copiarlo a mano desde el
-            correo: ábralo pulsando sobre él, o pida uno nuevo.
+            {traducir('Este enlace no lleva el código de recuperación. Suele pasar al copiarlo a mano desde el correo: ábralo pulsando sobre él, o pida uno nuevo.')}
           </Mensaje>
           <Link className="enlace" to="/recuperar">
             {traducir('Pedir un enlace nuevo')}
@@ -121,8 +120,7 @@ export function Restablecer() {
         <form onSubmit={(e) => e.preventDefault()}>
           <h1>{traducir('Contraseña cambiada')}</h1>
           <Mensaje tipo="ok">
-            Ya puede entrar con la contraseña nueva. Se han cerrado todas las sesiones que hubiera
-            abiertas, también en otros dispositivos.
+            {traducir('Ya puede entrar con la contraseña nueva. Se han cerrado todas las sesiones que hubiera abiertas, también en otros dispositivos.')}
           </Mensaje>
           <button type="button" onClick={() => navegar('/entrar')}>
             {traducir('Entrar')}
@@ -137,8 +135,7 @@ export function Restablecer() {
       <form onSubmit={(e) => void guardar(e)}>
         <h1>{traducir('Elegir contraseña nueva')}</h1>
         <p className="ayuda">
-          El enlace caduca a los 30 minutos y solo sirve una vez. Al terminar se cerrarán todas sus
-          sesiones abiertas.
+          {traducir('El enlace caduca a los 30 minutos y solo sirve una vez. Al terminar se cerrarán todas sus sesiones abiertas.')}
         </p>
 
         <label>

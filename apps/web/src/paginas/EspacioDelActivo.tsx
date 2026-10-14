@@ -167,8 +167,7 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
               <section className="equipo-del-activo">
                 <h3>{traducir('Ficha de cada equipo')}</h3>
                 <p className="ayuda">
-                  El detalle completo: fabricante, número de serie, mantenimiento preventivo y
-                  vida residual, que se calcula al leer y nunca se teclea.
+                  {traducir('El detalle completo: fabricante, número de serie, mantenimiento preventivo y vida residual, que se calcula al leer y nunca se teclea.')}
                 </p>
                 <PestanaEquipo projectId={projectId} assetId={assetId} />
               </section>

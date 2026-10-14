@@ -184,14 +184,12 @@ export function ArbolDeCapex({ projectId, assetId }: { projectId: string; assetI
     <section className="arbol-capex">
       <h3>{traducir('CAPEX del activo')}</h3>
       <p className="ayuda">
-        Tipo de coste → categoría → objeto. Solo se dibujan las ramas que tienen algo: el
-        catálogo trae 175 nodos y un activo toca unos pocos.
+        {traducir('Tipo de coste → categoría → objeto. Solo se dibujan las ramas que tienen algo: el catálogo trae 175 nodos y un activo toca unos pocos.')}
       </p>
 
       {hallazgos.length === 0 ? (
         <Vacio>
-          Este activo todavía no tiene actuaciones. Se registran desde «Hallazgos y CAPEX»,
-          desde una fotografía de la visita, o aquí mismo cuando el árbol tenga ramas.
+          {traducir('Este activo todavía no tiene actuaciones. Se registran desde «Hallazgos y CAPEX», desde una fotografía de la visita, o aquí mismo cuando el árbol tenga ramas.')}
         </Vacio>
       ) : (
         <>
@@ -261,9 +259,7 @@ function Rama({
 
         {retirado && (
           <Mensaje tipo="aviso">
-            Estas actuaciones están codificadas en códigos que ya no se ofrecen. Siguen contando
-            en los totales —por eso salen aquí y no desaparecen—, pero conviene recodificarlas:
-            al exportar, la plantilla no sabe en qué bloque ponerlas.
+            {traducir('Estas actuaciones están codificadas en códigos que ya no se ofrecen. Siguen contando en los totales —por eso salen aquí y no desaparecen—, pero conviene recodificarlas: al exportar, la plantilla no sabe en qué bloque ponerlas.')}
           </Mensaje>
         )}
 

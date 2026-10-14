@@ -538,8 +538,7 @@ export function InventarioDelActivo({
 
       {totalObjetos === 0 && (
         <Vacio>
-          El catálogo del CAPEX no tiene objetos cargados, así que no hay árbol que recorrer.
-          Siembre los catálogos y vuelva a entrar.
+          {traducir('El catálogo del CAPEX no tiene objetos cargados, así que no hay árbol que recorrer. Siembre los catálogos y vuelva a entrar.')}
         </Vacio>
       )}
     </section>
@@ -675,8 +674,7 @@ function FichaDeObjeto({
       <h5>{traducir('Inventario relacionado')}</h5>
       {equipos.length === 0 ? (
         <Vacio>
-          Este objeto no tiene equipos inventariados. No siempre hace falta: una cubierta o una
-          fachada se describen y se valoran, pero no tienen máquinas que fichar.
+          {traducir('Este objeto no tiene equipos inventariados. No siempre hace falta: una cubierta o una fachada se describen y se valoran, pero no tienen máquinas que fichar.')}
         </Vacio>
       ) : (
         <div className="desbordable">
@@ -716,8 +714,7 @@ function FichaDeObjeto({
       <h5>{traducir('Fotografías de este objeto')}</h5>
       {fotos.length === 0 ? (
         <p className="ayuda">
-          Todavía no hay ninguna. Salen solas al atar una fotografía de la visita a uno de estos
-          equipos, o al clasificarla en este objeto.
+          {traducir('Todavía no hay ninguna. Salen solas al atar una fotografía de la visita a uno de estos equipos, o al clasificarla en este objeto.')}
         </p>
       ) : (
         <ul className="fotos-del-objeto">
