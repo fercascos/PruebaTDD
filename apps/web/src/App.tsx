@@ -1,6 +1,7 @@
 import { type ComponentType, type ReactNode, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { alCambiarSesion, haySesion, restaurarSesion } from './api/cliente'
+import { ProveedorDeIdioma } from './i18n/idioma'
 import { Marco } from './ui/Marco'
 import { Entrar } from './paginas/Entrar'
 import { Recuperar, Restablecer } from './paginas/Recuperar'
@@ -44,6 +45,7 @@ export function App({
   }
 
   return (
+    <ProveedorDeIdioma>
     <Enrutador>
       <Routes>
         <Route
@@ -77,5 +79,6 @@ export function App({
         />
       </Routes>
     </Enrutador>
+    </ProveedorDeIdioma>
   )
 }

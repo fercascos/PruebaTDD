@@ -21,7 +21,8 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "herramientas/extraer-textos.d.mts"
   ],
   "exclude": [
     "src/sw.ts"

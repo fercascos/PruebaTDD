@@ -2927,3 +2927,32 @@ button.enlace.volver {
   color: var(--tinta-suave);
   font-variant-numeric: tabular-nums;
 }
+
+/* El selector de idioma de la cabecera [REQ] S-05. NO se llama `.idioma`: esa clase ya es la del
+   selector de idioma de la exportación, y `comprobar-exportacion.mjs` cuenta
+   `.idioma select` para encontrarlo. Dos botones pequeños y
+   juntos: es un interruptor, no un menú, y tiene que ocupar lo que ocupa un
+   interruptor. */
+.idioma-interfaz {
+  display: inline-flex;
+  border: 1px solid var(--borde, #d4d8de);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.idioma-interfaz button {
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--texto-tenue, #5b6470);
+  cursor: pointer;
+}
+.idioma-interfaz button.activo {
+  background: var(--acento, #1f4e79);
+  color: #fff;
+}
+.idioma-interfaz button:not(.activo):hover {
+  background: var(--fondo-suave, #f5f6f8);
+}
