@@ -35,6 +35,8 @@ class ResumenSemilla:
     memoria_sections: int = 0
     #: `[REQ]` §5.10 · los 73 nodos del árbol documental del cliente.
     doc_tree_nodes: int = 0
+    #: `[REQ]` 0029 · nombres en inglés aplicados a los catálogos.
+    traducciones: int = 0
 
     def __str__(self) -> str:
         return (
@@ -44,7 +46,8 @@ class ResumenSemilla:
             f"{self.concepts} conceptos · {self.horizons} horizontes · "
             f"{self.technical_systems} sistemas técnicos · "
             f"{self.memoria_sections} secciones de memoria · "
-            f"{self.doc_tree_nodes} nodos del árbol documental"
+            f"{self.doc_tree_nodes} nodos del árbol documental · "
+            f"{self.traducciones} traducciones al inglés"
         )
 
 
@@ -214,6 +217,8 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
             {"code": fila["code"], "name_es": fila["name_es"], "orden": i},
         )
 
+    traducidas = sembrar_traducciones(conn, base=base)
+
     return ResumenSemilla(
         typologies=n_tip,
         zones=n_zon,
@@ -225,4 +230,69 @@ def sembrar_catalogos(conn: Connection, *, base: Path | None = None) -> ResumenS
         technical_systems=len(sistemas),
         memoria_sections=len(secciones),
         doc_tree_nodes=len(arbol),
+        traducciones=traducidas,
     )
+
+
+#: `[REQ]` 0029 · Las tablas que llevan nombre inglés, y la columna donde va.
+#: Es una lista blanca: el CSV nombra la tabla y el campo, y lo que no esté
+#: aquí **falla** en vez de ejecutarse. Un fichero de datos no decide a qué
+#: columna de qué tabla se escribe.
+TRADUCIBLES: dict[str, frozenset[str]] = {
+    "asset_typology": frozenset({"name_en"}),
+    "zone": frozenset({"name_en"}),
+    "capex_code": frozenset({"name_en"}),
+    "risk_level": frozenset({"name_en", "definition_en"}),
+    "capex_concept": frozenset({"name_en"}),
+    "time_horizon": frozenset({"name_en"}),
+    "technical_system": frozenset({"name_en"}),
+    "phase_definition": frozenset({"name_en"}),
+    "doc_request_category": frozenset({"name_en"}),
+    "doc_check_type": frozenset({"name_en"}),
+    "memoria_seccion": frozenset({"name_en"}),
+}
+
+#: `phase_definition` es del sistema entera y **no tiene** `organization_id`:
+#: son las 8 fases de un encargo, iguales para todos. `memoria_seccion` sí lo
+#: tiene, pero su clave no se llama `code`.
+SIN_ORGANIZACION = frozenset({"phase_definition"})
+CLAVE = {"memoria_seccion": "seccion_code"}
+
+
+def sembrar_traducciones(conn: Connection, *, base: Path | None = None) -> int:
+    """Rellena `name_en` de los catálogos del sistema. `[REQ]` 0029.
+
+    Va en una pasada aparte y al final, y no dentro de cada `INSERT`, por una
+    razón práctica: los `INSERT` de arriba llevan `ON CONFLICT DO NOTHING`, así
+    que en una base que ya tenga los catálogos **no escribirían nada**. Esto es
+    un `UPDATE`, de modo que sirve igual para una base nueva y para una que ya
+    estaba sembrada —que es el caso de todas las que existen hoy—.
+
+    Solo toca las filas del sistema (`organization_id IS NULL`). Lo que una
+    organización haya añadido por su cuenta se queda como está: su traducción
+    no la tenemos, y el respaldo `COALESCE(name_en, name_es)` enseña el
+    castellano, que se lee como lo que es.
+
+    `[LIM]` Si falta el CSV **no falla**, devuelve 0. Una instalación a la que
+    le falte un fichero de datos tiene que poder arrancar; lo que no puede es
+    dar por traducido lo que no está.
+    """
+    ruta = (base or CATALOGOS) / "traducciones_en.csv"
+    if not ruta.exists():
+        return 0
+    with ruta.open(encoding="utf-8", newline="") as fh:
+        filas = list(csv.DictReader(fh))
+
+    for fila in filas:
+        tabla, campo = fila["tabla"], fila["campo"]
+        if campo not in TRADUCIBLES.get(tabla, frozenset()):
+            raise ValueError(
+                f"{ruta.name} apunta a {tabla}.{campo}, que no es una columna traducible"
+            )
+        clave = CLAVE.get(tabla, "code")
+        filtro = "" if tabla in SIN_ORGANIZACION else " AND organization_id IS NULL"
+        conn.execute(
+            text(f"UPDATE {tabla} SET {campo} = :texto WHERE {clave} = :code{filtro}"),
+            {"texto": fila["texto_en"], "code": fila["code"]},
+        )
+    return len(filas)

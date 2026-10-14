@@ -67,6 +67,11 @@ CREATE TABLE asset_typology (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
+    -- [REQ] El nombre inglés, de las plantillas del propio cliente (0029).
+    -- Admite NULL a propósito: una organización puede añadir sus códigos y
+    -- nadie los traduce al darlos de alta. El respaldo es COALESCE(name_en,
+    -- name_es), para que una traducción que falta se lea como lo que es.
+    name_en         VARCHAR(120),
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order      INT NOT NULL DEFAULT 0,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
@@ -77,6 +82,7 @@ CREATE TABLE zone (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
+    name_en         VARCHAR(120),
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     sort_order      INT NOT NULL DEFAULT 0,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
@@ -95,6 +101,7 @@ CREATE TABLE capex_code (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(200) NOT NULL,
+    name_en         VARCHAR(200),
     level           SMALLINT NOT NULL CHECK (level BETWEEN 1 AND 3),
     parent_id       UUID REFERENCES capex_code(id),
     path            LTREE,
@@ -114,10 +121,12 @@ CREATE TABLE risk_level (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(4) NOT NULL,
     name_es         VARCHAR(60) NOT NULL,
+    name_en         VARCHAR(60),
     score           SMALLINT NOT NULL CHECK (score BETWEEN 1 AND 4),
     -- [REQ] La definición íntegra vive en base de datos, no en el frontend:
     -- se muestra al clasificar y se vuelca al informe como leyenda.
     definition_es   TEXT NOT NULL,
+    definition_en   TEXT,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
@@ -127,6 +136,7 @@ CREATE TABLE capex_concept (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
+    name_en         VARCHAR(120),
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
 );
@@ -136,6 +146,7 @@ CREATE TABLE time_horizon (
     organization_id   UUID REFERENCES organization(id),
     code              VARCHAR(20) NOT NULL,
     name_es           VARCHAR(60) NOT NULL,
+    name_en           VARCHAR(60),
     year_from         SMALLINT,
     year_to           SMALLINT,
     is_execution_term BOOLEAN NOT NULL DEFAULT TRUE,
@@ -159,6 +170,7 @@ CREATE TABLE technical_system (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
+    name_en         VARCHAR(120),
     capex_chapter   VARCHAR(40),
     sort_order      INT NOT NULL DEFAULT 0,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
@@ -611,6 +623,7 @@ CREATE TABLE phase_definition (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code               VARCHAR(40) NOT NULL UNIQUE,
     name_es            VARCHAR(120) NOT NULL,
+    name_en            VARCHAR(120),
     display_order      SMALLINT NOT NULL,
     has_checklist      BOOLEAN NOT NULL DEFAULT FALSE,
     has_external_link  BOOLEAN NOT NULL DEFAULT FALSE,
@@ -663,6 +676,7 @@ CREATE TABLE doc_request_category (
     -- —el nodo de REACH tiene 342 caracteres— porque esa frase es con la que el
     -- gestor reconoce qué tiene que pedirle a la propiedad.
     name_es         VARCHAR(400) NOT NULL,
+    name_en         VARCHAR(400),
     display_order   SMALLINT NOT NULL DEFAULT 0,
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE NULLS NOT DISTINCT (organization_id, code)
@@ -1804,6 +1818,7 @@ CREATE TABLE doc_check_type (
     organization_id UUID REFERENCES organization(id),
     code            VARCHAR(40) NOT NULL,
     name_es         VARCHAR(120) NOT NULL,
+    name_en         VARCHAR(120),
     -- Lo que se le pide comprobar, en castellano llano. No es documentación:
     -- es el texto que alimenta la instrucción enviada al proveedor, y por eso
     -- vive en la base y no en una constante de Python.
@@ -2127,6 +2142,7 @@ CREATE TABLE memoria_seccion (
     organization_id UUID REFERENCES organization(id),
     seccion_code    VARCHAR(10) NOT NULL,
     name_es         VARCHAR(160) NOT NULL,
+    name_en         VARCHAR(160),
     capex_code_id   UUID REFERENCES capex_code(id),
     is_system       BOOLEAN NOT NULL DEFAULT TRUE,
     UNIQUE NULLS NOT DISTINCT (organization_id, seccion_code, capex_code_id)

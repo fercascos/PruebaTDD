@@ -24,7 +24,7 @@ import sys
 
 from sqlalchemy import create_engine
 
-from tdd.catalogs.seeding import sembrar_catalogos
+from tdd.catalogs.seeding import sembrar_catalogos, sembrar_traducciones
 from tdd.phases.seeding import sembrar_fases
 
 
@@ -48,6 +48,14 @@ def main(argv: list[str] | None = None) -> int:
         print(sembrar_catalogos(conn))
         plantillas, comprobaciones = sembrar_fases(conn)
         print(f"Fases: {plantillas} plantillas, {comprobaciones} tipos de comprobación")
+        # `[REQ]` Otra vez, y a propósito. `sembrar_catalogos` ya aplica las
+        # traducciones, pero corre **antes** que `sembrar_fases`: en una base
+        # nueva las 8 fases y los 4 tipos de comprobación todavía no existen
+        # cuando pasa por ellos, y se quedaban sin inglés. Solo se veía en una
+        # instalación limpia, porque en una ya sembrada las filas estaban.
+        # Son UPDATE, así que repetirlo no cuesta nada y cierra el hueco sin
+        # atar el orden de los dos sembradores.
+        print(f"Traducciones al inglés: {sembrar_traducciones(conn)}")
     motor.dispose()
     return 0
 

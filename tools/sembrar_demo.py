@@ -1105,8 +1105,7 @@ def sembrar(api: Api) -> str:
                 {
                     "capex_code_id": sin_firmar["capex_code_id"],
                     "texto": (
-                        f"{sin_firmar['texto']} Revisado en visita: "
-                        "se confirma el estado descrito."
+                        f"{sin_firmar['texto']} Revisado en visita: se confirma el estado descrito."
                     ),
                     "valoracion": "",
                     "validado": False,

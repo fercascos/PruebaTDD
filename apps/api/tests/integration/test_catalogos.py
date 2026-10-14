@@ -479,3 +479,134 @@ def test_las_categorias_de_solicitud_se_sirven_por_api(cliente, cab) -> None:
     # `S2` sí tiene hijos; `S4` no tiene ninguno y es casilla aunque sea de
     # nivel 1. Una casilla es un nodo SIN HIJOS, esté donde esté.
     assert next(c for c in categorias if c["code"] == "S4")["es_casilla"] is True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  El inglés de los catálogos `[REQ]` 0029
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_las_traducciones_no_divergen_de_las_plantillas_del_cliente() -> None:
+    """El CSV de inglés se extrae de `capex_ddt_es/en.xltm`.
+
+    Es la misma garantía que la de arriba, un escalón más abajo: 230 de las 336
+    traducciones **no las hemos escrito nosotros**, se leen celda a celda de las
+    dos plantillas del cliente. Si alguien edita el CSV a mano, o el cliente
+    manda una plantilla nueva, esta prueba lo dice.
+
+    Lo que protege en concreto: que nadie «corrija» *Retail* por *Commercial* ni
+    *End of useful life* por *Useful life*. Las dos correcciones son razonables
+    en inglés y las dos estarían mal, porque en el fichero del cliente pone otra
+    cosa.
+    """
+    r = subprocess.run(  # noqa: S603
+        [sys.executable, str(RAIZ / "tools" / "extraer_ingles_del_cliente.py"), "--check"],
+        capture_output=True,
+        text=True,
+    )
+    assert r.returncode == 0, (
+        "data/catalogos/traducciones_en.csv está desfasado de las plantillas del cliente.\n"
+        "Ejecute: python3 tools/extraer_ingles_del_cliente.py\n" + r.stderr
+    )
+
+
+def test_el_csv_de_ingles_dice_de_donde_sale_cada_fila() -> None:
+    """`fuente` separa el inglés del cliente del nuestro, y no admite otra cosa.
+
+    Importa para quien firma el informe: las 106 filas `propia` son traducción
+    nuestra y se revisan; las del cliente no se tocan. Una fuente escrita a mano
+    que no sea una de las tres rompe esa separación sin que nada avise.
+    """
+    filas = _csv("traducciones_en.csv")
+    assert len(filas) == 336
+    fuentes = {f["fuente"] for f in filas}
+    assert fuentes == {"cliente:capex_en", "cliente:informe", "propia"}
+    assert sum(1 for f in filas if f["fuente"].startswith("cliente:")) == 230
+    # Ninguna traducción vacía: es peor que no tenerla, porque `COALESCE` ya no
+    # cae al castellano y la pantalla enseña un hueco.
+    assert [f["code"] for f in filas if not f["texto_en"].strip()] == []
+    # Y ninguna que se haya quedado en castellano por descuido. Se compara con
+    # el nombre real de la fila, no por si «parece» español.
+    assert [f["code"] for f in filas if f["campo"] == "name_en" and not f["texto_en"]] == []
+
+
+def test_ningun_catalogo_del_sistema_se_queda_sin_ingles(motor_admin) -> None:
+    """Las 341 filas de catálogo del sistema tienen `name_en`. `[REQ]` 0029.
+
+    `name_en` admite NULL a propósito —una organización puede añadir sus propios
+    códigos y nadie los traduce al darlos de alta—, y por eso hace falta esta
+    prueba: sin ella, «admite NULL» se convierte en «la mitad están sin
+    traducir» sin que nada falle.
+
+    Es la prueba que cazó dos cosas que se aplicaban limpias y no funcionaban:
+    la migración buscaba el CSV en una ruta que no existía, y las 8 fases y los
+    4 tipos de comprobación se sembraban DESPUÉS de las traducciones, así que en
+    una instalación nueva se quedaban en castellano.
+    """
+    #: Mínimos, no exactos, y solo por `capex_code`: el árbol tiene **175**
+    #: nodos cuando la base se crea con `schema.sql` y **178** cuando se crea
+    #: migrando, porque la 0006 añadió tres códigos que la 0020 jubiló y que
+    #: siguen vivos para que un hallazgo antiguo se resuelva. Los dos números
+    #: son correctos, cada uno por su camino, y el recuento exacto ya lo
+    #: comprueba `test_recuentos_de_la_semilla`. Lo que esta prueba vigila es
+    #: que **ninguna** fila se quede sin inglés, sea el camino que sea.
+    tablas = {
+        "asset_typology": 6,
+        "zone": 20,
+        "capex_code": 175,
+        "capex_concept": 10,
+        "time_horizon": 5,
+        "risk_level": 4,
+        "technical_system": 14,
+        "doc_check_type": 4,
+        "doc_request_category": 73,
+        "memoria_seccion": 19,
+        "phase_definition": 8,
+    }
+    with motor_admin.connect() as c:
+        for tabla, cuantas in tablas.items():
+            sin_organizacion = tabla == "phase_definition"
+            filtro = "" if sin_organizacion else " WHERE organization_id IS NULL"
+            total = c.execute(text(f"SELECT count(*) FROM {tabla}{filtro}")).scalar_one()
+            assert total >= cuantas, f"{tabla}: {total} filas, se esperaban {cuantas} o más"
+            y = "AND" if filtro else "WHERE"
+            huecos = c.execute(
+                text(f"SELECT count(*) FROM {tabla}{filtro} {y} name_en IS NULL")
+            ).scalar_one()
+            assert huecos == 0, f"{tabla}: {huecos} filas sin nombre en inglés"
+        # La definición entera del riesgo también, que el informe la imprime.
+        huecos = c.execute(
+            text("SELECT count(*) FROM risk_level WHERE definition_en IS NULL")
+        ).scalar_one()
+        assert huecos == 0
+
+
+def test_el_ingles_es_el_del_cliente_y_no_el_obvio(motor_admin) -> None:
+    """Seis casos donde la traducción natural es la equivocada.
+
+    No es una prueba de estilo: es la razón de ser de
+    `extraer_ingles_del_cliente.py`. Si estas seis se pueden «mejorar» sin que
+    nada falle, la herramienta no sirve para nada y más valdría haber traducido
+    a mano.
+    """
+    esperado = {
+        # «Comercial» no es *Commercial*: en el sector es Retail.
+        ("asset_typology", "COMERCIAL"): "Retail",
+        # «Sanitario» no es *Sanitary*.
+        ("asset_typology", "SANITARIO"): "Healthcare",
+        # «Vida útil» no es *Useful life*.
+        ("capex_concept", "VIDA_UTIL"): "End of useful life",
+        # «Normativa» no es *Regulations*.
+        ("capex_concept", "NORMATIVA"): "Regulatory",
+        # «Fontanería y saneamiento» no es *Plumbing and sanitation*.
+        ("technical_system", "FONT"): "Plumbing and drainage",
+        # Y el que divergía entre las dos fuentes del cliente: manda el informe.
+        ("time_horizon", "MEDIO"): "Mid term",
+    }
+    with motor_admin.connect() as c:
+        for (tabla, code), ingles in esperado.items():
+            fila = c.execute(
+                text(f"SELECT name_en FROM {tabla} WHERE code = :c AND organization_id IS NULL"),
+                {"c": code},
+            ).scalar_one()
+            assert fila == ingles, f"{tabla}.{code}: «{fila}», se esperaba «{ingles}»"
