@@ -8,14 +8,16 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request, Response, status
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from sqlalchemy import text as sa_text
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tdd.assets.router import router as assets_router
 from tdd.assets.ubicaciones import router as ubicaciones_router
 from tdd.capex.router import router as capex_router
 from tdd.catalogs.router import router as catalogs_router
-from tdd.core import metricas, observabilidad
+from tdd.core import idioma, metricas, observabilidad
 from tdd.core.config import get_settings
 from tdd.core.conflictos import registrar as registrar_conflictos
 from tdd.core.db import crear_fabrica_de_sesiones, crear_motor
@@ -128,6 +130,38 @@ def crear_app() -> FastAPI:
             },
             headers={observabilidad.CABECERA: traza} if traza else None,
         )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _detalle_en_el_idioma_de_la_peticion(
+        request: Request, exc: StarletteHTTPException
+    ) -> Response:
+        """Traduce el `detail` de un `HTTPException`. `[REQ]` 0030
+
+        **Aquí y no en cada `raise`.** Hay 174 en la aplicación, y son lo que
+        ve un usuario cuando algo falla: «No puede modificar un informe
+        emitido», «Ese correo ya está dado de alta». Envolver cada uno en
+        `traducir()` serían 174 sitios donde olvidarse, y olvidarse no falla:
+        deja una frase en castellano en una pantalla inglesa.
+
+        Así que se traduce **a la salida**, en el único punto por el que pasan
+        todas. El precio está dicho en `core/idioma.py`: la tabla tiene que
+        contener la frase **exacta**, así que un `raise` que componga el
+        mensaje con un `f-string` no casa. Esos se convierten a
+        `idioma.traducir("… {x}", x=…)` en su sitio, y son 38.
+
+        El idioma se lee **de la cabecera** y no del `ContextVar`: un manejador
+        de excepciones puede correr fuera del middleware que lo fija —le pasa
+        al de `Exception`, y está escrito ahí arriba—, y entonces traduciría al
+        idioma equivocado sin avisar. La cabecera siempre está.
+        """
+        if isinstance(exc.detail, str):
+            lengua = idioma.de_cabecera(request.headers.get("accept-language", ""))
+            exc = StarletteHTTPException(
+                status_code=exc.status_code,
+                detail=idioma.traducir_a(lengua, exc.detail),
+                headers=exc.headers,
+            )
+        return await http_exception_handler(request, exc)
 
     # Repetir el código de un proyecto es un error del usuario, no del servidor:
     # sin este traductor salía un 500 genérico que no decía qué campo repetir.

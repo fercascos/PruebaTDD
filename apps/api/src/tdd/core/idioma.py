@@ -41,7 +41,9 @@ importación—, y están sin traducir. Es trabajo medido, no un olvido.
 
 from __future__ import annotations
 
+import csv
 from contextvars import ContextVar, Token
+from pathlib import Path
 
 #: Los idiomas que la aplicación sabe servir. Igual que en `core/db`.
 IDIOMAS = frozenset({"es", "en"})
@@ -92,29 +94,62 @@ def actual() -> str:
     return _idioma.get()
 
 
+#: Dónde vive la tabla. En un fichero de datos y no incrustada en este módulo,
+#: por el mismo criterio que `data/catalogos/traducciones_en.csv` y
+#: `data/demo/textos_en.csv`:
+#:
+#: * Son frases largas, y como literales de Python el formateador y el límite
+#:   de 100 columnas las parten por donde le conviene. Revisar una traducción
+#:   obligaría a leer código.
+#: * Quien las tiene que revisar sabe de edificios, no de Python.
+#:
 #: Castellano → inglés, igual que en el frontend: la clave **es** el texto
 #: original, así que una frase sin traducir sale en castellano y se lee como lo
 #: que es, en vez de como un identificador crudo.
-TEXTOS: dict[str, str] = {
-    # ── El avance de cada fase, en la ficha del proyecto ──────────────────
-    "{resueltos} de {solicitados} resueltas": "{resueltos} of {solicitados} resolved",
-    "enlace activo": "link active",
-    "sin enlace": "no link",
-    "{hechas} de {activos} activos visitados": "{hechas} of {activos} assets inspected",
-    "{cerradas} de {rondas} rondas cerradas": "{cerradas} of {rondas} rounds closed",
-    "{lineas} líneas": "{lineas} lines",
-    " · {cuantas} sin precio validado": " · {cuantas} with an unvalidated price",
-    "{cuantas} versión(es) emitida(s)": "{cuantas} version(s) issued",
-    "{cuantas} versión(es) en borrador": "{cuantas} draft version(s)",
-    "sin generar": "not generated",
-    "{cuantos} evento(s)": "{cuantos} event(s)",
-    # ── La fila de los hallazgos que nadie clasificó ──────────────────────
-    #
-    # Sale en la matriz de riesgo y en el reparto por grado. Es una frase del
-    # servidor y no un catálogo: no hay fila de `risk_level` que traducir,
-    # porque justo lo que dice es que no hay grado.
-    "Sin clasificar": "Unclassified",
-}
+RELATIVA = Path("data") / "api" / "textos_en.csv"
+
+
+def _csv() -> Path:
+    """Sube buscando el CSV en vez de contar niveles de directorio.
+
+    `[REQ]` Contar falla. En la migración 0029 se puso `parents[5]`, luego
+    `parents[6]`, y las dos estaban mal; aquí se puso `parents[4]` y también.
+    El síntoma es siempre el mismo y es el peor: el fichero no se encuentra, la
+    tabla queda vacía y **todo sale en castellano sin un solo error**.
+    """
+    for carpeta in Path(__file__).resolve().parents:
+        if (candidato := carpeta / RELATIVA).exists():
+            return candidato
+    return Path(__file__).resolve().parents[-1] / RELATIVA
+
+
+CSV = _csv()
+
+
+def _cargar() -> dict[str, str]:
+    """`[LIM]` Si falta el CSV **no falla**: devuelve una tabla vacía y todo
+    sale en castellano, que es el idioma del producto y un fallo visible. Una
+    instalación a la que le falte un fichero de datos tiene que poder
+    arrancar; lo que no puede es dar por traducido lo que no está.
+    """
+    if not CSV.exists():
+        return {}
+    with CSV.open(encoding="utf-8", newline="") as fh:
+        return {f["es"]: f["en"] for f in csv.DictReader(fh)}
+
+
+TEXTOS: dict[str, str] = _cargar()
+
+
+def traducir_a(lengua: str, clave: str, **valores: object) -> str:
+    """Igual que `traducir()`, con el idioma dicho a la cara.
+
+    Lo usa el manejador de `HTTPException` de `main.py`, que corre en un sitio
+    donde el `ContextVar` puede no estar fijado —un manejador de excepciones
+    puede quedar por fuera del middleware— y donde la cabecera sí está.
+    """
+    texto = TEXTOS.get(clave, clave) if lengua == "en" else clave
+    return texto.format(**valores) if valores else texto
 
 
 def traducir(clave: str, **valores: object) -> str:

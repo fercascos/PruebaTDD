@@ -1,0 +1,92 @@
+es,en
+ · {cuantas} sin precio validado, · {cuantas} with an unvalidated price
+Agendar una visita exige fecha prevista,Scheduling an inspection requires a planned date
+"Alguna limitación no existe, no es de este proyecto o ya estaba decidida. Vuelva a cargar la lista: puede que otra persona la haya resuelto.","One of the limitations does not exist, does not belong to this project or had already been decided. Reload the list: somebody else may have resolved it."
+"Alguna propuesta no existe, no es de este activo o ya estaba decidida. Vuelva a cargar la lista: puede que otra persona la haya resuelto.","One of the proposals does not exist, does not belong to this asset or had already been decided. Reload the list: somebody else may have resolved it."
+"Alguna propuesta no existe, no es de este proyecto o ya estaba decidida. Vuelva a cargar la lista: puede que otra persona la haya resuelto.","One of the proposals does not exist, does not belong to this project or had already been decided. Reload the list: somebody else may have resolved it."
+Aplicar la memoria exige confirmación explícita,Applying the technical report requires explicit confirmation
+"Aprobar o emitir un informe exige perfil de revisor, director o administrador","Approving or issuing a report requires a reviewer, director or administrator profile"
+Autorizar el análisis de documentación del cliente corresponde a quien administra o dirige el proyecto.,Authorising the analysis of the client's documentation is for whoever administers or directs the project.
+"Cada asistente es una persona del equipo (`app_user_id`) o alguien de fuera (`external_name`), nunca las dos cosas ni ninguna.","Each attendee is either a team member (`app_user_id`) or somebody external (`external_name`), never both and never neither."
+Correo o contraseña incorrectos,Incorrect email or password
+Credencial no válida,Invalid credential
+El activo no es de este proyecto,The asset does not belong to this project
+"El desglose por medición va entero o no va: hacen falta unidad, cantidad y precio unitario. Deje los tres vacíos para dar solo el importe.","The measured breakdown goes in whole or not at all: unit, quantity and unit price are all required. Leave all three empty to give the amount only."
+El documento al que sustituye no existe,The document it replaces does not exist
+El documento ya está en la papelera,The document is already in the bin
+El fichero no es un PPTX válido,The file is not a valid PPTX
+El informe está emitido y es inmutable. Genere una versión nueva.,The report has been issued and is immutable. Generate a new version.
+El miembro no pertenece al equipo,That member does not belong to the team
+El nodo padre pertenece a otro activo: un árbol no puede cruzar edificios,The parent node belongs to another asset: a tree cannot span buildings
+El nombre queda vacío tras el saneado,The name is empty once sanitised
+El nombre visible se envía sin extensión: la fija el servidor,The display name is sent without an extension: the server sets it
+El proyecto todavía no tiene ninguna actuación que exportar,The project has no action to export yet
+El traslado exige confirmación explícita del usuario,Transferring requires explicit confirmation from the user
+El árbol documental no está sembrado en esta base de datos. Ejecute `python3 -m tdd.db.sembrar`.,The document tree is not seeded in this database. Run `python3 -m tdd.db.sembrar`.
+Elija un cliente de la lista o escriba el nombre de uno nuevo,Choose a client from the list or type the name of a new one
+Esa zona no corresponde a la tipología del activo,That area does not apply to the asset's typology
+Ese movimiento metería el nodo dentro de sí mismo,That move would put the node inside itself
+Esta fotografía no se puede descargar.,This photo cannot be downloaded.
+Esta línea no tiene desglose por medición: no hay nada que trasladar,This line has no measured breakdown: there is nothing to transfer
+Estado de ronda desconocido,Unknown round status
+"Este activo no tiene memoria técnica, que es de donde salen hoy los descriptivos. Cárguela o rellénela primero.","This asset has no technical report, which is where the descriptions come from today. Upload or fill it in first."
+Este activo todavía no tiene memoria técnica,This asset has no technical report yet
+Este documento está marcado como restringido y su perfil no puede descargarlo,This document is marked as restricted and your profile cannot download it
+"Este proyecto no tiene activada la fase de solicitud de documentación, que es donde vive el árbol. Actívela en la pestaña de fases del proyecto.","This project does not have the document request phase enabled, which is where the tree lives. Enable it on the project's phases tab."
+Falta la credencial,The credential is missing
+Fotografía no encontrada,Photo not found
+"Hay una limitación en las dos listas a la vez: aceptarla y descartarla en la misma llamada dejaría ganando al orden de ejecución, que no lo ha decidido nadie.","One limitation is in both lists at once: accepting and discarding it in the same call would let the order of execution decide, and nobody chose that order."
+"Hay una propuesta repetida entre las dos listas: aceptarla y descartarla en la misma llamada dejaría ganando al orden de ejecución, que no lo ha decidido nadie.","One proposal appears in both lists: accepting and discarding it in the same call would let the order of execution decide, and nobody chose that order."
+La contraseña actual no es correcta,The current password is not correct
+La fecha de cierre no puede ser anterior a la de arranque,The closing date cannot be earlier than the start date
+La fotografía debe pertenecer a este activo y estar lista,The photo must belong to this asset and be ready
+La fotografía no está asignada a ningún activo: asígnela antes de crear el hallazgo,The photo is not assigned to any asset: assign it before creating the finding
+La fotografía no tiene zona: indíquela en la petición,The photo has no area: state it in the request
+La misma persona del equipo está dos veces en la lista.,The same team member appears twice in the list.
+La nueva contraseña no puede ser la actual,The new password cannot be the current one
+La plantilla se descomprime a un tamaño desproporcionado y se rechaza,The template decompresses to a disproportionate size and is rejected
+La plantilla supera el tamaño máximo,The template exceeds the maximum size
+La purga es irreversible y exige confirmación explícita,Purging is irreversible and requires explicit confirmation
+La selección supera el tamaño máximo de descarga directa. Reduzca el número de fotografías.,The selection exceeds the maximum size for a direct download. Reduce the number of photos.
+Línea de solicitud no encontrada,Request line not found
+Línea no encontrada,Line not found
+Marcar un documento como no disponible exige explicar por qué: es lo que se declara como limitación en el informe,Marking a document as unavailable requires explaining why: that is what is declared as a limitation in the report
+Marcar una pregunta como respondida exige escribir la respuesta,Marking a question as answered requires writing the answer
+Ninguna de las fotografías indicadas está disponible,None of the photos given is available
+No hay ningún enlace activo,There is no active link
+No puede desactivar su propia cuenta,You cannot deactivate your own account
+No se ha indicado ninguna limitación,No limitation was given
+No se ha indicado ninguna propuesta,No proposal was given
+No se puede habilitar una fuente sin declarar que se han revisado sus condiciones de uso.,A source cannot be enabled without declaring that its terms of use have been reviewed.
+No se puede marcar como validado un objeto vacío: sería firmar una casilla en blanco. Escriba el descriptivo o la valoración.,An empty item cannot be marked as validated: it would mean signing a blank box. Write the description or the assessment.
+Quien dirige el proyecto debe tener el rol DIRECTOR,Whoever directs the project must have the DIRECTOR role
+Revise la previsualización y confirme la importación.,Review the preview and confirm the import.
+Revisión no encontrada,Review not found
+Sesión no válida,Invalid session
+Sin clasificar,Unclassified
+Solo un administrador gestiona las fuentes de precio,Only an administrator manages price sources
+Solo un administrador o director puede autorizar una purga,Only an administrator or director can authorise a purge
+Solo un administrador puede dar de alta usuarios,Only an administrator can create users
+Solo un administrador puede modificar usuarios,Only an administrator can modify users
+Solo un administrador puede ver las propuestas de otros usuarios,Only an administrator can see other users' proposals
+Solo un administrador revisa las condiciones de uso,Only an administrator reviews terms of use
+Su perfil no puede resolver propuestas de otros usuarios,Your profile cannot resolve other users' proposals
+Tipología desconocida,Unknown typology
+Ubicación no encontrada,Location not found
+Un nodo no puede ser su propio padre,A node cannot be its own parent
+"Un precio conserva siempre su procedencia: elija una referencia. Si el importe no sale de ninguna de las registradas, dé de alta una referencia manual con su origen y valide contra ella.","A price always keeps its provenance: choose a reference. If the amount comes from none of those on record, create a manual reference stating where it came from and validate against it."
+Una planta no puede aparecer dos veces en el mismo activo,A floor cannot appear twice in the same asset
+Una zona no puede declararse dos veces en el mismo activo,An area cannot be declared twice in the same asset
+Versión de informe no encontrada,Report version not found
+Versión no encontrada,Version not found
+Ya existe una cuenta con ese correo,An account with that email already exists
+enlace activo,link active
+sin enlace,no link
+sin generar,not generated
+{cerradas} de {rondas} rondas cerradas,{cerradas} of {rondas} rounds closed
+{cuantas} versión(es) emitida(s),{cuantas} version(s) issued
+{cuantas} versión(es) en borrador,{cuantas} draft version(s)
+{cuantos} evento(s),{cuantos} event(s)
+{hechas} de {activos} activos visitados,{hechas} of {activos} assets inspected
+{lineas} líneas,{lineas} lines
+{resueltos} de {solicitados} resueltas,{resueltos} of {solicitados} resolved
