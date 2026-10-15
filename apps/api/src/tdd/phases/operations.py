@@ -470,7 +470,8 @@ def programar_visita(
     ).first()
     if existe is None:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "El activo no es de este proyecto"
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "El activo no pertenece a este proyecto",
         )
 
     nuevo = s.execute(

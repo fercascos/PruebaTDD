@@ -304,7 +304,7 @@ def test_un_activo_de_otro_encargo_se_rechaza(
         json={"aceptar": [{"id": lista[0]["id"], "asset_id": str(ajeno)}]},
     )
     assert r.status_code == 422
-    assert "no es de este proyecto" in r.json()["detail"]
+    assert "no pertenece a este proyecto" in r.json()["detail"]
 
 
 def test_descartar_no_crea_nada_y_deja_constancia(

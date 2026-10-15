@@ -648,15 +648,15 @@ def _comprobar_objeto(s: Session, capex_code_id: uuid.UUID | None) -> None:
     if fila is None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            idioma.traducir("El código {capex_code_id} no existe", capex_code_id=capex_code_id),
+            idioma.traducir("El código {codigo} no existe", codigo=capex_code_id),
         )
     if fila["level"] != 3:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             idioma.traducir(
-                "Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {capex_code_id} "
+                "Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {codigo} "
                 "es de nivel {nivel}.",
-                capex_code_id=capex_code_id,
+                codigo=capex_code_id,
                 nivel=fila["level"],
             ),
         )
@@ -664,10 +664,10 @@ def _comprobar_objeto(s: Session, capex_code_id: uuid.UUID | None) -> None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             idioma.traducir(
-                "Un equipo es una parte física del edificio y va en «{tipo_de_coste}». El "
-                "código {capex_code_id} cuelga de «{raiz}».",
-                tipo_de_coste=TIPO_DE_COSTE_FISICO,
-                capex_code_id=capex_code_id,
+                "Un equipo es una parte física del edificio y va en «{tipo}». El "
+                "código {codigo} cuelga de «{raiz}».",
+                tipo=TIPO_DE_COSTE_FISICO,
+                codigo=capex_code_id,
                 raiz=fila["raiz"],
             ),
         )
@@ -800,7 +800,7 @@ def _analizar_subida(contenido: bytes, s: Session, project_id: uuid.UUID) -> Any
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             idioma.traducir(
-                "El fichero supera el máximo de {mb} MB",
+                "El archivo supera el máximo de {mb} MB",
                 mb=MAX_BYTES_XLSX // (1024 * 1024),
             ),
         )

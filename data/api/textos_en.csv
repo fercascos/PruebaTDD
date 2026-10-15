@@ -17,7 +17,6 @@ Credencial no válida,Invalid credential
 Cuenta bloqueada temporalmente. Inténtelo de nuevo en {minutos} min,Account temporarily locked. Try again in {minutos} min
 Demasiadas formas: el máximo es {maximo},Too many shapes: the maximum is {maximo}
 Documento no encontrado,Document not found
-El activo no es de este proyecto,The asset does not belong to this project
 El activo no pertenece a este proyecto,The asset does not belong to this project
 El activo {activo} no es de este proyecto.,Asset {activo} does not belong to this project.
 El activo «{nombre}»,Asset «{nombre}»
@@ -29,7 +28,6 @@ El campo «{campo}» está vacío: se insertará texto vacío.,Field «{campo}»
 El cliente tiene {proyectos} proyectos y no se puede borrar,The client has {proyectos} projects and cannot be deleted
 El código de categoría {codigo} no existe,Category code {codigo} does not exist
 El código interno «{codigo}» ya está cogido,Internal code «{codigo}» is already taken
-El código {capex_code_id} no existe,Code {capex_code_id} does not exist
 El código {codigo} no existe,Code {codigo} does not exist
 El dato que intenta guardar ya existe y no puede repetirse.,The value you are trying to save already exists and cannot be repeated.
 "El desglose por medición va entero o no va: hacen falta unidad, cantidad y precio unitario. Deje los tres vacíos para dar solo el importe.","The measured breakdown goes in whole or not at all: unit, quantity and unit price are all required. Leave all three empty to give the amount only."
@@ -37,7 +35,6 @@ El documento al que sustituye no existe,The document it replaces does not exist
 El documento propone {cuantos} datos del edificio y no está asignado a ningún activo: no hay a quién proponérselos. Asígnelo primero.,The document proposes {cuantos} building details and is not assigned to any asset: there is nobody to propose them to. Assign it first.
 El documento ya está en la papelera,The document is already in the bin
 El fichero no es un PPTX válido,The file is not a valid PPTX
-El fichero supera el máximo de {mb} MB,The file exceeds the maximum of {mb} MB
 El importe ({importe}) no coincide con la referencia ({referencia}): explique por qué (mínimo {minimo} caracteres).,The amount ({importe}) does not match the reference ({referencia}): explain why (minimum {minimo} characters).
 El informe está emitido y es inmutable. Genere una versión nueva.,The report has been issued and is immutable. Generate a new version.
 El marcador «{marcador}» no tiene origen en el mapeo y saldría literalmente en el documento.,Token «{marcador}» has no source in the mapping and would appear literally in the document.
@@ -165,8 +162,6 @@ Su perfil no puede resolver propuestas de otros usuarios,Your profile cannot res
 Tipología desconocida,Unknown typology
 Ubicación no encontrada,Location not found
 Un descriptivo describe un **objeto** del árbol (nivel 3). El código {codigo} es de nivel {nivel}.,A description describes an **item** of the tree (level 3). Code {codigo} is level {nivel}.
-Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {capex_code_id} es de nivel {nivel}.,A piece of equipment hangs off an **item** of the tree (level 3). Code {capex_code_id} is level {nivel}.
-Un equipo es una parte física del edificio y va en «{tipo_de_coste}». El código {capex_code_id} cuelga de «{raiz}».,A piece of equipment is a physical part of the building and goes under «{tipo_de_coste}». Code {capex_code_id} hangs off «{raiz}».
 Un hallazgo en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {posibles},A finding in «{desde}» cannot move to «{hasta}». Possible destinations: {posibles}
 Un informe en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {destinos},A report in «{desde}» cannot move to «{hasta}». Possible destinations: {destinos}
 Un nodo no puede ser su propio padre,A node cannot be its own parent
@@ -382,3 +377,6 @@ still valid and this link will stop working on its own. If several of these
 emails reach you without your asking, notify an administrator in your
 organisation.
 "
+El código {codigo} no existe,Code {codigo} does not exist
+Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {codigo} es de nivel {nivel}.,A piece of equipment hangs off an **item** of the tree (level 3). Code {codigo} is level {nivel}.
+Un equipo es una parte física del edificio y va en «{tipo}». El código {codigo} cuelga de «{raiz}».,A piece of equipment is a physical part of the building and goes under «{tipo}». Code {codigo} hangs off «{raiz}».
