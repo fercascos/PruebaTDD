@@ -1,12 +1,33 @@
-import { traducir } from '../i18n/idioma'
+import { traducir, useIdioma, useT } from '../i18n/idioma'
 import { useCallback, useEffect, useState } from 'react'
 import { ErrorDeApi, descargar, enviar, obtener } from '../api/cliente'
 import type { Mapeo, Plantilla, Previo, VersionDeInforme } from '../api/tipos'
 import { Mensaje, Vacio } from '../ui/Marco'
+import { MarcaDePendiente, Pendiente } from '../ui/Pendiente'
 
 const ORDEN_DE_SEVERIDAD = ['BLOQUEANTE', 'ALTA', 'MEDIA', 'BAJA'] as const
 
 export function PestanaInformes({ projectId }: { projectId: string }) {
+  const t = useT()
+  /**
+   * `[REQ]` El informe **no se genera con la interfaz en inglés**, y tampoco se
+   * descarga uno ya hecho.
+   *
+   * No es un bloqueo de permisos ni una limitación del servidor: es que esta
+   * parte está sin terminar. Se tradujeron las frases que compone la API, pero
+   * el entregable —la plantilla del cliente y el contenido del PPTX y del
+   * XLSX— sigue en castellano, y la plantilla no se toca. Generar aquí sacaría
+   * un documento mitad en un idioma y mitad en otro, que es peor que no
+   * sacarlo: se adjunta a un correo y nadie mira qué lleva dentro.
+   *
+   * Se mira **el idioma de la interfaz** y no el de la plantilla elegida.
+   * Decisión del cliente, y la consecuencia está asumida: con la interfaz en
+   * inglés tampoco se genera el informe castellano, que sí funcionaría.
+   * `[PDV]` El día que el entregable inglés exista, esto se cae con la
+   * condición.
+   */
+  const { idioma } = useIdioma()
+  const sinDesarrollar = idioma === 'en'
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
   const [plantillaElegida, setPlantillaElegida] = useState('')
   const [mapeos, setMapeos] = useState<Mapeo[]>([])
@@ -111,16 +132,45 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
     }
   }
 
+  /**
+   * El cartel va **por delante del estado vacío**, y por eso es una variable y
+   * no está escrito dentro del `return` de abajo.
+   *
+   * Se descubrió mirando la pantalla: sin ninguna plantilla registrada —que es
+   * como está una instalación recién puesta— esta pestaña devuelve el «no hay
+   * ninguna plantilla» y nunca llega al resto, así que el cartel no salía. Lo
+   * que veía quien la abría en inglés era una invitación a subir una
+   * plantilla, para luego encontrarse con que no se puede generar.
+   */
+  const cartel = sinDesarrollar ? (
+    <Pendiente>
+      <p>
+        {t(
+          'La generación del informe en inglés no está terminada: la plantilla del cliente y el contenido del entregable siguen sin traducir.',
+        )}
+      </p>
+      <p>
+        {t(
+          'Ni se puede generar un informe nuevo ni descargar los que ya existen mientras la interfaz esté en inglés. Cambie el idioma a español, arriba a la derecha, para usarlos.',
+        )}
+      </p>
+    </Pendiente>
+  ) : null
+
   if (plantillas.length === 0) {
     return (
-      <Vacio>
-        {traducir('No hay ninguna plantilla registrada. Súbala en «Plantillas» antes de generar un informe.')}
-      </Vacio>
+      <>
+        {cartel}
+        <Vacio>
+          {traducir('No hay ninguna plantilla registrada. Súbala en «Plantillas» antes de generar un informe.')}
+        </Vacio>
+      </>
     )
   }
 
   return (
     <>
+      {cartel}
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <div className="filtro">
@@ -174,10 +224,16 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
             className="destacado"
             onClick={() => void generar()}
             // El servidor lo rechazaría igualmente; deshabilitarlo aquí ahorra
-            // el viaje y deja claro qué hay que arreglar antes.
-            disabled={!previo.can_generate || trabajando}
+            // el viaje y deja claro qué hay que arreglar antes. Inutilizado y
+            // no retirado: un botón que desaparece deja a quien lo buscaba sin
+            // saber por qué, y su rótulo es donde cabe el motivo.
+            disabled={sinDesarrollar || !previo.can_generate || trabajando}
           >
-            {previo.can_generate ? traducir('Generar informe') : traducir('Corrija lo bloqueante para generar')}
+            {sinDesarrollar
+              ? traducir('Pendiente de desarrollar')
+              : previo.can_generate
+                ? traducir('Generar informe')
+                : traducir('Corrija lo bloqueante para generar')}
           </button>
         </section>
       )}
@@ -220,7 +276,10 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
                         {traducir('No se pudo generar. Vuelva a pedirlo; si se repite, avise a soporte.')}
                       </span>
                     )}
-                    {v.status !== 'GENERANDO' && v.status !== 'ERROR' && (
+                    {v.status !== 'GENERANDO' && v.status !== 'ERROR' && sinDesarrollar && (
+                      <MarcaDePendiente />
+                    )}
+                    {v.status !== 'GENERANDO' && v.status !== 'ERROR' && !sinDesarrollar && (
                       <>
                         <button
                           type="button"

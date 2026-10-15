@@ -670,6 +670,17 @@ export const EN: Record<string, string> = {
   'No se ha podido generar': 'It could not be generated',
   'No se ha podido cambiar el estado': 'The status could not be changed',
 
+  // ── Lo que está pendiente de desarrollar ──────────────────────────────
+  // `[REQ]` Estas tres solo se pintan con la interfaz en inglés, porque es el
+  // único idioma en el que la generación del informe está sin terminar. La
+  // clave va en castellano igual que todas: el día que haya algo pendiente que
+  // también lo esté en castellano, el cartel ya funciona en los dos.
+  'Pendiente de desarrollar': 'Pending development',
+  'La generación del informe en inglés no está terminada: la plantilla del cliente y el contenido del entregable siguen sin traducir.':
+    "English report generation is not finished: the client's template and the content of the deliverable have not been translated yet.",
+  'Ni se puede generar un informe nuevo ni descargar los que ya existen mientras la interfaz esté en inglés. Cambie el idioma a español, arriba a la derecha, para usarlos.':
+    'Neither generating a new report nor downloading the existing ones is available while the interface is in English. Switch the language to Spanish, top right, to use them.',
+
   // ── CAPEX del proyecto y exportación ──────────────────────────────────
   'Registrar hallazgo': 'Record a finding',
   Idioma: 'Language',

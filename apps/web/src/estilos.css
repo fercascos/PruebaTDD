@@ -274,6 +274,32 @@ select {
   color: var(--ok);
 }
 
+/* El cartel de lo que está sin desarrollar. Comparte el color de aviso con
+   `.mensaje.aviso` —es lo mismo que dice: «esto no está terminado»— pero lleva
+   el borde entero y no solo el izquierdo, porque no es un mensaje de una línea
+   dentro de una pantalla que funciona: es el estado de la pantalla. */
+.pendiente {
+  margin: 0.75rem 0;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--aviso);
+  border-left-width: 4px;
+  border-radius: var(--radio);
+  background: #fffbeb;
+  color: var(--aviso);
+}
+.pendiente h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+}
+.pendiente p {
+  margin: 0.3rem 0 0;
+  color: var(--tinta-suave);
+}
+.marca-pendiente {
+  color: var(--aviso);
+  font-size: 0.85rem;
+}
+
 /* ── Tablas ──────────────────────────────────────────────────────────────── */
 
 .tabla {
