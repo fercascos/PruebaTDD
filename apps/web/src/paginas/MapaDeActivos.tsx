@@ -139,7 +139,8 @@ export function MapaDeActivos({
   return (
     <div className="mapa-activos">
       <p className="ayuda">
-        <strong>{situados.length}</strong> {situados.length === 1 ? 'situado' : 'situados'}
+        <strong>{situados.length}</strong>{' '}
+        {situados.length === 1 ? traducir('situado') : traducir('situados')}
         {sinSituar > 0 && ` · ${traducir('{cuantas} sin coordenadas', { cuantas: sinSituar })}`}
       </p>
 

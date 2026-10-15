@@ -17,6 +17,8 @@ import { Mensaje, Vacio } from '../ui/Marco'
  * armar la jerarquía aquí.
  */
 
+/** Igual que las pestañas del activo: la etiqueta es la clave castellana y se
+ *  traduce al pintarla. Ver la nota de `EspacioDelActivo`. */
 const TIPOS: { valor: TipoDeNodo; etiqueta: string }[] = [
   { valor: 'ZONA', etiqueta: 'Zona' },
   { valor: 'PLANTA', etiqueta: 'Planta' },
@@ -96,7 +98,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
         <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoDeNodo)}>
           {TIPOS.map((t) => (
             <option key={t.valor} value={t.valor}>
-              {t.etiqueta}
+              {traducir(t.etiqueta)}
             </option>
           ))}
         </select>

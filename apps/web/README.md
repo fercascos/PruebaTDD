@@ -57,8 +57,29 @@ que se abre con doble clic, sin servidor, sin base de datos y sin red.
 
 ```bash
 npm run prototipo:grabar   # recorre la aplicación y graba lo que contesta la API
-npm run prototipo          # deja prototipo/dist/prototipo.html
+npm run prototipo          # deja prototipo/entregable/prototipo.html
+
+# Y el inglés, que necesita SU grabación: la mitad del texto de las pantallas
+# —zonas, capítulos, el propio encargo— lo manda la API.
+TDD_IDIOMA=en TDD_GRABACION=prototipo/grabacion-en.json npm run prototipo:grabar
+TDD_IDIOMA=en npm run prototipo
+
+node herramientas/comprobar-prototipo.mjs   # busca castellano en el inglés
 ```
+
+`[REQ]` La última orden **no sobra**. Es lo único que mira el prototipo ya
+compilado, que es lo que de verdad se entrega, y es lo único que encuentra una
+clase entera de fallos: un rótulo que se pinta desde una variable
+—`{nombre}`— o que se arma con una plantilla —`` `${n}/${m} objetos` ``— no es
+texto que ningún extractor pueda leer, así que `extraer-textos.mjs` dice «0 sin
+traducir» mientras la pantalla inglesa enseña castellano. Pasó con las cinco
+pestañas del activo, con los tipos del árbol de ubicaciones, con el recuento
+del mapa y con dos contadores del inventario. Las cinco veces el extractor
+estaba en verde.
+
+Se comprueba contra sí misma: apuntada al prototipo **castellano**
+(`TDD_IDIOMA=es`) tiene que encender las diecinueve pantallas. Si no las
+enciende, no está mirando nada.
 
 `[REQ]` **No es una maqueta.** Es `src/App.tsx` —las mismas pantallas, el mismo
 `cliente.ts`, la misma hoja de estilos— con dos cambios y ninguno más:

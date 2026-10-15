@@ -385,7 +385,8 @@ export function InventarioDelActivo({
       ))}
 
       <p className="recuento">
-        <strong>{conContenido.length}</strong> de {totalObjetos} {traducir('objetos con contenido ·')}{' '}
+        <strong>{conContenido.length}</strong>{' '}
+        {traducir('de {total} objetos con contenido ·', { total: totalObjetos })}{' '}
         {revisados} {traducir('validados ·')}{' '}{equipos.length} {traducir('equipos ·')}{' '}{marcados} {traducir('marcados para CAPEX')}
       </p>
 
@@ -422,10 +423,13 @@ export function InventarioDelActivo({
             codigo={raiz.code}
             nombre={raiz.name_es}
             nivel={1}
-            marca={`${capitulos.reduce(
-              (n, c) => n + c.objetos.filter((o) => conAlgo(o.id)).length,
-              0,
-            )}/${capitulos.reduce((n, c) => n + c.objetos.length, 0)} objetos`}
+            marca={traducir('{hechos}/{total} objetos', {
+              hechos: capitulos.reduce(
+                (n, c) => n + c.objetos.filter((o) => conAlgo(o.id)).length,
+                0,
+              ),
+              total: capitulos.reduce((n, c) => n + c.objetos.length, 0),
+            })}
           />
           {(abiertos?.has(raiz.id) ?? false) && (
             <ul className="arbol-inventario">
@@ -441,8 +445,13 @@ export function InventarioDelActivo({
                       nombre={cap.name_es}
                       nivel={2}
                       marca={
-                        `${vivos}/${objetos.length} objetos` +
-                        (equiposDelCap ? ` · ${equiposDelCap} eq.` : '')
+                        traducir('{hechos}/{total} objetos', {
+                          hechos: vivos,
+                          total: objetos.length,
+                        }) +
+                        (equiposDelCap
+                          ? ` · ${traducir('{cuantos} eq.', { cuantos: equiposDelCap })}`
+                          : '')
                       }
                     />
                     {(abiertos?.has(cap.id) ?? false) && (

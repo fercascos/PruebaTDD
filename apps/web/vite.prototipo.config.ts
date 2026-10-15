@@ -7,8 +7,15 @@
  * fichero**, que es lo que permite abrirlo con doble clic o subirlo como
  * artefacto.
  *
- *     npm run prototipo              # deja prototipo/dist/prototipo.html
+ *     npm run prototipo                # deja prototipo/entregable/prototipo.html
  *     TDD_IDIOMA=en npm run prototipo  # ...prototipo-en.html, en ingles
+ *
+ * `[REQ]` Los dos ficheros terminados **no van en `dist`**. Vite vacía su
+ * carpeta de salida en cada compilación (`emptyOutDir`), así que cuando los dos
+ * escribían ahí, compilar el inglés **borraba el castellano** y en la carpeta
+ * quedaba uno solo. No fallaba nada: el fichero simplemente ya no estaba, y la
+ * cabecera de aquí decía que estaban los dos. `dist` queda como lo que es, el
+ * borrador de Vite, y `entregable/` guarda lo que se entrega.
  *
  * `[REQ]` El idioma no es una bandera cosmética: elige **qué grabación se
  * incrusta**. La mitad del texto de las pantallas —zonas, capítulos de CAPEX,
@@ -17,14 +24,18 @@
  * `TDD_IDIOMA=en` y la grabación castellana daría botones en inglés y datos en
  * castellano, que es peor que no traducirlo.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { type Plugin, defineConfig } from 'vite'
 
 const aqui = fileURLToPath(new URL('.', import.meta.url))
+/** El borrador de Vite. Se vacía en cada compilación. */
 const SALIDA = resolve(aqui, 'prototipo/dist')
+
+/** Donde quedan los ficheros terminados, uno por idioma. No se vacía. */
+const ENTREGABLE = resolve(aqui, 'prototipo/entregable')
 
 const IDIOMA = process.env.TDD_IDIOMA ?? 'es'
 if (IDIOMA !== 'es' && IDIOMA !== 'en') {
@@ -81,7 +92,8 @@ function unSoloFichero(): Plugin {
           )
       }
 
-      const destino = resolve(SALIDA, FICHERO)
+      mkdirSync(ENTREGABLE, { recursive: true })
+      const destino = resolve(ENTREGABLE, FICHERO)
       writeFileSync(destino, texto)
       const mb = (Buffer.byteLength(texto) / 1024 / 1024).toFixed(2)
       // eslint-disable-next-line no-console

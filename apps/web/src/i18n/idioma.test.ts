@@ -33,8 +33,10 @@ describe('el diccionario', () => {
     const sinTraducir = Object.entries(EN).filter(([es, ingles]) => es === ingles)
     // Palabras que se escriben igual en los dos idiomas. «Error» entró con los
     // rótulos de una palabra: es el estado de una fila al importar una hoja, y
-    // en inglés se llama igual.
-    const iguales = ['Dashboard', 'English', 'Total', 'Red Flag / CAPEX', 'Error']
+    // en inglés se llama igual. «{cuantos} eq.» abrevia «equipos» y
+    // «equipment», y la abreviatura coincide: está en la tabla precisamente
+    // para que se vea que coincide a propósito y no por un descuido.
+    const iguales = ['Dashboard', 'English', 'Total', 'Red Flag / CAPEX', 'Error', '{cuantos} eq.']
     expect(sinTraducir.map(([es]) => es).filter((es) => !iguales.includes(es))).toEqual([])
   })
 })

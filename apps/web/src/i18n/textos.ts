@@ -913,7 +913,6 @@ export const EN: Record<string, string> = {
   'nodos': 'nodes',
   'objeto': 'item',
   'objetos': 'items',
-  'objetos con contenido ·': 'items with content ·',
   'opcional': 'optional',
   'pendientes': 'pending',
   'por una persona': 'by a person',
@@ -1166,7 +1165,11 @@ export const EN: Record<string, string> = {
   'Texto': 'Text',
   'Validado': 'Validated',
   'Verde': 'Green',
-  'Visita': 'Inspection',
+  // El inglés no distingue singular de plural aquí; el castellano sí, y por eso
+  // hay dos claves para una sola traducción.
+  situado: 'located',
+  situados: 'located',
+  'Visita': 'Site visit',
 
   // ── Las frases con un número dentro ───────────────────────────────────
   //
@@ -1185,6 +1188,9 @@ export const EN: Record<string, string> = {
 
   'Se han cerrado las sesiones abiertas de {quien}.': 'Open sessions for {quien} have been closed.',
   'Toda la cartera · {total} activos': 'Whole portfolio · {total} assets',
+  'de {total} objetos con contenido ·': 'of {total} items with content ·',
+  '{hechos}/{total} objetos': '{hechos}/{total} items',
+  '{cuantos} eq.': '{cuantos} eq.',
   'la fila': 'the row',
   'le quedan {cuantos} año(s)': '{cuantos} year(s) remaining',
   'los {cuantas} {plural}': 'the {cuantas} {plural}',

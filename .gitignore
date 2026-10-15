@@ -67,3 +67,9 @@ var/certificados-desarrollo/
 # suelto, y en cuanto hubo una grabación por idioma dejó de cubrirlas. Se coló
 # una en un commit antes de verlo.
 apps/web/prototipo/grabacion*.json
+
+# Y el prototipo ya compilado, por lo mismo y con más razón: son 1,4 MB por
+# idioma de HTML generado, con la grabación dentro. Sale de `npm run prototipo`
+# en dos órdenes, una por idioma. No va en `dist/` —que Vite vacía en cada
+# compilación, y por eso el inglés borraba al castellano— sino aquí.
+apps/web/prototipo/entregable/

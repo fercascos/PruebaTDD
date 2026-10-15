@@ -54,6 +54,19 @@ const MapaDeFotos = lazy(() =>
  * - **Inventario** lleva los descriptivos, «pasa a CAPEX» y la ficha de equipo.
  */
 
+/** `[REQ]` Los rótulos van **en castellano, que es la clave**, y se traducen
+ *  al pintarlos, unas líneas más abajo.
+ *
+ *  Traducirlos aquí no serviría: una constante de módulo se evalúa una vez al
+ *  importar, así que las cinco pestañas se quedarían con el idioma del primer
+ *  arranque y el selector ES/EN no las movería.
+ *
+ *  `[LIM]` Y esto **no lo ve `extraer-textos.mjs`**: lee el texto de las
+ *  etiquetas JSX, y aquí lo que hay en la etiqueta es `{nombre}`, una
+ *  expresión. Las cinco pestañas salían en castellano en el prototipo inglés
+ *  con el extractor diciendo «0 sin traducir». Lo caza
+ *  `comprobar-prototipo.mjs`, que mira la pantalla.
+ */
 const SECCIONES = [
   ['', 'Detalle'],
   ['documentacion', 'Documentación'],
@@ -105,7 +118,7 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
       <nav className="pestanas secundarias">
         {SECCIONES.map(([ruta, nombre]) => (
           <NavLink key={ruta} to={ruta ? `${base}/${ruta}` : base} end={ruta === ''}>
-            {nombre}
+            {traducir(nombre)}
           </NavLink>
         ))}
       </nav>
