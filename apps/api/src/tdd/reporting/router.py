@@ -643,7 +643,10 @@ def generar(
     if not puede_generarse(avisos):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            "No se puede generar el informe: " + "; ".join(motivos_de_bloqueo(avisos)),
+            idioma.traducir(
+                "No se puede generar el informe: {motivos}",
+                motivos="; ".join(motivos_de_bloqueo(avisos)),
+            ),
         )
 
     # `[REQ]` 0030 · El idioma del informe es **el de su plantilla**, no el de

@@ -20,6 +20,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.evidence import anotaciones, images
 from tdd.reporting import generator
 
@@ -140,7 +141,9 @@ def producir(s: Session, almacen: Any, version_id: uuid.UUID, *, incluir_fotos: 
         .first()
     )
     if fila is None:
-        raise VersionInexistente(f"La versión {version_id} ya no existe")
+        raise VersionInexistente(
+            idioma.traducir("La versión {version} ya no existe", version=version_id)
+        )
 
     congelado = dict(fila["data_snapshot"])
     fotos = fotos_del_snapshot(s, almacen, congelado) if incluir_fotos else []

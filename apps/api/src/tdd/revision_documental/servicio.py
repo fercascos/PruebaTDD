@@ -185,8 +185,10 @@ def revisar_documento(  # noqa: PLR0913 — cada uno es una dependencia distinta
     permiso = permiso_de(s, uuid.UUID(str(doc["project_id"])))
     if not permiso.activo:
         raise RevisionNoAutorizada(
-            "Este proyecto no tiene activada la revisión de documentación con IA. "
-            "La activa quien dirige el proyecto, y queda registrado quién lo hizo."
+            idioma.traducir(
+                "Este proyecto no tiene activada la revisión de documentación con IA. "
+                "La activa quien dirige el proyecto, y queda registrado quién lo hizo."
+            )
         )
     # `[REQ]` Y el interruptor del proyecto NO basta para un documento
     # RESTRINGIDO. Esto faltaba: la comprobación de confidencialidad estaba en
@@ -323,7 +325,7 @@ def decidir(
         {"i": str(finding_id)},
     ).scalar_one_or_none()
     if actual is None:
-        raise LookupError("Observación no encontrada")
+        raise LookupError(idioma.traducir("Observación no encontrada"))
     if actual != "PROPUESTA":
         raise DecisionInvalida(
             idioma.traducir(

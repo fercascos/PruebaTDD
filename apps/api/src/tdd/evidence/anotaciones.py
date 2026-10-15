@@ -166,10 +166,10 @@ def leer(bruto: Any) -> Capa:
     informe entregado es peor que un error al guardar.
     """
     if not isinstance(bruto, dict):
-        raise AnotacionInvalida("La capa de anotaciones debe ser un objeto")
+        raise AnotacionInvalida(idioma.traducir("La capa de anotaciones debe ser un objeto"))
     formas_brutas = bruto.get("shapes")
     if not isinstance(formas_brutas, list):
-        raise AnotacionInvalida("La capa debe traer la lista «shapes»")
+        raise AnotacionInvalida(idioma.traducir("La capa debe traer la lista «shapes»"))
     if len(formas_brutas) > MAX_FORMAS:
         raise AnotacionInvalida(
             idioma.traducir("Demasiadas formas: el máximo es {maximo}", maximo=MAX_FORMAS)

@@ -251,6 +251,10 @@ def _avisar_de_cliente_sin_validar(s: Any, usuario: Any, proyecto: Any, cliente:
             "o": usuario.organization_id,
             "u": usuario.id,
             "p": proyecto["id"],
+            # El título y el cuerpo van en castellano a propósito: se
+            # **guardan** como una sugerencia y los leerá quien administre, que
+            # puede no ser quien dio de alta el proyecto. Ver la nota
+            # equivalente en `equipment/router`.
             "t": f"Cliente sin validar: {cliente}",
             "b": (
                 f"El proyecto {proyecto['internal_code']} · {proyecto['name']} se ha dado de alta "

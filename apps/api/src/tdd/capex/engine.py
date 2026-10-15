@@ -198,6 +198,12 @@ class CascadeResult:
         return self.subtotals.get("PEC")
 
 
+#: El rótulo de cada peldaño **en castellano, que es la clave**: lo traduce
+#: `run_cascade`, que corre dentro de la petición. Sale en la respuesta de
+#: `preview-calculation` y lo pinta el bloque «Cómo se calcula», así que estaba
+#: saliendo en castellano en una pantalla inglesa. No lo cazó el inventario de
+#: cadenas —«Costes indirectos» no lleva tilde ni palabra funcional, que es lo
+#: que ese detector busca— sino repasar a mano quién lee `CascadeLine.label`.
 _LABELS = {
     StepKey.INDIRECT: "Costes indirectos",
     StepKey.OVERHEAD: "Gastos generales",
@@ -244,7 +250,7 @@ def run_cascade(*, quantity: Decimal, unit_price: Decimal, config: CascadeConfig
         lines.append(
             CascadeLine(
                 key=step.key,
-                label=_LABELS.get(step.key, step.key.value),
+                label=idioma.traducir(_LABELS.get(step.key, step.key.value)),
                 base_keys=step.base,
                 base_amount=_quantize(base_amount, config),
                 pct=step.pct,
@@ -291,9 +297,9 @@ def apply_tax(
     afecta a todas las líneas del proyecto.
     """
     if amount < 0:
-        raise ValueError("El importe de la línea no puede ser negativo")
+        raise ValueError(idioma.traducir("El importe de la línea no puede ser negativo"))
     if tax_pct < 0:
-        raise ValueError("El porcentaje de impuesto no puede ser negativo")
+        raise ValueError(idioma.traducir("El porcentaje de impuesto no puede ser negativo"))
     exp = Decimal(1).scaleb(-decimals)
     rounding = _ROUNDING[rounding_mode]
     tax_amount = (amount * tax_pct).quantize(exp, rounding=rounding)

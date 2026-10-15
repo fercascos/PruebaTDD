@@ -312,32 +312,6 @@ El enlace ha caducado. Los enlaces duran 30 minutos: pida uno nuevo.,The link ha
 Este enlace ya se ha usado. Cada enlace sirve una sola vez: pida uno nuevo.,This link has already been used. Each link works once only: request a new one.
 La cuenta está desactivada. Póngase en contacto con un administrador de su organización.,The account is deactivated. Please contact an administrator in your organisation.
 Restablecer su contraseña,Reset your password
-"Hola{saludo}:
-
-Alguien ha pedido restablecer la contraseña de esta cuenta en la aplicación de
-due diligence técnica. Si ha sido usted, abra este enlace:
-
-  {enlace}
-
-El enlace caduca en 30 minutos y solo se puede usar una vez.
-
-Si no ha sido usted, no hace falta que haga nada: la contraseña actual sigue
-siendo válida y este enlace dejará de servir solo. Si le llegan varios de estos
-correos sin haberlos pedido, avise a un administrador de su organización.
-","Hello{saludo},
-
-Someone has asked to reset the password for this account in the technical due
-diligence application. If that was you, open this link:
-
-  {enlace}
-
-The link expires in 30 minutes and can only be used once.
-
-If it was not you, there is nothing you need to do: your current password is
-still valid and this link will stop working on its own. If several of these
-emails reach you without your asking, notify an administrator in your
-organisation.
-"
 La plantilla no se ha analizado todavía: no se sabe qué marcadores tiene.,The template has not been analysed yet: there is no way to know which placeholders it has.
 Hay una fotografía seleccionada que no ha superado las verificaciones.,One of the selected photos has not passed the checks.
 Una línea quedó con una zona que ya no corresponde a la tipología del activo.,A line was left with a zone that no longer matches the asset's typology.
@@ -355,3 +329,56 @@ Al rechazar una sugerencia hay que explicar por qué: al menos {minimo} caracter
 Marcar como duplicada exige indicar con cuál se agrupa,Marking it as a duplicate requires saying which one it groups with
 Una sugerencia no puede ser duplicada de sí misma,A suggestion cannot be a duplicate of itself
 "Aplicar una sugerencia exige enlazar lo que se ha creado o cambiado: sin ese enlace, «aplicada» no es comprobable","Applying a suggestion requires linking what was created or changed: without that link, «applied» cannot be checked"
+"{cuantos} objetos de la memoria no están codificados contra el catálogo, así que no tienen descriptivo. Codifíquelos en la memoria y vuelva a traerlos.","{cuantos} items in the technical report are not coded against the catalogue, so they have no description. Code them in the report and bring them in again."
+La extracción de esta memoria es SIMULADA: los descriptivos nacen marcados como tales y no deben validarse sin leer el documento.,The extraction of this report is SIMULATED: the descriptions are created flagged as such and must not be validated without reading the document.
+«{capitulo}» no enumera objetos en la memoria: se genera una sola fila con el nombre del capítulo.,«{capitulo}» lists no items in the technical report: a single row is created with the chapter's name.
+«{zona}» no aplica a un activo de tipología {tipologia}.,«{zona}» does not apply to an asset of typology {tipologia}.
+la zona,the zone
+esa tipología,that typology
+La capa de anotaciones debe ser un objeto,The annotation layer must be an object
+La capa debe traer la lista «shapes»,The layer must carry the «shapes» list
+El fichero no es una imagen legible,The file is not a readable image
+"Se han reconocido {cuantos} epígrafes, {constructivos} de ellos constructivos. Los objetos del CAPEX que describen NO se han propuesto: hace falta clasificarlos, y eso todavía no está construido.","{cuantos} headings were recognised, {constructivos} of them construction-related. The CAPEX items they describe have NOT been proposed: they need classifying, and that is not built yet."
+No hay lector para documentos de tipo «{tipo}». Los que se leen hoy: {lectores}.,There is no reader for documents of type «{tipo}». The ones read today: {lectores}.
+ninguno,none
+"El estado de «{fase}» lo calcula la aplicación a partir del trabajo real y no se puede fijar a mano. Marque como completado lo que falte (líneas de CAPEX con precio validado, o la versión del informe).","The status of «{fase}» is calculated by the application from the actual work and cannot be set by hand. Mark whatever is outstanding as complete (CAPEX lines with a validated price, or the report version)."
+"Este proyecto no tiene activada la revisión de documentación con IA. La activa quien dirige el proyecto, y queda registrado quién lo hizo.","This project does not have AI document review enabled. It is enabled by whoever directs the project, and a record is kept of who did so."
+Observación no encontrada,Observation not found
+Costes indirectos,Indirect costs
+Gastos generales,Overheads
+Beneficio industrial,Contractor profit
+Honorarios técnicos,Professional fees
+Contingencia,Contingency
+El importe de la línea no puede ser negativo,The line's amount cannot be negative
+El porcentaje de impuesto no puede ser negativo,The tax percentage cannot be negative
+"No se ha aplicado nada. Al aplicarlo, el precio vuelve a quedar pendiente de validación.","Nothing has been applied. On applying it, the price goes back to pending validation."
+La versión {version} ya no existe,Version {version} no longer exists
+No se puede generar el informe: {motivos},The report cannot be generated: {motivos}
+"Hola, {nombre}:","Hello {nombre},"
+Hola:,"Hello,"
+"{saludo}
+
+Alguien ha pedido restablecer la contraseña de esta cuenta en la aplicación de
+due diligence técnica. Si ha sido usted, abra este enlace:
+
+  {enlace}
+
+El enlace caduca en 30 minutos y solo se puede usar una vez.
+
+Si no ha sido usted, no hace falta que haga nada: la contraseña actual sigue
+siendo válida y este enlace dejará de servir solo. Si le llegan varios de estos
+correos sin haberlos pedido, avise a un administrador de su organización.
+","{saludo}
+
+Someone has asked to reset the password for this account in the technical due
+diligence application. If that was you, open this link:
+
+  {enlace}
+
+The link expires in 30 minutes and can only be used once.
+
+If it was not you, there is nothing you need to do: your current password is
+still valid and this link will stop working on its own. If several of these
+emails reach you without your asking, notify an administrator in your
+organisation.
+"

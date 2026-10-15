@@ -227,6 +227,9 @@ def actualizar(node_id: uuid.UUID, cuerpo: ActualizarNodo, s: SesionDep) -> Any:
             parametros,
         )
     except Exception as exc:  # noqa: BLE001 — el disparador avisa de los ciclos
+        # La aguja se busca en castellano porque la escribe el **disparador**
+        # de PostgreSQL, que no sabe del idioma de la petición. Traducirla
+        # aquí haría que el 422 dejara de reconocer el ciclo.
         if "dentro de sí mismo" in str(exc):
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,

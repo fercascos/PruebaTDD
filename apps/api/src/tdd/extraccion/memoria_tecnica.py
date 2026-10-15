@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
+from tdd.core import idioma
 from tdd.extraccion.puerto import (
     Aportacion,
     CampoPropuesto,
@@ -86,9 +87,13 @@ class MemoriaTecnica:
         if leido.secciones:
             constructivas = [s for s in leido.secciones if s.codigo.startswith(("MC", "MD.2"))]
             aportacion.avisos.append(
-                f"Se han reconocido {len(leido.secciones)} epígrafes, {len(constructivas)} de "
-                "ellos constructivos. Los objetos del CAPEX que describen NO se han "
-                "propuesto: hace falta clasificarlos, y eso todavía no está construido."
+                idioma.traducir(
+                    "Se han reconocido {cuantos} epígrafes, {constructivos} de ellos "
+                    "constructivos. Los objetos del CAPEX que describen NO se han "
+                    "propuesto: hace falta clasificarlos, y eso todavía no está construido.",
+                    cuantos=len(leido.secciones),
+                    constructivos=len(constructivas),
+                )
             )
         return aportacion
 

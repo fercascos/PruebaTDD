@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Protocol
 
+from tdd.core import idioma
+
 
 @dataclass(frozen=True, slots=True)
 class Procedencia:
@@ -258,8 +260,11 @@ def para(doc_type: str) -> Extractor:
     extractor = _REGISTRO.get(doc_type)
     if extractor is None:
         raise SinExtractor(
-            f"No hay lector para documentos de tipo «{doc_type}». Los que se leen hoy: "
-            f"{', '.join(sorted(_REGISTRO)) or 'ninguno'}."
+            idioma.traducir(
+                "No hay lector para documentos de tipo «{tipo}». Los que se leen hoy: {lectores}.",
+                tipo=doc_type,
+                lectores=", ".join(sorted(_REGISTRO)) or idioma.traducir("ninguno"),
+            )
         )
     return extractor
 

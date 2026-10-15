@@ -407,13 +407,19 @@ def desde_documentacion(asset_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) 
     ).scalar_one()
     if sin_codigo:
         avisos.append(
-            f"{sin_codigo} objetos de la memoria no están codificados contra el catálogo, "
-            "así que no tienen descriptivo. Codifíquelos en la memoria y vuelva a traerlos."
+            idioma.traducir(
+                "{cuantos} objetos de la memoria no están codificados contra el catálogo, "
+                "así que no tienen descriptivo. Codifíquelos en la memoria y vuelva a "
+                "traerlos.",
+                cuantos=sin_codigo,
+            )
         )
     if memoria["es_simulada"]:
         avisos.append(
-            "La extracción de esta memoria es SIMULADA: los descriptivos nacen marcados "
-            "como tales y no deben validarse sin leer el documento."
+            idioma.traducir(
+                "La extracción de esta memoria es SIMULADA: los descriptivos nacen marcados "
+                "como tales y no deben validarse sin leer el documento."
+            )
         )
     return {
         "creados": creados,

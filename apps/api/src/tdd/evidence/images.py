@@ -132,6 +132,9 @@ def phash_de(imagen: Image.Image, *, lado: int = 8) -> str:
 def distancia_hamming(a: str, b: str) -> int:
     """Cuántos bits difieren entre dos `phash`. 0 = idénticas."""
     if len(a) != len(b):
+        # Sin traducir a propósito: esto solo salta si quien llama mezcla dos
+        # `phash` de longitudes distintas, que es un error de programación y
+        # no algo que pueda provocar un usuario.
         raise ValueError("Los hashes perceptuales deben tener la misma longitud")
     return bin(int(a, 16) ^ int(b, 16)).count("1")
 
@@ -217,7 +220,7 @@ def leer(datos: bytes) -> MetadatosDeImagen:
         imagen = Image.open(io.BytesIO(datos))
         imagen.load()
     except Exception as exc:  # noqa: BLE001 — cualquier fallo aquí es «no es imagen»
-        raise ImagenNoValida("El fichero no es una imagen legible") from exc
+        raise ImagenNoValida(idioma.traducir("El fichero no es una imagen legible")) from exc
 
     formato = (imagen.format or "").upper()
     if formato not in FORMATOS_ACEPTADOS:

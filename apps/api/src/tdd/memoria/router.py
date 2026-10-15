@@ -555,8 +555,11 @@ def generar_capex(asset_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any
         ]
         if not categoria["objetos"]:
             avisos.append(
-                f"«{categoria['capex_name']}» no enumera objetos en la memoria: se genera "
-                "una sola fila con el nombre del capítulo."
+                idioma.traducir(
+                    "«{capitulo}» no enumera objetos en la memoria: se genera una sola fila "
+                    "con el nombre del capítulo.",
+                    capitulo=categoria["capex_name"],
+                )
             )
         for objeto in objetos:
             if objeto["nombre"] in ya_estan:
@@ -577,6 +580,9 @@ def generar_capex(asset_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any
                     "c": str(objeto["capex_code_id"] or categoria["capex_code_id"]),
                     "z": str(zona),
                     "t": objeto["nombre"],
+                    # En castellano a propósito: se **guarda** en
+                    # `finding.description` y es contenido del proyecto. Ver la
+                    # nota equivalente en `equipment/router`.
                     "d": "Generado desde la memoria técnica. Pendiente de revisar en visita.",
                     "u": str(usuario.id),
                 },

@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.pricing import service
 
@@ -422,7 +423,7 @@ def previsualizar_indice(cuerpo: PeticionDeIndice) -> Any:
         "base": str(r.base),
         "resultado": str(r.resultado),
         "formula": r.formula,
-        "nota": (
+        "nota": idioma.traducir(
             "No se ha aplicado nada. Al aplicarlo, el precio vuelve a quedar "
             "pendiente de validación."
         ),

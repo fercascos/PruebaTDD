@@ -503,7 +503,16 @@ class RespuestaDeRecuperacion(BaseModel):
 #: enlace, así que el idioma de su petición es el suyo.
 ASUNTO = "Restablecer su contraseña"
 
-CUERPO = """Hola{saludo}:
+#: `[REQ]` El saludo entero es un hueco, y es **una clave por caso**, porque la
+#: puntuación no se traduce sola: en castellano el saludo lleva dos puntos y la
+#: coma va antes del nombre —«Hola, Marta:»—; en inglés lleva coma al final y
+#: ninguna antes del nombre —«Hello Marta,». La primera versión partía el
+#: saludo en «Hola{saludo}:» con `saludo = ", Marta"`, y el correo inglés salía
+#: con dos comas: «Hello, Marta,». Lo encontró leer el correo, no una prueba.
+SALUDO_CON_NOMBRE = "Hola, {nombre}:"
+SALUDO_SIN_NOMBRE = "Hola:"
+
+CUERPO = """{saludo}
 
 Alguien ha pedido restablecer la contraseña de esta cuenta en la aplicación de
 due diligence técnica. Si ha sido usted, abra este enlace:
@@ -516,6 +525,14 @@ Si no ha sido usted, no hace falta que haga nada: la contraseña actual sigue
 siendo válida y este enlace dejará de servir solo. Si le llegan varios de estos
 correos sin haberlos pedido, avise a un administrador de su organización.
 """
+
+
+def _saludo(nombre_completo: str | None) -> str:
+    """La primera línea del correo, con el nombre si consta."""
+    primero = (nombre_completo or "").split()
+    if not primero:
+        return idioma.traducir(SALUDO_SIN_NOMBRE)
+    return idioma.traducir(SALUDO_CON_NOMBRE, nombre=primero[0])
 
 
 @router.post(
@@ -619,9 +636,7 @@ def olvide_mi_clave(
                         "asunto": idioma.traducir(ASUNTO),
                         "cuerpo": idioma.traducir(
                             CUERPO,
-                            saludo=(
-                                f", {fila['full_name'].split()[0]}" if fila["full_name"] else ""
-                            ),
+                            saludo=_saludo(fila["full_name"]),
                             enlace=recuperacion.enlace(settings.app_base_url, token.valor),
                         ),
                     },

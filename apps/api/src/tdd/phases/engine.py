@@ -140,9 +140,12 @@ def comprobar_estado_escribible(codigo: PhaseCode) -> None:
     """Lanza si se intenta escribir a mano el estado de una fase derivada."""
     if codigo in FASES_DERIVADAS:
         raise EstadoNoEscribible(
-            f"El estado de «{codigo}» lo calcula la aplicación a partir del trabajo real "
-            "y no se puede fijar a mano. Marque como completado lo que falte "
-            "(líneas de CAPEX con precio validado, o la versión del informe)."
+            idioma.traducir(
+                "El estado de «{fase}» lo calcula la aplicación a partir del trabajo real "
+                "y no se puede fijar a mano. Marque como completado lo que falte "
+                "(líneas de CAPEX con precio validado, o la versión del informe).",
+                fase=codigo,
+            )
         )
 
 

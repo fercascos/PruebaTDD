@@ -38,11 +38,39 @@ unitaria— obtiene el castellano. Es el valor correcto por omisión, pero es un
 valor por omisión y no un error, así que un sitio que debería traducir y no lo
 hace no se queja. Lo que lo delata es mirar la pantalla.
 
-`[PDV]` De las frases que escribe la API, aquí están **solo las del avance de
-las fases**: las que se ven en la ficha del proyecto, que es la pantalla que
-abre cualquiera. Quedan unas 490 cadenas más repartidas por 73 ficheros
-—mensajes de error de validación, avisos del informe, resultados de
-importación—, y están sin traducir. Es trabajo medido, no un olvido.
+## Qué hay aquí y qué no
+
+Están las frases que **ve un usuario**: los mensajes de error de validación,
+el avance de cada fase, los avisos de una importación, los motivos que bloquean
+una transición, el correo del enlace de recuperación. Son 197 claves y no hay
+ninguna sin traducir, que es lo que vigila
+`tests/unit/test_textos_de_la_api.py`.
+
+**No** están, y cada una por su motivo:
+
+* **Lo que se guarda en la base.** El título del hallazgo que genera el
+  inventario, la nota de «Restaurada desde la versión N», la sugerencia de
+  cliente sin validar. Es contenido del proyecto: si dependiera de la cabecera,
+  el mismo botón escribiría cosas distintas según quién lo aprieta, y la
+  deduplicación por título dejaría de ver los duplicados. `[PDV]` Un proyecto
+  redactado en inglés necesita decidir el idioma **del proyecto**, que es otra
+  cosa que el idioma de la interfaz.
+* **Lo que se busca, no se escribe.** Las expresiones regulares que leen los
+  PDF del cliente (`extraccion/plan_autoproteccion`, `memoria/extraccion`), las
+  cabeceras que el importador de inventario busca en el XLSX
+  (`equipment/importacion`), el texto del disparador de PostgreSQL que
+  `assets/ubicaciones` reconoce para dar un 422 legible. Traducirlas rompe la
+  lectura.
+* **El entregable.** El PPTX y el XLSX llevan su propio idioma, que lo elige
+  **la plantilla** —hay una por idioma— o el parámetro `?idioma=` de la
+  descarga, no la cabecera de quien mira la pantalla.
+* **Lo que solo lee quien opera la máquina.** Los `log`, los errores de
+  arranque y de configuración, los mensajes de las órdenes de consola, los
+  rótulos de Prometheus.
+* **Lo que nadie enseña todavía.** Tres de los cuatro detalles del antivirus y
+  los avisos de composición del informe se escriben, suben hasta el router y no
+  salen de ahí. Se traducen el día que se pinten, y entonces en el sitio donde
+  se pinten.
 """
 
 from __future__ import annotations

@@ -74,6 +74,12 @@ class ResultadoDeGeneracion:
     secciones_sin_datos: list[str] = field(default_factory=list)
     #: Lo que la composición ha tenido que decidir: fotos que no caben en una
     #: diapositiva, marcos que no se reconocen, más de un `@capex`.
+    #:
+    #: `[LIM]` Van en castellano y **nadie los enseña**: los escriben
+    #: `composicion` y `repeticion`, llegan hasta aquí y de aquí no salen. Solo
+    #: los leen las pruebas. Por eso no están traducidos: el día que se pinten
+    #: en la pantalla de generación habrá que traducirlos **allí**, que es
+    #: donde se sabrá en qué idioma mira quien los lee.
     avisos_de_composicion: list[str] = field(default_factory=list)
     #: Diapositivas de la plantilla que han recibido la tabla nativa de CAPEX.
     #: Cero significa que la plantilla no dice dónde quiere la tabla y se ha

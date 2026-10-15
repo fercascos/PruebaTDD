@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import text
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep
 
 router = APIRouter(prefix="/catalogs", tags=["Catálogos"])
@@ -283,8 +284,14 @@ def zona_permitida(zone_id: uuid.UUID, typology_id: uuid.UUID, s: SesionDep) -> 
         ),
         {"z": zone_id, "t": typology_id},
     ).first()
-    zona, tipologia = nombres if nombres else ("la zona", "esa tipología")
+    zona, tipologia = (
+        nombres if nombres else (idioma.traducir("la zona"), idioma.traducir("esa tipología"))
+    )
     return {
         "permitida": False,
-        "motivo": f"«{zona}» no aplica a un activo de tipología {tipologia}.",
+        "motivo": idioma.traducir(
+            "«{zona}» no aplica a un activo de tipología {tipologia}.",
+            zona=zona,
+            tipologia=tipologia,
+        ),
     }
