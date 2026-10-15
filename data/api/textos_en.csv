@@ -18,7 +18,7 @@ Cuenta bloqueada temporalmente. Inténtelo de nuevo en {minutos} min,Account tem
 Demasiadas formas: el máximo es {maximo},Too many shapes: the maximum is {maximo}
 Documento no encontrado,Document not found
 El activo no pertenece a este proyecto,The asset does not belong to this project
-El activo {activo} no es de este proyecto.,Asset {activo} does not belong to this project.
+El activo {activo} no pertenece a este proyecto.,Asset {activo} does not belong to this project.
 El activo «{nombre}»,Asset «{nombre}»
 El antivirus ha detectado una amenaza en el fichero ({detalle}). No se ha subido.,The antivirus detected a threat in the file ({detalle}). It has not been uploaded.
 El archivo supera el máximo de {mb} MB,The file exceeds the maximum of {mb} MB

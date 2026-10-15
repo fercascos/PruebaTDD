@@ -796,7 +796,7 @@ def decidir_equipos(
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
                 idioma.traducir(
-                    "El activo {activo} no es de este proyecto.",
+                    "El activo {activo} no pertenece a este proyecto.",
                     activo=aceptada.asset_id,
                 ),
             )
