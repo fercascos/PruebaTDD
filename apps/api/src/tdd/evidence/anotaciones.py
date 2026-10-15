@@ -29,6 +29,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from tdd.core import idioma
+
 #: Versión del formato de la capa. Va guardada con las anotaciones para que,
 #: si algún día cambia, se sepa qué se está leyendo en vez de deducirlo.
 VERSION_DE_FORMATO = 1
@@ -102,14 +104,21 @@ def _fraccion(valor: Any, campo: str, indice: int) -> float:
     try:
         numero = float(valor)
     except (TypeError, ValueError) as exc:
-        raise AnotacionInvalida(f"Forma {indice}: «{campo}» no es un número") from exc
+        raise AnotacionInvalida(
+            idioma.traducir("Forma {indice}: «{campo}» no es un número", indice=indice, campo=campo)
+        ) from exc
     if not 0.0 <= numero <= 1.0:
         # Fuera de [0,1] no es un despiste redondeable: significa que quien
         # escribe está mandando píxeles, y aceptarlo produciría anotaciones que
         # apuntan a cualquier sitio en cuanto cambie el tamaño.
         raise AnotacionInvalida(
-            f"Forma {indice}: «{campo}» vale {numero}. Las coordenadas van en "
-            "fracción del lado (0 a 1), no en píxeles."
+            idioma.traducir(
+                "Forma {indice}: «{campo}» vale {numero}. Las coordenadas van en fracción del lado"
+                " (0 a 1), no en píxeles.",
+                indice=indice,
+                campo=campo,
+                numero=numero,
+            )
         )
     return numero
 
@@ -121,7 +130,11 @@ def _color(valor: Any, indice: int) -> str:
         and len(texto) == 7  # noqa: PLR2004 — «#» más seis dígitos hexadecimales
         and all(c in "0123456789abcdefABCDEF" for c in texto[1:])
     ):
-        raise AnotacionInvalida(f"Forma {indice}: «{texto}» no es un color #RRGGBB")
+        raise AnotacionInvalida(
+            idioma.traducir(
+                "Forma {indice}: «{texto}» no es un color #RRGGBB", indice=indice, texto=texto
+            )
+        )
     return texto.upper()
 
 
@@ -139,7 +152,9 @@ def _grosor(valor: Any, indice: int) -> float:
     try:
         numero = float(valor)
     except (TypeError, ValueError) as exc:
-        raise AnotacionInvalida(f"Forma {indice}: «grosor» no es un número") from exc
+        raise AnotacionInvalida(
+            idioma.traducir("Forma {indice}: «grosor» no es un número", indice=indice)
+        ) from exc
     return max(GROSOR_MINIMO, min(numero, GROSOR_MAXIMO))
 
 
@@ -156,26 +171,38 @@ def leer(bruto: Any) -> Capa:
     if not isinstance(formas_brutas, list):
         raise AnotacionInvalida("La capa debe traer la lista «shapes»")
     if len(formas_brutas) > MAX_FORMAS:
-        raise AnotacionInvalida(f"Demasiadas formas: el máximo es {MAX_FORMAS}")
+        raise AnotacionInvalida(
+            idioma.traducir("Demasiadas formas: el máximo es {maximo}", maximo=MAX_FORMAS)
+        )
 
     formas: list[Forma] = []
     for indice, cruda in enumerate(formas_brutas, 1):
         if not isinstance(cruda, dict):
-            raise AnotacionInvalida(f"Forma {indice}: se esperaba un objeto")
+            raise AnotacionInvalida(
+                idioma.traducir("Forma {indice}: se esperaba un objeto", indice=indice)
+            )
         try:
             tipo = TipoDeForma(str(cruda.get("tipo", "")).upper())
         except ValueError as exc:
             disponibles = ", ".join(t.value for t in TipoDeForma)
             raise AnotacionInvalida(
-                f"Forma {indice}: tipo «{cruda.get('tipo')}» desconocido. "
-                f"Disponibles: {disponibles}"
+                idioma.traducir(
+                    "Forma {indice}: tipo «{tipo}» desconocido. Disponibles: {disponibles}",
+                    indice=indice,
+                    tipo=cruda.get("tipo"),
+                    disponibles=disponibles,
+                )
             ) from exc
 
         texto = str(cruda.get("texto", ""))[:MAX_TEXTO]
         if tipo is TipoDeForma.TEXTO and not texto.strip():
             # Un texto vacío no dibuja nada y ocupa sitio en la capa: quien lo
             # mandó cree que ha anotado algo.
-            raise AnotacionInvalida(f"Forma {indice}: una anotación de texto no puede ir vacía")
+            raise AnotacionInvalida(
+                idioma.traducir(
+                    "Forma {indice}: una anotación de texto no puede ir vacía", indice=indice
+                )
+            )
 
         formas.append(
             Forma(

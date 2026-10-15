@@ -54,6 +54,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, SettingsDep, UsuarioActual, UsuarioDep
 from tdd.evidence import antivirus, guardia, images, storage
 from tdd.evidence.naming import (
@@ -370,7 +371,10 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     if len(datos) > MAX_BYTES:
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            f"El archivo supera el máximo de {MAX_BYTES // (1024 * 1024)} MB",
+            idioma.traducir(
+                "El archivo supera el máximo de {mb} MB",
+                mb=MAX_BYTES // (1024 * 1024),
+            ),
         )
     try:
         meta = images.leer(datos)
@@ -388,7 +392,11 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
         # clasifica el que hay.
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"{duplicado.mensaje} (fotografía {duplicado.photo_id})",
+            idioma.traducir(
+                "{mensaje} (fotografía {identificador})",
+                mensaje=duplicado.mensaje,
+                identificador=duplicado.photo_id,
+            ),
         )
 
     # `[REQ]` §18.5 · Antes de escribir nada, ni en el almacén ni en la base.

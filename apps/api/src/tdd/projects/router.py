@@ -38,6 +38,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 from tdd.phases.repository import contar_para_transicion
@@ -307,7 +308,8 @@ def crear(cuerpo: CrearProyecto, s: SesionDep, usuario: UsuarioDep) -> Any:
                 raise
             if cuerpo.internal_code or intento == intentos - 1:
                 raise HTTPException(
-                    status.HTTP_409_CONFLICT, f"El código interno «{codigo}» ya está cogido"
+                    status.HTTP_409_CONFLICT,
+                    idioma.traducir("El código interno «{codigo}» ya está cogido", codigo=codigo),
                 ) from exc
 
     cliente = s.execute(

@@ -23,6 +23,8 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
+from tdd.core import idioma
+
 #: Restricción → qué decirle a quien está rellenando el formulario.
 #: La clave es el nombre que PostgreSQL le da al índice único.
 MENSAJES: dict[str, str] = {
@@ -91,18 +93,25 @@ def registrar(app: Any) -> None:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 content={
                     "type": "https://api.tdd.example/errors/internal",
-                    "title": "Error interno",
+                    "title": idioma.traducir_a(
+                        idioma.de_cabecera(request.headers.get("accept-language", "")),
+                        "Error interno",
+                    ),
                     "status": 500,
                     "instance": str(request.url.path),
                 },
             )
+        # `[REQ]` 0030 · Se traduce aquí y no en la tabla de arriba: una
+        # constante de módulo se evalúa al importar y congelaría el idioma. Y
+        # el título también, que es lo que el frontend enseña en negrita.
+        lengua = idioma.de_cabecera(request.headers.get("accept-language", ""))
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={
                 "type": "https://api.tdd.example/errors/conflict",
-                "title": "Conflicto",
+                "title": idioma.traducir_a(lengua, "Conflicto"),
                 "status": 409,
-                "detail": texto,
+                "detail": idioma.traducir_a(lengua, texto),
                 "instance": str(request.url.path),
             },
         )

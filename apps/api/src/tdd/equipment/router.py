@@ -35,6 +35,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.equipment import importacion, service
 
@@ -199,7 +200,12 @@ def _comprobar_enumerados(datos: dict[str, Any]) -> None:
         if valor is not None and valor not in validos:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                f"«{campo}» no admite «{valor}». Valores válidos: {', '.join(validos)}.",
+                idioma.traducir(
+                    "«{campo}» no admite «{valor}». Valores válidos: {validos}.",
+                    campo=campo,
+                    valor=valor,
+                    validos=", ".join(validos),
+                ),
             )
 
 
@@ -505,7 +511,10 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
     if zona is None:  # pragma: no cover - el catálogo la tiene en las seis tipologías
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"La tipología de este activo no admite la zona «{ZONA_DE_ARRANQUE}»",
+            idioma.traducir(
+                "La tipología de este activo no admite la zona «{zona}»",
+                zona=ZONA_DE_ARRANQUE,
+            ),
         )
 
     marcados = (
@@ -626,19 +635,29 @@ def _comprobar_objeto(s: Session, capex_code_id: uuid.UUID | None) -> None:
     )
     if fila is None:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, f"El código {capex_code_id} no existe"
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            idioma.traducir("El código {capex_code_id} no existe", capex_code_id=capex_code_id),
         )
     if fila["level"] != 3:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "Un equipo cuelga de un **objeto** del árbol (nivel 3). El código "
-            f"{capex_code_id} es de nivel {fila['level']}.",
+            idioma.traducir(
+                "Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {capex_code_id} "
+                "es de nivel {nivel}.",
+                capex_code_id=capex_code_id,
+                nivel=fila["level"],
+            ),
         )
     if fila["raiz"] != TIPO_DE_COSTE_FISICO:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Un equipo es una parte física del edificio y va en «{TIPO_DE_COSTE_FISICO}». "
-            f"El código {capex_code_id} cuelga de «{fila['raiz']}».",
+            idioma.traducir(
+                "Un equipo es una parte física del edificio y va en «{tipo_de_coste}». El "
+                "código {capex_code_id} cuelga de «{raiz}».",
+                tipo_de_coste=TIPO_DE_COSTE_FISICO,
+                capex_code_id=capex_code_id,
+                raiz=fila["raiz"],
+            ),
         )
 
 
@@ -761,7 +780,10 @@ def _analizar_subida(contenido: bytes, s: Session, project_id: uuid.UUID) -> Any
     if len(contenido) > MAX_BYTES_XLSX:
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            f"El fichero supera el máximo de {MAX_BYTES_XLSX // (1024 * 1024)} MB",
+            idioma.traducir(
+                "El fichero supera el máximo de {mb} MB",
+                mb=MAX_BYTES_XLSX // (1024 * 1024),
+            ),
         )
     try:
         hoja = equipo_xlsx.leer(contenido)

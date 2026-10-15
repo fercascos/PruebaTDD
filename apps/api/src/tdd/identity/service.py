@@ -25,6 +25,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
+from tdd.core import idioma
+
 #: `[SUP]` Intentos antes de bloquear. Cinco es el equilibrio habitual: absorbe
 #: los errores de mecanografía sin dejar sitio a la fuerza bruta.
 INTENTOS_ANTES_DE_BLOQUEAR = 5
@@ -202,7 +204,12 @@ class ClaveDebil(Exception):  # noqa: N818
 
 def comprobar_fortaleza(clave: str, *, email: str = "") -> None:
     if len(clave) < LONGITUD_MINIMA_DE_CLAVE:
-        raise ClaveDebil(f"La contraseña debe tener al menos {LONGITUD_MINIMA_DE_CLAVE} caracteres")
+        raise ClaveDebil(
+            idioma.traducir(
+                "La contraseña debe tener al menos {minimo} caracteres",
+                minimo=LONGITUD_MINIMA_DE_CLAVE,
+            )
+        )
     if email and email.split("@")[0].lower() in clave.lower():
         raise ClaveDebil("La contraseña no puede contener el nombre de la cuenta")
     if len(set(clave)) < 5:

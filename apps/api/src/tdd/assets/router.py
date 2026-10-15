@@ -27,6 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 
 router = APIRouter(tags=["Activos"])
@@ -420,7 +421,10 @@ def fijar_zonas_del_activo(
     if fuera := sorted(str(z) for z in set(pedidas) - permitidas):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"La tipología de este activo no admite estas zonas: {', '.join(fuera)}",
+            idioma.traducir(
+                "La tipología de este activo no admite estas zonas: {fuera}",
+                fuera=", ".join(fuera),
+            ),
         )
 
     s.execute(text("DELETE FROM asset_zone WHERE asset_id = :a"), {"a": str(asset_id)})

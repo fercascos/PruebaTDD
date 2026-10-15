@@ -18,6 +18,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.revision_documental.puerto import (
     Comprobacion,
     Dictamen,
@@ -195,10 +196,13 @@ def revisar_documento(  # noqa: PLR0913 — cada uno es una dependencia distinta
     # autoprotección como RESTRINGIDO.
     if doc["confidentiality"] == "RESTRINGIDO":
         raise DocumentoDemasiadoSensible(
-            f"«{doc['display_name']}» está clasificado como RESTRINGIDO y no se envía a "
-            "ningún proveedor de IA, ni con la revisión del proyecto activada. Es el nivel "
-            "que solo puede descargar quien administra o dirige. Si hay que revisarlo, "
-            "baje su clasificación primero: quedará registrado quién lo hizo."
+            idioma.traducir(
+                "«{documento}» está clasificado como RESTRINGIDO y no se envía a ningún proveedor "
+                "de IA, ni con la revisión del proyecto activada. Es el nivel que solo puede "
+                "descargar quien administra o dirige. Si hay que revisarlo, baje su clasificación "
+                "primero: quedará registrado quién lo hizo.",
+                documento=doc["display_name"],
+            )
         )
 
     criterios = comprobaciones_vigentes(s)
@@ -322,7 +326,9 @@ def decidir(
         raise LookupError("Observación no encontrada")
     if actual != "PROPUESTA":
         raise DecisionInvalida(
-            f"Esta observación ya está {actual.lower()}: no se decide dos veces."
+            idioma.traducir(
+                "Esta observación ya está {estado}: no se decide dos veces.", estado=actual.lower()
+            )
         )
 
     s.execute(

@@ -16,6 +16,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.evidence import antivirus
 
 
@@ -65,6 +66,8 @@ def rechazar_si_infectado(
     s.commit()
     raise HTTPException(
         status.HTTP_422_UNPROCESSABLE_ENTITY,
-        f"El antivirus ha detectado una amenaza en el fichero ({resultado.detalle}). "
-        f"No se ha subido.",
+        idioma.traducir(
+            "El antivirus ha detectado una amenaza en el fichero ({detalle}). No se ha subido.",
+            detalle=resultado.detalle,
+        ),
     )

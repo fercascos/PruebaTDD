@@ -1,5 +1,6 @@
 es,en
  · {cuantas} sin precio validado, · {cuantas} with an unvalidated price
+Activo no encontrado,Asset not found
 Agendar una visita exige fecha prevista,Scheduling an inspection requires a planned date
 "Alguna limitación no existe, no es de este proyecto o ya estaba decidida. Vuelva a cargar la lista: puede que otra persona la haya resuelto.","One of the limitations does not exist, does not belong to this project or had already been decided. Reload the list: somebody else may have resolved it."
 "Alguna propuesta no existe, no es de este activo o ya estaba decidida. Vuelva a cargar la lista: puede que otra persona la haya resuelto.","One of the proposals does not exist, does not belong to this asset or had already been decided. Reload the list: somebody else may have resolved it."
@@ -7,63 +8,154 @@ Agendar una visita exige fecha prevista,Scheduling an inspection requires a plan
 Aplicar la memoria exige confirmación explícita,Applying the technical report requires explicit confirmation
 "Aprobar o emitir un informe exige perfil de revisor, director o administrador","Approving or issuing a report requires a reviewer, director or administrator profile"
 Autorizar el análisis de documentación del cliente corresponde a quien administra o dirige el proyecto.,Authorising the analysis of the client's documentation is for whoever administers or directs the project.
+Año de instalación,Year of installation
 "Cada asistente es una persona del equipo (`app_user_id`) o alguien de fuera (`external_name`), nunca las dos cosas ni ninguna.","Each attendee is either a team member (`app_user_id`) or somebody external (`external_name`), never both and never neither."
+Cliente no encontrado,Client not found
+Conflicto,Conflict
 Correo o contraseña incorrectos,Incorrect email or password
 Credencial no válida,Invalid credential
+Cuenta bloqueada temporalmente. Inténtelo de nuevo en {minutos} min,Account temporarily locked. Try again in {minutos} min
+Demasiadas formas: el máximo es {maximo},Too many shapes: the maximum is {maximo}
+Documento no encontrado,Document not found
 El activo no es de este proyecto,The asset does not belong to this project
+El activo no pertenece a este proyecto,The asset does not belong to this project
+El activo {activo} no es de este proyecto.,Asset {activo} does not belong to this project.
+El activo «{nombre}»,Asset «{nombre}»
+El antivirus ha detectado una amenaza en el fichero ({detalle}). No se ha subido.,The antivirus detected a threat in the file ({detalle}). It has not been uploaded.
+El archivo supera el máximo de {mb} MB,The file exceeds the maximum of {mb} MB
+El año de instalación ({instalacion}) está fuera de rango,The year of installation ({instalacion}) is out of range
+El año de instalación y la vida útil esperada van juntos o no van: con solo uno de los dos no hay vida residual que calcular.,The year of installation and the expected service life go together or not at all: with only one of the two there is no remaining life to calculate.
+El campo «{campo}» está vacío: se insertará texto vacío.,Field «{campo}» is empty: empty text will be inserted.
+El cliente tiene {proyectos} proyectos y no se puede borrar,The client has {proyectos} projects and cannot be deleted
+El código de categoría {codigo} no existe,Category code {codigo} does not exist
+El código interno «{codigo}» ya está cogido,Internal code «{codigo}» is already taken
+El código {capex_code_id} no existe,Code {capex_code_id} does not exist
+El código {codigo} no existe,Code {codigo} does not exist
+El dato que intenta guardar ya existe y no puede repetirse.,The value you are trying to save already exists and cannot be repeated.
 "El desglose por medición va entero o no va: hacen falta unidad, cantidad y precio unitario. Deje los tres vacíos para dar solo el importe.","The measured breakdown goes in whole or not at all: unit, quantity and unit price are all required. Leave all three empty to give the amount only."
 El documento al que sustituye no existe,The document it replaces does not exist
+El documento propone {cuantos} datos del edificio y no está asignado a ningún activo: no hay a quién proponérselos. Asígnelo primero.,The document proposes {cuantos} building details and is not assigned to any asset: there is nobody to propose them to. Assign it first.
 El documento ya está en la papelera,The document is already in the bin
 El fichero no es un PPTX válido,The file is not a valid PPTX
+El fichero supera el máximo de {mb} MB,The file exceeds the maximum of {mb} MB
+El importe ({importe}) no coincide con la referencia ({referencia}): explique por qué (mínimo {minimo} caracteres).,The amount ({importe}) does not match the reference ({referencia}): explain why (minimum {minimo} characters).
 El informe está emitido y es inmutable. Genere una versión nueva.,The report has been issued and is immutable. Generate a new version.
+El marcador «{marcador}» no tiene origen en el mapeo y saldría literalmente en el documento.,Token «{marcador}» has no source in the mapping and would appear literally in the document.
 El miembro no pertenece al equipo,That member does not belong to the team
+El nodo padre no existe o pertenece a otro activo,The parent node does not exist or belongs to another asset
 El nodo padre pertenece a otro activo: un árbol no puede cruzar edificios,The parent node belongs to another asset: a tree cannot span buildings
 El nombre queda vacío tras el saneado,The name is empty once sanitised
 El nombre visible se envía sin extensión: la fija el servidor,The display name is sent without an extension: the server sets it
+El objeto «{objeto}» aparece dos veces en la misma categoría,Item «{objeto}» appears twice in the same category
+El objeto «{objeto}» apunta a un código que no es un elemento del catálogo (nivel 3),Item «{objeto}» points to a code that is not a catalogue item (level 3)
+El padre no existe,The parent does not exist
+El proyecto,The project
+El proyecto no tiene la fase {fase}: actívela primero,The project does not have the {fase} phase: enable it first
 El proyecto todavía no tiene ninguna actuación que exportar,The project has no action to export yet
+El texto de «{donde}» excede su marco un {exceso}.,The text in «{donde}» overflows its frame by {exceso}.
 El traslado exige confirmación explícita del usuario,Transferring requires explicit confirmation from the user
 El árbol documental no está sembrado en esta base de datos. Ejecute `python3 -m tdd.db.sembrar`.,The document tree is not seeded in this database. Run `python3 -m tdd.db.sembrar`.
+El árbol documental no tiene «{code}»,The document tree has no «{code}»
 Elija un cliente de la lista o escriba el nombre de uno nuevo,Choose a client from the list or type the name of a new one
+Equipo no encontrado,Equipment not found
+Error interno,Internal error
+Esa actuación ya tiene un importe para ese horizonte temporal. Edite la línea existente en vez de añadir otra.,That action already has an amount for that time horizon. Edit the existing line instead of adding another.
+Esa fase ya está activada en el proyecto.,That phase is already enabled in the project.
+Esa plantilla ya tiene un marcador con ese nombre.,That template already has a token with that name.
 Esa zona no corresponde a la tipología del activo,That area does not apply to the asset's typology
+Ese cliente no existe,That client does not exist
 Ese movimiento metería el nodo dentro de sí mismo,That move would put the node inside itself
 Esta fotografía no se puede descargar.,This photo cannot be downloaded.
 Esta línea no tiene desglose por medición: no hay nada que trasladar,This line has no measured breakdown: there is nothing to transfer
+Esta observación ya está {estado}: no se decide dos veces.,This observation is already {estado}: it is not decided twice.
+Esta versión no tiene fichero {formato},This version has no {formato} file
 Estado de ronda desconocido,Unknown round status
+Estas expresiones no corresponden a ningún campo: {desconocidas}. Disponibles: {disponibles},These expressions match no field: {desconocidas}. Available: {disponibles}
 "Este activo no tiene memoria técnica, que es de donde salen hoy los descriptivos. Cárguela o rellénela primero.","This asset has no technical report, which is where the descriptions come from today. Upload or fill it in first."
 Este activo todavía no tiene memoria técnica,This asset has no technical report yet
 Este documento está marcado como restringido y su perfil no puede descargarlo,This document is marked as restricted and your profile cannot download it
+"Este documento ya está en el proyecto como «{nombre}» ({identificador}). Para sustituirlo, súbalo indicando a cuál reemplaza.","This document is already in the project as «{nombre}» ({identificador}). To replace it, upload it stating which one it replaces."
+"Este hallazgo ya tiene una línea en el plazo {plazo}. Una actuación recurrente lleva una línea por plazo, no dos en el mismo.","This finding already has a line in the {plazo} term. A recurring action has one line per term, not two in the same one."
 "Este proyecto no tiene activada la fase de solicitud de documentación, que es donde vive el árbol. Actívela en la pestaña de fases del proyecto.","This project does not have the document request phase enabled, which is where the tree lives. Enable it on the project's phases tab."
+Estos campos no se pueden proponer sobre un activo: {fuera},These fields cannot be proposed for an asset: {fuera}
+"Estos códigos de sistema técnico no están en el catálogo: {codigos}. Los equipos se han propuesto igual, sin sistema: hay que asignárselo a mano.","These technical system codes are not in the catalogue: {codigos}. The equipment has been proposed anyway, with no system: it has to be assigned by hand."
+Extensión «{extension}» no admitida. Se aceptan: {admitidas},Extension «{extension}» not supported. Accepted: {admitidas}
+Falta el activo,The asset is missing
+Falta el tipo de equipo,The equipment type is missing
 Falta la credencial,The credential is missing
+Fase no encontrada,Phase not found
+Forma {indice}: se esperaba un objeto,Shape {indice}: an object was expected
+Forma {indice}: tipo «{tipo}» desconocido. Disponibles: {disponibles},Shape {indice}: unknown type «{tipo}». Available: {disponibles}
+Forma {indice}: una anotación de texto no puede ir vacía,Shape {indice}: a text annotation cannot be empty
+Forma {indice}: «grosor» no es un número,Shape {indice}: «grosor» is not a number
+Forma {indice}: «{campo}» no es un número,Shape {indice}: «{campo}» is not a number
+"Forma {indice}: «{campo}» vale {numero}. Las coordenadas van en fracción del lado (0 a 1), no en píxeles.","Shape {indice}: «{campo}» is {numero}. Coordinates are a fraction of the side (0 to 1), not pixels."
+Forma {indice}: «{texto}» no es un color #RRGGBB,Shape {indice}: «{texto}» is not an #RRGGBB colour
+Formato «{formato}» no admitido. Se aceptan: {admitidos},Format «{formato}» not supported. Accepted: {admitidos}
 Fotografía no encontrada,Photo not found
+Fuente no encontrada,Source not found
+Hallazgo no encontrado,Finding not found
+Hay dos propuestas aceptadas para el mismo campo ({repetidos}). Elija una: aplicarlas en orden dejaría ganando a la última por azar.,Two accepted proposals target the same field ({repetidos}). Choose one: applying them in order would let the last one win by chance.
 "Hay una limitación en las dos listas a la vez: aceptarla y descartarla en la misma llamada dejaría ganando al orden de ejecución, que no lo ha decidido nadie.","One limitation is in both lists at once: accepting and discarding it in the same call would let the order of execution decide, and nobody chose that order."
 "Hay una propuesta repetida entre las dos listas: aceptarla y descartarla en la misma llamada dejaría ganando al orden de ejecución, que no lo ha decidido nadie.","One proposal appears in both lists: accepting and discarding it in the same call would let the order of execution decide, and nobody chose that order."
+Horizonte temporal desconocido: {plazo},Unknown time horizon: {plazo}
+La cantidad debe ser mayor que cero,The quantity must be greater than zero
 La contraseña actual no es correcta,The current password is not correct
+La contraseña debe tener al menos {minimo} caracteres,The password must be at least {minimo} characters long
+La etiqueta «{etiqueta}» ya aparece en la fila {fila} para el mismo activo.,Tag «{etiqueta}» already appears on row {fila} for the same asset.
+La expresión «{expresion}» del mapeo apunta a un campo que no existe.,Expression «{expresion}» in the mapping points to a field that does not exist.
 La fecha de cierre no puede ser anterior a la de arranque,The closing date cannot be earlier than the start date
 La fotografía debe pertenecer a este activo y estar lista,The photo must belong to this asset and be ready
 La fotografía no está asignada a ningún activo: asígnela antes de crear el hallazgo,The photo is not assigned to any asset: assign it before creating the finding
 La fotografía no tiene zona: indíquela en la petición,The photo has no area: state it in the request
+La fotografía ya está vinculada a ese elemento.,The photo is already linked to that element.
+"La fuente «{fuente}» no está instalada en el servidor. El documento la seguirá pidiendo por nombre, pero la estimación de desbordamiento pierde precisión.","Font «{fuente}» is not installed on the server. The document will still ask for it by name, but the overflow estimate loses accuracy."
+La memoria no puede proponer estos campos del activo: {sobran}. Admitidos: {admitidos}.,The technical report cannot propose these asset fields: {sobran}. Accepted: {admitidos}.
 La misma persona del equipo está dos veces en la lista.,The same team member appears twice in the list.
 La nueva contraseña no puede ser la actual,The new password cannot be the current one
 La plantilla se descomprime a un tamaño desproporcionado y se rechaza,The template decompresses to a disproportionate size and is rejected
 La plantilla supera el tamaño máximo,The template exceeds the maximum size
 La purga es irreversible y exige confirmación explícita,Purging is irreversible and requires explicit confirmation
+La retención del proyecto llega hasta {hasta}.,The project's retention runs to {hasta}.
+"La sección «{nombre}» ({codigo}) va al informe con la valoración en blanco: sale su descriptivo y debajo el rótulo vacío. La valoración no la rellena ningún documento, la escribe el técnico.",Section «{nombre}» ({codigo}) goes into the report with a blank assessment: its description is printed with an empty label underneath. No document fills the assessment in; the engineer writes it.
 La selección supera el tamaño máximo de descarga directa. Reduzca el número de fotografías.,The selection exceeds the maximum size for a direct download. Reduce the number of photos.
+La tabla de CAPEX se repartirá en {diapositivas} diapositivas.,The CAPEX table will be split across {diapositivas} slides.
+La tipología de este activo no admite estas zonas: {fuera},This asset's typology does not allow these areas: {fuera}
+La tipología de este activo no admite la zona «{zona}»,This asset's typology does not allow the «{zona}» area
+"La tipología de este activo no admite la zona «{zona}», con la que nacen las filas del esqueleto","This asset's typology does not allow the «{zona}» area, which is the one the skeleton rows start with"
+La vida útil esperada ({vida}) está fuera de rango,The expected service life ({vida}) is out of range
 Línea de solicitud no encontrada,Request line not found
 Línea no encontrada,Line not found
 Marcar un documento como no disponible exige explicar por qué: es lo que se declara como limitación en el informe,Marking a document as unavailable requires explaining why: that is what is declared as a limitation in the report
 Marcar una pregunta como respondida exige escribir la respuesta,Marking a question as answered requires writing the answer
+Miembro no encontrado,Member not found
 Ninguna de las fotografías indicadas está disponible,None of the photos given is available
+No encontrada,Not found
 No hay ningún enlace activo,There is no active link
 No puede desactivar su propia cuenta,You cannot deactivate your own account
+"No se admiten {tipo}s. El contenido del fichero es un {real}, independientemente de su extensión.","{tipo}s are not accepted. The file's content is a {real}, whatever its extension says."
 No se ha indicado ninguna limitación,No limitation was given
 No se ha indicado ninguna propuesta,No proposal was given
+No se ha podido leer la plantilla: {exc},The template could not be read: {exc}
 No se puede habilitar una fuente sin declarar que se han revisado sus condiciones de uso.,A source cannot be enabled without declaring that its terms of use have been reviewed.
 No se puede marcar como validado un objeto vacío: sería firmar una casilla en blanco. Escriba el descriptivo o la valoración.,An empty item cannot be marked as validated: it would mean signing a blank box. Write the description or the assessment.
+Para validar un objeto descrito hace falta su valoración. El descriptivo dice qué hay y lo trae la documentación; la valoración dice en qué estado está y la escribe usted. Sin ella el informe saca la sección con el rótulo «Valoración» y nada debajo.,Validating a described item requires its assessment. The description says what is there and comes from the documentation; the assessment says what condition it is in and you write it. Without it the report prints the section with the «Assessment» label and nothing underneath.
+Plantilla no encontrada,Template not found
+Pregunta no encontrada,Question not found
+Proyecto no encontrado,Project not found
+Quedan {cuantos} precios pendientes de validación humana,{cuantos} prices are still pending human validation
+Quedan {pendientes} documentos en «solicitada»: compruebe si deben declararse como limitación.,{pendientes} documents are still «requested»: check whether they should be declared as a limitation.
+Quedan {restantes} días de retención en la papelera.,{restantes} days of retention remain in the bin.
 Quien dirige el proyecto debe tener el rol DIRECTOR,Whoever directs the project must have the DIRECTOR role
+Referencia no encontrada,Reference not found
 Revise la previsualización y confirme la importación.,Review the preview and confirm the import.
 Revisión no encontrada,Review not found
+Rol desconocido,Unknown role
+Rol desconocido. Disponibles: {roles},Unknown role. Available: {roles}
+Ronda no encontrada,Round not found
 Sesión no válida,Invalid session
 Sin clasificar,Unclassified
+Sin evidencia: ningún proveedor ha leído el documento todavía.,No evidence: no provider has read the document yet.
 Solo un administrador gestiona las fuentes de precio,Only an administrator manages price sources
 Solo un administrador o director puede autorizar una purga,Only an administrator or director can authorise a purge
 Solo un administrador puede dar de alta usuarios,Only an administrator can create users
@@ -73,20 +165,80 @@ Solo un administrador revisa las condiciones de uso,Only an administrator review
 Su perfil no puede resolver propuestas de otros usuarios,Your profile cannot resolve other users' proposals
 Tipología desconocida,Unknown typology
 Ubicación no encontrada,Location not found
+Un descriptivo describe un **objeto** del árbol (nivel 3). El código {codigo} es de nivel {nivel}.,A description describes an **item** of the tree (level 3). Code {codigo} is level {nivel}.
+Un equipo cuelga de un **objeto** del árbol (nivel 3). El código {capex_code_id} es de nivel {nivel}.,A piece of equipment hangs off an **item** of the tree (level 3). Code {capex_code_id} is level {nivel}.
+Un equipo es una parte física del edificio y va en «{tipo_de_coste}». El código {capex_code_id} cuelga de «{raiz}».,A piece of equipment is a physical part of the building and goes under «{tipo_de_coste}». Code {capex_code_id} hangs off «{raiz}».
+Un hallazgo en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {posibles},A finding in «{desde}» cannot move to «{hasta}». Possible destinations: {posibles}
+Un informe en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {destinos},A report in «{desde}» cannot move to «{hasta}». Possible destinations: {destinos}
 Un nodo no puede ser su propio padre,A node cannot be its own parent
 "Un precio conserva siempre su procedencia: elija una referencia. Si el importe no sale de ninguna de las registradas, dé de alta una referencia manual con su origen y valide contra ella.","A price always keeps its provenance: choose a reference. If the amount comes from none of those on record, create a manual reference stating where it came from and validate against it."
+Una categoría de la memoria tiene que ser un capítulo del catálogo (nivel 2). El código {codigo} es de nivel {nivel}.,A category of the technical report has to be a catalogue chapter (level 2). Code {codigo} is level {nivel}.
+Una fotografía en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {posibles},A photo in «{desde}» cannot move to «{hasta}». Possible destinations: {posibles}
 Una planta no puede aparecer dos veces en el mismo activo,A floor cannot appear twice in the same asset
 Una zona no puede declararse dos veces en el mismo activo,An area cannot be declared twice in the same asset
+Usuario desconocido o inactivo,Unknown or inactive user
+Usuario no encontrado,User not found
 Versión de informe no encontrada,Report version not found
 Versión no encontrada,Version not found
+Versión {identificador} no encontrada,Version {identificador} not found
+Vida útil esperada,Expected service life
+Visita no encontrada,Inspection not found
+Ya existe un cliente con ese nombre.,A client with that name already exists.
+Ya existe un proyecto con ese código interno. Use otro.,A project with that internal code already exists. Use another one.
 Ya existe una cuenta con ese correo,An account with that email already exists
+Ya existe una cuenta con ese correo.,An account with that email already exists.
+Ya existe una plantilla con ese nombre en ese idioma.,A template with that name already exists in that language.
+Ya existe una pregunta con ese número en la ronda.,A question with that number already exists in the round.
+Ya existe una ronda con ese número.,A round with that number already exists.
+Ya existe una versión con ese número.,A version with that number already exists.
+Ya hay un activo con ese código del cliente en el proyecto.,There is already an asset with that client code in the project.
+Ya hay un equipo con la etiqueta «{etiqueta}» en ese activo. No se toca salvo que pida actualizar los existentes.,There is already a piece of equipment with tag «{etiqueta}» on that asset. It is left alone unless you ask to update existing ones.
+Zona desconocida,Unknown area
 enlace activo,link active
 sin enlace,no link
 sin generar,not generated
 {cerradas} de {rondas} rondas cerradas,{cerradas} of {rondas} rounds closed
 {cuantas} versión(es) emitida(s),{cuantas} version(s) issued
 {cuantas} versión(es) en borrador,{cuantas} draft version(s)
+{cuantos} con error,{cuantos} with an error
+{cuantos} de los asistentes no son personas de esta organización.,{cuantos} of the attendees are not people in this organisation.
+{cuantos} equipos nuevos,{cuantos} new items of equipment
 {cuantos} evento(s),{cuantos} event(s)
+{cuantos} ya existentes (no se tocan),{cuantos} already existing (left alone)
+{hallazgos} hallazgos siguen en «borrador» y NO saldrán en el informe: se quedan fuera {importe} de CAPEX. Páselos a «en revisión» si deben aparecer.,{hallazgos} findings are still «draft» and will NOT appear in the report: {importe} of CAPEX is left out. Move them to «under review» if they should appear.
 {hechas} de {activos} activos visitados,{hechas} of {activos} assets inspected
 {lineas} líneas,{lineas} lines
+"{lineas} líneas con precio sin validar, por un total de {importe}. Revíselas antes de enviar el informe al cliente.","{lineas} lines with an unvalidated price, totalling {importe}. Review them before sending the report to the client."
+{marca} no se ha analizado «{documento}». Esta línea ocupa el sitio de lo que dirá el proveedor de IA sobre «{comprobacion}» cuando se elija uno.,{marca} «{documento}» has not been analysed. This line stands in for what the AI provider will say about «{comprobacion}» once one is chosen.
+{mensaje} (fotografía {identificador}),{mensaje} (photo {identificador})
+{omitidas} campos no se han vuelto a proponer porque alguien ya decidió sobre ellos desde este mismo documento.,{omitidas} fields were not proposed again because somebody already decided on them from this same document.
+{quien} todavía no tiene ninguna actuación que exportar,{quien} has no action to export yet
 {resueltos} de {solicitados} resueltas,{resueltos} of {solicitados} resolved
+{saltadas} limitaciones no se han vuelto a proponer porque alguien ya decidió sobre ellas.,{saltadas} limitations were not proposed again because somebody already decided on them.
+«Cantidad»: «{texto}» no es un número,«Quantity»: «{texto}» is not a number
+«Documentación»: «{texto}» no se entiende. Se toma como «no».,«Documentation»: «{texto}» is not understood. Taken as «no».
+«{campo}» no admite «{valor}». Valores válidos: {validos}.,«{campo}» does not accept «{valor}». Valid values: {validos}.
+«{campo}»: «{texto}» no es un número entero,«{campo}»: «{texto}» is not a whole number
+«{campo}»: «{texto}» no es un valor conocido ({conocidos}). Se deja sin valorar.,«{campo}»: «{texto}» is not a known value ({conocidos}). Left unassessed.
+«{code}» agrupa a otros nodos y no lleva estado propio: el estado se pone en los que cuelgan de él.,«{code}» groups other nodes and carries no status of its own: the status goes on the ones hanging off it.
+"«{documento}» está clasificado como RESTRINGIDO y no se envía a ningún proveedor de IA, ni con la revisión del proyecto activada. Es el nivel que solo puede descargar quien administra o dirige. Si hay que revisarlo, baje su clasificación primero: quedará registrado quién lo hizo.","«{documento}» is classified as RESTRICTED and is not sent to any AI provider, not even with the project's review enabled. It is the level only an administrator or director can download. If it has to be reviewed, lower its classification first: a record will be kept of who did so."
+«{texto}» no es ninguno de los 14 sistemas técnicos: el equipo entra sin clasificar.,«{texto}» is none of the 14 technical systems: the equipment goes in unclassified.
+«{texto}» no es un activo de este proyecto. Dé de alta el activo antes de importar su inventario.,«{texto}» is not an asset of this project. Create the asset before importing its inventory.
+El peldaño «{peldano}» no declara base,Cascade step «{peldano}» declares no base
+El peldaño «{peldano}» no puede calcularse sobre sí mismo,Cascade step «{peldano}» cannot be calculated on itself
+"El peldaño «{peldano}» se apoya en {missing}, que no se ha calculado todavía","Cascade step «{peldano}» rests on {missing}, which has not been calculated yet"
+El porcentaje de «{peldano}» no puede ser negativo,The percentage for «{peldano}» cannot be negative
+Peldaño duplicado: {peldano},Duplicate cascade step: {peldano}
+Modo de redondeo desconocido: {modo},Unknown rounding mode: {modo}
+El proyecto ya está en «{actual}»,The project is already in «{actual}»
+No se puede pasar de «{actual}» a «{destino}». Destinos posibles: {opciones},«{actual}» cannot move to «{destino}». Possible destinations: {opciones}
+ninguna: es un estado final,none: it is a final status
+Para pasar a «{destino}» falta: {motivos},To move to «{destino}» the following is missing: {motivos}
+el proyecto no tiene cliente asignado,the project has no client assigned
+el proyecto no tiene ningún activo,the project has no assets
+no hay ninguna visita agendada,no site visit has been scheduled
+queda {pendientes} activo por visitar ({hechas} de {activos} realizadas),{pendientes} asset still to be visited ({hechas} of {activos} done)
+quedan {pendientes} activos por visitar ({hechas} de {activos} realizadas),{pendientes} assets still to be visited ({hechas} of {activos} done)
+no hay ninguna versión de informe generada,no report version has been generated
+falta la aprobación de un revisor,a reviewer's approval is missing
+quedan fases posteriores sin completar (presentación o defensa),later phases are still incomplete (presentation or defence)

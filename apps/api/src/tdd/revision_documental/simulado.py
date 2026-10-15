@@ -28,6 +28,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date
 
+from tdd.core import idioma
 from tdd.revision_documental.puerto import (
     Comprobacion,
     Dictamen,
@@ -82,12 +83,16 @@ class RevisorSimulado:
             Observacion(
                 comprobacion=c.codigo,
                 veredicto=RUEDA[(semilla + i) % len(RUEDA)],
-                resumen=(
-                    f"{MARCA} no se ha analizado «{documento.nombre}». "
-                    f"Esta línea ocupa el sitio de lo que dirá el proveedor de "
-                    f"IA sobre «{c.nombre}» cuando se elija uno."
+                resumen=idioma.traducir(
+                    "{marca} no se ha analizado «{documento}». Esta línea ocupa el sitio de lo "
+                    "que dirá el proveedor de IA sobre «{comprobacion}» cuando se elija uno.",
+                    marca=MARCA,
+                    documento=documento.nombre,
+                    comprobacion=c.nombre,
                 ),
-                evidencia=("Sin evidencia: ningún proveedor ha leído el documento todavía."),
+                evidencia=idioma.traducir(
+                    "Sin evidencia: ningún proveedor ha leído el documento todavía."
+                ),
                 pagina=None,
                 confianza=None,
             )

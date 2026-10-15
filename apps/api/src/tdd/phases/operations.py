@@ -27,6 +27,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 
@@ -86,7 +87,10 @@ def _fase(s: Session, project_id: uuid.UUID, codigo: PhaseCode) -> uuid.UUID:
     if fila is None:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
-            f"El proyecto no tiene la fase {codigo.value}: actívela primero",
+            idioma.traducir(
+                "El proyecto no tiene la fase {fase}: actívela primero",
+                fase=codigo.value,
+            ),
         )
     return uuid.UUID(str(fila))
 
@@ -652,7 +656,10 @@ def guardar_asistentes(
         if ajenos:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                f"{len(ajenos)} de los asistentes no son personas de esta organización.",
+                idioma.traducir(
+                    "{cuantos} de los asistentes no son personas de esta organización.",
+                    cuantos=len(ajenos),
+                ),
             )
 
     # Sustituir y no reconciliar: la lista es corta, se manda entera, y comparar

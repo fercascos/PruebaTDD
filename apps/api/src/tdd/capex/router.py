@@ -23,9 +23,15 @@ from sqlalchemy.orm import Session
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core import concurrencia as cc
-from tdd.core import idioma
 from tdd.core.db import fijar_idioma
 from tdd.core.deps import SesionDep, UsuarioDep
+
+# La función suelta y no el módulo: en este fichero `idioma` es el **parámetro
+# de consulta** de las tres descargas —`?idioma=en`, que es su nombre público y
+# no se puede cambiar sin romper al frontend—, y taparía al módulo. Lo cazó
+# mypy; en ejecución habría sido un `AttributeError` dentro de un `raise`, que
+# es el peor sitio posible para encontrárselo.
+from tdd.core.idioma import traducir
 from tdd.exports.plantilla_capex import Idioma
 from tdd.findings.riesgos import SIN_GRADO
 
@@ -515,7 +521,7 @@ def resumen_por_riesgo(
                 # El rótulo va como parámetro y no escrito en el SQL para que
                 # pase por `core.idioma`: es una frase del servidor, no una
                 # fila de catálogo que `nombre()` pueda traducir.
-                "sin_nombre": idioma.traducir("Sin clasificar"),
+                "sin_nombre": traducir("Sin clasificar"),
             },
         )
         .mappings()
@@ -731,7 +737,7 @@ def exportar_xlsx(
     prefijo = f"CAPEX_{proyecto.get('internal_code') or project_id}"
 
     if asset_id is None:
-        contenido = _libro(datos, idioma, quien="El proyecto")
+        contenido = _libro(datos, idioma, quien=traducir("El proyecto"))
         nombre = f"{prefijo}_actual.xlsx"
     else:
         partes = {p.asset_id: p for p in puente.separar_por_activo(datos)}
@@ -739,7 +745,10 @@ def exportar_xlsx(
         if parte is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "El activo no pertenece a este proyecto")
         contenido = _libro(
-            parte.snapshot, idioma, quien=f"El activo «{parte.nombre}»", del_activo=True
+            parte.snapshot,
+            idioma,
+            quien=traducir("El activo «{nombre}»", nombre=parte.nombre),
+            del_activo=True,
         )
         nombre = parte.nombre_de_fichero(prefijo)
 
@@ -774,7 +783,7 @@ def _snapshot_de_trabajo(
     return snap.construir(s, project_id, estados=snap.ESTADOS_DE_TRABAJO)
 
 
-def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: bool = False) -> bytes:
+def _libro(datos: dict[str, Any], lengua: Idioma, *, quien: str, del_activo: bool = False) -> bytes:
     """Rellena la plantilla del cliente, o dice por qué no puede.
 
     Está aparte porque lo llaman las tres descargas —proyecto entero, un activo
@@ -786,21 +795,23 @@ def _libro(datos: dict[str, Any], idioma: Idioma, *, quien: str, del_activo: boo
     from tdd.exports.plantilla_capex import NoCabe, generar
 
     proyecto, actuaciones = puente.preparar(
-        datos, idioma=idioma.value, activo_en_el_nombre=del_activo
+        datos, idioma=lengua.value, activo_en_el_nombre=del_activo
     )
     if not actuaciones:
         # 409 y no un libro vacío: un Excel con la cabecera y ninguna fila se
         # adjunta a un correo sin que nadie note que no lleva nada dentro.
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"{quien} todavía no tiene ninguna actuación que exportar",
+            traducir("{quien} todavía no tiene ninguna actuación que exportar", quien=quien),
         )
     try:
-        return generar(proyecto, actuaciones, idioma=idioma.value)
+        return generar(proyecto, actuaciones, idioma=lengua.value)
     except NoCabe as exc:
         # 409 y no 500: no es un fallo del servidor, es que el proyecto tiene
         # más actuaciones de las que admite la plantilla. El mensaje dice qué
         # capítulo se pasa y por cuánto, que es lo accionable.
+        # `quien` y el mensaje de `NoCabe` ya vienen traducidos; aquí solo se
+        # pegan, así que no hay nada que traducir.
         raise HTTPException(status.HTTP_409_CONFLICT, f"{quien}: {exc}") from exc
 
 
@@ -863,7 +874,10 @@ def exportar_cartera_zip(
             zf.writestr(
                 nombre,
                 _libro(
-                    parte.snapshot, idioma, quien=f"El activo «{parte.nombre}»", del_activo=True
+                    parte.snapshot,
+                    idioma,
+                    quien=traducir("El activo «{nombre}»", nombre=parte.nombre),
+                    del_activo=True,
                 ),
             )
         zf.writestr("LEEME.txt", _leeme(proyecto, partes, con_actuaciones))

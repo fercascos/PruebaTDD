@@ -26,6 +26,8 @@ from typing import Any
 from PIL import Image, ImageOps
 from PIL.ExifTags import GPSTAGS, TAGS
 
+from tdd.core import idioma
+
 try:
     from pillow_heif import register_heif_opener
 
@@ -220,8 +222,11 @@ def leer(datos: bytes) -> MetadatosDeImagen:
     formato = (imagen.format or "").upper()
     if formato not in FORMATOS_ACEPTADOS:
         raise ImagenNoValida(
-            f"Formato «{formato or 'desconocido'}» no admitido. "
-            f"Se aceptan: {', '.join(sorted(FORMATOS_ACEPTADOS))}"
+            idioma.traducir(
+                "Formato «{formato}» no admitido. Se aceptan: {admitidos}",
+                formato=formato or "desconocido",
+                admitidos=", ".join(sorted(FORMATOS_ACEPTADOS)),
+            )
         )
 
     exif_bruto = {}

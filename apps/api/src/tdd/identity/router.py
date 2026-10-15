@@ -23,6 +23,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd import cola
+from tdd.core import idioma
 from tdd.core.config import Settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
 from tdd.core.deps import SesionDep, SettingsDep, UsuarioDep
@@ -242,7 +243,10 @@ def iniciar_sesion(
                 minutos = max(exc.segundos_restantes // 60, 1)
                 raise HTTPException(
                     status.HTTP_429_TOO_MANY_REQUESTS,
-                    f"Cuenta bloqueada temporalmente. Inténtelo de nuevo en {minutos} min",
+                    idioma.traducir(
+                        "Cuenta bloqueada temporalmente. Inténtelo de nuevo en {minutos} min",
+                        minutos=minutos,
+                    ),
                     headers={"Retry-After": str(exc.segundos_restantes)},
                 ) from exc
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, MENSAJE_GENERICO) from exc

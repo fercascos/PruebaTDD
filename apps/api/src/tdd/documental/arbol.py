@@ -48,6 +48,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.phases.engine import PhaseCode
 from tdd.phases.operations import DocRequestStatus
@@ -255,7 +256,10 @@ def fijar_estado(
         .first()
     )
     if nodo is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"El árbol documental no tiene «{code}»")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            idioma.traducir("El árbol documental no tiene «{code}»", code=code),
+        )
     hijos = s.execute(
         text(
             "SELECT 1 FROM doc_request_category "
@@ -266,8 +270,11 @@ def fijar_estado(
     if hijos is not None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"«{code}» agrupa a otros nodos y no lleva estado propio: "
-            "el estado se pone en los que cuelgan de él.",
+            idioma.traducir(
+                "«{code}» agrupa a otros nodos y no lleva estado propio: el estado se pone en los "
+                "que cuelgan de él.",
+                code=code,
+            ),
         )
 
     motivo = (cuerpo.unavailable_reason or "").strip() or None

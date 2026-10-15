@@ -29,6 +29,8 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 class TipoDeFuente(StrEnum):
     MANUAL = "MANUAL"
@@ -262,9 +264,14 @@ def comprobar_validacion(
     if importe != referencia.unit_price:
         if len(texto) < MINIMO_JUSTIFICACION:
             raise ValidacionRechazada(
-                f"El importe ({importe}) no coincide con la referencia "
-                f"({referencia.unit_price}): explique por qué "
-                f"(mínimo {MINIMO_JUSTIFICACION} caracteres)."
+                idioma.traducir(
+                    "El importe ({importe}) no coincide con la referencia "
+                    "({referencia}): explique por qué (mínimo {minimo} "
+                    "caracteres).",
+                    importe=importe,
+                    referencia=referencia.unit_price,
+                    minimo=MINIMO_JUSTIFICACION,
+                )
             )
         return texto
 

@@ -22,6 +22,8 @@ from dataclasses import dataclass, field
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, ROUND_HALF_UP, ROUND_UP, Decimal
 from enum import StrEnum
 
+from tdd.core import idioma
+
 CALC_VERSION = 1
 """Se guarda en cada línea. Permite reproducir un informe antiguo aunque la
 fórmula haya evolucionado."""
@@ -55,11 +57,21 @@ class CascadeStep:
 
     def __post_init__(self) -> None:
         if self.key in self.base:
-            raise ValueError(f"El peldaño «{self.key}» no puede calcularse sobre sí mismo")
+            raise ValueError(
+                idioma.traducir(
+                    "El peldaño «{peldano}» no puede calcularse sobre sí mismo", peldano=self.key
+                )
+            )
         if not self.base:
-            raise ValueError(f"El peldaño «{self.key}» no declara base")
+            raise ValueError(
+                idioma.traducir("El peldaño «{peldano}» no declara base", peldano=self.key)
+            )
         if self.pct < 0:
-            raise ValueError(f"El porcentaje de «{self.key}» no puede ser negativo")
+            raise ValueError(
+                idioma.traducir(
+                    "El porcentaje de «{peldano}» no puede ser negativo", peldano=self.key
+                )
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,18 +97,28 @@ class CascadeConfig:
 
     def __post_init__(self) -> None:
         if self.rounding_mode not in _ROUNDING:
-            raise ValueError(f"Modo de redondeo desconocido: {self.rounding_mode}")
+            raise ValueError(
+                idioma.traducir(
+                    "Modo de redondeo desconocido: {modo}",
+                    modo=self.rounding_mode,
+                )
+            )
         seen: set[StepKey] = {StepKey.DIRECT}
         for step in self.steps:
             if step.key in seen:
-                raise ValueError(f"Peldaño duplicado: {step.key}")
+                raise ValueError(idioma.traducir("Peldaño duplicado: {peldano}", peldano=step.key))
             missing = [b for b in step.base if b not in seen]
             if missing:
                 # Un peldaño no puede apoyarse en otro que aún no se ha calculado.
                 # Sin esta comprobación la cascada daría un resultado silenciosamente
                 # distinto según el orden de declaración.
                 raise ValueError(
-                    f"El peldaño «{step.key}» se apoya en {missing}, que no se ha calculado todavía"
+                    idioma.traducir(
+                        "El peldaño «{peldano}» se apoya en {missing}, que no se ha calculado "
+                        "todavía",
+                        peldano=step.key,
+                        missing=missing,
+                    )
                 )
             seen.add(step.key)
 

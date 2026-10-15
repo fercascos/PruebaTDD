@@ -14,6 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 class ProjectStatus(StrEnum):
     BORRADOR = "BORRADOR"
@@ -74,35 +76,48 @@ def _guardas(actual: ProjectStatus, destino: ProjectStatus, e: EstadoDelProyecto
 
     if destino is S.EN_PREPARACION:
         if e.clientes < 1:
-            faltan.append("el proyecto no tiene cliente asignado")
+            faltan.append(idioma.traducir("el proyecto no tiene cliente asignado"))
         if e.activos < 1:
-            faltan.append("el proyecto no tiene ningún activo")
+            faltan.append(idioma.traducir("el proyecto no tiene ningún activo"))
 
     elif destino is S.VISITA_PROGRAMADA:
         if e.visitas_agendadas < 1:
-            faltan.append("no hay ninguna visita agendada")
+            faltan.append(idioma.traducir("no hay ninguna visita agendada"))
 
     elif destino is S.VISITA_REALIZADA:
         pendientes = e.activos - e.visitas_realizadas
         if pendientes > 0:
-            verbo = "queda" if pendientes == 1 else "quedan"
-            sustantivo = "activo" if pendientes == 1 else "activos"
+            # Una frase entera por caso y no un plural pegado a trozos: en
+            # inglés el verbo no cambia y la castellana sí, así que componerla
+            # con `verbo + sustantivo` obligaba a que la inglesa repitiera una
+            # estructura que no es la suya.
+            plantilla = (
+                "queda {pendientes} activo por visitar ({hechas} de {activos} realizadas)"
+                if pendientes == 1
+                else "quedan {pendientes} activos por visitar ({hechas} de {activos} realizadas)"
+            )
             faltan.append(
-                f"{verbo} {pendientes} {sustantivo} por visitar "
-                f"({e.visitas_realizadas} de {e.activos} realizadas)"
+                idioma.traducir(
+                    plantilla,
+                    pendientes=pendientes,
+                    hechas=e.visitas_realizadas,
+                    activos=e.activos,
+                )
             )
 
     elif destino is S.EN_REVISION:
         if e.versiones_generadas < 1:
-            faltan.append("no hay ninguna versión de informe generada")
+            faltan.append(idioma.traducir("no hay ninguna versión de informe generada"))
 
     elif destino is S.INFORME_EMITIDO:
         if e.aprobaciones_registradas < 1:
-            faltan.append("falta la aprobación de un revisor")
+            faltan.append(idioma.traducir("falta la aprobación de un revisor"))
 
     elif destino is S.CERRADO and actual is S.INFORME_EMITIDO:
         if not e.fases_posteriores_completadas:
-            faltan.append("quedan fases posteriores sin completar (presentación o defensa)")
+            faltan.append(
+                idioma.traducir("quedan fases posteriores sin completar (presentación o defensa)")
+            )
 
     return faltan
 
@@ -112,18 +127,31 @@ def validar_transicion(
 ) -> None:
     """Comprueba que la transición existe y que sus guardas se cumplen."""
     if actual == destino:
-        raise TransicionNoPermitida(f"El proyecto ya está en «{actual}»")
+        raise TransicionNoPermitida(
+            idioma.traducir("El proyecto ya está en «{actual}»", actual=actual)
+        )
 
     posibles = TRANSICIONES[actual]
     if destino not in posibles:
-        opciones = ", ".join(sorted(posibles)) or "ninguna: es un estado final"
+        opciones = ", ".join(sorted(posibles)) or idioma.traducir("ninguna: es un estado final")
         raise TransicionNoPermitida(
-            f"No se puede pasar de «{actual}» a «{destino}». Destinos posibles: {opciones}"
+            idioma.traducir(
+                "No se puede pasar de «{actual}» a «{destino}». Destinos posibles: {opciones}",
+                actual=actual,
+                destino=destino,
+                opciones=opciones,
+            )
         )
 
     faltan = _guardas(actual, destino, estado)
     if faltan:
-        raise GuardaIncumplida(f"Para pasar a «{destino}» falta: " + "; ".join(faltan))
+        raise GuardaIncumplida(
+            idioma.traducir(
+                "Para pasar a «{destino}» falta: {motivos}",
+                destino=destino,
+                motivos="; ".join(faltan),
+            )
+        )
 
 
 def destinos_posibles(

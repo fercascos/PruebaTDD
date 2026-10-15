@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 class EstadoDelHallazgo(StrEnum):
     BORRADOR = "BORRADOR"
@@ -70,7 +72,13 @@ def comprobar_transicion(
     if hasta not in TRANSICIONES[desde]:
         posibles = ", ".join(sorted(TRANSICIONES[desde])) or "ninguno"
         raise TransicionDeHallazgoNoPermitida(
-            f"Un hallazgo en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {posibles}"
+            idioma.traducir(
+                "Un hallazgo en «{desde}» no puede pasar a «{hasta}». Destinos posibles: "
+                "{posibles}",
+                desde=desde,
+                hasta=hasta,
+                posibles=posibles,
+            )
         )
     if hasta is EstadoDelHallazgo.EN_REVISION and not hechos.tiene_descripcion:
         raise GuardaDeHallazgoIncumplida(
@@ -84,7 +92,10 @@ def comprobar_transicion(
             )
         if hechos.precios_sin_validar:
             raise GuardaDeHallazgoIncumplida(
-                f"Quedan {hechos.precios_sin_validar} precios pendientes de validación humana"
+                idioma.traducir(
+                    "Quedan {cuantos} precios pendientes de validación humana",
+                    cuantos=hechos.precios_sin_validar,
+                )
             )
 
 

@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.evidence.router import AlmacenDep
 
@@ -157,8 +158,11 @@ def extraer(
     if documento["asset_id"] is None and aportacion.campos:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"El documento propone {len(aportacion.campos)} datos del edificio y no está "
-            "asignado a ningún activo: no hay a quién proponérselos. Asígnelo primero.",
+            idioma.traducir(
+                "El documento propone {cuantos} datos del edificio y no está "
+                "asignado a ningún activo: no hay a quién proponérselos. Asígnelo primero.",
+                cuantos=len(aportacion.campos),
+            ),
         )
 
     # Se retiran solo las PENDIENTES de este documento. Las decididas se quedan.
@@ -311,19 +315,27 @@ def extraer(
     avisos = list(aportacion.avisos)
     if sistemas_desconocidos:
         avisos.append(
-            f"Estos códigos de sistema técnico no están en el catálogo: "
-            f"{', '.join(sorted(sistemas_desconocidos))}. Los equipos se han propuesto "
-            "igual, sin sistema: hay que asignárselo a mano."
+            idioma.traducir(
+                "Estos códigos de sistema técnico no están en el catálogo: {codigos}. Los equipos "
+                "se han propuesto igual, sin sistema: hay que asignárselo a mano.",
+                codigos=", ".join(sorted(sistemas_desconocidos)),
+            )
         )
     if omitidas := len(decididos & {c.campo for c in aportacion.campos}):
         avisos.append(
-            f"{omitidas} campos no se han vuelto a proponer porque alguien ya decidió "
-            "sobre ellos desde este mismo documento."
+            idioma.traducir(
+                "{omitidas} campos no se han vuelto a proponer porque alguien ya decidió sobre "
+                "ellos desde este mismo documento.",
+                omitidas=omitidas,
+            )
         )
     if saltadas := len(ya_decididas & {lim.texto for lim in aportacion.limitaciones}):
         avisos.append(
-            f"{saltadas} limitaciones no se han vuelto a proponer porque alguien ya "
-            "decidió sobre ellas."
+            idioma.traducir(
+                "{saltadas} limitaciones no se han vuelto a proponer porque alguien ya decidió "
+                "sobre ellas.",
+                saltadas=saltadas,
+            )
         )
 
     return {
@@ -448,8 +460,11 @@ def decidir(
         repetidos = sorted({c for c in campos if campos.count(c) > 1})
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Hay dos propuestas aceptadas para el mismo campo ({', '.join(repetidos)}). "
-            "Elija una: aplicarlas en orden dejaría ganando a la última por azar.",
+            idioma.traducir(
+                "Hay dos propuestas aceptadas para el mismo campo ({repetidos}). Elija una: "
+                "aplicarlas en orden dejaría ganando a la última por azar.",
+                repetidos=", ".join(repetidos),
+            ),
         )
 
     from tdd.memoria.router import CAMPOS_PROPONIBLES
@@ -457,7 +472,10 @@ def decidir(
     if fuera := sorted(set(campos) - set(CAMPOS_PROPONIBLES)):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Estos campos no se pueden proponer sobre un activo: {', '.join(fuera)}",
+            idioma.traducir(
+                "Estos campos no se pueden proponer sobre un activo: {fuera}",
+                fuera=", ".join(fuera),
+            ),
         )
 
     # `[REQ]` **No se toca `memoria_validada_at`.** Es tentador —el gestor acaba
@@ -777,7 +795,10 @@ def decidir_equipos(
         if del_encargo is None:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                f"El activo {aceptada.asset_id} no es de este proyecto.",
+                idioma.traducir(
+                    "El activo {activo} no es de este proyecto.",
+                    activo=aceptada.asset_id,
+                ),
             )
 
         equipment_id = s.execute(

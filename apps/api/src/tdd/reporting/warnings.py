@@ -27,6 +27,7 @@ from enum import StrEnum
 # `f"{...:,.2f}"` directamente, que es la convención inglesa: en una aplicación
 # entera en español el importe salía como «1,099,100.00 €» al lado de la
 # pantalla de CAPEX, que muestra «1.099.100,00 €» para la misma cifra.
+from tdd.core import idioma
 from tdd.reporting.capex_layout import formatear_importe
 
 
@@ -107,8 +108,11 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Severidad.BLOQUEANTE,
                 # Sin esto, el marcador saldría literal en la pantalla del
                 # cliente, que es la peor forma posible de descubrir el fallo.
-                f"El marcador «{marcador}» no tiene origen en el mapeo y saldría "
-                "literalmente en el documento.",
+                idioma.traducir(
+                    "El marcador «{marcador}» no tiene origen en el mapeo y saldría literalmente "
+                    "en el documento.",
+                    marcador=marcador,
+                ),
                 "placeholder",
             )
         )
@@ -126,7 +130,10 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "INVALID_MAPPING_EXPRESSION",
                 Severidad.BLOQUEANTE,
-                f"La expresión «{expresion}» del mapeo apunta a un campo que no existe.",
+                idioma.traducir(
+                    "La expresión «{expresion}» del mapeo apunta a un campo que no existe.",
+                    expresion=expresion,
+                ),
                 "mapping",
             )
         )
@@ -160,7 +167,15 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Aviso(
                     "TEXT_OVERFLOW",
                     Severidad.ALTA,
-                    f"El texto de «{donde}» excede su marco un {exceso:.0%}.",
+                    # El porcentaje se formatea ANTES de traducir: `{exceso:.0%}`
+                    # dentro de la clave obligaría a que la frase inglesa
+                    # repitiera el formato, y basta con que lo olvide para que
+                    # salga «0.23» en vez de «23 %».
+                    idioma.traducir(
+                        "El texto de «{donde}» excede su marco un {exceso}.",
+                        donde=donde,
+                        exceso=f"{exceso:.0%}",
+                    ),
                     "placeholder",
                 )
             )
@@ -169,7 +184,10 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "TABLE_DOES_NOT_FIT",
                 Severidad.ALTA,
-                f"La tabla de CAPEX se repartirá en {estado.diapositivas_de_tabla} diapositivas.",
+                idioma.traducir(
+                    "La tabla de CAPEX se repartirá en {diapositivas} diapositivas.",
+                    diapositivas=estado.diapositivas_de_tabla,
+                ),
                 "table",
             )
         )
@@ -196,10 +214,13 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 # lee como «no hay nada que hacer», no como «esto no se ha
                 # revisado todavía». Se descubrió generando el informe de un
                 # proyecto de demostración con 1,1 M€ en hallazgos.
-                f"{estado.hallazgos_en_borrador} hallazgos siguen en «borrador» y "
-                f"NO saldrán en el informe: se quedan fuera "
-                f"{formatear_importe(estado.importe_en_borrador)} de CAPEX. "
-                "Páselos a «en revisión» si deben aparecer.",
+                idioma.traducir(
+                    "{hallazgos} hallazgos siguen en «borrador» y NO saldrán en el informe: se "
+                    "quedan fuera {importe} de CAPEX. Páselos a «en revisión» si "
+                    "deben aparecer.",
+                    hallazgos=estado.hallazgos_en_borrador,
+                    importe=formatear_importe(estado.importe_en_borrador),
+                ),
                 "finding",
             )
         )
@@ -212,9 +233,12 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Severidad.MEDIA,
                 # No bloquea —un borrador interno es legítimo— pero enviarlo al
                 # cliente sin darse cuenta sí es un problema real.
-                f"{estado.lineas_con_precio_sin_validar} líneas con precio sin validar, "
-                f"por un total de {formatear_importe(estado.importe_sin_validar)}. "
-                "Revíselas antes de enviar el informe al cliente.",
+                idioma.traducir(
+                    "{lineas} líneas con precio sin validar, por un total de "
+                    "{importe}. Revíselas antes de enviar el informe al cliente.",
+                    lineas=estado.lineas_con_precio_sin_validar,
+                    importe=formatear_importe(estado.importe_sin_validar),
+                ),
                 "capex",
             )
         )
@@ -243,9 +267,13 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 # vacío: un borrador interno con la valoración a medias es
                 # legítimo. Lo que no es legítimo es enviarlo sin saberlo, y
                 # para eso está el aviso.
-                f"La sección «{nombre}» ({codigo}) va al informe con la valoración en "
-                "blanco: sale su descriptivo y debajo el rótulo vacío. La valoración "
-                "no la rellena ningún documento, la escribe el técnico.",
+                idioma.traducir(
+                    "La sección «{nombre}» ({codigo}) va al informe con la valoración en blanco: "
+                    "sale su descriptivo y debajo el rótulo vacío. La valoración no la rellena "
+                    "ningún documento, la escribe el técnico.",
+                    nombre=nombre,
+                    codigo=codigo,
+                ),
                 "capex_code",
             )
         )
@@ -257,9 +285,12 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 # No bloquea: el PPTX guarda el NOMBRE de la fuente, así que en
                 # un equipo que sí la tenga se verá bien. Lo que falla es la
                 # medición del desbordamiento aquí.
-                f"La fuente «{fuente}» no está instalada en el servidor. El documento la "
-                "seguirá pidiendo por nombre, pero la estimación de desbordamiento pierde "
-                "precisión.",
+                idioma.traducir(
+                    "La fuente «{fuente}» no está instalada en el servidor. El documento la "
+                    "seguirá pidiendo por nombre, pero la estimación de desbordamiento pierde "
+                    "precisión.",
+                    fuente=fuente,
+                ),
                 "font",
             )
         )
@@ -268,8 +299,11 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "PENDING_DOC_REQUESTS",
                 Severidad.MEDIA,
-                f"Quedan {estado.solicitudes_pendientes} documentos en «solicitada»: "
-                "compruebe si deben declararse como limitación.",
+                idioma.traducir(
+                    "Quedan {pendientes} documentos en «solicitada»: compruebe si deben declararse"
+                    " como limitación.",
+                    pendientes=estado.solicitudes_pendientes,
+                ),
                 "doc_request",
             )
         )
@@ -286,7 +320,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Severidad.BAJA,
                 # [REQ] §17.7 · Se inserta texto VACÍO, nunca el literal
                 # `{{...}}` ni un «N/D» inventado.
-                f"El campo «{campo}» está vacío: se insertará texto vacío.",
+                idioma.traducir(
+                    "El campo «{campo}» está vacío: se insertará texto vacío.", campo=campo
+                ),
                 "placeholder",
             )
         )

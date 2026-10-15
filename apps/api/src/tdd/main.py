@@ -121,7 +121,9 @@ def crear_app() -> FastAPI:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "type": "https://api.tdd.example/errors/internal",
-                "title": "Error interno",
+                "title": idioma.traducir_a(
+                    idioma.de_cabecera(request.headers.get("accept-language", "")), "Error interno"
+                ),
                 "status": 500,
                 "instance": str(request.url.path),
                 # Un identificador opaco: no dice nada de dentro y lo dice todo

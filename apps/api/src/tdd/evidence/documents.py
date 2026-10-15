@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import guardia, images, storage
 from tdd.evidence.naming import sanear
@@ -113,8 +114,12 @@ def comprobar_contenido(datos: bytes, *, extension: str) -> None:
     for firma, que_es in _FIRMAS_PROHIBIDAS:
         if cabecera.startswith(firma):
             raise ContenidoRechazado(
-                f"No se admiten {que_es}s. El contenido del fichero es un {que_es}, "
-                "independientemente de su extensión."
+                idioma.traducir(
+                    "No se admiten {tipo}s. El contenido del fichero es un {real}, "
+                    "independientemente de su extensión.",
+                    tipo=que_es,
+                    real=que_es,
+                )
             )
 
     es_ooxml = cabecera.startswith(b"PK\x03\x04")
@@ -131,8 +136,11 @@ def comprobar_contenido(datos: bytes, *, extension: str) -> None:
 
     if extension not in EXTENSIONES_ADMITIDAS:
         raise ContenidoRechazado(
-            f"Extensión «{extension}» no admitida. Se aceptan: "
-            f"{', '.join(sorted(EXTENSIONES_ADMITIDAS))}"
+            idioma.traducir(
+                "Extensión «{extension}» no admitida. Se aceptan: {admitidas}",
+                extension=extension,
+                admitidas=", ".join(sorted(EXTENSIONES_ADMITIDAS)),
+            )
         )
 
 
@@ -295,7 +303,10 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     if len(datos) > MAX_BYTES_DOCUMENTO:
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            f"El archivo supera el máximo de {MAX_BYTES_DOCUMENTO // (1024 * 1024)} MB",
+            idioma.traducir(
+                "El archivo supera el máximo de {mb} MB",
+                mb=MAX_BYTES_DOCUMENTO // (1024 * 1024),
+            ),
         )
     nombre = archivo.filename or "documento"
     extension = nombre.rsplit(".", 1)[-1].lower() if "." in nombre else ""
@@ -315,8 +326,12 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     if ya_esta is not None:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Este documento ya está en el proyecto como «{ya_esta.display_name}» "
-            f"({ya_esta.id}). Para sustituirlo, súbalo indicando a cuál reemplaza.",
+            idioma.traducir(
+                "Este documento ya está en el proyecto como «{nombre}» "
+                "({identificador}). Para sustituirlo, súbalo indicando a cuál reemplaza.",
+                nombre=ya_esta.display_name,
+                identificador=ya_esta.id,
+            ),
         )
 
     # [REC] Clasificación automática desde la fase: si el documento se adjunta a

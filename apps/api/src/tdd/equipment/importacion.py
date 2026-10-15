@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 def clave(texto: str | None) -> str:
     """Normaliza para comparar: sin tildes, sin espacios de más, en minúsculas.
@@ -157,11 +159,15 @@ class Analisis:
         return [f for f in self.filas if f.estado in (Estado.ERROR, Estado.DUPLICADA_EN_FICHERO)]
 
     def resumen(self) -> str:
-        partes = [f"{len(self.nuevas)} equipos nuevos"]
+        partes = [idioma.traducir("{cuantos} equipos nuevos", cuantos=len(self.nuevas))]
         if self.ya_existen:
-            partes.append(f"{len(self.ya_existen)} ya existentes (no se tocan)")
+            partes.append(
+                idioma.traducir(
+                    "{cuantos} ya existentes (no se tocan)", cuantos=len(self.ya_existen)
+                )
+            )
         if self.con_error:
-            partes.append(f"{len(self.con_error)} con error")
+            partes.append(idioma.traducir("{cuantos} con error", cuantos=len(self.con_error)))
         return " · ".join(partes)
 
 
@@ -195,7 +201,9 @@ def _entero(valor: str, campo: str, errores: list[str]) -> int | None:
         # numérica: convertir directo a int reventaría en el segundo caso.
         return int(Decimal(texto))
     except (InvalidOperation, ValueError):
-        errores.append(f"«{campo}»: «{texto}» no es un número entero")
+        errores.append(
+            idioma.traducir("«{campo}»: «{texto}» no es un número entero", campo=campo, texto=texto)
+        )
         return None
 
 
@@ -217,7 +225,7 @@ def _analizar_fila(
     # está a medias.
     texto_activo = (crudo.get("asset") or "").strip()
     if not texto_activo:
-        errores.append("Falta el activo")
+        errores.append(idioma.traducir("Falta el activo"))
     else:
         buscado = clave(texto_activo)
         encontrado = next(
@@ -226,15 +234,18 @@ def _analizar_fila(
         )
         if encontrado is None:
             errores.append(
-                f"«{texto_activo}» no es un activo de este proyecto. "
-                f"Dé de alta el activo antes de importar su inventario."
+                idioma.traducir(
+                    "«{texto}» no es un activo de este proyecto. Dé de alta el activo antes de "
+                    "importar su inventario.",
+                    texto=texto_activo,
+                )
             )
         else:
             valores["asset_id"] = encontrado.id
 
     tipo = (crudo.get("equipment_type") or "").strip()
     if not tipo:
-        errores.append("Falta el tipo de equipo")
+        errores.append(idioma.traducir("Falta el tipo de equipo"))
     else:
         valores["equipment_type"] = tipo[:120]
 
@@ -251,8 +262,11 @@ def _analizar_fila(
         )
         if sistema is None:
             avisos.append(
-                f"«{texto_sistema}» no es ninguno de los 14 sistemas técnicos: "
-                f"el equipo entra sin clasificar."
+                idioma.traducir(
+                    "«{texto}» no es ninguno de los 14 sistemas técnicos: el equipo entra sin "
+                    "clasificar.",
+                    texto=texto_sistema,
+                )
             )
         else:
             valores["technical_system_id"] = sistema.id
@@ -263,17 +277,29 @@ def _analizar_fila(
     valores["notes"] = (crudo.get("notes") or "").strip() or None
 
     # ── Vida útil: los dos datos o ninguno ───────────────────────────────────
-    instalacion = _entero(crudo.get("install_year", ""), "Año de instalación", errores)
-    vida = _entero(crudo.get("expected_life_years", ""), "Vida útil esperada", errores)
+    instalacion = _entero(
+        crudo.get("install_year", ""), idioma.traducir("Año de instalación"), errores
+    )
+    vida = _entero(
+        crudo.get("expected_life_years", ""), idioma.traducir("Vida útil esperada"), errores
+    )
     if (instalacion is None) != (vida is None):
         errores.append(
-            "El año de instalación y la vida útil esperada van juntos o no van: "
-            "con solo uno de los dos no hay vida residual que calcular."
+            idioma.traducir(
+                "El año de instalación y la vida útil esperada van juntos o no van: "
+                "con solo uno de los dos no hay vida residual que calcular."
+            )
         )
     if instalacion is not None and not (1800 <= instalacion <= 2200):
-        errores.append(f"El año de instalación ({instalacion}) está fuera de rango")
+        errores.append(
+            idioma.traducir(
+                "El año de instalación ({instalacion}) está fuera de rango", instalacion=instalacion
+            )
+        )
     if vida is not None and not (0 < vida <= 200):
-        errores.append(f"La vida útil esperada ({vida}) está fuera de rango")
+        errores.append(
+            idioma.traducir("La vida útil esperada ({vida}) está fuera de rango", vida=vida)
+        )
     valores["install_year"] = instalacion
     valores["expected_life_years"] = vida
 
@@ -290,8 +316,13 @@ def _analizar_fila(
             codigo = texto.upper()
         if codigo is None:
             avisos.append(
-                f"«{campo}»: «{texto}» no es un valor conocido "
-                f"({', '.join(sorted(tabla))}). Se deja sin valorar."
+                idioma.traducir(
+                    "«{campo}»: «{texto}» no es un valor conocido ({conocidos}). Se deja sin "
+                    "valorar.",
+                    campo=campo,
+                    texto=texto,
+                    conocidos=", ".join(sorted(tabla)),
+                )
             )
             valores[campo] = None
         else:
@@ -303,10 +334,12 @@ def _analizar_fila(
         try:
             cantidad = Decimal(texto_cantidad.replace(",", "."))
         except InvalidOperation:
-            errores.append(f"«Cantidad»: «{texto_cantidad}» no es un número")
+            errores.append(
+                idioma.traducir("«Cantidad»: «{texto}» no es un número", texto=texto_cantidad)
+            )
             cantidad = Decimal("1")
         if cantidad <= 0:
-            errores.append("La cantidad debe ser mayor que cero")
+            errores.append(idioma.traducir("La cantidad debe ser mayor que cero"))
             cantidad = Decimal("1")
     else:
         cantidad = Decimal("1")
@@ -319,7 +352,11 @@ def _analizar_fila(
     elif texto_doc in NO:
         valores["has_documentation"] = False
     else:
-        avisos.append(f"«Documentación»: «{texto_doc}» no se entiende. Se toma como «no».")
+        avisos.append(
+            idioma.traducir(
+                "«Documentación»: «{texto}» no se entiende. Se toma como «no».", texto=texto_doc
+            )
+        )
         valores["has_documentation"] = False
 
     estado = Estado.ERROR if errores else Estado.NUEVA
@@ -380,16 +417,23 @@ def analizar(
             if llave in vistas:
                 fila.estado = Estado.DUPLICADA_EN_FICHERO
                 fila.errores.append(
-                    f"La etiqueta «{etiqueta}» ya aparece en la fila {vistas[llave]} "
-                    f"para el mismo activo."
+                    idioma.traducir(
+                        "La etiqueta «{etiqueta}» ya aparece en la fila {fila} para el mismo "
+                        "activo.",
+                        etiqueta=etiqueta,
+                        fila=vistas[llave],
+                    )
                 )
                 fila.valores = {}
             elif llave in etiquetas_existentes:
                 fila.estado = Estado.YA_EXISTE
                 fila.existente_id = etiquetas_existentes[llave]
                 fila.avisos.append(
-                    f"Ya hay un equipo con la etiqueta «{etiqueta}» en ese activo. "
-                    f"No se toca salvo que pida actualizar los existentes."
+                    idioma.traducir(
+                        "Ya hay un equipo con la etiqueta «{etiqueta}» en ese activo. No se toca "
+                        "salvo que pida actualizar los existentes.",
+                        etiqueta=etiqueta,
+                    )
                 )
                 vistas[llave] = numero
             else:

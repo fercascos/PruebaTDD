@@ -21,6 +21,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 
 router = APIRouter(tags=["Directorio"])
@@ -127,7 +128,9 @@ def borrar_cliente(client_id: uuid.UUID, s: SesionDep) -> None:
     if proyectos:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"El cliente tiene {proyectos} proyectos y no se puede borrar",
+            idioma.traducir(
+                "El cliente tiene {proyectos} proyectos y no se puede borrar", proyectos=proyectos
+            ),
         )
     hay = s.execute(
         text(
@@ -208,7 +211,7 @@ def crear_persona(cuerpo: AltaDePersona, s: SesionDep, usuario: UsuarioDep) -> A
     if cuerpo.org_role not in ROLES:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Rol desconocido. Disponibles: {', '.join(ROLES)}",
+            idioma.traducir("Rol desconocido. Disponibles: {roles}", roles=", ".join(ROLES)),
         )
     try:
         comprobar_fortaleza(cuerpo.password, email=cuerpo.email)

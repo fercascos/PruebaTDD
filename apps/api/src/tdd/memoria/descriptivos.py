@@ -63,6 +63,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 
 router = APIRouter(tags=["Memoria técnica"])
@@ -211,13 +212,20 @@ def guardar(asset_id: uuid.UUID, cuerpo: Edicion, s: SesionDep, usuario: Usuario
             if nivel is None:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    f"El código {linea.capex_code_id} no existe",
+                    idioma.traducir(
+                        "El código {codigo} no existe",
+                        codigo=linea.capex_code_id,
+                    ),
                 )
             if nivel != 3:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    "Un descriptivo describe un **objeto** del árbol (nivel 3). El código "
-                    f"{linea.capex_code_id} es de nivel {nivel}.",
+                    idioma.traducir(
+                        "Un descriptivo describe un **objeto** del árbol (nivel 3). El código "
+                        "{codigo} es de nivel {nivel}.",
+                        codigo=linea.capex_code_id,
+                        nivel=nivel,
+                    ),
                 )
             # `[REQ]` La restricción de la base dice lo mismo, y aquí se dice
             # antes para poder explicarlo: un 23514 de PostgreSQL no cuenta que

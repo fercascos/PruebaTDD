@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
 
+from tdd.core import idioma
 from tdd.evidence.images import UMBRAL_DUPLICADO_PERCEPTUAL, distancia_hamming
 from tdd.evidence.naming import (
     PLANTILLA_POR_DEFECTO,
@@ -72,7 +73,13 @@ def comprobar_transicion(desde: EstadoDeFoto, hasta: EstadoDeFoto) -> None:
     if hasta not in TRANSICIONES[desde]:
         posibles = ", ".join(sorted(TRANSICIONES[desde])) or "ninguno"
         raise TransicionDeFotoNoPermitida(
-            f"Una fotografía en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {posibles}"
+            idioma.traducir(
+                "Una fotografía en «{desde}» no puede pasar a «{hasta}». Destinos posibles: "
+                "{posibles}",
+                desde=desde,
+                hasta=hasta,
+                posibles=posibles,
+            )
         )
 
 
@@ -416,10 +423,15 @@ def comprobar_purga(
     if restantes > 0:
         raise PurgaNoPermitida(
             "RETENTION_NOT_ELAPSED",
-            f"Quedan {restantes} días de retención en la papelera.",
+            idioma.traducir(
+                "Quedan {restantes} días de retención en la papelera.", restantes=restantes
+            ),
         )
     if retencion_del_proyecto_hasta is not None and ahora.date() < retencion_del_proyecto_hasta:
         raise PurgaNoPermitida(
             "PROJECT_RETENTION_ACTIVE",
-            f"La retención del proyecto llega hasta {retencion_del_proyecto_hasta.isoformat()}.",
+            idioma.traducir(
+                "La retención del proyecto llega hasta {hasta}.",
+                hasta=retencion_del_proyecto_hasta.isoformat(),
+            ),
         )

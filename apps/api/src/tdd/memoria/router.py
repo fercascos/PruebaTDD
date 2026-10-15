@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 
 router = APIRouter(tags=["Memoria técnica"])
@@ -241,27 +242,40 @@ def _validar_codigos(s: Session, cuerpo: ContenidoDeMemoria) -> None:
         if nivel is None:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                f"El código de categoría {c.capex_code_id} no existe",
+                idioma.traducir(
+                    "El código de categoría {codigo} no existe",
+                    codigo=c.capex_code_id,
+                ),
             )
         if nivel != 2:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
-                "Una categoría de la memoria tiene que ser un capítulo del catálogo "
-                f"(nivel 2). El código {c.capex_code_id} es de nivel {nivel}.",
+                idioma.traducir(
+                    "Una categoría de la memoria tiene que ser un capítulo del catálogo (nivel 2)."
+                    " El código {codigo} es de nivel {nivel}.",
+                    codigo=c.capex_code_id,
+                    nivel=nivel,
+                ),
             )
         vistos: set[str] = set()
         for o in c.objetos:
             if o.nombre in vistos:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    f"El objeto «{o.nombre}» aparece dos veces en la misma categoría",
+                    idioma.traducir(
+                        "El objeto «{objeto}» aparece dos veces en la misma categoría",
+                        objeto=o.nombre,
+                    ),
                 )
             vistos.add(o.nombre)
             if o.capex_code_id and niveles.get(o.capex_code_id) != 3:
                 raise HTTPException(
                     status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    f"El objeto «{o.nombre}» apunta a un código que no es un elemento "
-                    "del catálogo (nivel 3)",
+                    idioma.traducir(
+                        "El objeto «{objeto}» apunta a un código que no es un elemento del "
+                        "catálogo (nivel 3)",
+                        objeto=o.nombre,
+                    ),
                 )
 
 
@@ -269,8 +283,12 @@ def _propuesta_limpia(propuesta: dict[str, Any]) -> dict[str, Any]:
     if sobran := sorted(set(propuesta) - set(CAMPOS_PROPONIBLES)):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"La memoria no puede proponer estos campos del activo: {', '.join(sobran)}. "
-            f"Admitidos: {', '.join(CAMPOS_PROPONIBLES)}.",
+            idioma.traducir(
+                "La memoria no puede proponer estos campos del activo: {sobran}. Admitidos: "
+                "{admitidos}.",
+                sobran=", ".join(sobran),
+                admitidos=", ".join(CAMPOS_PROPONIBLES),
+            ),
         )
     return propuesta
 
@@ -510,8 +528,11 @@ def generar_capex(asset_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) -> Any
     if zona is None:  # pragma: no cover - el catálogo la tiene en las seis tipologías
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"La tipología de este activo no admite la zona «{ZONA_DE_ARRANQUE}», "
-            "con la que nacen las filas del esqueleto",
+            idioma.traducir(
+                "La tipología de este activo no admite la zona «{zona}», con la que "
+                "nacen las filas del esqueleto",
+                zona=ZONA_DE_ARRANQUE,
+            ),
         )
 
     # Lo que ya existe, por título: es lo que hace idempotente la generación.

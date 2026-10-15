@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.findings.service import (
     EstadoDelHallazgo,
@@ -307,7 +308,10 @@ def _insertar_linea(
     if horizonte is None:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Horizonte temporal desconocido: {linea.time_horizon_code}",
+            idioma.traducir(
+                "Horizonte temporal desconocido: {plazo}",
+                plazo=linea.time_horizon_code,
+            ),
         )
     # `[REQ]` La medición va entera o no va: unidad, cantidad y precio unitario.
     # Lo impone un `CHECK` de la base, y sin esta traducción una línea a la que
@@ -355,8 +359,11 @@ def _insertar_linea(
             # mismo plazo sí es un duplicado, y conviene decirlo con claridad.
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                f"Este hallazgo ya tiene una línea en el plazo {linea.time_horizon_code}. "
-                "Una actuación recurrente lleva una línea por plazo, no dos en el mismo.",
+                idioma.traducir(
+                    "Este hallazgo ya tiene una línea en el plazo {plazo}. Una "
+                    "actuación recurrente lleva una línea por plazo, no dos en el mismo.",
+                    plazo=linea.time_horizon_code,
+                ),
             ) from exc
         raise
 

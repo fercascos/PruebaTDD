@@ -28,6 +28,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tdd import cola
+from tdd.core import idioma
 from tdd.core.db import fijar_idioma
 from tdd.core.deps import SesionDep, UsuarioActual, UsuarioDep
 from tdd.evidence import guardia, images
@@ -149,7 +150,8 @@ def registrar_plantilla(
         analisis = generator.analizar(datos)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, f"No se ha podido leer la plantilla: {exc}"
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            idioma.traducir("No se ha podido leer la plantilla: {exc}", exc=exc),
         ) from exc
 
     template_id = uuid.uuid4()
@@ -259,8 +261,12 @@ def crear_mapeo(template_id: uuid.UUID, cuerpo: Mapeo, s: SesionDep, usuario: Us
     if desconocidos:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            f"Estas expresiones no corresponden a ningún campo: {', '.join(desconocidos)}. "
-            f"Disponibles: {', '.join(sorted(CAMPOS_DISPONIBLES))}",
+            idioma.traducir(
+                "Estas expresiones no corresponden a ningún campo: {desconocidas}. "
+                "Disponibles: {disponibles}",
+                desconocidas=", ".join(desconocidos),
+                disponibles=", ".join(sorted(CAMPOS_DISPONIBLES)),
+            ),
         )
     marcadores = set((plantilla["analysis"] or {}).get("placeholders", []))
     sobrantes = sorted(set(cuerpo.bindings) - marcadores)
@@ -797,7 +803,10 @@ def descargar(
         {"i": str(version_id)},
     ).scalar()
     if clave is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"Esta versión no tiene fichero {formato}")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            idioma.traducir("Esta versión no tiene fichero {formato}", formato=formato),
+        )
 
     datos = almacen.leer(clave)
     _auditar(s, usuario, "REPORT_DOWNLOADED", version_id, {"formato": formato})
@@ -856,8 +865,12 @@ def cambiar_estado(
     if cuerpo.to not in destinos:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            f"Un informe en «{version['status']}» no puede pasar a «{cuerpo.to}». "
-            f"Destinos posibles: {', '.join(sorted(destinos)) or 'ninguno'}",
+            idioma.traducir(
+                "Un informe en «{desde}» no puede pasar a «{hasta}». Destinos posibles: {destinos}",
+                desde=version["status"],
+                hasta=cuerpo.to,
+                destinos=", ".join(sorted(destinos)) or "ninguno",
+            ),
         )
     if cuerpo.to in ("APROBADO", "EMITIDO") and usuario.org_role not in (
         "ADMIN",
@@ -910,6 +923,11 @@ def comparar_versiones(version_id: uuid.UUID, otra_id: uuid.UUID, s: SesionDep) 
             {"i": str(identificador)},
         ).scalar()
         if fila is None:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Versión {identificador} no encontrada")
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                idioma.traducir(
+                    "Versión {identificador} no encontrada", identificador=identificador
+                ),
+            )
         snapshots[identificador] = fila
     return snap.comparar(snapshots[version_id], snapshots[otra_id])
