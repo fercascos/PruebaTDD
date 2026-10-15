@@ -121,7 +121,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "MISSING_TEMPLATE",
                 Severidad.BLOQUEANTE,
-                "La plantilla no se ha analizado todavía: no se sabe qué marcadores tiene.",
+                idioma.traducir(
+                    "La plantilla no se ha analizado todavía: no se sabe qué marcadores tiene."
+                ),
                 "template",
             )
         )
@@ -142,7 +144,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "PHOTO_QUARANTINED",
                 Severidad.BLOQUEANTE,
-                "Hay una fotografía seleccionada que no ha superado las verificaciones.",
+                idioma.traducir(
+                    "Hay una fotografía seleccionada que no ha superado las verificaciones."
+                ),
                 "photo",
                 foto,
             )
@@ -154,7 +158,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
                 Severidad.BLOQUEANTE,
                 # Reclasificar un activo puede dejar zonas que ya no aplican.
                 # Salir en el informe con una zona imposible es peor que parar.
-                "Una línea quedó con una zona que ya no corresponde a la tipología del activo.",
+                idioma.traducir(
+                    "Una línea quedó con una zona que ya no corresponde a la tipología del activo."
+                ),
                 "finding",
                 linea,
             )
@@ -196,7 +202,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "PHOTO_WITHOUT_ASSET",
                 Severidad.ALTA,
-                "Fotografía seleccionada sin activo: no se sabría en qué diapositiva colocarla.",
+                idioma.traducir(
+                    "Fotografía seleccionada sin activo: no se sabría en qué diapositiva colocarla."
+                ),
                 "photo",
                 foto,
             )
@@ -247,7 +255,9 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
             Aviso(
                 "MISSING_PHOTO",
                 Severidad.MEDIA,
-                "El activo no tiene ninguna fotografía seleccionada para el informe.",
+                idioma.traducir(
+                    "El activo no tiene ninguna fotografía seleccionada para el informe."
+                ),
                 "asset",
                 activo,
             )
@@ -311,7 +321,13 @@ def evaluar(estado: EstadoDelInforme) -> list[Aviso]:
     # ── Bajas ───────────────────────────────────────────────────────────────
     for foto in estado.fotos_sin_pie:
         avisos.append(
-            Aviso("MISSING_CAPTION", Severidad.BAJA, "Fotografía sin pie de foto.", "photo", foto)
+            Aviso(
+                "MISSING_CAPTION",
+                Severidad.BAJA,
+                idioma.traducir("Fotografía sin pie de foto."),
+                "photo",
+                foto,
+            )
         )
     for campo in estado.campos_vacios:
         avisos.append(

@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
 
+from tdd.core import idioma
+
 #: 32 bytes de entropía: 256 bits. Sobra para que no haya nada que adivinar, y
 #: cabe en una URL sin partirse.
 BYTES_DEL_TOKEN = 32
@@ -41,7 +43,8 @@ MINUTOS_DE_VALIDEZ = 30
 MAXIMO_POR_VENTANA = 3
 MINUTOS_DE_VENTANA = 60
 
-#: `[REQ]` La respuesta es SIEMPRE esta, exista o no la cuenta.
+#: `[REQ]` La respuesta es SIEMPRE esta, exista o no la cuenta. Es la clave
+#: castellana: la traduce quien la pinta, en `identity/router`.
 RESPUESTA_UNICA = (
     "Si esa dirección corresponde a una cuenta, le hemos enviado un enlace para "
     "restablecer la contraseña. Caduca en 30 minutos y solo se puede usar una vez."
@@ -80,7 +83,10 @@ EXPLICACION = {
 class TokenRechazado(Exception):  # noqa: N818 — el dominio está en español
     def __init__(self, motivo: MotivoDeRechazo) -> None:
         self.motivo = motivo
-        super().__init__(EXPLICACION[motivo])
+        # El diccionario guarda las claves castellanas —se evalúa al
+        # importar—; la traducción va aquí, que es donde se monta el mensaje
+        # que verá quien presentó el enlace.
+        super().__init__(idioma.traducir(EXPLICACION[motivo]))
 
 
 @dataclass(frozen=True, slots=True)

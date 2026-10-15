@@ -41,15 +41,28 @@ from fastapi import HTTPException, Request, Response, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
+
 
 class VersionRequerida(HTTPException):
-    """Falta `If-Match` en una ruta donde es obligatoria."""
+    """Falta `If-Match` en una ruta donde es obligatoria.
+
+    `que` llega **en castellano y con su artículo** —«una línea de CAPEX»—
+    porque es la clave, no el texto: se traduce aquí, que es donde se monta la
+    frase, y no en las once rutas que lo pasan. Que esas once claves estén en
+    la tabla lo vigila `test_los_nombres_que_pasan_las_rutas_se_traducen`;
+    traducirlas en cada ruta las haría visibles a `claves.py`, pero a cambio de
+    traducir en el camino bueno, donde nunca se usan.
+    """
 
     def __init__(self, que: str) -> None:
         super().__init__(
             status.HTTP_428_PRECONDITION_REQUIRED,
-            f"Para modificar {que} hay que decir sobre qué versión se escribe. "
-            "Envíe la cabecera If-Match con el ETag que devolvió la lectura.",
+            idioma.traducir(
+                "Para modificar {que} hay que decir sobre qué versión se escribe. "
+                "Envíe la cabecera If-Match con el ETag que devolvió la lectura.",
+                que=idioma.traducir(que),
+            ),
         )
 
 
@@ -108,8 +121,8 @@ def _quien_y_cuando(s: Session, tabla: str, fila_id: uuid.UUID) -> str:
         .first()
     )
     if fila is None or not fila["full_name"]:
-        return "Alguien lo ha modificado"
-    return f"{fila['full_name']} lo ha modificado"
+        return idioma.traducir("Alguien lo ha modificado")
+    return idioma.traducir("{quien} lo ha modificado", quien=fila["full_name"])
 
 
 def comprobar(
@@ -141,9 +154,12 @@ def comprobar(
 
     if pedida != str(version_actual):
         raise VersionCaducada(
-            f"{_quien_y_cuando(s, tabla, fila_id)} desde que usted lo abrió. "
-            "Sus cambios no se han guardado para no borrar los suyos: vuelva a "
-            "cargar, compruebe qué ha cambiado y aplique lo que siga haciendo falta."
+            idioma.traducir(
+                "{quien} desde que usted lo abrió. Sus cambios no se han guardado "
+                "para no borrar los suyos: vuelva a cargar, compruebe qué ha "
+                "cambiado y aplique lo que siga haciendo falta.",
+                quien=_quien_y_cuando(s, tabla, fila_id),
+            )
         )
 
 

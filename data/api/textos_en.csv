@@ -133,7 +133,6 @@ Ninguna de las fotografías indicadas está disponible,None of the photos given 
 No encontrada,Not found
 No hay ningún enlace activo,There is no active link
 No puede desactivar su propia cuenta,You cannot deactivate your own account
-"No se admiten {tipo}s. El contenido del fichero es un {real}, independientemente de su extensión.","{tipo}s are not accepted. The file's content is a {real}, whatever its extension says."
 No se ha indicado ninguna limitación,No limitation was given
 No se ha indicado ninguna propuesta,No proposal was given
 No se ha podido leer la plantilla: {exc},The template could not be read: {exc}
@@ -242,3 +241,117 @@ quedan {pendientes} activos por visitar ({hechas} de {activos} realizadas),{pend
 no hay ninguna versión de informe generada,no report version has been generated
 falta la aprobación de un revisor,a reviewer's approval is missing
 quedan fases posteriores sin completar (presentación o defensa),later phases are still incomplete (presentation or defence)
+Fuente no habilitada. No se ha realizado ninguna consulta automatizada a este proveedor.,Source not enabled. No automated query has been made to this provider.
+Pendiente de revisión de las condiciones de uso por un administrador. No se ha realizado ninguna consulta automatizada a este proveedor.,Pending review of the terms of use by an administrator. No automated query has been made to this provider.
+La licencia registrada caducó el {fecha}. No se ha realizado ninguna consulta automatizada a este proveedor.,The registered licence expired on {fecha}. No automated query has been made to this provider.
+Ninguna referencia se selecciona automáticamente. Un consultor debe validar el precio que se aplique.,No reference is selected automatically. A consultant must validate whichever price is applied.
+Coincide con la referencia de {fuente}.,Matches the {fuente} reference.
+El índice de origen debe ser mayor que cero,The starting index must be greater than zero
+El índice de destino debe ser mayor que cero,The target index must be greater than zero
+El factor geográfico debe ser mayor que cero,The geographic factor must be greater than zero
+«{campo}» no es un número válido: {valor},«{campo}» is not a valid number: {valor}
+Para modificar {que} hay que decir sobre qué versión se escribe. Envíe la cabecera If-Match con el ETag que devolvió la lectura.,To modify {que} you have to say which version you are writing over. Send the If-Match header with the ETag returned by the read.
+"{quien} desde que usted lo abrió. Sus cambios no se han guardado para no borrar los suyos: vuelva a cargar, compruebe qué ha cambiado y aplique lo que siga haciendo falta.","{quien} since you opened it. Your changes have not been saved, so as not to wipe theirs: reload, check what has changed and apply whatever is still needed."
+Alguien lo ha modificado,Someone has modified it
+{quien} lo ha modificado,{quien} has modified it
+un activo,an asset
+un hallazgo,a finding
+un proyecto,a project
+una casilla del árbol documental,a box in the document tree
+una ficha de equipo,an equipment record
+una línea de CAPEX,a CAPEX line
+una línea de la checklist,a checklist line
+Este archivo ya está en el proyecto. Súbalo solo si quiere una copia.,This file is already in the project. Upload it only if you want a copy.
+Se parece mucho a una fotografía ya subida. Puede ser otro disparo de la misma escena: revíselo antes de descartarlo.,This looks very much like a photo already uploaded. It may be another shot of the same scene: check it before discarding it.
+La fotografía está en «{estado}» y no puede insertarse en el informe.,The photo is in «{estado}» and cannot be placed in the report.
+Fotografía sin activo: no se sabría en qué diapositiva colocarla.,Photo with no asset: there would be no way to know which slide to place it on.
+Fotografía seleccionada sin pie de foto.,Selected photo with no caption.
+La fotografía se tomó a {metros} m del activo asignado.,The photo was taken {metros} m from the asset it is assigned to.
+El activo no tiene ninguna fotografía seleccionada para el informe.,The asset has no photo selected for the report.
+La fotografía aparece en un informe ya emitido y no puede purgarse: el informe dejaría de ser reproducible.,The photo appears in a report that has been issued and cannot be purged: the report would stop being reproducible.
+Solo se purga lo que está en la papelera o en cuarentena.,Only what is in the trash or in quarantine can be purged.
+Sin año de instalación o sin vida útil esperada: no se puede calcular la vida residual.,No installation year or no expected service life: the remaining life cannot be calculated.
+Vida útil agotada hace {anios} año(s) ({anio}).,Service life ran out {anios} year(s) ago ({anio}).
+Agota su vida útil este año ({anio}).,Its service life runs out this year ({anio}).
+Le quedan {anios} año(s): agota su vida útil en {anio}.,It has {anios} year(s) left: its service life runs out in {anio}.
+{resumen} Reposición en {plazo}.,{resumen} Replacement in the {plazo}.
+"Nada se ha guardado todavía. Al aplicar, los equipos que ya existen no se tocan salvo que lo pida expresamente.","Nothing has been saved yet. On applying, equipment that already exists is left untouched unless you expressly ask otherwise."
+«{equipo}» está marcado y no tiene objeto del árbol; su sistema técnico ({sistema}) tampoco dice a qué capítulo del CAPEX va. Ábralo en el Inventario y dígale de qué objeto cuelga.,«{equipo}» is flagged and has no item from the tree; its technical system ({sistema}) does not say which CAPEX chapter it belongs to either. Open it in the Inventory and tell it which item it hangs off.
+sin sistema,no system
+"La cascada llega hasta la base imponible. El impuesto se aplica una sola vez, sobre el importe de la línea. Este cálculo no se ha guardado: para usarlo, trasládelo al importe con el botón correspondiente.","The cascade runs up to the taxable base. Tax is applied once only, on the line's amount. This calculation has not been saved: to use it, carry it over to the amount with the corresponding button."
+CAPEX de «{proyecto}» ({codigo}),CAPEX for «{proyecto}» ({codigo})
+"Un libro por activo. Cada libro es la plantilla CAPEX del cliente con la cabecera, el tipo de edificio y las zonas de SU activo, y solo sus actuaciones.","One workbook per asset. Each workbook is the client's CAPEX template with the header, the building type and the zones of ITS asset, and only its actions."
+Libros incluidos ({cuantos}):,Workbooks included ({cuantos}):
+  · {activo} — {cuantas} actuaciones,  · {activo} — {cuantas} actions
+"Activos SIN libro ({cuantos}), porque no tienen ninguna actuación registrada todavía. No es lo mismo que no tener CAPEX: puede que aún no se hayan visitado.","Assets with NO workbook ({cuantos}), because they have no action recorded yet. That is not the same as having no CAPEX: they may not have been visited yet."
+"AVISO: hay actuaciones cuyo activo ya no está en el proyecto (se borró después de registrarlas). Van en su propio libro para no perderse, pero su cabecera está vacía y sus zonas pueden estarlo también.","WARNING: some actions belong to an asset that is no longer in the project (it was deleted after they were recorded). They go in a workbook of their own so as not to be lost, but its header is empty and its zones may be too."
+amenaza sin identificar,unidentified threat
+El fichero está vacío,The file is empty
+No se admiten documentos con macros,Documents with macros are not accepted
+"El fichero es un contenedor comprimido. Solo se admiten como documentos ofimáticos, no como archivo suelto: un ZIP anidado puede ser una bomba de descompresión.","The file is a compressed container. These are accepted only as office documents, not as a standalone archive: a nested ZIP can be a decompression bomb."
+"El contenido del fichero es un {real} y no se admite, independientemente de su extensión.","The file's content is a {real} and is not accepted, whatever its extension."
+ejecutable de Windows,Windows executable
+ejecutable de Linux,Linux executable
+ejecutable de macOS,macOS executable
+script ejecutable,executable script
+archivo comprimido,compressed archive
+"Lleva procedimientos de emergencia, puntos de reunión, ubicación de los medios contra incendios y datos de las personas con responsabilidad en una emergencia. Un documento RESTRINGIDO solo lo descarga quien administra o dirige, y no se envía a ningún proveedor de IA.","It carries emergency procedures, assembly points, the location of the fire-fighting equipment and details of the people with responsibilities in an emergency. A RESTRICTED document can only be downloaded by an administrator or a director, and is not sent to any AI provider."
+La fotografía no está asignada a ningún activo.,The photo is not assigned to any asset.
+La fotografía no trae fecha en el EXIF: el campo queda vacío.,The photo carries no date in its EXIF: the field is left empty.
+El antivirus marcó esta fotografía y no se puede descargar. El archivo se conserva para poder analizarlo; avise a un administrador.,The antivirus flagged this photo and it cannot be downloaded. The file is kept so that it can be analysed; notify an administrator.
+Esta fotografía se purgó y su archivo ya no existe.,This photo was purged and its file no longer exists.
+Token de refresco desconocido,Unknown refresh token
+La cuenta está desactivada,The account is deactivated
+Token de refresco ya utilizado,Refresh token already used
+Token de refresco caducado,Refresh token expired
+La contraseña no puede contener el nombre de la cuenta,The password cannot contain the account name
+La contraseña repite demasiado los mismos caracteres,The password repeats the same characters too much
+"Si esa dirección corresponde a una cuenta, le hemos enviado un enlace para restablecer la contraseña. Caduca en 30 minutos y solo se puede usar una vez.","If that address corresponds to an account, we have sent it a link to reset the password. It expires in 30 minutes and can only be used once."
+El enlace no es válido. Puede que se haya copiado incompleto: pida uno nuevo.,The link is not valid. It may have been copied incomplete: request a new one.
+El enlace ha caducado. Los enlaces duran 30 minutos: pida uno nuevo.,The link has expired. Links last 30 minutes: request a new one.
+Este enlace ya se ha usado. Cada enlace sirve una sola vez: pida uno nuevo.,This link has already been used. Each link works once only: request a new one.
+La cuenta está desactivada. Póngase en contacto con un administrador de su organización.,The account is deactivated. Please contact an administrator in your organisation.
+Restablecer su contraseña,Reset your password
+"Hola{saludo}:
+
+Alguien ha pedido restablecer la contraseña de esta cuenta en la aplicación de
+due diligence técnica. Si ha sido usted, abra este enlace:
+
+  {enlace}
+
+El enlace caduca en 30 minutos y solo se puede usar una vez.
+
+Si no ha sido usted, no hace falta que haga nada: la contraseña actual sigue
+siendo válida y este enlace dejará de servir solo. Si le llegan varios de estos
+correos sin haberlos pedido, avise a un administrador de su organización.
+","Hello{saludo},
+
+Someone has asked to reset the password for this account in the technical due
+diligence application. If that was you, open this link:
+
+  {enlace}
+
+The link expires in 30 minutes and can only be used once.
+
+If it was not you, there is nothing you need to do: your current password is
+still valid and this link will stop working on its own. If several of these
+emails reach you without your asking, notify an administrator in your
+organisation.
+"
+La plantilla no se ha analizado todavía: no se sabe qué marcadores tiene.,The template has not been analysed yet: there is no way to know which placeholders it has.
+Hay una fotografía seleccionada que no ha superado las verificaciones.,One of the selected photos has not passed the checks.
+Una línea quedó con una zona que ya no corresponde a la tipología del activo.,A line was left with a zone that no longer matches the asset's typology.
+Fotografía seleccionada sin activo: no se sabría en qué diapositiva colocarla.,Selected photo with no asset: there would be no way to know which slide to place it on.
+Fotografía sin pie de foto.,Photo with no caption.
+"Clasificación por sección, sin leer la prosa: los objetos se proponen en el primer capítulo al que toca su sección. Hay que repasarlos antes de aceptar.","Classified by section, without reading the prose: items are proposed in the first chapter their section touches. They must be reviewed before being accepted."
+«{codigo} {titulo}» toca {cuantos} capítulos ({nombres}). Todos sus objetos se han propuesto en el primero: hay que repartirlos a mano.,«{codigo} {titulo}» touches {cuantos} chapters ({nombres}). All of its items have been proposed in the first one: they have to be split by hand.
+Las coordenadas se dan completas: latitud y longitud,Coordinates are given in full: latitude and longitude
+El año de reforma no puede ser anterior al de construcción,The refurbishment year cannot be earlier than the construction year
+La superficie de almacén no puede superar la construida total,The warehouse area cannot exceed the total built area
+Un hallazgo sin descripción no puede pasar a revisión: es lo que lee el revisor,A finding with no description cannot go to review: it is what the reviewer reads
+"Un hallazgo validado necesita al menos una línea de CAPEX, aunque sea de importe cero","A validated finding needs at least one CAPEX line, even one of zero amount"
+No se puede pasar de «{actual}» a «{destino}». Transiciones posibles: {opciones},«{actual}» cannot move to «{destino}». Possible transitions: {opciones}
+Al rechazar una sugerencia hay que explicar por qué: al menos {minimo} caracteres. Quien la escribió va a leer esta respuesta.,Rejecting a suggestion requires explaining why: at least {minimo} characters. Whoever wrote it is going to read this reply.
+Marcar como duplicada exige indicar con cuál se agrupa,Marking it as a duplicate requires saying which one it groups with
+Una sugerencia no puede ser duplicada de sí misma,A suggestion cannot be a duplicate of itself
+"Aplicar una sugerencia exige enlazar lo que se ha creado o cambiado: sin ese enlace, «aplicada» no es comprobable","Applying a suggestion requires linking what was created or changed: without that link, «applied» cannot be checked"

@@ -104,19 +104,25 @@ class DatosDeActivo(BaseModel):
         cualquier vía; esto devuelve un `422` que dice qué campo revisar.
         """
         if (self.latitude is None) != (self.longitude is None):
-            raise ValueError("Las coordenadas se dan completas: latitud y longitud")
+            raise ValueError(
+                idioma.traducir("Las coordenadas se dan completas: latitud y longitud")
+            )
         if (
             self.year_last_refurb is not None
             and self.year_built is not None
             and self.year_last_refurb < self.year_built
         ):
-            raise ValueError("El año de reforma no puede ser anterior al de construcción")
+            raise ValueError(
+                idioma.traducir("El año de reforma no puede ser anterior al de construcción")
+            )
         if (
             self.warehouse_area_sqm is not None
             and self.total_built_sqm is not None
             and self.warehouse_area_sqm > self.total_built_sqm
         ):
-            raise ValueError("La superficie de almacén no puede superar la construida total")
+            raise ValueError(
+                idioma.traducir("La superficie de almacén no puede superar la construida total")
+            )
         return self
 
 

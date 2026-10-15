@@ -527,9 +527,11 @@ def subir(  # noqa: PLR0913 — son campos de formulario, no parámetros de dise
     avisos: list[str] = []
     if asset_id is None:
         # [REQ] §10.7 regla 4 · sin activo se acepta CON AVISO, no con error.
-        avisos.append("La fotografía no está asignada a ningún activo.")
+        avisos.append(idioma.traducir("La fotografía no está asignada a ningún activo."))
     if meta.taken_at is None:
-        avisos.append("La fotografía no trae fecha en el EXIF: el campo queda vacío.")
+        avisos.append(
+            idioma.traducir("La fotografía no trae fecha en el EXIF: el campo queda vacío.")
+        )
     respuesta["avisos"] = avisos
     return respuesta
 
@@ -1005,6 +1007,8 @@ class Variante(StrEnum):
 #: quien la recupera suele querer verla antes.
 NO_DESCARGABLES = frozenset({"CUARENTENA", "PURGADA"})
 
+#: La clave castellana de cada motivo. Se traduce en `descargar()`, que es
+#: donde se pinta: un diccionario de módulo se evalúa al importar.
 MOTIVO_NO_DESCARGABLE = {
     "CUARENTENA": (
         "El antivirus marcó esta fotografía y no se puede descargar. El archivo se "
@@ -1054,7 +1058,9 @@ def descargar(
     if fila.status in NO_DESCARGABLES:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            MOTIVO_NO_DESCARGABLE.get(fila.status, "Esta fotografía no se puede descargar."),
+            idioma.traducir(
+                MOTIVO_NO_DESCARGABLE.get(fila.status, "Esta fotografía no se puede descargar.")
+            ),
         )
 
     clave: str | None = None
@@ -1303,6 +1309,10 @@ def restaurar_version(version_id: uuid.UUID, s: SesionDep, usuario: UsuarioDep) 
             "t": tipo,
             "n": origen["display_name"],
             "a": _json(origen["annotations"]) if origen["annotations"] else None,
+            # En castellano a propósito: se **guarda** en `photo_version.note`
+            # y es el historial del proyecto, no texto de pantalla. Traducirlo
+            # dejaría el historial de una misma foto en dos idiomas según quién
+            # restauró cada versión.
             "nota": f"Restaurada desde la versión {version_id}",
             "u": str(usuario.id),
         },

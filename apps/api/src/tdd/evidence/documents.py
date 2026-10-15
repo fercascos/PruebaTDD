@@ -108,17 +108,21 @@ def comprobar_contenido(datos: bytes, *, extension: str) -> None:
     renombrando— y solo después la extensión declarada.
     """
     if not datos:
-        raise ContenidoRechazado("El fichero está vacío")
+        raise ContenidoRechazado(idioma.traducir("El fichero está vacío"))
 
     cabecera = datos[:8]
     for firma, que_es in _FIRMAS_PROHIBIDAS:
         if cabecera.startswith(firma):
+            # `[REC]` Antes decía «No se admiten {que_es}s», y con `que_es` =
+            # «ejecutable de Windows» salía «ejecutable de Windowss». Era un
+            # defecto del castellano, no de la traducción, y se arregla igual
+            # en los dos idiomas: una sola frase, sin pluralizar pegando una
+            # «s» a un sustantivo que ya trae complemento.
             raise ContenidoRechazado(
                 idioma.traducir(
-                    "No se admiten {tipo}s. El contenido del fichero es un {real}, "
+                    "El contenido del fichero es un {real} y no se admite, "
                     "independientemente de su extensión.",
-                    tipo=que_es,
-                    real=que_es,
+                    real=idioma.traducir(que_es),
                 )
             )
 
@@ -126,12 +130,14 @@ def comprobar_contenido(datos: bytes, *, extension: str) -> None:
     if es_ooxml and any(marca in datos for marca in _MARCAS_DE_MACRO):
         # [REQ] Un `.docm` renombrado a `.docx` sigue llevando el proyecto VBA
         # dentro del contenedor; buscarlo ahí es lo único que lo detecta.
-        raise ContenidoRechazado("No se admiten documentos con macros")
+        raise ContenidoRechazado(idioma.traducir("No se admiten documentos con macros"))
     if es_ooxml and extension not in {"docx", "xlsx", "pptx", "dwg", "dxf"}:
         raise ContenidoRechazado(
-            "El fichero es un contenedor comprimido. Solo se admiten como documentos "
-            "ofimáticos, no como archivo suelto: un ZIP anidado puede ser una bomba "
-            "de descompresión."
+            idioma.traducir(
+                "El fichero es un contenedor comprimido. Solo se admiten como documentos "
+                "ofimáticos, no como archivo suelto: un ZIP anidado puede ser una bomba "
+                "de descompresión."
+            )
         )
 
     if extension not in EXTENSIONES_ADMITIDAS:
@@ -475,7 +481,10 @@ def confidencialidad_por_tipo() -> Any:
         {
             "doc_type": tipo,
             "confidentiality": nivel,
-            "motivo": MOTIVO_DE_CONFIDENCIALIDAD.get(tipo, ""),
+            # El diccionario guarda la clave castellana —se evalúa al importar
+            # el módulo y traducirlo allí congelaría el idioma—; aquí, que es
+            # donde se pinta, se traduce.
+            "motivo": idioma.traducir(MOTIVO_DE_CONFIDENCIALIDAD.get(tipo, "")),
         }
         for tipo, nivel in sorted(CONFIDENCIALIDAD_POR_OMISION.items())
     ]

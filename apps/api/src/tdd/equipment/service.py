@@ -24,12 +24,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from tdd.core import idioma
+
 
 @dataclass(frozen=True, slots=True)
 class Horizonte:
     """Un plazo del catálogo `time_horizon`, tal como está sembrado."""
 
     code: str
+    #: `[LIM]` El nombre engaña: lo que llega aquí es `nombre(name_es, name_en)`
+    #: resuelto por la base, o sea el nombre **en el idioma de la petición**. Se
+    #: llama `name_es` porque así se llama la columna y así lo alias la consulta
+    #: de `equipment/router._horizontes`. Renombrarlo toca cuatro sitios más.
     name_es: str
     year_from: int | None
     year_to: int | None
@@ -100,15 +106,27 @@ def calcular_vida(
     horizonte = horizonte_de_reposicion(residual, horizontes)
 
     if residual is None:
-        resumen = SIN_DATOS
+        resumen = idioma.traducir(SIN_DATOS)
     elif residual < 0:
-        resumen = f"Vida útil agotada hace {abs(residual)} año(s) ({end_of_life_year})."
+        resumen = idioma.traducir(
+            "Vida útil agotada hace {anios} año(s) ({anio}).",
+            anios=abs(residual),
+            anio=end_of_life_year,
+        )
     elif residual == 0:
-        resumen = f"Agota su vida útil este año ({end_of_life_year})."
+        resumen = idioma.traducir("Agota su vida útil este año ({anio}).", anio=end_of_life_year)
     else:
-        resumen = f"Le quedan {residual} año(s): agota su vida útil en {end_of_life_year}."
+        resumen = idioma.traducir(
+            "Le quedan {anios} año(s): agota su vida útil en {anio}.",
+            anios=residual,
+            anio=end_of_life_year,
+        )
     if horizonte is not None:
-        resumen = f"{resumen} Reposición en {horizonte.name_es.lower()}."
+        # `name_es` ya viene resuelto por `nombre()`, así que el plazo sale en
+        # el idioma de la petición sin hacer nada aquí.
+        resumen = idioma.traducir(
+            "{resumen} Reposición en {plazo}.", resumen=resumen, plazo=horizonte.name_es.lower()
+        )
 
     return Vida(
         end_of_life_year=end_of_life_year,

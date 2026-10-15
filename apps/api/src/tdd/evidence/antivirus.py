@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
 
+from tdd.core import idioma
+
 
 class Veredicto(StrEnum):
     LIMPIO = "LIMPIO"
@@ -42,6 +44,14 @@ class Resultado:
     #: Nombre de la firma cuando hay positivo, o el motivo de no haber
     #: analizado. Nunca vacío: un veredicto sin explicación no se puede
     #: auditar.
+    #:
+    #: `[LIM]` De los cuatro detalles que se escriben aquí, el único que ve un
+    #: usuario es el del positivo: `guardia.rechazar_si_infectado` lo mete en
+    #: el 422, y por eso «amenaza sin identificar» sí se traduce. Los otros
+    #: tres —no hay antivirus, no contesta, sin amenazas— vuelven al router y
+    #: **nadie los lee**: no se guardan ni se pintan. Van en castellano a
+    #: propósito, porque el día que se enseñen lo que hará falta es decidir
+    #: dónde, y entonces se traducen allí.
     detalle: str
 
     @property
@@ -145,7 +155,11 @@ class ClamAvPorSocket:
             return Resultado(Veredicto.LIMPIO, "Analizado por ClamAV: sin amenazas")
         if respuesta.endswith("FOUND"):
             firma = respuesta.removeprefix("stream:").removesuffix("FOUND").strip()
-            return Resultado(Veredicto.INFECTADO, firma or "amenaza sin identificar")
+            # La firma es el nombre que le da ClamAV y no se traduce; el
+            # respaldo sí, porque acaba dentro del 422 que lee quien subía.
+            return Resultado(
+                Veredicto.INFECTADO, firma or idioma.traducir("amenaza sin identificar")
+            )
         return Resultado(
             Veredicto.NO_ANALIZADO,
             f"Respuesta no reconocida del antivirus: «{respuesta}»",

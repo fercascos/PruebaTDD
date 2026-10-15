@@ -112,9 +112,14 @@ class Duplicado:
 
     @property
     def mensaje(self) -> str:
+        # Una propiedad y no un campo con valor por omisión: un campo se
+        # evaluaría al definir la clase y se quedaría con el idioma del
+        # arranque.
         if self.tipo is TipoDeDuplicado.EXACTO:
-            return "Este archivo ya está en el proyecto. Súbalo solo si quiere una copia."
-        return (
+            return idioma.traducir(
+                "Este archivo ya está en el proyecto. Súbalo solo si quiere una copia."
+            )
+        return idioma.traducir(
             "Se parece mucho a una fotografía ya subida. Puede ser otro disparo "
             "de la misma escena: revíselo antes de descartarlo."
         )
@@ -244,7 +249,10 @@ def avisos_previos_al_informe(
                 Aviso(
                     "PHOTO_NOT_USABLE",
                     Severidad.BLOQUEANTE,
-                    f"La fotografía está en «{foto.estado}» y no puede insertarse en el informe.",
+                    idioma.traducir(
+                        "La fotografía está en «{estado}» y no puede insertarse en el informe.",
+                        estado=foto.estado,
+                    ),
                     foto.id,
                 )
             )
@@ -253,7 +261,9 @@ def avisos_previos_al_informe(
                 Aviso(
                     "PHOTO_WITHOUT_ASSET",
                     Severidad.ALTA,
-                    "Fotografía sin activo: no se sabría en qué diapositiva colocarla.",
+                    idioma.traducir(
+                        "Fotografía sin activo: no se sabría en qué diapositiva colocarla."
+                    ),
                     foto.id,
                 )
             )
@@ -262,7 +272,7 @@ def avisos_previos_al_informe(
                 Aviso(
                     "PHOTO_WITHOUT_CAPTION",
                     Severidad.BAJA,
-                    "Fotografía seleccionada sin pie de foto.",
+                    idioma.traducir("Fotografía seleccionada sin pie de foto."),
                     foto.id,
                 )
             )
@@ -275,7 +285,10 @@ def avisos_previos_al_informe(
                         Severidad.MEDIA,
                         # Aviso, nunca bloqueo: hay sótanos sin GPS fiable y hay
                         # instalaciones exteriores legítimamente alejadas.
-                        f"La fotografía se tomó a {metros:,.0f} m del activo asignado.",
+                        idioma.traducir(
+                            "La fotografía se tomó a {metros} m del activo asignado.",
+                            metros=idioma.numero(metros),
+                        ),
                         foto.id,
                     )
                 )
@@ -286,7 +299,9 @@ def avisos_previos_al_informe(
                 Aviso(
                     "ASSET_WITHOUT_PHOTOS",
                     Severidad.MEDIA,
-                    "El activo no tiene ninguna fotografía seleccionada para el informe.",
+                    idioma.traducir(
+                        "El activo no tiene ninguna fotografía seleccionada para el informe."
+                    ),
                     None,
                 )
             )
@@ -410,14 +425,17 @@ def comprobar_purga(
     if referenciada_por_informe_emitido:
         raise PurgaNoPermitida(
             "REFERENCED_BY_ISSUED_REPORT",
-            "La fotografía aparece en un informe ya emitido y no puede purgarse: "
-            "el informe dejaría de ser reproducible.",
+            idioma.traducir(
+                "La fotografía aparece en un informe ya emitido y no puede purgarse: "
+                "el informe dejaría de ser reproducible."
+            ),
         )
     if estado is EstadoDeFoto.CUARENTENA:
         return  # Lo positivo en el antivirus se purga con autorización explícita.
     if estado is not EstadoDeFoto.PAPELERA or borrada_el is None:
         raise PurgaNoPermitida(
-            "NOT_IN_TRASH", "Solo se purga lo que está en la papelera o en cuarentena."
+            "NOT_IN_TRASH",
+            idioma.traducir("Solo se purga lo que está en la papelera o en cuarentena."),
         )
     restantes = dias_restantes_en_papelera(borrada_el, ahora, retencion_dias=retencion_dias)
     if restantes > 0:

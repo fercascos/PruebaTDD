@@ -98,6 +98,11 @@ class FuenteNoConsultada:
 #: Motivo por defecto cuando la fuente no está habilitada y nadie escribió uno.
 #: Se redacta aquí y no en la pantalla para que diga lo mismo en el informe, en
 #: la API y en la interfaz.
+#:
+#: Estas tres son la **clave** castellana, no el texto que sale: traducirlas
+#: aquí las congelaría en el idioma del primer arranque, porque una constante
+#: de módulo se evalúa una vez al importar. La traducción va en
+#: `motivo_de_no_consulta`, que es donde se pinta.
 MOTIVO_SIN_HABILITAR = (
     "Fuente no habilitada. No se ha realizado ninguna consulta automatizada a este proveedor."
 )
@@ -120,26 +125,37 @@ def motivo_de_no_consulta(fuente: Fuente, *, hoy: date) -> str | None:
     if fuente.source_type is TipoDeFuente.MANUAL:
         return None
     if not fuente.is_enabled:
-        return fuente.disabled_reason or MOTIVO_SIN_HABILITAR
+        # `disabled_reason` lo escribe quien administra, en el idioma que
+        # quiera: es un dato, y sale tal cual.
+        return fuente.disabled_reason or idioma.traducir(MOTIVO_SIN_HABILITAR)
     if not fuente.tos_reviewed:
         # Redundante con el `CHECK` de la base, y a propósito: si un día alguien
         # relaja la restricción, la pantalla sigue diciendo la verdad.
-        return MOTIVO_SIN_REVISAR
+        return idioma.traducir(MOTIVO_SIN_REVISAR)
     if fuente.license_expires_at is not None and fuente.license_expires_at < hoy:
-        return MOTIVO_LICENCIA_CADUCADA.format(fecha=fuente.license_expires_at.isoformat())
+        return idioma.traducir(
+            MOTIVO_LICENCIA_CADUCADA, fecha=fuente.license_expires_at.isoformat()
+        )
     return None
+
+
+#: `[REQ]` Ninguna referencia viene marcada como elegida. Es una lista para que
+#: decida una persona, no una recomendación.
+AVISO_SIN_SELECCION = (
+    "Ninguna referencia se selecciona automáticamente. Un consultor debe "
+    "validar el precio que se aplique."
+)
 
 
 @dataclass(frozen=True, slots=True)
 class Comparacion:
     referencias: list[Referencia]
     no_consultadas: list[FuenteNoConsultada]
-    #: `[REQ]` Ninguna referencia viene marcada como elegida. Es una lista para
-    #: que decida una persona, no una recomendación.
-    aviso: str = (
-        "Ninguna referencia se selecciona automáticamente. Un consultor debe "
-        "validar el precio que se aplique."
-    )
+    #: El aviso de arriba, ya traducido. **Sin valor por defecto a propósito**:
+    #: un `aviso: str = AVISO_SIN_SELECCION` se evaluaría al importar el módulo
+    #: y la primera petición que llegara fijaría el idioma de todas las demás.
+    #: Sin defecto, quien construya una `Comparacion` sin traducirlo no compila.
+    aviso: str
 
 
 def comparar(referencias: list[Referencia], fuentes: list[Fuente], *, hoy: date) -> Comparacion:
@@ -160,7 +176,11 @@ def comparar(referencias: list[Referencia], fuentes: list[Fuente], *, hoy: date)
             no_consultadas.append(
                 FuenteNoConsultada(code=fuente.code, name=fuente.name, motivo=motivo)
             )
-    return Comparacion(referencias=ordenadas, no_consultadas=no_consultadas)
+    return Comparacion(
+        referencias=ordenadas,
+        no_consultadas=no_consultadas,
+        aviso=idioma.traducir(AVISO_SIN_SELECCION),
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -197,11 +217,11 @@ def actualizar_por_indice(
     **no se aplica solo**: quien llama decide.
     """
     if indice_origen <= 0:
-        raise ValueError("El índice de origen debe ser mayor que cero")
+        raise ValueError(idioma.traducir("El índice de origen debe ser mayor que cero"))
     if indice_destino <= 0:
-        raise ValueError("El índice de destino debe ser mayor que cero")
+        raise ValueError(idioma.traducir("El índice de destino debe ser mayor que cero"))
     if factor_geografico <= 0:
-        raise ValueError("El factor geográfico debe ser mayor que cero")
+        raise ValueError(idioma.traducir("El factor geográfico debe ser mayor que cero"))
 
     resultado = (base * indice_destino / indice_origen * factor_geografico).quantize(
         Decimal("0.01")
@@ -275,7 +295,9 @@ def comprobar_validacion(
             )
         return texto
 
-    coincide = f"Coincide con la referencia de {referencia.source_name}."
+    coincide = idioma.traducir(
+        "Coincide con la referencia de {fuente}.", fuente=referencia.source_name
+    )
     if not texto:
         return coincide
     if len(texto) < MINIMO_JUSTIFICACION:
@@ -297,4 +319,8 @@ def a_decimal(valor: object, campo: str) -> Decimal:
     try:
         return Decimal(str(valor))
     except (InvalidOperation, TypeError, ValueError) as exc:
-        raise ValueError(f"«{campo}» no es un número válido: {valor!r}") from exc
+        raise ValueError(
+            idioma.traducir(
+                "«{campo}» no es un número válido: {valor}", campo=campo, valor=repr(valor)
+            )
+        ) from exc

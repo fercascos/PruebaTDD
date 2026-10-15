@@ -559,11 +559,23 @@ def generar_capex_de_equipos(asset_id: uuid.UUID, s: SesionDep, usuario: Usuario
         codigo = equipo["capex_code_id"] or _capitulo_de(equipo["capex_chapter"], capitulos)
         if codigo is None:
             avisos.append(
-                f"«{_nombre_de(equipo)}» está marcado y no tiene objeto del árbol; su sistema "
-                f"técnico ({equipo['sistema'] or 'sin sistema'}) tampoco dice a qué capítulo "
-                "del CAPEX va. Ábralo en el Inventario y dígale de qué objeto cuelga."
+                idioma.traducir(
+                    "«{equipo}» está marcado y no tiene objeto del árbol; su sistema "
+                    "técnico ({sistema}) tampoco dice a qué capítulo del CAPEX va. "
+                    "Ábralo en el Inventario y dígale de qué objeto cuelga.",
+                    equipo=_nombre_de(equipo),
+                    sistema=equipo["sistema"] or idioma.traducir("sin sistema"),
+                )
             )
             continue
+        # `[REQ]` En castellano **a propósito**, y no en el idioma de la
+        # petición: el título se **guarda** en `finding.title` y es contenido
+        # del proyecto, no texto de pantalla. Traducirlo aquí haría que el
+        # mismo inventario generase hallazgos con títulos distintos según la
+        # cabecera de quien aprieta el botón, y `ya_estan` —que compara
+        # títulos— dejaría de ver los duplicados. `[PDV]` Un proyecto que se
+        # redacta en inglés necesita decidir el idioma **del proyecto**, que es
+        # otra cosa que el idioma de la interfaz.
         titulo = f"Sustitución o intervención: {_nombre_de(equipo)}"
         if titulo in ya_estan:
             omitidas += 1
@@ -706,6 +718,13 @@ def borrar(equipment_id: uuid.UUID, s: SesionDep) -> None:
 #: entero en memoria antes de que nadie mire qué es.
 MAX_BYTES_XLSX = 10 * 1024 * 1024
 
+#: La clave castellana del aviso de la previsualización. Se traduce en
+#: `_a_respuesta`, no aquí.
+AVISO_SIN_GUARDAR = (
+    "Nada se ha guardado todavía. Al aplicar, los equipos que ya existen no "
+    "se tocan salvo que lo pida expresamente."
+)
+
 
 class FilaImportada(BaseModel):
     fila: int
@@ -727,10 +746,10 @@ class Previsualizacion(BaseModel):
     nuevas: int
     ya_existen: int
     con_error: int
-    aviso: str = (
-        "Nada se ha guardado todavía. Al aplicar, los equipos que ya existen no "
-        "se tocan salvo que lo pida expresamente."
-    )
+    #: Sin valor por omisión a propósito: un `aviso: str = "…"` se evalúa al
+    #: importar el módulo y la primera petición fijaría el idioma de todas. Lo
+    #: rellena `_a_respuesta`, que corre dentro de la petición.
+    aviso: str
 
 
 def _catalogos(s: Session, project_id: uuid.UUID) -> tuple[Any, Any, Any]:
@@ -822,6 +841,7 @@ def _a_respuesta(hoja: Any, analisis: Any) -> dict[str, Any]:
         "nuevas": len(analisis.nuevas),
         "ya_existen": len(analisis.ya_existen),
         "con_error": len(analisis.con_error),
+        "aviso": idioma.traducir(AVISO_SIN_GUARDAR),
     }
 
 

@@ -492,10 +492,15 @@ class PeticionDeRecuperacion(BaseModel):
 
 
 class RespuestaDeRecuperacion(BaseModel):
-    #: `[REQ]` Siempre la misma frase, exista o no la cuenta.
-    detail: str = recuperacion.RESPUESTA_UNICA
+    #: `[REQ]` Siempre la misma frase, exista o no la cuenta. **Sin valor por
+    #: omisión**: un `= recuperacion.RESPUESTA_UNICA` se evaluaría al importar
+    #: el módulo y la frase quedaría fijada en el idioma del arranque.
+    detail: str
 
 
+#: El asunto y el cuerpo del correo, en castellano, que es la clave. Se
+#: traducen al encolar la tarea: quien lee el correo es quien acaba de pedir el
+#: enlace, así que el idioma de su petición es el suyo.
 ASUNTO = "Restablecer su contraseña"
 
 CUERPO = """Hola{saludo}:
@@ -611,9 +616,12 @@ def olvide_mi_clave(
                     created_by=fila["id"],
                     payload={
                         "destinatario": cuerpo.email,
-                        "asunto": ASUNTO,
-                        "cuerpo": CUERPO.format(
-                            saludo=f", {fila['full_name'].split()[0]}" if fila["full_name"] else "",
+                        "asunto": idioma.traducir(ASUNTO),
+                        "cuerpo": idioma.traducir(
+                            CUERPO,
+                            saludo=(
+                                f", {fila['full_name'].split()[0]}" if fila["full_name"] else ""
+                            ),
                             enlace=recuperacion.enlace(settings.app_base_url, token.valor),
                         ),
                     },
@@ -632,7 +640,7 @@ def olvide_mi_clave(
                 s.commit()
         else:
             s.rollback()
-        return {"detail": recuperacion.RESPUESTA_UNICA}
+        return {"detail": idioma.traducir(recuperacion.RESPUESTA_UNICA)}
     finally:
         s.close()
 

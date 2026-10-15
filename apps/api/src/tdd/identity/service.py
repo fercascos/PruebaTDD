@@ -184,13 +184,15 @@ def comprobar_sesion_de_refresco(sesion: SesionGuardada | None, *, ahora: dateti
     corta la familia entera y ambos vuelven a iniciar sesión.
     """
     if sesion is None:
-        raise SesionNoValida("Token de refresco desconocido")
+        raise SesionNoValida(idioma.traducir("Token de refresco desconocido"))
     if not sesion.is_active:
-        raise SesionNoValida("La cuenta está desactivada")
+        raise SesionNoValida(idioma.traducir("La cuenta está desactivada"))
     if sesion.revoked_at is not None:
-        raise SesionNoValida("Token de refresco ya utilizado", revocar_familia=True)
+        raise SesionNoValida(
+            idioma.traducir("Token de refresco ya utilizado"), revocar_familia=True
+        )
     if sesion.expires_at <= ahora:
-        raise SesionNoValida("Token de refresco caducado")
+        raise SesionNoValida(idioma.traducir("Token de refresco caducado"))
 
 
 #: `[REC]` Mínimos de la contraseña. Longitud por encima de composición: es lo
@@ -211,9 +213,9 @@ def comprobar_fortaleza(clave: str, *, email: str = "") -> None:
             )
         )
     if email and email.split("@")[0].lower() in clave.lower():
-        raise ClaveDebil("La contraseña no puede contener el nombre de la cuenta")
+        raise ClaveDebil(idioma.traducir("La contraseña no puede contener el nombre de la cuenta"))
     if len(set(clave)) < 5:
-        raise ClaveDebil("La contraseña repite demasiado los mismos caracteres")
+        raise ClaveDebil(idioma.traducir("La contraseña repite demasiado los mismos caracteres"))
 
 
 def ahora_utc() -> datetime:

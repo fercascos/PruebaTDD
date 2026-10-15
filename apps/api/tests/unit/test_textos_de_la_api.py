@@ -164,6 +164,36 @@ def test_ningun_mensaje_de_error_se_queda_sin_traducir() -> None:
     )
 
 
+def test_los_nombres_que_pasan_las_rutas_se_traducen() -> None:
+    """`cc.comprobar(..., que="una línea de CAPEX")` y sus diez hermanas.
+
+    `[REQ]` Es el tercer hueco de esta capa, y el más fácil de dejarse abierto.
+    La frase del `428` la monta `core/concurrencia.py` —«Para modificar *una
+    línea de CAPEX* hay que decir sobre qué versión se escribe»— y el trozo con
+    artículo lo manda cada ruta. Como viaja en una variable,
+    `test_ninguna_llamada_a_traducir_se_queda_sin_traduccion` no lo ve: para
+    ella la clave es `que`, no su valor.
+
+    Sin esta prueba, una ruta nueva con `que="un documento"` sacaría media
+    frase en inglés y media en castellano. Con ella, falla el día que se
+    escribe.
+    """
+    tabla = _tabla()
+    faltan: list[str] = []
+    for f in _ficheros():
+        arbol = ast.parse(f.read_text(encoding="utf-8"))
+        for n in ast.walk(arbol):
+            if not isinstance(n, ast.Call):
+                continue
+            for k in n.keywords:
+                if k.arg != "que" or not isinstance(k.value, ast.Constant):
+                    continue
+                if isinstance(k.value.value, str) and k.value.value not in tabla:
+                    faltan.append(f"{f.name}:{k.value.lineno}  {k.value.value}")
+    detalle = "\n  ".join(sorted(faltan))
+    assert faltan == [], f"Estos nombres entran sin traducir en la frase del 428:\n  {detalle}"
+
+
 @pytest.mark.parametrize(
     ("es", "en"),
     [

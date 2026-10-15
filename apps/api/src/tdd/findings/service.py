@@ -82,13 +82,17 @@ def comprobar_transicion(
         )
     if hasta is EstadoDelHallazgo.EN_REVISION and not hechos.tiene_descripcion:
         raise GuardaDeHallazgoIncumplida(
-            "Un hallazgo sin descripción no puede pasar a revisión: es lo que lee el revisor"
+            idioma.traducir(
+                "Un hallazgo sin descripción no puede pasar a revisión: es lo que lee el revisor"
+            )
         )
     if hasta is EstadoDelHallazgo.VALIDADO:
         if not hechos.tiene_lineas_capex:
             raise GuardaDeHallazgoIncumplida(
-                "Un hallazgo validado necesita al menos una línea de CAPEX, "
-                "aunque sea de importe cero"
+                idioma.traducir(
+                    "Un hallazgo validado necesita al menos una línea de CAPEX, "
+                    "aunque sea de importe cero"
+                )
             )
         if hechos.precios_sin_validar:
             raise GuardaDeHallazgoIncumplida(

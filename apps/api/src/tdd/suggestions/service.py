@@ -16,6 +16,8 @@ import uuid
 from dataclasses import dataclass
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 class SuggestionType(StrEnum):
     CATALOGO = "CATALOGO"
@@ -85,30 +87,43 @@ def validar_transicion(
     """
     permitidas = TRANSICIONES[actual]
     if peticion.a not in permitidas:
-        opciones = ", ".join(sorted(permitidas)) or "ninguna: es un estado final"
+        opciones = ", ".join(sorted(permitidas)) or idioma.traducir("ninguna: es un estado final")
         raise TransicionInvalida(
-            f"No se puede pasar de «{actual}» a «{peticion.a}». Transiciones posibles: {opciones}"
+            idioma.traducir(
+                "No se puede pasar de «{actual}» a «{destino}». Transiciones posibles: {opciones}",
+                actual=actual,
+                destino=peticion.a,
+                opciones=opciones,
+            )
         )
 
     if peticion.a is SuggestionStatus.RECHAZADA:
         nota = (peticion.resolution_note or "").strip()
         if len(nota) < LONGITUD_MINIMA_RESPUESTA:
             raise RespuestaObligatoria(
-                "Al rechazar una sugerencia hay que explicar por qué: "
-                f"al menos {LONGITUD_MINIMA_RESPUESTA} caracteres. "
-                "Quien la escribió va a leer esta respuesta."
+                idioma.traducir(
+                    "Al rechazar una sugerencia hay que explicar por qué: al menos {minimo} "
+                    "caracteres. Quien la escribió va a leer esta respuesta.",
+                    minimo=LONGITUD_MINIMA_RESPUESTA,
+                )
             )
 
     if peticion.a is SuggestionStatus.DUPLICADA:
         if peticion.duplicate_of_id is None:
-            raise TransicionInvalida("Marcar como duplicada exige indicar con cuál se agrupa")
+            raise TransicionInvalida(
+                idioma.traducir("Marcar como duplicada exige indicar con cuál se agrupa")
+            )
         if peticion.duplicate_of_id == propia_id:
-            raise TransicionInvalida("Una sugerencia no puede ser duplicada de sí misma")
+            raise TransicionInvalida(
+                idioma.traducir("Una sugerencia no puede ser duplicada de sí misma")
+            )
 
     if peticion.a is SuggestionStatus.APLICADA and peticion.applied_entity_id is None:
         raise TransicionInvalida(
-            "Aplicar una sugerencia exige enlazar lo que se ha creado o cambiado: "
-            "sin ese enlace, «aplicada» no es comprobable"
+            idioma.traducir(
+                "Aplicar una sugerencia exige enlazar lo que se ha creado o cambiado: "
+                "sin ese enlace, «aplicada» no es comprobable"
+            )
         )
 
 

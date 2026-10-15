@@ -23,6 +23,21 @@ error, no una invitación a crearlo.
 
 El análisis es lógica pura: recibe listas de diccionarios y catálogos ya
 leídos. Se prueba sin base de datos y sin ficheros.
+
+## El vocabulario de la hoja está en castellano, y se queda así
+
+`[PDV]` `CABECERAS` y `ENUMERADOS` **no se traducen**, y no es un olvido de la
+pasada de inglés: son los nombres que esta función busca en la hoja que llega.
+Traducirlos rompería la hoja castellana, que es la que descarga `plantilla()` y
+la que el cliente ya tiene rellenada. Lo mismo vale para los nombres legibles
+de las columnas que faltan (`Activo`, `Tipo de equipo`): quien lee el error
+tiene que añadir una columna **con ese nombre exacto**, así que decirle
+«Asset» sería mandarle a escribir algo que no se reconoce.
+
+Un inventario con cabeceras inglesas no se importa hoy. Lo que falta no es una
+traducción sino **alias ingleses añadidos** a estos diccionarios y una
+plantilla inglesa que los use; son dos cambios que van juntos, porque una
+plantilla cuyas cabeceras el analizador no reconoce es peor que no tenerla.
 """
 
 from __future__ import annotations

@@ -34,6 +34,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from tdd.core import idioma
 from tdd.memoria.extraccion import Seccion
 
 #: Secciones que sí describen obra del activo. La memoria trae también agentes,
@@ -126,8 +127,10 @@ class PorSeccion:
     def clasificar(self, secciones: list[Seccion], capitulos: dict[str, str]) -> Dictamen:
         dictamen = Dictamen(proveedor="por-seccion", es_simulado=True)
         dictamen.avisos.append(
-            "Clasificación por sección, sin leer la prosa: los objetos se proponen en el "
-            "primer capítulo al que toca su sección. Hay que repasarlos antes de aceptar."
+            idioma.traducir(
+                "Clasificación por sección, sin leer la prosa: los objetos se proponen en el "
+                "primer capítulo al que toca su sección. Hay que repasarlos antes de aceptar."
+            )
         )
 
         for seccion in secciones:
@@ -154,9 +157,14 @@ class PorSeccion:
             if len(destinos) > 1:
                 nombres = ", ".join(capitulos[c] for c in destinos)
                 dictamen.avisos.append(
-                    f"«{seccion.codigo} {seccion.titulo}» toca {len(destinos)} capítulos "
-                    f"({nombres}). Todos sus objetos se han propuesto en el primero: "
-                    "hay que repartirlos a mano."
+                    idioma.traducir(
+                        "«{codigo} {titulo}» toca {cuantos} capítulos ({nombres}). Todos sus "
+                        "objetos se han propuesto en el primero: hay que repartirlos a mano.",
+                        codigo=seccion.codigo,
+                        titulo=seccion.titulo,
+                        cuantos=len(destinos),
+                        nombres=nombres,
+                    )
                 )
         return dictamen
 

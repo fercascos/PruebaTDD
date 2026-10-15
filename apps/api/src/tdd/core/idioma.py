@@ -19,12 +19,18 @@ pantalla por lo demás inglesa.
 
 ## Cómo viaja el idioma hasta aquí
 
-Por un `ContextVar`, que lo fija la misma dependencia que abre la sesión
-(`core/deps.obtener_sesion`) y por tanto no se puede olvidar en una ruta. Un
-`ContextVar` y no un argumento porque estas frases se componen **cinco capas
-por debajo** de la ruta —`phases/engine.describir_avance()` no sabe que existe
-una petición HTTP—, y pasar el idioma por toda esa cadena serían veinte firmas
-cambiadas para que una función de hoja escriba una palabra.
+Por un `ContextVar`, que fija el **middleware ASGI** de `core/observabilidad.py`
+y por tanto no se puede olvidar en una ruta. Un `ContextVar` y no un argumento
+porque estas frases se componen **cinco capas por debajo** de la ruta
+—`phases/engine.describir_avance()` no sabe que existe una petición HTTP—, y
+pasar el idioma por toda esa cadena serían veinte firmas cambiadas para que una
+función de hoja escriba una palabra.
+
+`[REQ]` En el middleware y **no en una dependencia** de FastAPI. La primera
+versión lo fijaba en `core/deps.obtener_sesion`, que es un generador síncrono:
+FastAPI lo ejecuta en un hilo del pool, con **su propio** contexto, así que el
+valor no llegaba al endpoint. La API devolvía castellano con
+`Accept-Language: en` y no fallaba nada.
 
 `[LIM]` Un `ContextVar` es estado implícito, con lo que eso implica: una
 función que lo lea fuera de una petición —el worker de la cola, una prueba
@@ -163,3 +169,25 @@ def traducir(clave: str, **valores: object) -> str:
     """
     texto = TEXTOS.get(clave, clave) if actual() == "en" else clave
     return texto.format(**valores) if valores else texto
+
+
+def numero(valor: float, *, decimales: int = 0) -> str:
+    """Un número con el separador de miles del idioma en curso.
+
+    `[REQ]` Traducir la frase y dejar el número en inglés deja el aviso a medio
+    camino: «se tomó a 1,200 m» en una pantalla castellana se lee como *mil
+    doscientos* o como *uno coma dos* según quién lo mire, y las dos lecturas
+    están a un factor de mil de distancia. `f"{x:,.0f}"` es la convención
+    inglesa y Python no tiene otra sin `locale`, que es estado global del
+    proceso y no se puede fijar por petición.
+
+    Es el mismo criterio que `reporting/capex_layout.formatear_importe`, que ya
+    lo hacía para los importes del informe; aquí el idioma sale del contexto de
+    la petición en vez de un argumento.
+    """
+    crudo = f"{valor:,.{decimales}f}"
+    if actual() == "en":
+        return crudo
+    entero, _, dec = crudo.partition(".")
+    entero = entero.replace(",", ".")
+    return f"{entero},{dec}" if dec else entero

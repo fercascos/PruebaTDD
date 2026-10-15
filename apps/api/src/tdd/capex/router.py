@@ -31,7 +31,7 @@ from tdd.core.deps import SesionDep, UsuarioDep
 # no se puede cambiar sin romper al frontend—, y taparía al módulo. Lo cazó
 # mypy; en ejecución habría sido un `AttributeError` dentro de un `raise`, que
 # es el peor sitio posible para encontrárselo.
-from tdd.core.idioma import traducir
+from tdd.core.idioma import traducir, traducir_a
 from tdd.exports.plantilla_capex import Idioma
 from tdd.findings.riesgos import SIN_GRADO
 
@@ -116,7 +116,7 @@ def previsualizar_calculo(cuerpo: PeticionCalculo) -> Any:
         "tax_amount": totales.tax_amount,
         "total_with_tax": totales.total_cost,
         "calc_version": resultado.calc_version,
-        "nota": (
+        "nota": traducir(
             "La cascada llega hasta la base imponible. El impuesto se aplica una sola vez, "
             "sobre el importe de la línea. Este cálculo no se ha guardado: para usarlo, "
             "trasládelo al importe con el botón correspondiente."
@@ -880,7 +880,10 @@ def exportar_cartera_zip(
                     del_activo=True,
                 ),
             )
-        zf.writestr("LEEME.txt", _leeme(proyecto, partes, con_actuaciones))
+        # El nombre del fichero también: un ZIP inglés con un «LEEME.txt»
+        # dentro delata que la traducción se quedó a medias.
+        nombre_leeme = "README.txt" if idioma is Idioma.EN else "LEEME.txt"
+        zf.writestr(nombre_leeme, _leeme(proyecto, partes, con_actuaciones, idioma))
 
     nombre_zip = f"{prefijo}_por_activo.zip"
     return Response(
@@ -890,25 +893,63 @@ def exportar_cartera_zip(
     )
 
 
-def _leeme(proyecto: dict[str, Any], partes: list[Parte], con_actuaciones: list[Parte]) -> bytes:
-    """Qué lleva el ZIP y, sobre todo, **qué no lleva y por qué**."""
+#: El ancho al que se parte el LEEME. Los párrafos se guardan en la tabla
+#: **enteros**, en una línea, y se parten aquí: el inglés no ocupa lo mismo que
+#: el castellano, así que partirlos a mano en el código dejaría el texto inglés
+#: con los cortes del castellano.
+ANCHO_LEEME = 78
+
+
+def _leeme(
+    proyecto: dict[str, Any],
+    partes: list[Parte],
+    con_actuaciones: list[Parte],
+    lengua: Idioma,
+) -> bytes:
+    """Qué lleva el ZIP y, sobre todo, **qué no lleva y por qué**.
+
+    `[REQ]` Va en el idioma del **parámetro de consulta**, igual que los libros
+    que acompaña, y no en el de la cabecera `Accept-Language`: es contenido del
+    entregable y no texto de pantalla, y quien descarga elige el idioma del
+    entregable en el desplegable de la descarga.
+    """
+    import textwrap
+
+    def di(clave: str, **valores: object) -> str:
+        return traducir_a(lengua.value, clave, **valores)
+
+    def parrafo(clave: str, **valores: object) -> str:
+        return textwrap.fill(di(clave, **valores), ANCHO_LEEME)
+
     lineas = [
-        f"CAPEX de «{proyecto.get('name')}» ({proyecto.get('internal_code') or '—'})",
+        di(
+            "CAPEX de «{proyecto}» ({codigo})",
+            proyecto=proyecto.get("name"),
+            codigo=proyecto.get("internal_code") or "—",
+        ),
         "",
-        "Un libro por activo. Cada libro es la plantilla CAPEX del cliente con la",
-        "cabecera, el tipo de edificio y las zonas de SU activo, y solo sus actuaciones.",
+        parrafo(
+            "Un libro por activo. Cada libro es la plantilla CAPEX del cliente con la "
+            "cabecera, el tipo de edificio y las zonas de SU activo, y solo sus actuaciones."
+        ),
         "",
-        f"Libros incluidos ({len(con_actuaciones)}):",
+        di("Libros incluidos ({cuantos}):", cuantos=len(con_actuaciones)),
     ]
-    lineas += [f"  · {p.nombre} — {p.actuaciones} actuaciones" for p in con_actuaciones]
+    lineas += [
+        di("  · {activo} — {cuantas} actuaciones", activo=p.nombre, cuantas=p.actuaciones)
+        for p in con_actuaciones
+    ]
 
     vacios = [p for p in partes if not p.actuaciones]
     if vacios:
         lineas += [
             "",
-            f"Activos SIN libro ({len(vacios)}), porque no tienen ninguna actuación",
-            "registrada todavía. No es lo mismo que no tener CAPEX: puede que aún no",
-            "se hayan visitado.",
+            parrafo(
+                "Activos SIN libro ({cuantos}), porque no tienen ninguna actuación "
+                "registrada todavía. No es lo mismo que no tener CAPEX: puede que aún "
+                "no se hayan visitado.",
+                cuantos=len(vacios),
+            ),
         ]
         lineas += [f"  · {p.nombre}" for p in vacios]
 
@@ -916,9 +957,11 @@ def _leeme(proyecto: dict[str, Any], partes: list[Parte], con_actuaciones: list[
     if huerfanas:
         lineas += [
             "",
-            "AVISO: hay actuaciones cuyo activo ya no está en el proyecto (se borró",
-            "después de registrarlas). Van en su propio libro para no perderse, pero",
-            "su cabecera está vacía y sus zonas pueden estarlo también.",
+            parrafo(
+                "AVISO: hay actuaciones cuyo activo ya no está en el proyecto (se borró "
+                "después de registrarlas). Van en su propio libro para no perderse, pero "
+                "su cabecera está vacía y sus zonas pueden estarlo también."
+            ),
         ]
     return "\n".join(lineas).encode("utf-8")
 
