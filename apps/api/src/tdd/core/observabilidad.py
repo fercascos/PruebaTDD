@@ -41,6 +41,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
+from tdd.core import idioma
+
 #: La cabecera estándar de hecho. La respetan los balanceadores y las mallas de
 #: servicio, así que si alguien ya puso una, se conserva en vez de inventar otra
 #: y romper la traza a mitad de camino.
@@ -205,6 +207,17 @@ class TrazaDePeticion:
         traza = entrante if _ADMISIBLE.fullmatch(entrante) else uuid.uuid4().hex
         scope[CLAVE_EN_SCOPE] = traza
         testigo = peticion_actual.set(traza)
+        # `[REQ]` 0030 · El idioma de la petición, aquí y no en una dependencia
+        # de FastAPI. Se intentó en `core/deps.obtener_sesion` y **no
+        # funcionaba**: una dependencia generadora síncrona corre en un hilo del
+        # pool, con su propio contexto, así que el `ContextVar` que fija ahí no
+        # lo ve el endpoint. El síntoma era una API que devolvía castellano con
+        # `Accept-Language: en` y ni un error. Un middleware ASGI sí corre en el
+        # contexto del que hereda el endpoint, que es por donde ya viaja la
+        # traza de esta misma clase.
+        testigo_idioma = idioma.fijar_testigo(
+            idioma.de_cabecera(peticion.headers.get("accept-language", ""))
+        )
         comienzo = time.perf_counter()
         estado = 500
 
@@ -237,6 +250,7 @@ class TrazaDePeticion:
                         "ms": ms,
                     },
                 )
+            idioma.restaurar(testigo_idioma)
             if self.al_terminar is not None:
                 self.al_terminar(scope, peticion.method, estado, ms / 1000)
             peticion_actual.reset(testigo)

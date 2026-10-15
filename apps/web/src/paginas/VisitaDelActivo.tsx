@@ -175,7 +175,7 @@ export function VisitaDelActivo({ activo }: { activo: Activo }) {
         </button>
         {visitas && visitas.length > 1 && (
           <span className="recuento">
-            <strong>{visitas.length}</strong> visitas a este activo
+            <strong>{visitas.length}</strong> {traducir('visitas a este activo')}
           </span>
         )}
       </div>
@@ -415,7 +415,7 @@ function FichaDeVisita({
                 ])
               }}
             >
-              <option value="">— elija una persona —</option>
+              <option value="">{traducir('— elija una persona —')}</option>
               {libres.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.full_name}
@@ -460,11 +460,11 @@ function FichaDeVisita({
         ) : (
           <p className="recuento">
             <strong>{fotos.length}</strong> {fotos.length === 1 ? traducir('fotografía') : traducir('fotografías')}{' '}
-            del activo
+            {traducir('del activo')}
             {visita.actual_date && (
               <>
                 {' · '}
-                <strong>{deLasFotos.length}</strong> con fecha de esta visita
+                <strong>{deLasFotos.length}</strong> {traducir('con fecha de esta visita')}
               </>
             )}
           </p>

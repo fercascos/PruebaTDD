@@ -46,6 +46,43 @@ export function idiomaEnVivo(): Idioma {
   return idiomaActual
 }
 
+/** Lo que `Intl` necesita para el idioma en vivo. La moneda la fija el proyecto. */
+const LOCALE: Record<Idioma, string> = { es: 'es-ES', en: 'en-GB' }
+
+export function localeEnVivo(): string {
+  return LOCALE[idiomaActual]
+}
+
+/**
+ * Un formateador de `Intl` que **sigue al idioma**.
+ *
+ * `[REQ]` Existe por un error concreto y silencioso: había trece
+ * `new Intl.NumberFormat('es-ES', …)` como constantes de módulo repartidas por
+ * el frontend. Una constante de módulo se evalúa **al importar**, así que la
+ * pantalla en inglés seguía escribiendo «250.157,50 €» —punto de millares,
+ * coma decimal, símbolo detrás— a alguien que espera «€250,157.50». Se vio en
+ * el prototipo en inglés, con la cifra de CAPEX del proyecto en la cabecera.
+ *
+ * Devuelve algo con `.format()` para no tocar los cincuenta sitios que lo
+ * llaman así, y crea el formateador de verdad **en la llamada**, cacheado por
+ * idioma: construir un `Intl.NumberFormat` no es gratis y estas funciones se
+ * llaman una vez por celda de una tabla.
+ */
+export function formateador(opciones: Intl.NumberFormatOptions): { format: (n: number) => string } {
+  const cache = new Map<string, Intl.NumberFormat>()
+  return {
+    format(n: number): string {
+      const l = localeEnVivo()
+      let f = cache.get(l)
+      if (!f) {
+        f = new Intl.NumberFormat(l, opciones)
+        cache.set(l, f)
+      }
+      return f.format(n)
+    },
+  }
+}
+
 /**
  * Traduce. En castellano devuelve la clave tal cual, que **es** el texto.
  *

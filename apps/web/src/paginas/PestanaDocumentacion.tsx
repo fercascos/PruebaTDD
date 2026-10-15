@@ -263,8 +263,7 @@ function Autorizacion({
         <strong>{traducir('Revisión de documentación con IA')}</strong>
         {permiso.activo ? (
           <p className="detalle">
-            {traducir('Autorizada para este proyecto')}{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}.
-            Los documentos que se suban podrán analizarse a petición.
+            {traducir('Autorizada para este proyecto')}{permiso.desde ? ` el ${permiso.desde.slice(0, 10)}` : ''}{traducir('. Los documentos que se suban podrán analizarse a petición.')}
           </p>
         ) : (
           <p className="detalle">
@@ -619,14 +618,14 @@ function Extraccion({
             evita la duda de si se va a perder lo decidido. */}
         {decididas > 0 && (
           <span className="detalle">
-            {decididas} ya decidida(s): volver a extraer no las reabre
+            {decididas} {traducir('ya decidida(s): volver a extraer no las reabre')}
           </span>
         )}
       </div>
 
       {resultado?.es_simulada && (
         <Mensaje tipo="aviso">
-          {traducir('Lectura')} <strong>simulada</strong>{traducir(': nadie ha leído este documento. Lo de abajo ocupa el sitio de lo que vendrá y no dice nada sobre su contenido.')}
+          {traducir('Lectura')} <strong>{traducir('simulada')}</strong>{traducir(': nadie ha leído este documento. Lo de abajo ocupa el sitio de lo que vendrá y no dice nada sobre su contenido.')}
         </Mensaje>
       )}
 
@@ -719,8 +718,8 @@ function Propuesta({
           <>{traducir('Hoy está vacío: aceptarlo lo rellena.')}</>
         ) : contradice ? (
           <>
-            {traducir('Hoy pone')} <strong>{propuesta.valor_actual}</strong>. Aceptarlo lo{' '}
-            <strong>sustituye</strong>.
+            {traducir('Hoy pone')} <strong>{propuesta.valor_actual}</strong>{traducir('. Aceptarlo lo')}{' '}
+            <strong>{traducir('sustituye')}</strong>.
           </>
         ) : (
           <>{traducir('Coincide con lo que ya hay. Aceptarlo no cambia nada.')}</>
@@ -765,9 +764,7 @@ function Revision({
           proveedor, que nadie confunda esto con una revisión de verdad. */}
       {revision.is_simulated && (
         <Mensaje tipo="aviso">
-          {traducir('Revisión')} <strong>simulada</strong>. Todavía no hay proveedor de IA elegido, así que nadie
-          ha leído este documento: las observaciones de abajo ocupan el sitio de las que vendrán y
-          no dicen nada sobre su contenido.
+          {traducir('Revisión')} <strong>{traducir('simulada')}</strong>{traducir('. Todavía no hay proveedor de IA elegido, así que nadie ha leído este documento: las observaciones de abajo ocupan el sitio de las que vendrán y no dicen nada sobre su contenido.')}
         </Mensaje>
       )}
       <ul className="observaciones">
@@ -830,7 +827,7 @@ function Observacion({
         </div>
       ) : (
         <p className="decidida">
-          {obs.decision === 'ACEPTADA' ? 'Aceptada' : 'Rechazada'} por una persona
+          {obs.decision === 'ACEPTADA' ? traducir('Aceptada') : traducir('Rechazada')} {traducir('por una persona')}
           {obs.decision_note ? `: ${obs.decision_note}` : '.'}
         </p>
       )}
@@ -932,8 +929,7 @@ function Limitaciones({
     <section className="limitaciones-doc">
       <h3>{traducir('Lo que la documentación dice sobre sí misma')}</h3>
       <p className="ayuda">
-        {traducir('Salen de leer los documentos, no de lo que falta.')} <strong>{traducir('Solo las aceptadas entran en el apartado de limitaciones del informe')}</strong>: entre la propuesta y el entregable hay
-        una persona decidiendo.
+        {traducir('Salen de leer los documentos, no de lo que falta.')} <strong>{traducir('Solo las aceptadas entran en el apartado de limitaciones del informe')}</strong>{traducir(': entre la propuesta y el entregable hay una persona decidiendo.')}
       </p>
 
       {pendientes.length > 0 && (
@@ -942,12 +938,12 @@ function Limitaciones({
             <li key={l.id} className={`propuesta limitacion m-${l.motivo.toLowerCase()}`}>
               <div className="cabecera">
                 <span className="criterio">{traducir(MOTIVO[l.motivo].etiqueta)}</span>
-                {l.es_simulada && <span className="veredicto">simulada</span>}
+                {l.es_simulada && <span className="veredicto">{traducir('simulada')}</span>}
               </div>
               <p className="resumen">{l.texto}</p>
               <p className="detalle">
                 {traducir(MOTIVO[l.motivo].explica)}
-                {l.documento && <> · Sale de «{l.documento}»</>}
+                {l.documento && <> {traducir('· Sale de «')}{l.documento}»</>}
                 {l.seccion && <> · {l.seccion}</>}
               </p>
               {l.evidencia && <blockquote className="evidencia">{l.evidencia}</blockquote>}
@@ -966,7 +962,7 @@ function Limitaciones({
 
       {aceptadas.length > 0 && (
         <details className="decididas" open>
-          <summary>{aceptadas.length} van al informe</summary>
+          <summary>{aceptadas.length} {traducir('van al informe')}</summary>
           <ul>
             {aceptadas.map((l) => (
               <li key={l.id}>
@@ -1095,7 +1091,7 @@ function EquiposPropuestos({
                   {/* Sin cantidad se dice «sin cantidad», no «1». Un uno en un
                       inventario se lee después como cierto. */}
                   {e.quantity === null ? (
-                    <span className="ayuda">sin cantidad</span>
+                    <span className="ayuda">{traducir('sin cantidad')}</span>
                   ) : (
                     `${Number(e.quantity)} ${e.unit}`
                   )}
@@ -1103,7 +1099,7 @@ function EquiposPropuestos({
               </div>
               <p className="detalle">
                 {e.technical_system_name ?? traducir('sin sistema técnico')}
-                {e.documento && <> · Sale de «{e.documento}»</>}
+                {e.documento && <> {traducir('· Sale de «')}{e.documento}»</>}
                 {e.seccion && <> · {e.seccion}</>}
               </p>
               {e.evidencia && <blockquote className="evidencia">{e.evidencia}</blockquote>}
@@ -1128,7 +1124,7 @@ function EquiposPropuestos({
                     type="number"
                     min={1}
                     max={600}
-                    placeholder="opcional"
+                    placeholder={traducir('opcional')}
                     value={meses[e.id] ?? ''}
                     onChange={(ev) => setMeses((m) => ({ ...m, [e.id]: ev.target.value }))}
                   />

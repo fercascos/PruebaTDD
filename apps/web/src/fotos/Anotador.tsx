@@ -44,7 +44,11 @@ export function Anotador({
   const [color, setColor] = useState(COLORES[0]!.valor)
   const [grosor, setGrosor] = useState(3)
   const [enCurso, setEnCurso] = useState<Forma | null>(null)
-  const [texto, setTexto] = useState('Fisura')
+  // `[LIM]` El texto con el que nace una anotación nueva: es un **valor por
+  // omisión que se escribe encima**, no un rótulo, así que se traduce al
+  // crearlo y no al pintarlo. Una anotación guardada conserva el idioma en
+  // que se escribió, que es lo correcto: es un dato del técnico.
+  const [texto, setTexto] = useState(() => traducir('Fisura'))
   const [error, setError] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 

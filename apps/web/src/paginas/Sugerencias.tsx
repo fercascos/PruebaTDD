@@ -165,7 +165,7 @@ function Lista({
             <span className="marca">{s.type}</span>
           </div>
           <p className="detalle">{s.body}</p>
-          {s.resolution_note && <p className="sugerencia">Respuesta: {s.resolution_note}</p>}
+          {s.resolution_note && <p className="sugerencia">{traducir('Respuesta:')}{' '}{s.resolution_note}</p>}
           {conAcciones && alCambiar && <Acciones sugerencia={s} alCambiar={alCambiar} />}
         </li>
       ))}

@@ -137,7 +137,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
         <label>
           {traducir('Mapeo')}
           <select value={mapeoElegido} onChange={(e) => setMapeoElegido(e.target.value)}>
-            <option value="">— sin mapeo —</option>
+            <option value="">{traducir('— sin mapeo —')}</option>
             {mapeos.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -154,7 +154,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
       {previo && (
         <section className="previo">
           <h3>
-            {previo.summary.total} avisos · {previo.summary.blocking} {traducir('bloquean la generación')}
+            {previo.summary.total} {traducir('avisos ·')}{' '}{previo.summary.blocking} {traducir('bloquean la generación')}
           </h3>
           {ORDEN_DE_SEVERIDAD.map((severidad) => {
             const lista = previo.warnings.filter((w) => w.severidad === severidad)
@@ -202,7 +202,7 @@ export function PestanaInformes({ projectId }: { projectId: string }) {
                   <td>v{v.version_number}</td>
                   <td>
                     <span className={`estado e-${v.status.toLowerCase()}`}>{v.status}</span>
-                    {v.is_locked && <span className="candado"> inmutable</span>}
+                    {v.is_locked && <span className="candado"> {traducir('inmutable')}</span>}
                   </td>
                   <td>
                     <code title={v.pptx_sha256 ?? ''}>{v.pptx_sha256?.slice(0, 12) ?? '—'}…</code>

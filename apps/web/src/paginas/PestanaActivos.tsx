@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { localeEnVivo } from '../i18n/traducir'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { borrar, obtener } from '../api/cliente'
@@ -96,7 +97,7 @@ export function PestanaActivos({ projectId }: { projectId: string }) {
                   <td>{a.year_built ?? '—'}</td>
                   <td className="numerica">
                     {a.total_built_sqm
-                      ? `${Number(a.total_built_sqm).toLocaleString('es-ES')} m²`
+                      ? `${Number(a.total_built_sqm).toLocaleString(localeEnVivo())} m²`
                       : '—'}
                   </td>
                   <td className="acciones">

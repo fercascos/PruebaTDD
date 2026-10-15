@@ -18,6 +18,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from tdd.core import idioma
+
 
 class PhaseCode(StrEnum):
     SOLICITUD_DOCUMENTACION = "SOLICITUD_DOCUMENTACION"
@@ -160,29 +162,50 @@ def describir_avance(codigo: PhaseCode, estado: PhaseStatus, h: HechosDelProyect
     `[REC]` Un estado sin explicación obliga a entrar en la fase para entenderlo.
     Esta frase es lo que hace útil la vista de fases de la ficha de proyecto.
     """
+    # `[REQ]` 0030 · Esta frase la **escribe el servidor**, así que el
+    # navegador no puede traducirla: no sabe cómo se compuso. Va por
+    # `core.idioma`, que lee el idioma de la petición. Se vio en el prototipo
+    # en inglés: cinco fases con su avance en castellano en medio de una
+    # pantalla inglesa.
     match codigo:
         case PhaseCode.SOLICITUD_DOCUMENTACION:
-            detalle = f"{h.documentos_resueltos} de {h.documentos_solicitados} resueltas"
+            detalle = idioma.traducir(
+                "{resueltos} de {solicitados} resueltas",
+                resueltos=h.documentos_resueltos,
+                solicitados=h.documentos_solicitados,
+            )
         case PhaseCode.VDR:
-            detalle = "enlace activo" if h.tiene_enlace_vdr else "sin enlace"
+            detalle = idioma.traducir("enlace activo" if h.tiene_enlace_vdr else "sin enlace")
         case PhaseCode.VISITA:
-            detalle = f"{h.visitas_realizadas} de {h.activos} activos visitados"
+            detalle = idioma.traducir(
+                "{hechas} de {activos} activos visitados",
+                hechas=h.visitas_realizadas,
+                activos=h.activos,
+            )
         case PhaseCode.QA:
-            detalle = f"{h.rondas_qa_cerradas} de {h.rondas_qa} rondas cerradas"
+            detalle = idioma.traducir(
+                "{cerradas} de {rondas} rondas cerradas",
+                cerradas=h.rondas_qa_cerradas,
+                rondas=h.rondas_qa,
+            )
         case PhaseCode.RED_FLAG_CAPEX:
             sin_validar = h.lineas_capex - h.lineas_con_precio_validado
-            detalle = f"{h.lineas_capex} líneas"
+            detalle = idioma.traducir("{lineas} líneas", lineas=h.lineas_capex)
             if sin_validar > 0:
-                detalle += f" · {sin_validar} sin precio validado"
+                detalle += idioma.traducir(" · {cuantas} sin precio validado", cuantas=sin_validar)
         case PhaseCode.FULL_REPORT:
             if h.versiones_emitidas:
-                detalle = f"{h.versiones_emitidas} versión(es) emitida(s)"
+                detalle = idioma.traducir(
+                    "{cuantas} versión(es) emitida(s)", cuantas=h.versiones_emitidas
+                )
             elif h.versiones_de_informe:
-                detalle = f"{h.versiones_de_informe} versión(es) en borrador"
+                detalle = idioma.traducir(
+                    "{cuantas} versión(es) en borrador", cuantas=h.versiones_de_informe
+                )
             else:
-                detalle = "sin generar"
+                detalle = idioma.traducir("sin generar")
         case _:
-            detalle = f"{h.eventos_registrados} evento(s)"
+            detalle = idioma.traducir("{cuantos} evento(s)", cuantos=h.eventos_registrados)
 
     return AvanceDeFase(
         code=codigo,

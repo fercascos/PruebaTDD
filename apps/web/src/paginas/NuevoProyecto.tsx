@@ -152,7 +152,7 @@ export function NuevoProyecto() {
 
         <h3>{traducir('Fases aplicables')}</h3>
         <p className="ayuda">
-          {traducir('Se crean solo las que marque. Un proyecto sin Q&A no arrastra una fase vacía que nadie va a rellenar. Las marcadas como')}{' '}<em>calculada</em> {traducir('no se marcan a mano después: su estado sale del trabajo que hay debajo.')}
+          {traducir('Se crean solo las que marque. Un proyecto sin Q&A no arrastra una fase vacía que nadie va a rellenar. Las marcadas como')}{' '}<em>{traducir('calculada')}</em> {traducir('no se marcan a mano después: su estado sale del trabajo que hay debajo.')}
         </p>
         <ul className="lista-fases">
           {FASES.map((f) => (
@@ -164,7 +164,7 @@ export function NuevoProyecto() {
                   onChange={() => alternar(f.code)}
                 />
                 {traducir(f.nombre)}
-                {'calculada' in f && f.calculada && <span className="candado">calculada</span>}
+                {'calculada' in f && f.calculada && <span className="candado">{traducir('calculada')}</span>}
               </label>
             </li>
           ))}

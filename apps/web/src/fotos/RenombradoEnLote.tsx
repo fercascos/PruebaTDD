@@ -129,7 +129,7 @@ export function RenombradoEnLote({
           )}
           {plan.aplicados > 0 && (
             <p className="mensaje ok">
-              {plan.aplicados} renombradas
+              {plan.aplicados} {traducir('renombradas')}
               {plan.fallidos.length > 0 && ` · ${plan.fallidos.length} fallidas`}
             </p>
           )}
@@ -147,7 +147,7 @@ export function RenombradoEnLote({
                   <td>
                     {c.despues}
                     {c.omitidos.length > 0 && (
-                      <em className="ayuda"> · sin valor: {c.omitidos.join(' ')}</em>
+                      <em className="ayuda"> {traducir('· sin valor:')}{' '}{c.omitidos.join(' ')}</em>
                     )}
                   </td>
                 </tr>

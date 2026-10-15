@@ -64,7 +64,10 @@ export function Personas() {
       await enviar(`/users/${persona.id}`, cambios, 'PATCH')
       if (cambios.is_active === false) {
         setAviso(
-          `Se han cerrado las sesiones abiertas de ${persona.full_name}. ` +
+          traducir('Se han cerrado las sesiones abiertas de {quien}.', {
+            quien: persona.full_name,
+          }) +
+            ' ' +
             traducir('Desactivar echa a alguien ahora, no cuando caduque su token de refresco.'),
         )
       }
@@ -148,7 +151,7 @@ export function Personas() {
                   </td>
                   <td>
                     <span className={`estado e-${p.is_active ? 'validado' : 'descartado'}`}>
-                      {p.is_active ? 'Activa' : 'Desactivada'}
+                      {p.is_active ? traducir('Activa') : traducir('Desactivada')}
                     </span>
                   </td>
                   {esAdmin && (
@@ -158,14 +161,14 @@ export function Personas() {
                         // potencialmente sin administrador y al usuario fuera en
                         // la siguiente petición. La API devuelve 422; aquí ni se
                         // ofrece el botón.
-                        <em className="ayuda">es su propia cuenta</em>
+                        <em className="ayuda">{traducir('es su propia cuenta')}</em>
                       ) : (
                         <button
                           type="button"
                           className="secundario"
                           onClick={() => void cambiar(p, { is_active: !p.is_active })}
                         >
-                          {p.is_active ? 'Desactivar' : 'Reactivar'}
+                          {p.is_active ? traducir('Desactivar') : traducir('Reactivar')}
                         </button>
                       )}
                     </td>
@@ -253,8 +256,7 @@ function Alta({ alGuardar, alCancelar }: { alGuardar: () => void; alCancelar: ()
       </label>
       <p className="ayuda">
         {traducir('`[REQ]` P-41 · El permiso es separable del rol para que alguien pueda atender el buzón')}{' '}
-        <strong>sin</strong> ser administrador. Un administrador lo atiende igualmente, lleve o no la
-        marca.
+        <strong>{traducir('sin')}</strong> {traducir('ser administrador. Un administrador lo atiende igualmente, lleve o no la marca.')}
       </p>
     </Formulario>
   )

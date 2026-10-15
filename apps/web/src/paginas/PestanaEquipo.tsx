@@ -162,7 +162,7 @@ export function PestanaEquipo({
         {!assetId && (
           <Campo etiqueta={traducir('Activo')}>
             <select value={elegidoAMano} onChange={(e) => setElegidoAMano(e.target.value)}>
-              <option value="">— todos —</option>
+              <option value="">{traducir('— todos —')}</option>
               {activos.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -173,7 +173,7 @@ export function PestanaEquipo({
         )}
         <Campo etiqueta={traducir('Sistema técnico')}>
           <select value={sistema} onChange={(e) => setSistema(e.target.value)}>
-            <option value="">— todos —</option>
+            <option value="">{traducir('— todos —')}</option>
             {sistemas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name_es}
@@ -276,20 +276,26 @@ export function PestanaEquipo({
                     <td>{e.serial_number ?? '—'}</td>
                     <td className="numerica">{e.install_year ?? '—'}</td>
                     <td className="numerica">
-                      {e.expected_life_years ? `${e.expected_life_years} años` : '—'}
+                      {e.expected_life_years
+                        ? traducir('{cuantos} años', { cuantos: e.expected_life_years })
+                        : '—'}
                     </td>
                     {/* [REQ] P-15 · Calculada por el servidor en cada lectura, con
                         el texto explicando en qué plazo cae la reposición. Nunca
                         se identifica solo por color: la cifra está escrita. */}
                     <td className="vida" title={e.vida_resumen}>
                       {e.remaining_life_years === null ? (
-                        <span className="ayuda">sin datos</span>
+                        <span className="ayuda">{traducir('sin datos')}</span>
                       ) : (
                         <>
                           <strong>
                             {e.remaining_life_years < 0
-                              ? `vencida hace ${Math.abs(e.remaining_life_years)} años`
-                              : `${e.remaining_life_years} años`}
+                              ? traducir('vencida hace {cuantos} años', {
+                                  cuantos: Math.abs(e.remaining_life_years),
+                                })
+                              : traducir('{cuantos} años', {
+                                  cuantos: e.remaining_life_years,
+                                })}
                           </strong>
                           {e.horizonte_name && <div className="ayuda">{e.horizonte_name}</div>}
                         </>
@@ -310,7 +316,7 @@ export function PestanaEquipo({
                             {e.next_maintenance_due < hoy ? traducir('vencido') : traducir('al día')}
                           </strong>
                           <div className="ayuda">
-                            toca el {e.next_maintenance_due}
+                            {traducir('toca el')}{' '}{e.next_maintenance_due}
                             {e.maintenance_months ? ` · cada ${e.maintenance_months} meses` : ''}
                           </div>
                         </>
@@ -513,7 +519,7 @@ function FichaDeEquipo({
               value={f.technical_system_id}
               onChange={(e) => cambiar('technical_system_id', e.target.value)}
             >
-              <option value="">— sin clasificar —</option>
+              <option value="">{traducir('— sin clasificar —')}</option>
               {sistemas.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name_es}
@@ -636,8 +642,8 @@ function FichaDeEquipo({
               {traducir('Agota su vida útil en')} <strong>{fin}</strong>
               {' · '}
               {fin - anio < 0
-                ? `vencida hace ${anio - fin} año(s)`
-                : `le quedan ${fin - anio} año(s)`}
+                ? traducir('vencida hace {cuantos} año(s)', { cuantos: anio - fin })
+                : traducir('le quedan {cuantos} año(s)', { cuantos: fin - anio })}
               . <span className="ayuda">{traducir('Se recalcula sola cada año: no se guarda.')}</span>
             </>
           )}
@@ -649,7 +655,7 @@ function FichaDeEquipo({
         <Rejilla>
           <Campo etiqueta={traducir('Estado de conservación')}>
             <select value={f.condition} onChange={(e) => cambiar('condition', e.target.value)}>
-              <option value="">— sin valorar —</option>
+              <option value="">{traducir('— sin valorar —')}</option>
               {CONDICION.map((c) => (
                 <option key={c.code} value={c.code}>
                   {traducir(c.nombre)}
@@ -665,7 +671,7 @@ function FichaDeEquipo({
               value={f.obsolescence}
               onChange={(e) => cambiar('obsolescence', e.target.value)}
             >
-              <option value="">— sin valorar —</option>
+              <option value="">{traducir('— sin valorar —')}</option>
               {OBSOLESCENCIA.map((o) => (
                 <option key={o.code} value={o.code}>
                   {traducir(o.nombre)}
@@ -675,7 +681,7 @@ function FichaDeEquipo({
           </Campo>
           <Campo etiqueta={traducir('Criticidad')} ayuda={traducir('Qué pasa si se para')}>
             <select value={f.criticality} onChange={(e) => cambiar('criticality', e.target.value)}>
-              <option value="">— sin valorar —</option>
+              <option value="">{traducir('— sin valorar —')}</option>
               {CRITICIDAD.map((c) => (
                 <option key={c.code} value={c.code}>
                   {traducir(c.nombre)}

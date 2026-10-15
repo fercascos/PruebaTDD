@@ -215,7 +215,10 @@ export function DocumentacionDelActivo({
         await recargar()
         setError(null)
         setAviso(
-          `${ficheros.length} documento${ficheros.length === 1 ? '' : 's'} en ${nodo.code}`,
+          traducir('{cuantos} documento(s) en {nodo}', {
+            cuantos: ficheros.length,
+            nodo: nodo.code,
+          }),
         )
       } catch (e) {
         setError((e as Error).message)
@@ -247,12 +250,12 @@ export function DocumentacionDelActivo({
       </p>
 
       <p className="ayuda">
-        {traducir('El árbol acordado con el cliente:')} <strong>{nodos.length} nodos</strong> y{' '}
-        <strong>{casillas.length} casillas</strong>. Van tocadas {pedidas}, y{' '}
+        {traducir('El árbol acordado con el cliente:')} <strong>{nodos.length} {traducir('nodos')}</strong> y{' '}
+        <strong>{casillas.length} {traducir('casillas')}</strong>{traducir('. Van tocadas')}{' '}{pedidas}{traducir(', y')}{' '}
         {limitan === 0
-          ? 'ninguna entra hoy en las limitaciones del informe'
-          : `${limitan} ${limitan === 1 ? 'entra' : 'entran'} en las limitaciones del informe`}
-        . Las que no tienen estado están pendientes de pedir.
+          ? traducir('ninguna entra hoy en las limitaciones del informe')
+          : traducir('{cuantas} entran en las limitaciones del informe', { cuantas: limitan })}
+        {traducir('. Las que no tienen estado están pendientes de pedir.')}
       </p>
 
       <ul className="ramas-doc">

@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { localeEnVivo } from '../i18n/traducir'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -162,7 +163,7 @@ export function PestanaMapa({
           (punto.zone_name ? `<em>${escapar(punto.zone_name)}</em><br>` : '') +
           (punto.caption ? `${escapar(punto.caption)}<br>` : '') +
           (punto.taken_at
-            ? new Date(punto.taken_at).toLocaleString('es-ES')
+            ? new Date(punto.taken_at).toLocaleString(localeEnVivo())
             : '<em>sin fecha EXIF</em>'),
       )
       marca.on('click', () => setElegida(punto.id))
@@ -199,8 +200,9 @@ export function PestanaMapa({
           </label>
         )}
         <span className="ayuda">
-          {datos.puntos.length} situadas
-          {datos.sin_coordenadas > 0 && ` · ${datos.sin_coordenadas} sin coordenadas`}
+          {datos.puntos.length} {traducir('situadas')}
+          {datos.sin_coordenadas > 0 &&
+            ` · ${traducir('{cuantas} sin coordenadas', { cuantas: datos.sin_coordenadas })}`}
         </span>
       </div>
 
@@ -214,8 +216,7 @@ export function PestanaMapa({
 
       {!TESELAS && (
         <Mensaje tipo="aviso">
-          {traducir('Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la escala—. Para ver el mapa, defina')}{' '}<code>VITE_MAP_TILE_URL</code> con un proveedor cuyas
-          condiciones de uso permitan este caso. Ver <code>.env.example</code>.
+          {traducir('Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la escala—. Para ver el mapa, defina')}{' '}<code>VITE_MAP_TILE_URL</code> {traducir('con un proveedor cuyas condiciones de uso permitan este caso. Ver')}{' '}<code>.env.example</code>.
         </Mensaje>
       )}
 

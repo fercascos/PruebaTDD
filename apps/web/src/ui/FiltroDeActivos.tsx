@@ -52,8 +52,11 @@ export function FiltroDeActivos({
           exactamente lo que no se puede dejar a la memoria de quien mira. */}
       <summary>
         {puestos.size
-          ? `${puestos.size} de ${activos.length} activos`
-          : `Toda la cartera · ${activos.length} activos`}
+          ? traducir('{puestos} de {total} activos', {
+              puestos: puestos.size,
+              total: activos.length,
+            })
+          : traducir('Toda la cartera · {total} activos', { total: activos.length })}
       </summary>
       <fieldset>
         {/* La leyenda, corta: se dibuja sobre el borde del `fieldset` y con dos

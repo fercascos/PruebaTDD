@@ -28,7 +28,17 @@ import { textoVisible } from './jsx.mjs'
  * justo donde tiene que funcionar.
  */
 const RAIZ = new URL('..', import.meta.url).pathname.replace(/^\/@fs/, '')
-const FUENTE = join(RAIZ, 'src')
+
+/** Dónde vive el texto de la interfaz.
+ *
+ *  `prototipo/` también: su aviso —«Prototipo navegable… no guarda nada»— es
+ *  lo primero que lee quien abre el fichero que se comparte, y durante un rato
+ *  fue el único texto de la aplicación que nadie vigilaba. Dejarlo fuera
+ *  obligaba a escribir sus claves a mano y a confiar en que nadie cambiara la
+ *  frase sin cambiarlas.
+ */
+const FUENTES = [join(RAIZ, 'src'), join(RAIZ, 'prototipo')]
+const FUENTE = FUENTES[0]
 
 /** Lo que NO es texto para una persona aunque lo parezca. */
 const NO_ES_TEXTO = [
@@ -62,8 +72,13 @@ function esTexto(s, suelto = false) {
   if (NO_ES_TEXTO.some((r) => r.test(t))) return false
   if (ACENTOS.test(t)) return true
   if (/\s/.test(t) && /^[A-ZÁÉÍÓÚÑ¿¡]/.test(t)) return true
-  // Palabra suelta dentro de JSX: etiqueta de la interfaz.
-  return suelto && /^[A-ZÁÉÍÓÚÑ][a-záéíóúüñ]+$/.test(t)
+  // Una palabra sola que empieza en mayúscula. `suelto` ya no distingue nada
+  // —el texto JSX no pasa por aquí—, así que esto vale para las cadenas
+  // entrecomilladas, que es donde viven las **tablas de rótulos**: el
+  // `Record<string,string>` de `ui/estados.ts` que traduce `BORRADOR` por
+  // «Borrador». Faltaban tres estados de proyecto y el extractor decía que no
+  // faltaba nada.
+  return /^[A-ZÁÉÍÓÚÑ][a-záéíóúüñ]+$/.test(t)
 }
 
 function ficheros(dir) {
@@ -96,7 +111,7 @@ export function extraer() {
     encontrados.get(t).add(relative(RAIZ, fichero))
   }
 
-  for (const fichero of ficheros(FUENTE)) {
+  for (const fichero of FUENTES.flatMap(ficheros)) {
     if (fichero.includes(`${join('src', 'i18n')}`)) continue // el propio catálogo
     const codigo = readFileSync(fichero, 'utf8')
     // Texto suelto entre etiquetas JSX. **Solo en `.tsx`**: en un `.ts` no hay

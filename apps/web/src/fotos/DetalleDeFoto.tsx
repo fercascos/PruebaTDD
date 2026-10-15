@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { localeEnVivo } from '../i18n/traducir'
 import { useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Activo, ElementoCatalogo, Foto, NodoDeUbicacion } from '../api/tipos'
@@ -133,9 +134,9 @@ export function DetalleDeFoto({
           <dt>{traducir('Fecha de captura')}</dt>
           <dd>
             {foto.taken_at ? (
-              new Date(foto.taken_at).toLocaleString('es-ES')
+              new Date(foto.taken_at).toLocaleString(localeEnVivo())
             ) : (
-              <em>sin EXIF · no se infiere</em>
+              <em>{traducir('sin EXIF · no se infiere')}</em>
             )}
           </dd>
           <dt>{traducir('Coordenadas')}</dt>
@@ -143,7 +144,7 @@ export function DetalleDeFoto({
             {foto.gps_latitude !== null ? (
               `${foto.gps_latitude.toFixed(6)}, ${foto.gps_longitude?.toFixed(6)}`
             ) : (
-              <em>sin GPS</em>
+              <em>{traducir('sin GPS')}</em>
             )}
           </dd>
           <dt>{traducir('Dimensiones')}</dt>
@@ -159,7 +160,7 @@ export function DetalleDeFoto({
         <Rejilla>
           <Campo etiqueta={traducir('Activo')}>
             <select value={activo} onChange={(e) => setActivo(e.target.value)}>
-              <option value="">— sin asignar —</option>
+              <option value="">{traducir('— sin asignar —')}</option>
               {activos.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -169,7 +170,7 @@ export function DetalleDeFoto({
           </Campo>
           <Campo etiqueta={traducir('Zona')} ayuda={traducir('Clasificación del catálogo: es lo que agrega el informe')}>
             <select value={zona} onChange={(e) => setZona(e.target.value)} disabled={!activo}>
-              <option value="">— sin zona —</option>
+              <option value="">{traducir('— sin zona —')}</option>
               {zonas.map((z) => (
                 <option key={z.id} value={z.id}>
                   {z.name_es}
@@ -194,7 +195,7 @@ export function DetalleDeFoto({
               onChange={(e) => setEspacio(e.target.value)}
               disabled={!activo || espacios.length === 0}
             >
-              <option value="">— sin espacio —</option>
+              <option value="">{traducir('— sin espacio —')}</option>
               {espacios.map((n) => (
                 <option key={n.id} value={n.id}>
                   {'\u00a0\u00a0'.repeat(n.profundidad)}

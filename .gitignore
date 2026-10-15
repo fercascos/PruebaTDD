@@ -62,4 +62,8 @@ var/certificados-desarrollo/
 # ficticios y podrían versionarse, pero envejecen en cuanto la API cambia y un
 # fichero generado que se queda viejo dentro del repositorio acaba enseñando
 # una aplicación que ya no existe. Se regenera con `npm run prototipo:grabar`.
-apps/web/prototipo/grabacion.json
+#
+# El comodín cubre también `grabacion-en.json`: la regla nombraba un fichero
+# suelto, y en cuanto hubo una grabación por idioma dejó de cubrirlas. Se coló
+# una en un commit antes de verlo.
+apps/web/prototipo/grabacion*.json

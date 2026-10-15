@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { formateador } from '../i18n/traducir'
 import { useCallback, useEffect, useState } from 'react'
 import { obtener } from '../api/cliente'
 import type { Activo } from '../api/tipos'
@@ -30,7 +31,7 @@ type Matriz = {
   total_importe: string
 }
 
-const euros = new Intl.NumberFormat('es-ES', {
+const euros = formateador({
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
@@ -139,12 +140,12 @@ export function PestanaRiesgos({ projectId }: { projectId: string }) {
           </select>
         </label>
         <span className="ayuda">
-          {datos.total_hallazgos} hallazgos · {euros.format(total)}
+          {datos.total_hallazgos} {traducir('hallazgos ·')}{' '}{euros.format(total)}
           {elegidos.length > 0 && (
             <>
               {' '}
               <button type="button" className="enlace" onClick={() => setElegidos([])}>
-                ver los {activos.length} agregados
+                {traducir('ver los')}{' '}{activos.length} {traducir('agregados')}
               </button>
             </>
           )}

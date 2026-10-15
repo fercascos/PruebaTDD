@@ -86,7 +86,7 @@ export function Proyectos() {
                       cliente como los demás. */}
                   {p.client_pending_validation && (
                     <span className="pastilla aviso" title={traducir('Escrito al dar de alta; falta validarlo')}>
-                      sin validar
+                      {traducir('sin validar')}
                     </span>
                   )}
                 </td>

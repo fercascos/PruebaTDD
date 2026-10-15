@@ -344,9 +344,10 @@ export function InventarioDelActivo({
         {},
       )
       setHecho(
-        `${r.creadas} actuación(es) creada(s) de ${r.marcados} equipo(s) marcado(s), ` +
-          `cada una colgando de la categoría de su objeto. ` +
-          `${r.omitidas} ya existían y no se han duplicado.`,
+        traducir(
+          '{creadas} actuación(es) creada(s) de {marcados} equipo(s) marcado(s), cada una colgando de la categoría de su objeto. {omitidas} ya existían y no se han duplicado.',
+          { creadas: r.creadas, marcados: r.marcados, omitidas: r.omitidas },
+        ),
       )
       if (r.avisos.length) setAviso(r.avisos)
     })
@@ -384,8 +385,8 @@ export function InventarioDelActivo({
       ))}
 
       <p className="recuento">
-        <strong>{conContenido.length}</strong> de {totalObjetos} objetos con contenido ·{' '}
-        {revisados} validados · {equipos.length} equipos · {marcados} marcados para CAPEX
+        <strong>{conContenido.length}</strong> de {totalObjetos} {traducir('objetos con contenido ·')}{' '}
+        {revisados} {traducir('validados ·')}{' '}{equipos.length} {traducir('equipos ·')}{' '}{marcados} {traducir('marcados para CAPEX')}
       </p>
 
       <div className="filtro">
@@ -514,7 +515,7 @@ export function InventarioDelActivo({
                         aria-label={`Objeto de ${e.tag ?? e.equipment_type}`}
                         onChange={(ev) => void colocar(e, ev.target.value)}
                       >
-                        <option value="">— elija el objeto —</option>
+                        <option value="">{traducir('— elija el objeto —')}</option>
                         {objetosDelCatalogo.map(({ cap, o }) => (
                           <option key={o.id} value={o.id}>
                             {o.code} · {cap.name_es} › {o.name_es}
@@ -716,7 +717,7 @@ function FichaDeObjeto({
             <li key={f.id}>
               <strong>{f.display_name}</strong>
               <span className="recuento">
-                {f.taken_at?.slice(0, 10) ?? 'sin fecha'}
+                {f.taken_at?.slice(0, 10) ?? traducir('sin fecha')}
                 {f.equipment_id && ' · atada a un equipo'}
               </span>
             </li>

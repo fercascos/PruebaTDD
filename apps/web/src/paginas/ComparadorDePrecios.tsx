@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { formateador, localeEnVivo } from '../i18n/traducir'
 import { useCallback, useEffect, useState } from 'react'
 import { enviar, obtener } from '../api/cliente'
 import type { Hallazgo } from '../api/tipos'
@@ -44,10 +45,10 @@ type Fuente = {
   motivo_de_no_consulta: string | null
 }
 
-const euros = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+const euros = formateador({ style: 'currency', currency: 'EUR' })
 
 function fecha(valor: string | null): string {
-  return valor ? new Date(valor).toLocaleDateString('es-ES') : '—'
+  return valor ? new Date(valor).toLocaleDateString(localeEnVivo()) : '—'
 }
 
 function siNo(valor: boolean | null): string {
@@ -405,7 +406,7 @@ function ActualizacionPorIndice({
             placeholder="118,4"
           />
         </Campo>
-        <Campo etiqueta={traducir('Factor geográfico')} ayuda="1 si no aplica">
+        <Campo etiqueta={traducir('Factor geográfico')} ayuda={traducir('1 si no aplica')}>
           <input type="number" step="0.01" value={geo} onChange={(e) => setGeo(e.target.value)} />
         </Campo>
       </Rejilla>
@@ -417,7 +418,7 @@ function ActualizacionPorIndice({
         <>
           <p className="formula">{resultado.formula}</p>
           <button type="button" className="secundario" onClick={() => alAplicar(resultado.resultado)}>
-            {traducir('Llevar')}{' '}{euros.format(Number(resultado.resultado))} al importe
+            {traducir('Llevar')}{' '}{euros.format(Number(resultado.resultado))} {traducir('al importe')}
           </button>
           <p className="ayuda">
             {traducir('No se ha aplicado nada todavía, y aplicarlo solo rellena el campo: sigue haciendo falta validar el precio.')}

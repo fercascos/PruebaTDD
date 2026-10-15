@@ -89,7 +89,7 @@ export function EspacioDelActivo({ projectId }: { projectId: string }) {
           className="enlace volver"
           onClick={() => navegar(`/proyectos/${projectId}/activos`)}
         >
-          ← Todos los activos
+          {traducir('← Todos los activos')}
         </button>
         <h2>
           {activo.name}

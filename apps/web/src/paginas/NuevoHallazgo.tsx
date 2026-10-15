@@ -213,7 +213,7 @@ export function NuevoHallazgo({
         </Campo>
         <Campo etiqueta={traducir('Código CAPEX')} ayuda={traducir('Agrupado por tipo de coste')}>
           <select required value={codigo} onChange={(e) => setCodigo(e.target.value)}>
-            <option value="">— elija un elemento —</option>
+            <option value="">{traducir('— elija un elemento —')}</option>
             {codificables.map(([tipo, lista]) => (
               <optgroup key={tipo} label={tipo}>
                 {lista.map((c) => (
@@ -227,7 +227,7 @@ export function NuevoHallazgo({
         </Campo>
         <Campo etiqueta={traducir('Grado de riesgo')}>
           <select value={riesgo} onChange={(e) => setRiesgo(e.target.value)}>
-            <option value="">— sin clasificar —</option>
+            <option value="">{traducir('— sin clasificar —')}</option>
             {riesgos.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name_es}
@@ -275,7 +275,7 @@ export function NuevoHallazgo({
 
       <h3>{traducir('Importe')}</h3>
       <p className="ayuda">
-        {traducir('Una línea por plazo. El importe que teclee')} <strong>lo incluye todo</strong>{traducir(': indirectos, honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima. Añada otra línea solo si la actuación es')}{' '}<em>recurrente</em> {traducir('—hace falta ahora y otra vez más adelante—, que es lo que P-44 permite.')}
+        {traducir('Una línea por plazo. El importe que teclee')} <strong>{traducir('lo incluye todo')}</strong>{traducir(': indirectos, honorarios y contingencia ya dentro. La aplicación nunca aplica la cascada por encima. Añada otra línea solo si la actuación es')}{' '}<em>{traducir('recurrente')}</em> {traducir('—hace falta ahora y otra vez más adelante—, que es lo que P-44 permite.')}
       </p>
 
       {lineas.map((linea, indice) => (

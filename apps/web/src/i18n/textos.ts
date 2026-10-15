@@ -900,6 +900,7 @@ export const EN: Record<string, string> = {
   'no se ha podido cargar': 'could not be loaded',
   'no se importan': 'are not imported',
   'nodos': 'nodes',
+  'objeto': 'item',
   'objetos': 'items',
   'objetos con contenido ·': 'items with content ·',
   'opcional': 'optional',
@@ -1088,6 +1089,129 @@ export const EN: Record<string, string> = {
     '· their asset was deleted after they were recorded. They still count towards the total.',
   '—hace falta ahora y otra vez más adelante—, que es lo que P-44 permite.':
     '—needed now and again later on—, which is what P-44 allows.',
+
+  // ── Los rótulos de una sola palabra ───────────────────────────────────
+  //
+  // `[REQ]` La quinta tanda, y otra clase entera que estaba en silencio: los
+  // valores de las **tablas de rótulos** —`{ BORRADOR: 'Borrador' }`,
+  // `{ code: 'BUENO', nombre: 'Bueno' }`— cuando son una sola palabra. El
+  // extractor las descartaba porque su regla para una palabra suelta solo
+  // valía dentro de JSX, y éstas viven en un `.ts` entre comillas.
+  //
+  // Son 52, y todas se ven: el estado de un proyecto en su cabecera, la
+  // condición de un equipo en el inventario, el rol de una persona, el
+  // veredicto de una revisión, los colores del anotador. El prototipo en
+  // inglés enseñaba «Borrador» en la ficha del proyecto, que es lo primero
+  // que se lee.
+
+  'Aceptable': 'Acceptable',
+  'Aceptada': 'Accepted',
+  'Activa': 'Active',
+  'Actual': 'Current',
+  'Administrador': 'Administrator',
+  'Agendada': 'Scheduled',
+  'Alta': 'High',
+  'Archivado': 'Archived',
+  'Azul': 'Blue',
+  'Baja': 'Low',
+  'Blanco': 'White',
+  'Borrador': 'Draft',
+  'Bueno': 'Good',
+  'Cerrado': 'Closed',
+  'Conforme': 'Compliant',
+  'Consultor': 'Consultant',
+  'Contingencia': 'Contingency',
+  'Corto': 'Short',
+  'Deficiente': 'Poor',
+  'Desactivada': 'Deactivated',
+  'Desactivar': 'Deactivate',
+  'Detalle': 'Detail',
+  'Dudoso': 'Doubtful',
+  'Elipse': 'Ellipse',
+  'Error': 'Error',
+  'Falta': 'Missing',
+  'Fisura': 'Crack',
+  'Flecha': 'Arrow',
+  'Incompleto': 'Incomplete',
+  'Inventario': 'Inventory',
+  'Largo': 'Long',
+  'Lector': 'Reader',
+  'Media': 'Medium',
+  'Medio': 'Mid',
+  'Mejoras': 'Improvements',
+  'Obsoleto': 'Obsolete',
+  'Otro': 'Other',
+  'Otros': 'Others',
+  'Planta': 'Floor',
+  'Provincia': 'Province',
+  'Reactivar': 'Reactivate',
+  'Realizada': 'Completed',
+  'Rechazada': 'Rejected',
+  'Recibida': 'Received',
+  'Recuadro': 'Box',
+  'Revisor': 'Reviewer',
+  'Rojo': 'Red',
+  'Solicitada': 'Requested',
+  'Texto': 'Text',
+  'Validado': 'Validated',
+  'Verde': 'Green',
+  'Visita': 'Inspection',
+
+  // ── Las frases con un número dentro ───────────────────────────────────
+  //
+  // `[REQ]` Eran plantillas de JavaScript —`` `${n} de ${total} activos` ``— y
+  // por tanto **invisibles para cualquier extractor**: no hay una cadena que
+  // leer, hay un trozo de programa que la construye. El prototipo en inglés
+  // las enseñaba en castellano y ninguna herramienta se quejaba.
+  //
+  // Pasan a interpolación —`traducir('{n} de {total} activos', {…})`— con el
+  // hueco resuelto DESPUÉS de traducir, para que la frase inglesa pueda
+  // colocarlo donde le toque.
+  //
+  // `[LIM]` Quedan plantillas en el código, y seguirán siendo invisibles: una
+  // nueva no sale en la lista de pendientes. Lo que las encuentra es abrir el
+  // prototipo y leerlo.
+
+  'Se han cerrado las sesiones abiertas de {quien}.': 'Open sessions for {quien} have been closed.',
+  'Toda la cartera · {total} activos': 'Whole portfolio · {total} assets',
+  'la fila': 'the row',
+  'le quedan {cuantos} año(s)': '{cuantos} year(s) remaining',
+  'los {cuantas} {plural}': 'the {cuantas} {plural}',
+  'ninguna entra hoy en las limitaciones del informe':
+    'none goes into the limitations of the report today',
+  'vencida hace {cuantos} año(s)': 'overdue by {cuantos} year(s)',
+  'vencida hace {cuantos} años': 'overdue by {cuantos} years',
+  '{creadas} actuación(es) creada(s) de {marcados} equipo(s) marcado(s), cada una colgando de la categoría de su objeto. {omitidas} ya existían y no se han duplicado.':
+    '{creadas} action(s) created from {marcados} flagged item(s), each hanging off the category of its item. {omitidas} already existed and have not been duplicated.',
+  '{cuantas} entran en las limitaciones del informe':
+    '{cuantas} go into the limitations of the report',
+  '{cuantas} sin coordenadas': '{cuantas} with no coordinates',
+  '{cuantos} años': '{cuantos} years',
+  '{cuantos} documento(s) en {nodo}': '{cuantos} document(s) under {nodo}',
+  '{puestos} de {total} activos': '{puestos} of {total} assets',
+
+  // ── El aviso del prototipo navegable ──────────────────────────────────
+  //
+  // Durante un rato fueron las únicas cadenas de la aplicación que no vigilaba
+  // nadie: el extractor solo miraba `src/`, así que había que escribir las
+  // claves a mano y confiar en que nadie cambiara la frase sin cambiarlas. Ya
+  // mira también `prototipo/`, de modo que una frase que cambie aquí sale en
+  // la lista de pendientes como cualquier otra.
+  'Prototipo navegable.': 'Navigable prototype.',
+  'Es la aplicación real con datos': 'It is the real application, with',
+  ficticios: 'fictitious',
+  'y la API grabada: se navega y se filtra, pero':
+    'data and a recorded API: you can navigate and filter, but',
+  'no guarda nada': 'it saves nothing',
+  '. Lo que escribe avisa de que no puede.': '. Anything that writes says so.',
+  'Ocultar el aviso': 'Hide the notice',
+  Entendido: 'Got it',
+  'Prototipo de solo lectura': 'Read-only prototype',
+  'El prototipo es de solo lectura: navega con datos grabados y no guarda nada. Escribir esto sí funciona en la aplicación.':
+    'The prototype is read-only: it navigates recorded data and saves nothing. Writing this does work in the application.',
+  'Fuera del recorrido grabado': 'Outside the recorded walkthrough',
+  'Este recorrido no llegó a esta pantalla al grabarse, así que el prototipo no tiene su respuesta. En la aplicación de verdad esto funciona.':
+    'The walkthrough did not reach this screen when it was recorded, so the prototype has no response for it. In the real application this works.',
 
   // ── El estado de un proyecto ──────────────────────────────────────────
   //

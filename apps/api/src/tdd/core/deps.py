@@ -12,6 +12,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from tdd.core import idioma
 from tdd.core.config import Settings, get_settings
 from tdd.core.db import ContextoRLS, aplicar_contexto
 from tdd.core.security import leer_token
@@ -91,10 +92,7 @@ def idioma_de(request: Request) -> str:
 
     Cualquier otra cosa, incluida la ausencia de cabecera, es castellano.
     """
-    cabecera = request.headers.get("accept-language", "")
-    primero = cabecera.split(",")[0].strip().lower()
-    etiqueta = primero.split("-")[0]
-    return "en" if etiqueta == "en" else "es"
+    return idioma.de_cabecera(request.headers.get("accept-language", ""))
 
 
 def obtener_sesion(
@@ -111,6 +109,13 @@ def obtener_sesion(
     decide FastAPI, no este módulo: por eso `SesionDep` la pide con
     `scope="function"`. Ver allí; el detalle importa más de lo que parece.
     """
+    # `[REQ]` 0030 · El idioma se fija en **dos** sitios y los dos hacen falta:
+    # en la sesión de base de datos, que es lo que lee `nombre(name_es,
+    # name_en)` para los nombres de catálogo, y en el contexto de Python, que
+    # es lo que leen las frases que compone el servidor —el avance de una fase,
+    # un aviso del informe—. Aquí, porque es por donde pasan todas las rutas.
+    lengua = idioma_de(request)
+
     factory = request.app.state.session_factory
     session: Session = factory()
     try:
@@ -124,7 +129,7 @@ def obtener_sesion(
                 # leen las políticas RLS, y tiene que decir lo mismo que la
                 # comprobación de la API o se producen 500 en vez de 403.
                 can_manage_suggestions=usuario.gestiona_sugerencias,
-                idioma=idioma_de(request),
+                idioma=lengua,
             ),
         )
         yield session

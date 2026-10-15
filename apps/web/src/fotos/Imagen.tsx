@@ -1,3 +1,4 @@
+import { traducir } from '../i18n/idioma'
 import { useEffect, useState } from 'react'
 import { peticionAutenticada } from '../api/cliente'
 
@@ -69,7 +70,7 @@ export function Imagen({
   if (fallo) {
     // Un hueco con explicación, no un icono roto: el usuario tiene que poder
     // distinguir «no se ha podido cargar» de «esta foto está vacía».
-    return <span className="imagen-fallida">no se ha podido cargar</span>
+    return <span className="imagen-fallida">{traducir('no se ha podido cargar')}</span>
   }
   if (!url) return <span className="imagen-cargando" aria-busy="true" />
   return <img src={url} alt={alt} className={className} />

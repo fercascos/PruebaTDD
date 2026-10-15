@@ -16,6 +16,7 @@
  * el error que es. No se simula un éxito: un prototipo que finge guardar es
  * peor que uno que dice que no guarda.
  */
+import { traducir } from '../src/i18n/traducir'
 
 type Grabada = { estado: number; tipo: string; texto?: string; base64?: string }
 
@@ -48,14 +49,20 @@ function problema(status: number, titulo: string, detalle: string): Response {
   })
 }
 
-/** Lo que el prototipo no puede contestar, dicho en pantalla y no en la consola. */
-const SIN_GRABAR =
-  'Este recorrido no llegó a esta pantalla al grabarse, así que el prototipo no ' +
-  'tiene su respuesta. En la aplicación de verdad esto funciona.'
+/** Lo que el prototipo no puede contestar, dicho en pantalla y no en la consola.
+ *
+ *  Se traduce en la llamada y no aquí: una constante de módulo se evalúa al
+ *  importar y congelaría el idioma. Es la misma regla que en el resto de la
+ *  aplicación —ver `i18n/idioma.tsx`—, y aquí importa de verdad, porque este
+ *  fichero se carga antes de que se pinte nada.
+ */
+//
+//  Y en **un solo renglón** cada una, aunque queden largas: partidas con `+`,
+//  el extractor ve dos cadenas y la clave del diccionario es la frase entera.
+//  Quedaban las dos mitades en el catálogo y la frase completa sin traducir.
+const SIN_GRABAR = 'Este recorrido no llegó a esta pantalla al grabarse, así que el prototipo no tiene su respuesta. En la aplicación de verdad esto funciona.'
 
-const SOLO_LECTURA =
-  'El prototipo es de solo lectura: navega con datos grabados y no guarda nada. ' +
-  'Escribir esto sí funciona en la aplicación.'
+const SOLO_LECTURA = 'El prototipo es de solo lectura: navega con datos grabados y no guarda nada. Escribir esto sí funciona en la aplicación.'
 
 export function instalar(grabacion: Grabacion): void {
   const original = window.fetch.bind(window)
@@ -83,13 +90,14 @@ export function instalar(grabacion: Grabacion): void {
     const sinConsulta = grabacion[`${metodo} ${url.pathname}`]
     if (sinConsulta) return respuesta(sinConsulta)
 
-    if (metodo !== 'GET') return problema(501, 'Prototipo de solo lectura', SOLO_LECTURA)
+    if (metodo !== 'GET')
+      return problema(501, traducir('Prototipo de solo lectura'), traducir(SOLO_LECTURA))
 
     const clave = `${metodo} ${url.pathname}`
     if (!fallos.has(clave)) {
       fallos.add(clave)
       console.warn('[prototipo] sin grabar:', clave)
     }
-    return problema(501, 'Fuera del recorrido grabado', SIN_GRABAR)
+    return problema(501, traducir('Fuera del recorrido grabado'), traducir(SIN_GRABAR))
   }
 }

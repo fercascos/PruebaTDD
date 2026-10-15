@@ -199,9 +199,9 @@ export function FichaDeActivo({
       <h3>
         {traducir('Datos de la memoria técnica')}{' '}
         {activo?.memoria_validada_at ? (
-          <span className="candado">validada</span>
+          <span className="candado">{traducir('validada')}</span>
         ) : (
-          <span className="candado">sin validar</span>
+          <span className="candado">{traducir('sin validar')}</span>
         )}
       </h3>
       <p className="ayuda">

@@ -140,13 +140,13 @@ export function MapaDeActivos({
     <div className="mapa-activos">
       <p className="ayuda">
         <strong>{situados.length}</strong> {situados.length === 1 ? 'situado' : 'situados'}
-        {sinSituar > 0 && ` · ${sinSituar} sin coordenadas`}
+        {sinSituar > 0 && ` · ${traducir('{cuantas} sin coordenadas', { cuantas: sinSituar })}`}
       </p>
 
       {!TESELAS && (
         <Mensaje tipo="aviso">
           {traducir('Sin cartografía de fondo: no hay proveedor de teselas configurado, así que la aplicación no contacta con ningún servidor externo. Las posiciones y las distancias son correctas —use la escala—. Para ver el mapa, defina')}{' '}<code>VITE_MAP_TILE_URL</code>{' '}
-          con un proveedor cuyas condiciones de uso permitan este caso.
+          {traducir('con un proveedor cuyas condiciones de uso permitan este caso.')}
         </Mensaje>
       )}
 

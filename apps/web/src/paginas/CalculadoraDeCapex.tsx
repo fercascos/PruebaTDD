@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { formateador } from '../i18n/traducir'
 import { useState } from 'react'
 import { enviar } from '../api/cliente'
 import { Campo, Rejilla } from '../ui/Formulario'
@@ -64,8 +65,8 @@ type Resultado = {
   nota: string
 }
 
-const euros = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
-const porciento = new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 2 })
+const euros = formateador({ style: 'currency', currency: 'EUR' })
+const porciento = formateador({ style: 'percent', maximumFractionDigits: 2 })
 
 export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }) {
   const [abierta, setAbierta] = useState(false)
@@ -143,7 +144,7 @@ export function Calculadora({ alAplicar }: { alAplicar: (base: string) => void }
       {/* `[SUP]` La etiqueta de convención se queda en el código: al usuario
           le llegaba a pantalla con los acentos graves puestos. */}
       <p className="ayuda">
-        {traducir('Porcentajes de la convención española, y')} <strong>editables</strong>{traducir(': no hay fuente de precios externa, así que esta parte se ajusta a mano hasta que la haya.')}
+        {traducir('Porcentajes de la convención española, y')} <strong>{traducir('editables')}</strong>{traducir(': no hay fuente de precios externa, así que esta parte se ajusta a mano hasta que la haya.')}
       </p>
       <Rejilla>
         {Object.entries(pcts).map(([clave, valor]) => (

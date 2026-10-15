@@ -111,7 +111,7 @@ export function ImportarInventario({
       {error && <Mensaje tipo="error">{error}</Mensaje>}
 
       <section>
-        <h3>1 · La plantilla</h3>
+        <h3>{traducir('1 · La plantilla')}</h3>
         <p className="ayuda">
           {traducir('Lleva dentro los activos de este proyecto y los 14 sistemas técnicos. Rellenarla a partir de ella evita que media hoja falle por una tilde en el nombre del edificio.')}
         </p>
@@ -133,7 +133,7 @@ export function ImportarInventario({
       </section>
 
       <section>
-        <h3>2 · Subir la hoja</h3>
+        <h3>{traducir('2 · Subir la hoja')}</h3>
         {/* El control nativo de fichero rotula su botón en el idioma del
             navegador —«Choose File»—, y esta aplicación está enteramente en
             español. Se oculta y se dispara desde un botón propio; el `input`
@@ -158,7 +158,7 @@ export function ImportarInventario({
 
       {vista && (
         <section>
-          <h3>3 · Qué va a pasar</h3>
+          <h3>{traducir('3 · Qué va a pasar')}</h3>
 
           {resultado ? (
             <Mensaje tipo="ok">{resultado.resumen}</Mensaje>
@@ -172,7 +172,7 @@ export function ImportarInventario({
               <>
                 {' · '}
                 <span className="ayuda">
-                  {traducir('El libro tiene')}{' '}{vista.total_hojas} hojas y solo se lee «{vista.hoja}».
+                  {traducir('El libro tiene')}{' '}{vista.total_hojas} {traducir('hojas y solo se lee «')}{vista.hoja}».
                 </span>
               </>
             )}
@@ -180,8 +180,7 @@ export function ImportarInventario({
 
           {vista.columnas_ausentes.length > 0 && (
             <Mensaje tipo="error">
-              {traducir('Faltan columnas obligatorias:')}{' '}{vista.columnas_ausentes.join(', ')}. Sin ellas no hay
-              nada que importar.
+              {traducir('Faltan columnas obligatorias:')}{' '}{vista.columnas_ausentes.join(', ')}{traducir('. Sin ellas no hay nada que importar.')}
             </Mensaje>
           )}
 
@@ -190,7 +189,7 @@ export function ImportarInventario({
               hasta buscarlo meses después. */}
           {vista.columnas_ignoradas.length > 0 && (
             <Mensaje tipo="aviso">
-              {traducir('Columnas que no se reconocen y')} <strong>no se importan</strong>:{' '}
+              {traducir('Columnas que no se reconocen y')} <strong>{traducir('no se importan')}</strong>:{' '}
               {vista.columnas_ignoradas.join(', ')}.
             </Mensaje>
           )}
@@ -251,7 +250,7 @@ export function ImportarInventario({
                     checked={actualizar}
                     onChange={(e) => setActualizar(e.target.checked)}
                   />
-                  {traducir('Actualizar los')}{' '}{vista.ya_existen} equipos que ya existen con lo que dice la hoja
+                  {traducir('Actualizar los')}{' '}{vista.ya_existen} {traducir('equipos que ya existen con lo que dice la hoja')}
                 </label>
               )}
               {vista.ya_existen > 0 && actualizar && (

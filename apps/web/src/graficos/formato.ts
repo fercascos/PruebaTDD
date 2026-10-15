@@ -1,3 +1,4 @@
+import { formateador } from '../i18n/traducir'
 /**
  * Cómo se escriben los números de los gráficos.
  *
@@ -9,7 +10,7 @@
  */
 
 /** Un porcentaje con un decimal: «83,4 %». */
-const UN_DECIMAL = new Intl.NumberFormat('es-ES', {
+const UN_DECIMAL = formateador({
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 })
@@ -30,14 +31,14 @@ export function porcentaje(parte: number, total: number): string {
  * cifras. En una tabla de dinero manda la comparación, no la tipografía de un
  * párrafo.
  */
-export const euros = new Intl.NumberFormat('es-ES', {
+export const euros = formateador({
   style: 'currency',
   currency: 'EUR',
   maximumFractionDigits: 0,
   useGrouping: true,
 })
 
-export const eurosExactos = new Intl.NumberFormat('es-ES', {
+export const eurosExactos = formateador({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,

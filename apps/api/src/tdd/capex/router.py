@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from tdd.capex.engine import CascadeConfig, apply_tax, run_cascade
 from tdd.core import concurrencia as cc
+from tdd.core import idioma
 from tdd.core.db import fijar_idioma
 from tdd.core.deps import SesionDep, UsuarioDep
 from tdd.exports.plantilla_capex import Idioma
@@ -497,7 +498,7 @@ def resumen_por_riesgo(
                 "  GROUP BY rl.code, nombre(rl.name_es, rl.name_en), rl.score "
                 # Y la fila de los que nadie clasificó, solo si la hay.
                 "  UNION ALL "
-                "  SELECT :sin, 'Sin clasificar', NULL, "
+                "  SELECT :sin, :sin_nombre, NULL, "
                 "         count(DISTINCT ci.finding_id), count(ci.id), "
                 "         COALESCE(sum(ci.amount), 0), COALESCE(sum(ci.total_cost), 0) "
                 "  FROM capex_item ci "
@@ -507,7 +508,15 @@ def resumen_por_riesgo(
                 + "  HAVING count(ci.id) > 0 "
                 ") g ORDER BY g.risk_score DESC NULLS LAST"
             ),
-            {"p": project_id, "a": _activos(asset_id), "sin": SIN_GRADO},
+            {
+                "p": project_id,
+                "a": _activos(asset_id),
+                "sin": SIN_GRADO,
+                # El rótulo va como parámetro y no escrito en el SQL para que
+                # pase por `core.idioma`: es una frase del servidor, no una
+                # fila de catálogo que `nombre()` pueda traducir.
+                "sin_nombre": idioma.traducir("Sin clasificar"),
+            },
         )
         .mappings()
         .all()

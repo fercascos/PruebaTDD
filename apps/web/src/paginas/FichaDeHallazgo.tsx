@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { formateador } from '../i18n/traducir'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { borrar, enviar, obtener } from '../api/cliente'
 import { esConflictoDeVersion, mensajeDeConflicto } from '../ui/conflictos'
@@ -17,7 +18,7 @@ const PLAZOS = [
   { code: 'OTRO', nombre: 'Otro' },
 ] as const
 
-const euros = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+const euros = formateador({ style: 'currency', currency: 'EUR' })
 
 /**
  * Edición de un hallazgo y de sus líneas de CAPEX.
@@ -197,7 +198,7 @@ export function FichaDeHallazgo({
         </Campo>
         <Campo etiqueta={traducir('Grado de riesgo')}>
           <select value={riesgo} onChange={(e) => setRiesgo(e.target.value)}>
-            <option value="">— sin clasificar —</option>
+            <option value="">{traducir('— sin clasificar —')}</option>
             {riesgos.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.code} · {r.name_es}
@@ -218,8 +219,7 @@ export function FichaDeHallazgo({
         <h3>{traducir('Líneas de CAPEX')}</h3>
         {/* `[REQ]` P-44. La etiqueta se queda aquí y no en la pantalla. */}
         <p className="ayuda">
-          {traducir('Una actuación recurrente lleva')} <strong>{traducir('una línea por plazo')}</strong>, no dos en el mismo.
-          El plazo ya usado no aparece en la lista.
+          {traducir('Una actuación recurrente lleva')} <strong>{traducir('una línea por plazo')}</strong>{traducir(', no dos en el mismo. El plazo ya usado no aparece en la lista.')}
         </p>
 
         {hallazgo.capex_lines.length === 0 && (
@@ -251,8 +251,7 @@ export function FichaDeHallazgo({
       <section>
         <h3>{traducir('Estado')}</h3>
         <p className="ayuda">
-          {traducir('Los botones que no se pueden pulsar salen deshabilitados')} <strong>con su motivo</strong>.
-          Un botón que no está no se puede preguntar por qué no está.
+          {traducir('Los botones que no se pueden pulsar salen deshabilitados')} <strong>{traducir('con su motivo')}</strong>{traducir('. Un botón que no está no se puede preguntar por qué no está.')}
         </p>
         <div className="acciones">
           {destinos.length === 0 && <em className="ayuda">{traducir('Sin transiciones desde este estado.')}</em>}
@@ -388,7 +387,7 @@ function Linea({
       <p className={`procedencia p-${linea.price_status.toLowerCase()}`}>
         {linea.price_reference_label ? (
           <>
-            <strong>{traducir(PRECIO[linea.price_status] ?? linea.price_status)}</strong> contra{' '}
+            <strong>{traducir(PRECIO[linea.price_status] ?? linea.price_status)}</strong> {traducir('contra')}{' '}
             {linea.price_reference_label}
             {linea.price_validation_note && <> — «{linea.price_validation_note}»</>}
           </>

@@ -219,7 +219,7 @@ function EditorDeMapeo({ plantilla, alCerrar }: { plantilla: Plantilla; alCerrar
                       })
                     }
                   >
-                    <option value="">— sin origen —</option>
+                    <option value="">{traducir('— sin origen —')}</option>
                     {CAMPOS.map((c) => (
                       <option key={c} value={c}>
                         {c}

@@ -42,7 +42,7 @@ export function FichaDeProyecto() {
             <p className="cliente-del-proyecto">
               {proyecto.client_name}
               {proyecto.client_pending_validation && (
-                <span className="pastilla aviso">cliente sin validar</span>
+                <span className="pastilla aviso">{traducir('cliente sin validar')}</span>
               )}
             </p>
           )}

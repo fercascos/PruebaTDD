@@ -1,4 +1,5 @@
 import { traducir } from '../i18n/idioma'
+import { formateador } from '../i18n/traducir'
 import { useCallback, useEffect, useState } from 'react'
 import { descargar, obtener } from '../api/cliente'
 import type { Activo, Hallazgo } from '../api/tipos'
@@ -9,7 +10,7 @@ import { Link } from 'react-router-dom'
 
 const PLAZOS = ['CORTO', 'MEDIO', 'LARGO', 'MEJORAS', 'OTRO'] as const
 
-const euros = new Intl.NumberFormat('es-ES', {
+const euros = formateador({
   style: 'currency',
   currency: 'EUR',
   minimumFractionDigits: 2,
@@ -301,8 +302,7 @@ export function PestanaCapex({ projectId }: { projectId: string }) {
       {sinValidar.length > 0 && (
         <Mensaje tipo="aviso">
           {sinValidar.length} {traducir('líneas con precio sin validar, por')}{' '}
-          {euros.format(sinValidar.reduce((a, l) => a + Number(l.amount), 0))}. Generar así es
-          legítimo para un borrador interno; enviarlo al cliente sin revisarlo, no.
+          {euros.format(sinValidar.reduce((a, l) => a + Number(l.amount), 0))}{traducir('. Generar así es legítimo para un borrador interno; enviarlo al cliente sin revisarlo, no.')}
         </Mensaje>
       )}
 

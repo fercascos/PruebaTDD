@@ -245,7 +245,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
       ? [
           {
             clave: 'OTROS',
-            nombre: 'Otros',
+            nombre: traducir('Otros'),
             valor: resto.reduce((s, c) => s + Number(c.amount), 0),
             agrupa: resto.length,
           },
@@ -297,7 +297,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
              lo que se lleva a la negociación. */
           <li>
             <span className="valor">{porcentaje(total, totalDelProyecto)}</span>
-            <span className="rotulo">del CAPEX del proyecto</span>
+            <span className="rotulo">{traducir('del CAPEX del proyecto')}</span>
           </li>
         ) : (
           <li>
@@ -305,7 +305,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
               {datos.activo.filter((a) => a.findings > 0).length}
               <span className="ayuda"> / {datos.activo.length}</span>
             </span>
-            <span className="rotulo">activos con actuaciones</span>
+            <span className="rotulo">{traducir('activos con actuaciones')}</span>
           </li>
         )}
       </ul>
@@ -326,9 +326,9 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <p className="ayuda">
               {traducir('Naturaleza de la inversión. Es la distinción que separa un activo caro de uno mal mantenido:')}{' '}
               <strong>
-                lo exigido por normativa hay que ejecutarlo y una mejora es discrecional
+                {traducir('lo exigido por normativa hay que ejecutarlo y una mejora es discrecional')}
               </strong>
-              , y en el total pesan igual.
+              {traducir(', y en el total pesan igual.')}
             </p>
             <Tarta
               porciones={porciones}
@@ -365,7 +365,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
             <h3>{traducir('Reparto de la inversión por pagador')}</h3>
             <p className="ayuda">
               {traducir('Cuánto del CAPEX recae sobre la propiedad y cuánto es repercutible al inquilino.')}
-              <strong> «Sin determinar» no es una tercera forma de pagar</strong>{traducir(': es una casilla sin rellenar —depende de los contratos de arrendamiento y se decide actuación por actuación—, y por eso va en gris y no con un color de serie.')}
+              <strong> {traducir('«Sin determinar» no es una tercera forma de pagar')}</strong>{traducir(': es una casilla sin rellenar —depende de los contratos de arrendamiento y se decide actuación por actuación—, y por eso va en gris y no con un color de serie.')}
             </p>
             <Tarta
               porciones={porcionesDePagador}
@@ -429,7 +429,7 @@ export function Dashboard({ projectId }: { projectId: string }) {
           <section className="bloque">
             <h3>{traducir('Desglose por categoría y objeto')}</h3>
             <p className="ayuda">
-              {traducir('Cada barra es una')} <strong>{traducir('categoría')}</strong> {traducir('del árbol de CAPEX y los tramos de dentro son sus')}{' '}<strong>objetos</strong>{traducir(', de mayor a menor. Un hallazgo codificado en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es lo mismo que un objeto denominado «General».')}
+              {traducir('Cada barra es una')} <strong>{traducir('categoría')}</strong> {traducir('del árbol de CAPEX y los tramos de dentro son sus')}{' '}<strong>{traducir('objetos')}</strong>{traducir(', de mayor a menor. Un hallazgo codificado en la propia categoría, sin descender al objeto, figura como «sin detallar»: no es lo mismo que un objeto denominado «General».')}
             </p>
             <BarrasApiladas filas={filtrado.objeto} />
           </section>
@@ -521,14 +521,14 @@ function Cabecera({
       <p className="alcance">
         {seleccion.length ? (
           <>
-            Alcance: <strong>{nombreDeLaSeleccion(seleccion)}</strong>
+            {traducir('Alcance:')}{' '}<strong>{nombreDeLaSeleccion(seleccion)}</strong>
             <button type="button" className="enlace" onClick={alQuitarFiltro}>
-              ver los {activos.length} agregados
+              {traducir('ver los')}{' '}{activos.length} {traducir('agregados')}
             </button>
           </>
         ) : cartera ? (
           <>
-            {traducir('Alcance: los')} <strong>{activos.length} activos</strong> del proyecto, agregados ·{' '}
+            {traducir('Alcance: los')} <strong>{activos.length} {traducir('activos')}</strong> {traducir('del proyecto, agregados ·')}{' '}
             {eurosExactos.format(totalDelProyecto)}
           </>
         ) : (
@@ -592,7 +592,7 @@ function Barras({
           <>
             <span className={f.clase ? `etiqueta ${f.clase}` : 'etiqueta'}>
               {f.nombre}
-              {marcada && <span className="pastilla"> en pantalla</span>}
+              {marcada && <span className="pastilla"> {traducir('en pantalla')}</span>}
             </span>
             <span className="barra" aria-hidden="true">
               {/* `[REQ]` Cero no pinta nada. El estilo compartido da un mínimo
@@ -697,7 +697,7 @@ function BarrasApiladas({ filas }: { filas: ResumenPorObjeto[] }) {
               })}
             </span>
             <span className="cifra">
-              {c.tramos.length} {c.tramos.length === 1 ? 'objeto' : 'objetos'}
+              {c.tramos.length} {c.tramos.length === 1 ? traducir('objeto') : traducir('objetos')}
             </span>
             <span className="cifra importe">{euros.format(c.importe)}</span>
           </li>
@@ -812,7 +812,9 @@ function Tabla({
   return (
     <details className="detalle-tabla">
       <summary>
-        {traducir('Ver')}{' '}{filas.length === 1 ? 'la fila' : `los ${filas.length} ${plural}`} en tabla
+        {traducir('Ver')}{' '}{filas.length === 1
+          ? traducir('la fila')
+          : traducir('los {cuantas} {plural}', { cuantas: filas.length, plural })} {traducir('en tabla')}
       </summary>
       <div className="desbordable">
         <table className="tabla">
@@ -824,7 +826,7 @@ function Tabla({
                 {traducir('Importe')}
               </th>
               <th scope="col" className="numerica">
-                % del total
+                {traducir('% del total')}
               </th>
             </tr>
           </thead>

@@ -32,6 +32,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
+from tdd.core import idioma
+
 #: Etiqueta de la fila de los hallazgos sin grado. No es un código del catálogo
 #: a propósito: si lo fuera, alguien acabaría creándolo en la tabla.
 SIN_GRADO = "SIN_GRADO"
@@ -146,7 +148,9 @@ def construir(
     grados = {
         code: Grado(code=code, name=name, score=score) for code, name, score in grados_del_catalogo
     }
-    grados[SIN_GRADO] = Grado(code=SIN_GRADO, name="Sin clasificar", score=None)
+    # Frase del servidor, no catálogo: lo que dice es que no hay grado, así que
+    # no hay fila de `risk_level` que `nombre()` pueda traducir.
+    grados[SIN_GRADO] = Grado(code=SIN_GRADO, name=idioma.traducir("Sin clasificar"), score=None)
     capitulos: dict[str, Capitulo] = {}
     total_por_horizonte: dict[str, Decimal] = dict.fromkeys(horizontes, Decimal("0"))
     total_importe = Decimal("0")

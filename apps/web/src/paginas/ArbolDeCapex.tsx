@@ -376,11 +376,11 @@ function TablaDeActuaciones({
                   <button type="button" className="enlace" onClick={() => alAbrir(h)}>
                     {h.title}
                   </button>
-                  {h.capex_lines.length > 1 && <em className="ayuda"> · recurrente</em>}
+                  {h.capex_lines.length > 1 && <em className="ayuda"> {traducir('· recurrente')}</em>}
                   {h.description && <span className="ayuda descripcion">{h.description}</span>}
                   {h.comments && (
                     <span className="ayuda descripcion">
-                      <strong>Comentarios:</strong> {h.comments}
+                      <strong>{traducir('Comentarios:')}</strong> {h.comments}
                     </span>
                   )}
                 </th>

@@ -130,7 +130,7 @@ export function ArbolDeUbicaciones({ assetId }: { assetId: string }) {
             <li key={n.id} style={{ paddingLeft: `${n.profundidad * 1.4}rem` }}>
               <span className={`tipo t-${n.node_type.toLowerCase()}`}>{n.node_type}</span>
               <strong>{n.name}</strong>
-              {n.zone_name && <span className="zona-ligada">zona: {n.zone_name}</span>}
+              {n.zone_name && <span className="zona-ligada">{traducir('zona:')}{' '}{n.zone_name}</span>}
               <select
                 value={n.parent_id ?? ''}
                 onChange={(e) => void mover(n, e.target.value)}

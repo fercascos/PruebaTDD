@@ -41,15 +41,14 @@ export function PestanaFases({ projectId }: { projectId: string }) {
             <span className={`estado e-${f.status.toLowerCase()}`}>{f.status}</span>
             {f.es_derivado && (
               <span className="candado" title={traducir('Se calcula del trabajo hecho: no se marca a mano')}>
-                calculada
+                {traducir('calculada')}
               </span>
             )}
           </div>
           <p className="detalle">{f.detalle}</p>
           {f.estado_sugerido && (
             <p className="sugerencia">
-              {traducir('La aplicación deduce que debería estar en')} <strong>{f.estado_sugerido}</strong>. Se
-              ofrece, no se impone: el responsable puede tener motivos que la aplicación no conoce.
+              {traducir('La aplicación deduce que debería estar en')} <strong>{f.estado_sugerido}</strong>{traducir('. Se ofrece, no se impone: el responsable puede tener motivos que la aplicación no conoce.')}
             </p>
           )}
         </li>

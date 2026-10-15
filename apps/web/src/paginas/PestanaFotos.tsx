@@ -134,7 +134,7 @@ export function PestanaFotos({
           </select>
         </label>
         <label>
-          y del sistema
+          {traducir('y del sistema')}
           <select value={filtroSistema} onChange={(e) => setFiltroSistema(e.target.value)}>
             <option value="">{traducir('Todos los sistemas')}</option>
             {sistemas.map((s) => (
@@ -163,7 +163,7 @@ export function PestanaFotos({
 
       {seleccion.size > 0 && (
         <div className="barra-seleccion">
-          <span>{seleccion.size} seleccionadas</span>
+          <span>{seleccion.size} {traducir('seleccionadas')}</span>
           <button type="button" onClick={() => void enLote({ include_in_report: true })}>
             {traducir('Incluir en el informe')}
           </button>
@@ -244,15 +244,15 @@ export function PestanaFotos({
                     checked={seleccion.has(f.id)}
                     onChange={() => alternar(f.id)}
                   />
-                  elegir
+                  {traducir('elegir')}
                 </label>
-                {f.include_in_report && <span className="marca">en el informe</span>}
-                {f.gps_latitude !== null && <span className="marca">con GPS</span>}
-                {f.taken_at === null && <span className="marca aviso">sin fecha</span>}
-                {f.asset_id === null && <span className="marca aviso">sin activo</span>}
+                {f.include_in_report && <span className="marca">{traducir('en el informe')}</span>}
+                {f.gps_latitude !== null && <span className="marca">{traducir('con GPS')}</span>}
+                {f.taken_at === null && <span className="marca aviso">{traducir('sin fecha')}</span>}
+                {f.asset_id === null && <span className="marca aviso">{traducir('sin activo')}</span>}
                 {f.technical_system_id === null && (
                   <span className="marca aviso" title={traducir('El renombrado escribirá «SinSistema»')}>
-                    sin sistema
+                    {traducir('sin sistema')}
                   </span>
                 )}
               </p>

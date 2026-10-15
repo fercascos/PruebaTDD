@@ -20,6 +20,8 @@ nadie mira:
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlalchemy import text
 
@@ -155,3 +157,77 @@ def test_la_busqueda_del_arbol_capex_encuentra_en_los_dos_idiomas(cliente, cab) 
     # Y lo que devuelve va en inglés, que es el idioma de la sesión.
     h02 = next(f for f in en_ingles.json() if f["code"] == "HC.H02")
     assert h02["name_es"] == "Roof"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Las frases que escribe el servidor
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def proyecto(cliente, cab, datos_base) -> str:
+    """Un proyecto con sus fases, que es lo que tiene un avance que describir."""
+    r = cliente.post(
+        "/api/v1/projects",
+        headers=cab("consultor_a"),
+        json={
+            "client_id": str(datos_base["cliente_a"]),
+            "internal_code": f"2026-{uuid.uuid4().hex[:6]}",
+            "name": "TDD de prueba",
+            "applicable_phases": [
+                {"code": "SOLICITUD_DOCUMENTACION"},
+                {"code": "VISITA"},
+                {"code": "RED_FLAG_CAPEX"},
+                {"code": "FULL_REPORT"},
+            ],
+        },
+    )
+    assert r.status_code == 201, r.text
+    return str(r.json()["id"])
+
+
+def test_el_avance_de_las_fases_se_traduce(cliente, cab, proyecto) -> None:
+    """«11 de 17 resueltas» no la puede traducir el navegador.
+
+    `[REQ]` Es la tercera capa de texto de la aplicación: ni rótulo del código
+    ni dato del catálogo, sino una frase que **compone el servidor** a partir
+    del estado del proyecto. Llega ya escrita, así que el frontend no sabe cómo
+    se formó y no puede hacer nada con ella.
+
+    Esta prueba existe por cómo falló: el idioma se fijaba en
+    `core/deps.obtener_sesion`, una dependencia **generadora síncrona**, que
+    FastAPI ejecuta en un hilo del pool con su propio contexto. El `ContextVar`
+    que se fijaba ahí no llegaba al endpoint, de modo que la API devolvía
+    castellano con `Accept-Language: en` **y no daba ningún error**. Se arregló
+    moviéndolo al middleware ASGI, que sí corre en el contexto del que hereda
+    el endpoint.
+    """
+    ruta = f"/api/v1/projects/{proyecto}/phases"
+    es = cliente.get(ruta, headers={**cab("consultor_a"), **ES})
+    en = cliente.get(ruta, headers={**cab("consultor_a"), **EN})
+    assert es.status_code == 200, es.text
+    assert en.status_code == 200, en.text
+
+    detalles_es = [f["detalle"] for f in es.json() if f.get("detalle")]
+    detalles_en = [f["detalle"] for f in en.json() if f.get("detalle")]
+    assert detalles_es, "el proyecto de prueba no tiene ninguna fase con avance"
+    # Al menos una cambia, y ninguna se queda a medias en castellano.
+    assert detalles_es != detalles_en
+    assert not [d for d in detalles_en if "de" in d.split() or "sin" in d.split()]
+
+
+def test_el_idioma_no_se_hereda_de_la_peticion_anterior(cliente, cab, proyecto) -> None:
+    """Inglés y luego sin cabecera: la segunda es castellana.
+
+    Es la prueba del `reset` del `ContextVar`. Sin él el valor se queda en el
+    contexto de la tarea, y una petición sin cabecera heredaría el idioma de la
+    anterior: la misma clase de fuga que evita el `SET LOCAL` del contexto RLS,
+    y con el mismo síntoma difícil de creer —una pantalla que sale en inglés
+    para quien no lo pidió—.
+    """
+    ruta = f"/api/v1/projects/{proyecto}/phases"
+    en_ingles = [
+        f["detalle"] for f in cliente.get(ruta, headers={**cab("consultor_a"), **EN}).json()
+    ]
+    sin_cabecera = [f["detalle"] for f in cliente.get(ruta, headers=cab("consultor_a")).json()]
+    assert en_ingles != sin_cabecera

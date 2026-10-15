@@ -259,12 +259,12 @@ export function Subida({
             <span style={{ width: `${resumen.porcentaje}%` }} />
           </div>
           <p>
-            {resumen.hechas} subidas · {resumen.duplicadas} ya estaban ·{' '}
-            {resumen.fallidas} con error · {resumen.pendientes + resumen.subiendo} pendientes
+            {resumen.hechas} {traducir('subidas ·')}{' '}{resumen.duplicadas} {traducir('ya estaban ·')}{' '}
+            {resumen.fallidas} {traducir('con error ·')}{' '}{resumen.pendientes + resumen.subiendo} {traducir('pendientes')}
           </p>
           {!enCurso && resumen.fallidas > 0 && (
             <button type="button" className="secundario" onClick={() => void reintentar()}>
-              {traducir('Reintentar las')}{' '}{resumen.fallidas} fallidas
+              {traducir('Reintentar las')}{' '}{resumen.fallidas} {traducir('fallidas')}
             </button>
           )}
         </div>

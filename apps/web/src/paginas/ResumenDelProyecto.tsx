@@ -102,7 +102,7 @@ export function ResumenDelProyecto({
             {traducir('Guardar la introducción')}
           </button>
           <span className="recuento">
-            {texto.trim().length} de 8.000 caracteres
+            {texto.trim().length} {traducir('de 8.000 caracteres')}
             {cambiado && ' · sin guardar'}
           </span>
         </div>

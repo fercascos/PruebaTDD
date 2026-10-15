@@ -31,8 +31,10 @@ describe('el diccionario', () => {
   it('traduce al inglés y no deja el castellano puesto', () => {
     // Un descuido típico al traducir a mano: copiar la clave en el valor.
     const sinTraducir = Object.entries(EN).filter(([es, ingles]) => es === ingles)
-    // «Dashboard», «English», «Total» y «N/A» son iguales en los dos idiomas.
-    const iguales = ['Dashboard', 'English', 'Total', 'Red Flag / CAPEX']
+    // Palabras que se escriben igual en los dos idiomas. «Error» entró con los
+    // rótulos de una palabra: es el estado de una fila al importar una hoja, y
+    // en inglés se llama igual.
+    const iguales = ['Dashboard', 'English', 'Total', 'Red Flag / CAPEX', 'Error']
     expect(sinTraducir.map(([es]) => es).filter((es) => !iguales.includes(es))).toEqual([])
   })
 })
