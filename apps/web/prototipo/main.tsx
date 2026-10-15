@@ -46,6 +46,7 @@ localStorage.setItem('tdd.idioma', __TDD_IDIOMA__)
    ES/EN. Es coherente con lo que hay: la grabación incrustada contesta en un
    solo idioma, así que cambiar de idioma traduce los rótulos y no los datos. */
 fijarIdioma(__TDD_IDIOMA__)
+document.documentElement.lang = __TDD_IDIOMA__
 
 /** El aviso de que esto es un prototipo.
  *

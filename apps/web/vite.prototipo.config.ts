@@ -66,6 +66,21 @@ function unSoloFichero(): Plugin {
           `<style>${readFileSync(resolve(SALIDA, href.replace(/^\.?\//, '')), 'utf-8')}</style>`,
       )
 
+      // `[REQ]` La cabecera del documento también: `lang` y `<title>` están
+      // escritos en `index.html`, que es estático, así que el prototipo
+      // inglés salía con `lang="es"` y «Prototipo de due diligence técnica»
+      // en la pestaña del navegador. El título es lo primero que ve quien
+      // recibe el fichero, y `lang` es lo que usa un lector de pantalla para
+      // elegir la voz y la pronunciación.
+      if (IDIOMA === 'en') {
+        texto = texto
+          .replace('<html lang="es">', '<html lang="en">')
+          .replace(
+            '<title>Prototipo de due diligence técnica</title>',
+            '<title>Technical due diligence prototype</title>',
+          )
+      }
+
       const destino = resolve(SALIDA, FICHERO)
       writeFileSync(destino, texto)
       const mb = (Buffer.byteLength(texto) / 1024 / 1024).toFixed(2)
