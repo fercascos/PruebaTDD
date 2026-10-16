@@ -138,6 +138,13 @@ Empiece por [`docs/01-resumen-supuestos-preguntas.md`](docs/01-resumen-supuestos
 | **[apps/api](apps/api/README.md)** | **Backend del MVP**: qué está construido, qué falta y cómo arrancarlo | **24** |
 | **[apps/web](apps/web/README.md)** | **Frontend del MVP**: pantallas, los tres orígenes de foto y lo que falta | **24** |
 
+### Llevarse esto a otro entorno
+
+| | |
+|---|---|
+| **[`docs/migracion/`](docs/migracion/README.md)** | Del `git clone` a la aplicación funcionando en otra máquina: qué versiones hacen falta, **qué no viaja dentro del repositorio y hay que conseguir aparte**, cómo comprobar que ha salido, y qué está a medias |
+| **[`CLAUDE.md`](CLAUDE.md)** | Las reglas de la casa, que Claude Code lee solo al abrir el proyecto: las del cliente, las etiquetas, la regla del idioma, las puertas y lo que ninguna herramienta ve |
+
 ### Convención de etiquetas
 
 | Etiqueta | Significado |
