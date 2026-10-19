@@ -23,6 +23,25 @@ Y en la raíz del repositorio, [`CLAUDE.md`](../../CLAUDE.md): las reglas de
 trabajo, que Claude Code lee solo al abrir el proyecto. Si en el entorno nuevo
 va a trabajar un agente, ese fichero es el que más importa de todos.
 
+## Si no puedes conectar el repositorio
+
+Si lo que tienes delante es un cuadro de «sube un fichero» y no un repositorio
+conectado, los siete documentos se juntan en uno:
+
+```bash
+python3 tools/juntar_documentacion.py -s TDD-documentacion-migracion.md
+```
+
+Salen 41 KB con su índice, los títulos encajados y los enlaces entre documentos
+convertidos en enlaces internos. **No se versiona**: es una copia de ficheros
+que ya están aquí, y una copia que envejece dentro del propio repositorio es lo
+que hace que alguien acabe leyendo una aplicación que ya no existe.
+
+`[REC]` Si el sitio donde lo subes distingue entre **instrucciones** y
+**ficheros adjuntos**, la parte 1 —las reglas de trabajo— va en las
+instrucciones, no como adjunto: son reglas de comportamiento y tienen que estar
+siempre delante, no competir por la atención con el resto.
+
 ## La versión de diez minutos
 
 Si solo quieres verlo funcionando y tienes Docker:

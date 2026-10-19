@@ -73,3 +73,8 @@ apps/web/prototipo/grabacion*.json
 # en dos órdenes, una por idioma. No va en `dist/` —que Vite vacía en cada
 # compilación, y por eso el inglés borraba al castellano— sino aquí.
 apps/web/prototipo/entregable/
+
+# La documentación de migración juntada en un fichero, que sale de
+# `tools/juntar_documentacion.py`. Es una copia de ficheros que ya están aquí:
+# versionarla sería tener dos que divergen, y la copia es la que envejece.
+TDD-documentacion-migracion.md
