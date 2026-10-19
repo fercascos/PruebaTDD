@@ -1,7 +1,7 @@
 """Junta la documentación de migración en **un solo fichero** para subirlo.
 
 Para quien no va a conectar el repositorio y lo que tiene delante es un cuadro
-de «sube un fichero»: siete documentos sueltos se suben de siete en siete y se
+de «sube un fichero»: ocho documentos sueltos se suben de ocho en ocho y se
 desordenan; uno solo, no.
 
     python3 tools/juntar_documentacion.py              # a la salida estándar
@@ -46,6 +46,7 @@ PARTES: tuple[tuple[str, str], ...] = (
     ("docs/migracion/03-lo-que-no-viaja.md", "Lo que no viaja en el repositorio"),
     ("docs/migracion/04-comprobar-la-migracion.md", "Comprobar que la migración ha salido"),
     ("docs/migracion/05-estado-y-pendientes.md", "Estado y pendientes"),
+    ("docs/migracion/06-portar-a-otro-stack.md", "Portar a otro stack"),
 )
 
 ENLACE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
@@ -115,8 +116,10 @@ def juntar() -> str:
     cabecera = [
         "# Due diligence técnica · documentación para migrar el proyecto",
         "",
-        "> **Esto es una copia juntada de siete ficheros del repositorio**, generada el ",
-        f"> {hoy} con `python3 tools/juntar_documentacion.py`. Existe para subirla de una",
+        # El número sale de `PARTES`, no escrito a mano: estaba puesto a mano,
+        # se añadió una parte y la portada siguió diciendo «siete».
+        f"> **Esto es una copia juntada de {len(PARTES)} ficheros del repositorio**, generada",
+        f"> el {hoy} con `python3 tools/juntar_documentacion.py`. Existe para subirla de una",
         "> vez a un sitio donde no se puede conectar el repositorio.",
         ">",
         "> **Si puedes conectar el repositorio, no uses esto**: `CLAUDE.md` se lee solo al",

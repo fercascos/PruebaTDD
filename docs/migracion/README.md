@@ -18,6 +18,7 @@ cambiar de sitio.**
 | 3 | [`03-lo-que-no-viaja.md`](03-lo-que-no-viaja.md) | **Lo más importante.** Lo que el repositorio no lleva dentro y hay que conseguir aparte |
 | 4 | [`04-comprobar-la-migracion.md`](04-comprobar-la-migracion.md) | Cómo saber que ha salido bien, con las cifras que se esperan |
 | 5 | [`05-estado-y-pendientes.md`](05-estado-y-pendientes.md) | Qué está construido, qué está a medias y qué está sin empezar |
+| 6 | [`06-portar-a-otro-stack.md`](06-portar-a-otro-stack.md) | Qué se reaprovecha y qué hay que reescribir si el destino impone otro stack |
 
 Y en la raíz del repositorio, [`CLAUDE.md`](../../CLAUDE.md): las reglas de
 trabajo, que Claude Code lee solo al abrir el proyecto. Si en el entorno nuevo
@@ -26,7 +27,7 @@ va a trabajar un agente, ese fichero es el que más importa de todos.
 ## Si no puedes conectar el repositorio
 
 Si lo que tienes delante es un cuadro de «sube un fichero» y no un repositorio
-conectado, los siete documentos se juntan en uno:
+conectado, los ocho documentos se juntan en uno:
 
 ```bash
 python3 tools/juntar_documentacion.py -s TDD-documentacion-migracion.md
